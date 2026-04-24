@@ -215,6 +215,147 @@ function getSheetDataMap_(sheetNames) {
   }, {});
 }
 
+function getRowsByFieldValuesSelective_(sheetName, field, values, caseInsensitive, options) {
+  const targets = (values || []).map(function(value) {
+    return caseInsensitive ? normalizeText_(value) : String(value || '');
+  }).filter(function(value) {
+    return String(value || '') !== '';
+  });
+
+  if (!targets.length) return [];
+
+  if (GO_PES_RUNTIME.rowsBySheet[sheetName]) {
+    const cached = cloneRowObjects_(GO_PES_RUNTIME.rowsBySheet[sheetName]).filter(function(row) {
+      const candidate = caseInsensitive ? normalizeText_(row[field]) : String(row[field] || '');
+      return targets.indexOf(candidate) !== -1;
+    });
+    return sortSelectiveRows_(cached, options || {});
+  }
+
+  const sh = getSheet_(sheetName);
+  if (!sh) return [];
+
+  const lastRow = sh.getLastRow();
+  const lastCol = sh.getLastColumn();
+  if (lastRow < 2 || !lastCol) return [];
+
+  const headerRow = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
+  GO_PES_RUNTIME.headersBySheet[sheetName] = headerRow.slice();
+
+  const fieldIndex = headerRow.indexOf(field);
+  if (fieldIndex === -1) return [];
+
+  const config = Object.assign({
+    sortField: '',
+    sortDesc: false,
+    limit: 0
+  }, options || {});
+
+  const rowsCount = lastRow - 1;
+  const fieldValues = sh.getRange(2, fieldIndex + 1, rowsCount, 1).getValues();
+  const sortFieldIndex = config.sortField ? headerRow.indexOf(config.sortField) : -1;
+  const sortValues = sortFieldIndex !== -1
+    ? sh.getRange(2, sortFieldIndex + 1, rowsCount, 1).getValues()
+    : null;
+
+  let matches = [];
+  for (let i = 0; i < rowsCount; i++) {
+    const candidate = caseInsensitive ? normalizeText_(fieldValues[i][0]) : String(fieldValues[i][0] || '');
+    if (targets.indexOf(candidate) === -1) continue;
+
+    matches.push({
+      rowIndex: i + 2,
+      sortValue: sortValues ? sortValues[i][0] : '',
+      order: i
+    });
+  }
+
+  if (!matches.length) return [];
+
+  if (config.sortField) {
+    matches.sort(function(a, b) {
+      const aTs = new Date(a.sortValue || 0).getTime();
+      const bTs = new Date(b.sortValue || 0).getTime();
+      if (config.sortDesc) return bTs - aTs;
+      return aTs - bTs;
+    });
+  }
+
+  if (config.limit && matches.length > config.limit) {
+    matches = matches.slice(0, config.limit);
+  }
+
+  const rowsByIndex = {};
+  buildContiguousRowBlocks_(matches.map(function(match) {
+    return match.rowIndex;
+  })).forEach(function(block) {
+    const valuesBlock = sh.getRange(block.start, 1, block.count, lastCol).getValues();
+    valuesBlock.forEach(function(rowValues, offset) {
+      const absoluteRow = block.start + offset;
+      rowsByIndex[absoluteRow] = mapSheetRowToObject_(headerRow, rowValues);
+    });
+  });
+
+  return matches.map(function(match) {
+    return rowsByIndex[match.rowIndex];
+  }).filter(Boolean);
+}
+
+function sortSelectiveRows_(rows, options) {
+  const config = Object.assign({
+    sortField: '',
+    sortDesc: false,
+    limit: 0
+  }, options || {});
+
+  let out = (rows || []).slice();
+  if (config.sortField) {
+    out.sort(function(a, b) {
+      const aTs = new Date(a && a[config.sortField] ? a[config.sortField] : 0).getTime();
+      const bTs = new Date(b && b[config.sortField] ? b[config.sortField] : 0).getTime();
+      if (config.sortDesc) return bTs - aTs;
+      return aTs - bTs;
+    });
+  }
+  if (config.limit && out.length > config.limit) {
+    out = out.slice(0, config.limit);
+  }
+  return out;
+}
+
+function buildContiguousRowBlocks_(rowIndexes) {
+  const sorted = (rowIndexes || []).slice().sort(function(a, b) {
+    return a - b;
+  });
+  if (!sorted.length) return [];
+
+  const blocks = [];
+  let start = sorted[0];
+  let previous = sorted[0];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const current = sorted[i];
+    if (current === previous + 1) {
+      previous = current;
+      continue;
+    }
+    blocks.push({ start: start, count: previous - start + 1 });
+    start = current;
+    previous = current;
+  }
+
+  blocks.push({ start: start, count: previous - start + 1 });
+  return blocks;
+}
+
+function mapSheetRowToObject_(headers, rowValues) {
+  const obj = {};
+  (headers || []).forEach(function(header, index) {
+    obj[header] = rowValues && rowValues[index] !== undefined ? rowValues[index] : '';
+  });
+  return obj;
+}
+
 function appendRowObject_(sheetName, obj) {
   const diag = goPesDiagStart_('Repository.appendRowObject_', {
     sheet: sheetName

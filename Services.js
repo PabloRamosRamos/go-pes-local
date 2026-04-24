@@ -163,28 +163,49 @@ function obtenerFicha(payload) {
   */
 
   const hitos = finalSolicitudId
-    ? filterByField_(GO_PES_V2.SHEETS.FACT_HITOS, 'solicitud_id', finalSolicitudId, false)
-        .sort((a, b) => new Date(b.fecha_gestion || 0) - new Date(a.fecha_gestion || 0))
+    ? getRowsByFieldValuesSelective_(
+        GO_PES_V2.SHEETS.FACT_HITOS,
+        'solicitud_id',
+        [finalSolicitudId],
+        false,
+        { sortField: 'fecha_gestion', sortDesc: true, limit: 25 }
+      )
     : [];
 
   const instrumentos = finalOrgId
-    ? filterByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'organizacion_id', finalOrgId, false)
+    ? getRowsByFieldValuesSelective_(
+        GO_PES_V2.SHEETS.FACT_INSTRUMENTOS,
+        'organizacion_id',
+        [finalOrgId],
+        false
+      )
     : [];
 
   const requisitos = finalOrgId
-    ? filterByField_(GO_PES_V2.SHEETS.FACT_REQUISITOS, 'organizacion_id', finalOrgId, false)
+    ? getRowsByFieldValuesSelective_(
+        GO_PES_V2.SHEETS.FACT_REQUISITOS,
+        'organizacion_id',
+        [finalOrgId],
+        false
+      )
     : [];
 
   const socios = finalOrgId
-    ? filterByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'organizacion_id', finalOrgId, false)
+    ? getRowsByFieldValuesSelective_(
+        GO_PES_V2.SHEETS.FACT_SOCIOS,
+        'organizacion_id',
+        [finalOrgId],
+        false
+      )
     : [];
 
-  const acciones = getSheetData_(GO_PES_V2.SHEETS.LOG_ACCIONES)
-    .filter(r =>
-      String(r.entity_id || '') === String(finalSolicitudId) ||
-      String(r.entity_id || '') === String(finalOrgId || '')
-    )
-    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+  const acciones = getRowsByFieldValuesSelective_(
+    GO_PES_V2.SHEETS.LOG_ACCIONES,
+    'entity_id',
+    [finalSolicitudId, finalOrgId],
+    false,
+    { sortField: 'timestamp', sortDesc: true, limit: 25 }
+  );
 
   const lastAction = acciones[0] || {};
   const summary = Object.assign({}, caseRow || {}, orgRow || {}, {
@@ -206,11 +227,11 @@ function obtenerFicha(payload) {
     summary: summary,
     vecino: caseRow || {},
     organizacion: orgRow,
-    hitos: hitos.slice(0, 25),
+    hitos: hitos,
     instrumentos: instrumentos,
     requisitos: requisitos,
     socios: socios,
-    trazabilidad: acciones.slice(0, 25)
+    trazabilidad: acciones
   });
 
   goPesDiagEnd_(diag, {

@@ -394,13 +394,9 @@ function guardarSeguimiento(payload) {
   });
 
   maybeCallMaker_('recalcularFicha', { solicitud_id: payload.solicitud_id, organizacion_id: payload.organizacion_id || '' });
-  refreshDerivedArtifacts_({
-    master: true,
-    sugerencias: true
-  });
-  refreshDerivedArtifacts_({
-    master: true,
-    sugerencias: true
+  refreshPartialArtifacts_({
+    masterSolicitudIds: [payload.solicitud_id],
+    sugerenciaSolicitudIds: [payload.solicitud_id]
   });
   logProcessing_('INFO', 'guardarSeguimiento', 'seguimiento', hitoId, user.email, 'OK', payload);
   logUserAction_('CREATE_SEGUIMIENTO', 'seguimiento', hitoId, 'OK', payload);
@@ -510,6 +506,7 @@ function guardarInstrumento(payload) {
   validateInstrumentoV2_(payload);
   const now = new Date();
   const orgInstrumentoId = payload.org_instrumento_id || nextId_('instrumento', 'OIN');
+  const orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', payload.organizacion_id, false);
 
   appendRowObject_(GO_PES_V2.SHEETS.RAW_INSTRUMENTOS, {
     created_at: now,
@@ -578,17 +575,14 @@ function guardarInstrumento(payload) {
     updated_at: now
   });
 
-  refreshDerivedArtifacts_({
-    master: true,
-    vistaOrganizaciones: true,
-    vistaInstrumentos: true,
-    vistaTerritorial: true
-  });
-  refreshDerivedArtifacts_({
-    master: true,
-    vistaOrganizaciones: true,
-    vistaInstrumentos: true,
-    vistaTerritorial: true
+  refreshPartialArtifacts_({
+    masterSolicitudIds: [orgRow && orgRow.solicitud_id || ''],
+    vistaOrganizacionIds: [payload.organizacion_id],
+    vistaInstrumentoIds: [orgInstrumentoId],
+    vistaTerritorialPairs: [{
+      uv: orgRow && orgRow.uv || '',
+      sector: orgRow && orgRow.sector || ''
+    }]
   });
   logProcessing_('INFO', 'guardarInstrumento', 'instrumento', orgInstrumentoId, user.email, 'OK', payload);
   logUserAction_('UPSERT_INSTRUMENTO', 'instrumento', orgInstrumentoId, 'OK', payload);
@@ -600,6 +594,7 @@ function guardarRequisito(payload) {
   validateRequisitoV2_(payload);
   const now = new Date();
   const registroId = payload.requisito_registro_id || nextId_('requisito', 'REQ');
+  const orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', payload.organizacion_id, false);
 
   appendRowObject_(GO_PES_V2.SHEETS.RAW_REQUISITOS, {
     created_at: now,
@@ -642,11 +637,8 @@ function guardarRequisito(payload) {
     updated_at: now
   });
 
-  refreshDerivedArtifacts_({
-    master: true
-  });
-  refreshDerivedArtifacts_({
-    master: true
+  refreshPartialArtifacts_({
+    masterSolicitudIds: [orgRow && orgRow.solicitud_id || '']
   });
   logProcessing_('INFO', 'guardarRequisito', 'requisito', registroId, user.email, 'OK', payload);
   logUserAction_('UPSERT_REQUISITO', 'requisito', registroId, 'OK', payload);

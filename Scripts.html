@@ -1,0 +1,1929 @@
+<script>
+  function showAppLoading(message) {
+    const overlay = document.getElementById('app-loading');
+    const text = overlay ? overlay.querySelector('.app-loading__text') : null;
+    if (!overlay) return;
+
+    if (text && message) text.textContent = message;
+    overlay.classList.remove('is-hidden');
+    overlay.style.display = 'flex';
+  }
+
+  function hideAppLoading() {
+    const overlay = document.getElementById('app-loading');
+    if (!overlay) return;
+    overlay.classList.add('is-hidden');
+    overlay.style.display = 'none';
+  }
+
+  function showContentLoading(message) {
+    const overlay = document.getElementById('content-loading');
+    const text = overlay ? overlay.querySelector('.content-loading__text') : null;
+    if (!overlay) return;
+
+    if (text && message) text.textContent = message;
+    overlay.classList.remove('is-hidden');
+    overlay.style.display = 'flex';
+  }
+
+  function hideContentLoading() {
+    const overlay = document.getElementById('content-loading');
+    if (!overlay) return;
+    overlay.classList.add('is-hidden');
+    overlay.style.display = 'none';
+  }
+
+(() => {
+  const root = document.getElementById('app');
+  const BOOTSTRAP = root ? JSON.parse(root.dataset.bootstrap || '{}') : {};
+
+  const APP = {
+    state: {
+      bootstrap: BOOTSTRAP,
+      catalogs: {},
+      user: BOOTSTRAP.user || {},
+      permissions: BOOTSTRAP.permissions || {},
+      activeView: BOOTSTRAP.initialView || 'inicio',
+      currentFicha: null,
+      currentSearchResults: [],
+      currentAvance: null,
+      avanceCatalogos: null,
+      avanceOrganizaciones: [],
+      pendingSociosRows: [],
+      ingresoMatches: [],
+      renderedViews: {}
+    }
+  };
+
+  const FORM_SCHEMAS = {
+    organizacion: [
+      { name: 'organizacion_id', label: 'Organización', type: 'select', optionsKey: 'organizacionesList', required: true, span: 2 },
+      { name: 'solicitud_id', label: 'ID de solicitud', type: 'hidden' },
+      { name: 'imagen_logo_base64', label: 'Imagen organización', type: 'image_upload_top' },
+      { name: 'nombre_organizacion', label: 'Nombre organización', type: 'text', required: true, span: 2 },
+      { name: 'uv', label: 'UV', type: 'select', optionsKey: 'uvList' },
+      { name: 'direccion_referencia', label: 'Dirección', type: 'text', span: 2 },
+      { name: 'fecha_inicio_acompanamiento', label: 'Fecha inicio acompañamiento', type: 'date' },
+      { name: 'cantidad_socios_declarada', label: 'Cantidad de socios declarada', type: 'number' },
+      { name: 'estado_constitucion', label: 'Estado de constitución', type: 'select', optionsKey: 'estado_constitucion' },
+      { name: 'fecha_asamblea_constitucion', label: 'Fecha asamblea', type: 'date' },
+      { name: 'fecha_ratificacion', label: 'Fecha ratificación', type: 'date' },
+      { name: 'vigencia_directiva_hasta', label: 'Vigencia directiva hasta', type: 'date' },
+      { name: 'personalidad_juridica_flag', label: 'Personalidad jurídica', type: 'select', options: ['Sí', 'No'] },
+      { name: 'directiva_vigente_flag', label: 'Directiva vigente', type: 'select', options: ['Sí', 'No'] },
+      { name: 'organizacion_constituida_flag', label: 'Organización constituida', type: 'select', options: ['Sí', 'No'] },
+      { name: 'observacion_resumen', label: 'Observación resumen', type: 'textarea', span: 2 }
+    ],
+    instrumento: [
+      { name: 'organizacion_id', label: 'ID de organización', type: 'text', required: true },
+      { name: 'org_instrumento_id', label: 'ID de instrumento', type: 'text' },
+      { name: 'instrumento_codigo_catalogo', label: 'Instrumento', type: 'select', optionsKey: 'instrumentosCodigo', required: true },
+      { name: 'instrumento_nombre_otro', label: 'Nombre libre si es OTRO', type: 'text' },
+      { name: 'instrumento_tipo', label: 'Tipo de instrumento', type: 'select', optionsKey: 'instrumentosTipo', required: true },
+      { name: 'origen_instrumento', label: 'Origen', type: 'select', optionsKey: 'instrumentosOrigen', required: true },
+      { name: 'anio_convocatoria', label: 'Año convocatoria', type: 'number', required: true },
+      { name: 'nombre_convocatoria', label: 'Nombre convocatoria', type: 'text' },
+      { name: 'numero_llamado', label: 'Número llamado', type: 'text' },
+      { name: 'fecha_inicio_gestion', label: 'Fecha inicio gestión', type: 'date' },
+      { name: 'fecha_apertura', label: 'Fecha apertura', type: 'date' },
+      { name: 'fecha_cierre', label: 'Fecha cierre', type: 'date' },
+      { name: 'fecha_habilitacion', label: 'Fecha habilitación', type: 'date' },
+      { name: 'fecha_postulacion', label: 'Fecha postulación', type: 'date' },
+      { name: 'fecha_resultado', label: 'Fecha resultado', type: 'date' },
+      { name: 'fecha_cierre_instrumento', label: 'Fecha cierre instrumento', type: 'date' },
+      { name: 'estado_instrumento', label: 'Estado instrumento', type: 'select', optionsKey: 'estado_instrumento' },
+      { name: 'subestado_instrumento', label: 'Subestado', type: 'text' },
+      { name: 'avance_instrumento_pct', label: 'Avance %', type: 'number' },
+      { name: 'proximo_hito_instrumento', label: 'Próximo hito', type: 'textarea', span: 2 },
+      { name: 'resultado_instrumento', label: 'Resultado', type: 'select', optionsKey: 'resultado_instrumento' },
+      { name: 'monto_solicitado', label: 'Monto solicitado', type: 'number' },
+      { name: 'monto_adjudicado', label: 'Monto adjudicado', type: 'number' },
+      { name: 'monto_ejecutado', label: 'Monto ejecutado', type: 'number' },
+      { name: 'responsable_instrumento', label: 'Responsable', type: 'select', optionsKey: 'responsables' },
+      { name: 'contraparte', label: 'Contraparte', type: 'text' },
+      { name: 'observacion_instrumento', label: 'Observación', type: 'textarea', span: 2 },
+      { name: 'documento_respaldo_url', label: 'URL respaldo', type: 'text', span: 2 }
+    ],
+    requisito: [
+      { name: 'organizacion_id', label: 'ID de organización', type: 'text', required: true },
+      { name: 'org_instrumento_id', label: 'ID de instrumento', type: 'text', required: true },
+      { name: 'requisito_registro_id', label: 'ID requisito', type: 'text' },
+      { name: 'instrumento_codigo_catalogo', label: 'Instrumento', type: 'select', optionsKey: 'instrumentosCodigo', required: true },
+      { name: 'requisito_codigo', label: 'Requisito', type: 'select', optionsKey: 'requisitosDependientes', required: true },
+      { name: 'requisito_nombre_libre', label: 'Nombre libre si es otro', type: 'text' },
+      { name: 'categoria_requisito', label: 'Categoría', type: 'select', optionsKey: 'requisitoCategorias', required: true },
+      { name: 'estado_requisito', label: 'Estado', type: 'select', optionsKey: 'estado_requisito', required: true },
+      { name: 'fecha_solicitud', label: 'Fecha solicitud', type: 'date' },
+      { name: 'fecha_cumplimiento', label: 'Fecha cumplimiento', type: 'date' },
+      { name: 'fecha_vencimiento', label: 'Fecha vencimiento', type: 'date' },
+      { name: 'responsable_requisito', label: 'Responsable', type: 'select', optionsKey: 'responsables' },
+      { name: 'documento_respaldo_url', label: 'URL respaldo', type: 'text', span: 2 },
+      { name: 'observacion_requisito', label: 'Observación', type: 'textarea', span: 2 },
+      { name: 'vigente_flag', label: 'Vigente', type: 'select', options: ['Sí', 'No'] }
+    ]
+  };
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  function init() {
+    bindGlobalNav();
+    hydrateStaticUser();
+    hydrateLogo();
+    renderQuickActions();
+    renderHomeTiles();
+    toggleTopQuickActions_(APP.state.activeView);
+
+    showAppLoading('Iniciando Gestor Operativo');
+
+    api('getAppBootstrap').then(bootstrap => {
+      bootstrap = bootstrap || {};
+
+      APP.state.user = bootstrap.user || APP.state.user;
+      APP.state.permissions = bootstrap.permissions || APP.state.permissions;
+      APP.state.catalogs = normalizeCatalogs(bootstrap.catalogs || {});
+
+      hydrateStaticUser();
+      applyPermissions();
+      route(APP.state.activeView, BOOTSTRAP.query || {});
+
+      if ((BOOTSTRAP.query || {}).solicitud_id || (BOOTSTRAP.query || {}).organizacion_id) {
+        loadFicha(BOOTSTRAP.query);
+      }
+
+      setStatus('Listo.', null);
+    }).catch(err => {
+      console.error('Init fatal error:', err);
+      setStatus('Ocurrió un error al iniciar la aplicación.', false);
+    }).finally(() => {
+      setTimeout(() => {
+        hideAppLoading();
+        hideContentLoading();
+      }, 120);
+    });
+  }
+
+  function api(fn, payload) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(err => reject(err && err.message ? err.message : err))
+        [fn](payload);
+    });
+  }
+
+  function hydrateLogo() {
+    const img = document.getElementById('appLogo');
+    if (!img) return;
+
+    const logo =
+      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) ||
+      img.getAttribute('src') ||
+      '';
+
+    if (logo) {
+      img.src = logo;
+      img.style.display = 'block';
+    }
+  }
+
+  function normalizeCatalogs(c) {
+    return {
+      ...c,
+      estado_hito: (c.estadosPorTipo || {}).estado_hito || [],
+      estado_constitucion: (c.estadosPorTipo || {}).estado_constitucion || [],
+      estado_general_organizacion: (c.estadosPorTipo || {}).estado_general_organizacion || [],
+      estado_instrumento: (c.estadosPorTipo || {}).estado_instrumento || [],
+      resultado_instrumento: (c.estadosPorTipo || {}).resultado_instrumento || [],
+      estado_requisito: (c.estadosPorTipo || {}).estado_requisito || [],
+      estado_vecino: (c.estadosPorTipo || {}).estado_vecino || [],
+      instrumentosCodigo: (c.instrumentos || []).map(i => i.instrumento_codigo_catalogo),
+      instrumentosTipo: [...new Set((c.instrumentos || []).map(i => i.instrumento_tipo).filter(Boolean))],
+      instrumentosOrigen: [...new Set((c.instrumentos || []).map(i => i.origen_instrumento).filter(Boolean))],
+      requisitoCategorias: ['legal', 'administrativo', 'financiero', 'documental', 'tecnico', 'otro']
+    };
+  }
+
+  function hydrateStaticUser() {
+    const user = APP.state.user || {};
+    const userName = document.getElementById('user-name');
+    const userRole = document.getElementById('user-role');
+    const badgeUser = document.getElementById('ingreso-current-user');
+
+    if (userName) userName.textContent = user.nombre_visible || user.email || 'Usuario';
+    if (userRole) userRole.textContent = user.roleLabel || user.perfil || 'Sin perfil';
+    if (badgeUser) badgeUser.textContent = user.nombre_visible || user.email || 'Usuario activo';
+  }
+
+  function bindGlobalNav() {
+    document.querySelectorAll('[data-view]').forEach(btn =>
+      btn.addEventListener('click', () => route(btn.dataset.view))
+    );
+
+    const searchBtn = document.getElementById('search-btn');
+    const saveUserBtn = document.getElementById('save-user-btn');
+    const sociosValidateBtn = document.getElementById('socios-validate-btn');
+    const sociosSaveBtn = document.getElementById('socios-save-btn');
+
+    if (searchBtn) searchBtn.addEventListener('click', runSearch);
+    if (saveUserBtn) saveUserBtn.addEventListener('click', saveUserFromForm);
+    if (sociosValidateBtn) sociosValidateBtn.addEventListener('click', validateSociosInput);
+    if (sociosSaveBtn) sociosSaveBtn.addEventListener('click', saveSociosInput);
+  }
+
+  function renderQuickActions() {
+    const container = document.getElementById('quick-actions');
+    if (!container) return;
+
+    const items = [
+      ['person_add', 'Nuevo ingreso', 'Registrar un nuevo vecino o solicitud', 'nuevo-ingreso'],
+      ['search', 'Buscar ficha', 'Encontrar vecinos, solicitudes u organizaciones', 'buscar'],
+      ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'seguimiento'],
+      ['groups', 'Actualizar organización', 'Crear o actualizar datos de una organización', 'organizacion'],
+      ['handshake', 'Gestionar instrumentos', 'Beneficios, fondos e instrumentos', 'instrumento'],
+      ['inventory_2', 'Registrar requisitos', 'Control documental por instrumento', 'requisito'],
+      ['badge', 'Cargar socios', 'Carga manual o masiva', 'socios']
+    ];
+
+    container.innerHTML = items.map(item => `
+      <button class="quick-card" data-view="${item[3]}">
+        <span class="material-symbols-outlined">${item[0]}</span>
+        <h3>${item[1]}</h3>
+        <p>${item[2]}</p>
+      </button>
+    `).join('');
+
+    container.querySelectorAll('.quick-card').forEach(btn =>
+      btn.addEventListener('click', () => route(btn.dataset.view))
+    );
+  }
+
+  function renderHomeTiles() {
+    const container = document.getElementById('home-tiles');
+    if (!container) return;
+
+    const tiles = [
+      ['Nuevo ingreso', 'Registrar la solicitud inicial del vecino.', 'person_add', 'nuevo-ingreso'],
+      ['Avance', 'Registrar hitos del proceso de constitución.', 'event_note', 'seguimiento'],
+      ['Organización', 'Actualizar la información estructural de la organización.', 'groups', 'organizacion'],
+      ['Instrumentos', 'Gestionar beneficios, fondos y otros apoyos.', 'handshake', 'instrumento'],
+      ['Requisitos', 'Registrar o validar documentación.', 'inventory_2', 'requisito'],
+      ['Socios', 'Subir carga manual o masiva.', 'badge', 'socios']
+    ];
+
+    container.innerHTML = tiles.map(([title, text, icon, view]) => `
+      <button class="tile" data-view="${view}">
+        <span class="material-symbols-outlined">${icon}</span>
+        <h3>${title}</h3>
+        <p>${text}</p>
+      </button>
+    `).join('');
+
+    container.querySelectorAll('.tile').forEach(btn =>
+      btn.addEventListener('click', () => route(btn.dataset.view))
+    );
+  }
+
+  function ensureViewRendered_(view) {
+    if (APP.state.renderedViews[view]) return;
+
+    switch (view) {
+      case 'nuevo-ingreso':
+        renderIngresoForm();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'seguimiento':
+        renderAvanceView_();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'organizacion':
+        buildForm('form-organizacion', FORM_SCHEMAS.organizacion, saveOrganizacionFromForm);
+        arrangeOrganizacionFormLayout_();
+        initOrganizacionForm_();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'instrumento':
+        buildForm('form-instrumento', FORM_SCHEMAS.instrumento, saveInstrumentoFromForm);
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'requisito':
+        buildForm('form-requisito', FORM_SCHEMAS.requisito, saveRequisitoFromForm);
+        APP.state.renderedViews[view] = true;
+        break;
+      default:
+        break;
+    }
+  }
+
+  function arrangeOrganizacionFormLayout_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form || form.dataset.layoutReady === 'true') return;
+
+    form.dataset.layoutReady = 'true';
+    form.classList.add('form-grid--organizacion');
+
+    const orgSelectField = form.querySelector('[name="organizacion_id"]')?.closest('.field');
+    const imageField = form.querySelector('[data-image-field="imagen_logo_base64"]')?.closest('.field');
+
+    if (orgSelectField) orgSelectField.classList.add('field--org-selector');
+    if (imageField) imageField.classList.add('field--org-image');
+  }
+
+  function renderIngresoForm() {
+    const form = document.getElementById('form-ingreso');
+    if (!form || form.dataset.initialized === 'true') return;
+
+    form.dataset.initialized = 'true';
+    form.addEventListener('submit', saveIngresoFromForm);
+
+    fillSelect(document.getElementById('ing-uv'), APP.state.catalogs.uvList || [], 'Seleccionar UV');
+    fillSelect(document.getElementById('ing-sector'), [], 'Seleccionar sector');
+    fillSelect(document.getElementById('ing-tipo_vivienda'), APP.state.catalogs.tipoVivienda || [], 'Seleccionar tipo de vivienda');
+    fillSelect(document.getElementById('ing-medio_solicitud'), APP.state.catalogs.medioSolicitud || [], 'Seleccionar medio');
+    fillSelect(document.getElementById('ing-unidad_origen'), APP.state.catalogs.unidadOrigen || [], 'Seleccionar unidad');
+
+    const fechaInput = document.getElementById('ing-fecha_solicitud');
+    if (fechaInput && !fechaInput.value) fechaInput.value = todayISO_();
+
+    const uvSelect = document.getElementById('ing-uv');
+    const reviewBtn = document.getElementById('ingreso-review-btn');
+    const clearBtn = document.getElementById('ingreso-clear-btn');
+
+    if (uvSelect) uvSelect.addEventListener('change', syncIngresoSectorOptions);
+    if (reviewBtn) reviewBtn.addEventListener('click', reviewIngresoMatches);
+    if (clearBtn) clearBtn.addEventListener('click', clearIngresoForm);
+
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+      el.addEventListener('input', renderIngresoPreview);
+      el.addEventListener('change', renderIngresoPreview);
+      el.addEventListener('blur', () => validateIngresoField(el));
+    });
+
+    syncIngresoSectorOptions();
+    renderIngresoPreview();
+  }
+
+  function buildForm(formId, schema, submitHandler) {
+    const form = document.getElementById(formId);
+    if (!form || form.dataset.initialized === 'true') return;
+
+    form.dataset.initialized = 'true';
+    form.innerHTML = schema.map(f => fieldTemplate(f)).join('') + `
+      <div class="field" data-span="2">
+        <div class="actions">
+          <button type="submit" class="primary-btn">
+            <span class="material-symbols-outlined">save</span>Guardar
+          </button>
+        </div>
+      </div>
+    `;
+
+    form.addEventListener('submit', submitHandler);
+    populateSelectsInForm_(form);
+
+    form.querySelectorAll('select[data-options-key="sectorByUv"]').forEach(select => syncSectorOptions(select));
+    form.querySelectorAll('select[data-options-key="requisitosDependientes"]').forEach(select => syncRequisitoOptions(select));
+
+    form.querySelectorAll('select[name="uv"]').forEach(select =>
+      select.addEventListener('change', () => {
+        const sectorSelect = form.querySelector('select[name="sector"]');
+        if (sectorSelect) syncSectorOptions(sectorSelect, select.value);
+      })
+    );
+
+    form.querySelectorAll('select[name="instrumento_codigo_catalogo"]').forEach(select =>
+      select.addEventListener('change', () => {
+        const reqSelect = form.querySelector('select[name="requisito_codigo"]');
+        if (reqSelect) syncRequisitoOptions(reqSelect, select.value);
+      })
+    );
+  }
+
+  function populateSelectsInForm_(form) {
+    form.querySelectorAll('select').forEach(select => {
+      const key = select.dataset.optionsKey;
+      if (key === 'sectorByUv' || key === 'requisitosDependientes') return;
+
+      let options = [];
+      if (key && APP.state.catalogs[key]) {
+        options = APP.state.catalogs[key];
+      } else {
+        const schemaField = [...Object.values(FORM_SCHEMAS).flat()].find(f => f.name === select.name);
+        if (schemaField && schemaField.options) options = schemaField.options;
+      }
+
+      fillSelect(select, options);
+    });
+  }
+
+  function fieldTemplate(field) {
+    const spanAttr = field.span === 2 ? ' data-span="2"' : '';
+    const requiredAttr = field.required ? ' required' : '';
+
+    if (field.type === 'hidden') {
+      return `<input name="${field.name}" type="hidden">`;
+    }
+
+    if (field.type === 'image_upload_top') {
+      return `
+        <div class="field field--image-top"${spanAttr}>
+          <label>${field.label}</label>
+          <div class="image-upload image-upload--top" data-image-field="${field.name}">
+            <input type="hidden" name="${field.name}" value="">
+            <input type="file" class="image-upload__file" accept="image/*" hidden>
+            <div class="image-upload__preview image-upload__preview--top empty-state">Sin imagen</div>
+            <div class="image-upload__actions image-upload__actions--stack">
+              <button type="button" class="secondary-btn" data-org-image-action="upload">
+                <span class="material-symbols-outlined">upload</span>Subir imagen
+              </button>
+              <button type="button" class="secondary-btn" data-org-image-action="remove">
+                <span class="material-symbols-outlined">delete</span>Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (field.type === 'textarea') {
+      return `<div class="field"${spanAttr}><label>${field.label}</label><textarea name="${field.name}"${requiredAttr}></textarea></div>`;
+    }
+
+    if (field.type === 'select') {
+      return `<div class="field"${spanAttr}><label>${field.label}</label><select name="${field.name}" data-options-key="${field.optionsKey || ''}"${requiredAttr}></select></div>`;
+    }
+
+    return `<div class="field"${spanAttr}><label>${field.label}</label><input name="${field.name}" type="${field.type || 'text'}"${requiredAttr}></div>`;
+  }
+
+  function fillSelect(select, options, placeholder = 'Seleccionar') {
+    if (!select) return;
+
+    select.innerHTML = `<option value="">${placeholder}</option>` + (options || []).map(opt => {
+      const value = typeof opt === 'string'
+        ? opt
+        : (opt.value || opt.codigo || opt.requisito_codigo || opt.instrumento_codigo_catalogo || '');
+      const label = typeof opt === 'string'
+        ? opt
+        : (opt.label || opt.descripcion || opt.nombre || opt.requisito_nombre || opt.instrumento_nombre || opt.requisito_codigo || value);
+
+      return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+    }).join('');
+  }
+
+  function syncSectorOptions(select, uvValue) {
+    const uv = uvValue || select.form.querySelector('select[name="uv"]')?.value || '';
+    const map = APP.state.catalogs.sectorByUv || {};
+    const options = uv ? (map[uv] || []) : [];
+    fillSelect(select, [...new Set(options)].sort(), uv ? 'Seleccionar sector' : 'Selecciona UV primero');
+  }
+
+  function syncIngresoSectorOptions() {
+    const uvSelect = document.getElementById('ing-uv');
+    const uv = uvSelect ? uvSelect.value : '';
+    const sectors = uv ? (APP.state.catalogs.sectorByUv?.[uv] || []) : [];
+    fillSelect(document.getElementById('ing-sector'), sectors, uv ? 'Seleccionar sector' : 'Selecciona UV primero');
+  }
+
+  function syncRequisitoOptions(select, instrumentoValue) {
+    const instrumento = instrumentoValue || select.form.querySelector('select[name="instrumento_codigo_catalogo"]')?.value || '';
+    const list = instrumento ? (APP.state.catalogs.requisitosPorInstrumento?.[instrumento] || []) : [];
+    fillSelect(
+      select,
+      list.map(x => ({
+        value: x.requisito_codigo,
+        label: `${x.requisito_nombre} (${x.requisito_codigo})`
+      })),
+      instrumento ? 'Seleccionar requisito' : 'Selecciona instrumento primero'
+    );
+  }
+
+  function applyPermissions() {
+    document.querySelectorAll('.is-admin').forEach(el => {
+      if (APP.state.permissions.canManageUsers) el.classList.add('show-admin');
+    });
+
+    const usersView = document.getElementById('view-usuarios');
+    if (usersView && !APP.state.permissions.canManageUsers) {
+      usersView.innerHTML = '<div class="empty-state">No tienes permisos para administrar usuarios.</div>';
+    }
+
+    fillSelect(document.getElementById('user-role-input'), ['operador', 'coordinador', 'administrador', 'superuser']);
+  }
+
+  function toggleTopQuickActions_(view) {
+    const quick = document.getElementById('quick-actions');
+    if (!quick) return;
+    quick.style.display = view === 'inicio' ? 'grid' : 'none';
+  }
+
+  function route(view, params = {}) {
+    APP.state.activeView = view;
+
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(`view-${view}`)?.classList.add('active');
+
+    document.querySelectorAll('.nav-btn').forEach(btn =>
+      btn.classList.toggle('is-active', btn.dataset.view === view)
+    );
+
+    toggleTopQuickActions_(view);
+    hideContentLoading();
+    ensureViewRendered_(view);
+
+    if (view === 'ficha' && APP.state.currentFicha && APP.state.currentFicha.summary) {
+      renderFicha(APP.state.currentFicha);
+    }
+
+    if (view === 'seguimiento') {
+      refreshAvanceViewOnRoute_();
+    }
+
+    if (view === 'historial') loadHistorial();
+    if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
+    if (view === 'nuevo-ingreso') {
+      renderNuevoIngresoView_();
+    }
+
+    setStatus(`Vista actual: ${friendlyViewName_(view)}`);
+  }
+
+  function runSearch() {
+    const query = document.getElementById('search-query')?.value.trim() || '';
+    const tbody = document.getElementById('search-results');
+
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted">Buscando...</td></tr>';
+    }
+
+    api('buscarVecino', query).then(rows => {
+      APP.state.currentSearchResults = Array.isArray(rows) ? rows : [];
+
+      setStatus(`Resultados búsqueda: ${APP.state.currentSearchResults.length}`, true);
+
+      if (!tbody) return;
+
+      if (!APP.state.currentSearchResults.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="muted">No se encontraron resultados.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = APP.state.currentSearchResults.map(r => `
+        <tr>
+          <td>${escapeHtml(r.solicitud_id || '')}</td>
+          <td>${escapeHtml(r.nombre_completo || '')}</td>
+          <td>${escapeHtml(r.direccion_original || '')}</td>
+          <td><span class="badge">${escapeHtml(r.estado_actual || '')}</span></td>
+          <td>${escapeHtml(r.nombre_organizacion || '')}</td>
+          <td>
+            <button class="secondary-btn js-open-ficha"
+              data-solicitud="${escapeHtml(r.solicitud_id || '')}"
+              data-organizacion="${escapeHtml(r.organizacion_id || '')}">
+              <span class="material-symbols-outlined">open_in_new</span>Ver ficha
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.js-open-ficha').forEach(btn =>
+        btn.addEventListener('click', () => loadFicha({
+          solicitud_id: btn.dataset.solicitud,
+          organizacion_id: btn.dataset.organizacion
+        }))
+      );
+    }).catch(err => {
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="6" class="muted">Error al buscar.</td></tr>';
+      }
+      showError(err);
+    });
+  }
+
+  function loadFicha(params) {
+    APP.state.currentFicha = null;
+
+    const container = document.getElementById('ficha-container');
+    if (container) {
+      container.innerHTML = '<div class="empty-state">Cargando ficha...</div>';
+    }
+
+    route('ficha');
+    showContentLoading('Cargando ficha...');
+
+    api('obtenerFicha', params).then(data => {
+      if (!data || !data.summary) {
+        throw new Error('La ficha no devolvió datos válidos.');
+      }
+
+      APP.state.currentFicha = data;
+      renderFicha(data);
+      setStatus('Ficha cargada correctamente.', true);
+    }).catch(err => {
+      if (container) {
+        container.innerHTML = '<div class="empty-state">No fue posible cargar la ficha.</div>';
+      }
+      showError(err);
+    }).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function renderFicha(data) {
+    const container = document.getElementById('ficha-container');
+    if (!container) return;
+
+    if (!data || !data.summary) {
+      container.innerHTML = '<div class="empty-state">No hay información disponible.</div>';
+      return;
+    }
+
+    const s = data.summary || {};
+    const o = data.organizacion || {};
+    const trazabilidad = data.trazabilidad || [];
+    const instrumentos = data.instrumentos || [];
+    const requisitos = data.requisitos || [];
+    const socios = data.socios || [];
+    const lastAction = trazabilidad[0] || {};
+
+    const hasOrg =
+      !!String(s.organizacion_id || '').trim() ||
+      !!String(o.organizacion_id || '').trim() ||
+      !!String(s.nombre_organizacion || '').trim();
+
+    const vecinoBlock = fichaBlock('person', 'Vecino / solicitud', [
+      ['Solicitud', s.solicitud_id],
+      ['Vecino', s.nombre_completo],
+      ['Teléfono', s.telefono_contacto],
+      ['Correo', s.correo_contacto],
+      ['Dirección', s.direccion_original],
+      ['UV', s.uv],
+      ['Sector', s.sector],
+      ['Fecha ingreso', s.fecha_ingreso],
+      ['Medio', s.medio_solicitud],
+      ['Unidad origen', s.unidad_origen],
+      ['Estado actual', s.estado_actual]
+    ]);
+
+    const seguimientoBlock = fichaBlock('event_note', 'Seguimiento', [
+      ['Última gestión', s.ultima_actualizacion || s.fecha_ingreso],
+      ['Etapa actual', s.etapa_actual],
+      ['Próximo hito', s.proximo_hito],
+      ['Responsable actual', s.responsable_actual],
+      ['Observación', data.vecino?.observacion_resumen || '']
+    ]);
+
+    const trazabilidadBlock = trazabilidad.length
+      ? fichaBlock('history', 'Trazabilidad', [
+          ['Último usuario', s.ultimo_usuario || lastAction.email || ''],
+          ['Última actualización', s.ultima_actualizacion || lastAction.timestamp || ''],
+          ['Última acción', lastAction.action || '']
+        ])
+      : '';
+
+    const organizacionBlock = hasOrg
+      ? fichaBlock('groups', 'Organización', [
+          ['ID organización', s.organizacion_id],
+          ['Nombre', s.nombre_organizacion],
+          ['Estado constitución', s.estado_constitucion],
+          ['Estado general', s.estado_general_organizacion],
+          ['Vigencia directiva', o.vigencia_directiva_hasta],
+          ['Constituida', o.organizacion_constituida_flag]
+        ])
+      : '';
+
+    const instrumentosBlock = hasOrg && instrumentos.length
+      ? fichaBlock('handshake', 'Instrumentos', [
+          ['Cantidad', instrumentos.length],
+          ['Último instrumento', instrumentos[0]?.instrumento_codigo_catalogo || ''],
+          ['Último estado', instrumentos[0]?.estado_instrumento || ''],
+          ['Resultado', instrumentos[0]?.resultado_instrumento || '']
+        ])
+      : '';
+
+    const requisitosBlock = hasOrg && requisitos.length
+      ? fichaBlock('inventory_2', 'Requisitos', [
+          ['Cantidad', requisitos.length],
+          ['Pendientes', requisitos.filter(r => r.estado_requisito === 'Pendiente').length],
+          ['Validados', requisitos.filter(r => r.estado_requisito === 'Validado').length],
+          ['Observaciones', requisitos[0]?.observacion_requisito || '']
+        ])
+      : '';
+
+    const sociosBlock = hasOrg && socios.length
+      ? fichaBlock('badge', 'Socios', [
+          ['Cantidad cargada', socios.length],
+          ['Último socio', socios[0]?.nombre_socio || '']
+        ])
+      : '';
+
+    const universoVecino = `
+      <section class="ficha-universe">
+        <div class="ficha-universe__head">
+          <p class="eyebrow">Universo 1</p>
+          <h3>Vecino y solicitud</h3>
+        </div>
+        <div class="ficha-grid ficha-grid--main">
+          ${vecinoBlock}
+          ${seguimientoBlock}
+          ${trazabilidadBlock}
+        </div>
+      </section>
+    `;
+
+    const universoOrganizacion = hasOrg
+      ? `
+        <section class="ficha-universe">
+          <div class="ficha-universe__head">
+            <p class="eyebrow">Universo 2</p>
+            <h3>Organización asociada</h3>
+          </div>
+          <div class="ficha-grid ficha-grid--org">
+            ${organizacionBlock}
+            ${sociosBlock}
+            ${instrumentosBlock}
+            ${requisitosBlock}
+          </div>
+        </section>
+      `
+      : '';
+
+    container.innerHTML = `
+      <div class="ficha-layout-v2">
+        ${universoVecino}
+        ${universoOrganizacion}
+      </div>
+    `;
+  }
+
+  function fichaBlock(icon, title, items) {
+    const cleanItems = (items || []).filter(([_, v]) => String(v || '').trim() !== '');
+    if (!cleanItems.length) return '';
+
+    return `
+      <div class="ficha-block">
+        <h3>
+          <span class="material-symbols-outlined">${icon}</span>
+          ${title}
+        </h3>
+        ${cleanItems.map(([k, v]) => `
+          <div class="kv">
+            <strong>${escapeHtml(k)}</strong>
+            <span>${escapeHtml(v || '')}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function serializeForm(form) {
+    const fd = new FormData(form);
+    const out = {};
+    fd.forEach((v, k) => out[k] = v);
+    return out;
+  }
+
+  function getIngresoPayload() {
+    return serializeForm(document.getElementById('form-ingreso'));
+  }
+
+  function renderIngresoPreview() {
+    const payload = getIngresoPayload();
+    const preview = document.getElementById('ingreso-preview');
+    if (!preview) return;
+
+    const summary = [
+      {
+        title: 'Vecino',
+        items: [
+          ['Nombre', buildFullName(payload.nombre_vecino, payload.apellido_vecino)],
+          ['RUT', payload.rut_vecino],
+          ['Teléfono', payload.telefono_contacto],
+          ['Correo', payload.correo_contacto]
+        ]
+      },
+      {
+        title: 'Ubicación',
+        items: [
+          ['Dirección', payload.direccion_original],
+          ['UV', payload.uv],
+          ['Sector', payload.sector],
+          ['Tipo vivienda', payload.tipo_vivienda]
+        ]
+      },
+      {
+        title: 'Solicitud',
+        items: [
+          ['Fecha', payload.fecha_solicitud],
+          ['Medio', payload.medio_solicitud],
+          ['Unidad origen', payload.unidad_origen],
+          ['Requerimiento', payload.requerimiento_inicial]
+        ]
+      }
+    ];
+
+    const hasContent = Object.values(payload).some(v => String(v || '').trim());
+
+    preview.innerHTML = hasContent
+      ? summary.map(block => `
+        <div class="preview-block">
+          <div class="preview-block__title">${escapeHtml(block.title)}</div>
+          <div class="preview-grid">
+            ${block.items.map(([k, v]) => `<div class="preview-item"><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v || 'Sin dato')}</span></div>`).join('')}
+          </div>
+        </div>
+      `).join('')
+      : 'Completa los datos para revisar el resumen antes de guardar.';
+  }
+
+  function validateIngresoField(el) {
+    if (!el) return true;
+
+    el.setCustomValidity('');
+    const value = String(el.value || '').trim();
+
+    if (el.required && !value) el.setCustomValidity('Este campo es obligatorio.');
+    if (el.name === 'correo_contacto' && value && !/^\S+@\S+\.\S+$/.test(value)) {
+      el.setCustomValidity('Ingresa un correo válido.');
+    }
+    if (el.name === 'telefono_contacto' && value && value.replace(/\D/g, '').length < 8) {
+      el.setCustomValidity('Ingresa un teléfono válido.');
+    }
+    if (el.name === 'rut_vecino' && value && !/^[0-9.]+-[0-9kK]$/.test(value)) {
+      el.setCustomValidity('Usa formato 12.345.678-9 o 12345678-9.');
+    }
+
+    el.reportValidity();
+    return !el.validationMessage;
+  }
+
+  function validateIngresoForm() {
+    const form = document.getElementById('form-ingreso');
+    let ok = true;
+
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+      if (!validateIngresoField(el)) ok = false;
+    });
+
+    return ok;
+  }
+
+  function saveIngresoFromForm(ev) {
+    ev.preventDefault();
+
+    if (!validateIngresoForm()) {
+      return showError('Revisa los campos obligatorios antes de guardar.');
+    }
+
+    const payload = getIngresoPayload();
+
+    payload.nombre_vecino = String(payload.nombre_vecino || '').trim();
+    payload.apellido_vecino = String(payload.apellido_vecino || '').trim();
+    payload.rut_vecino = String(payload.rut_vecino || '').trim();
+    payload.telefono_contacto = String(payload.telefono_contacto || '').trim();
+    payload.correo_contacto = String(payload.correo_contacto || '').trim();
+    payload.direccion_original = String(payload.direccion_original || '').trim();
+    payload.uv = String(payload.uv || '').trim();
+    payload.sector = String(payload.sector || '').trim();
+    payload.tipo_vivienda = String(payload.tipo_vivienda || '').trim();
+    payload.fecha_solicitud = String(payload.fecha_solicitud || '').trim();
+    payload.medio_solicitud = String(payload.medio_solicitud || '').trim();
+    payload.unidad_origen = String(payload.unidad_origen || '').trim();
+    payload.requerimiento_inicial = String(payload.requerimiento_inicial || '').trim();
+    payload.observaciones_form = String(payload.observaciones_form || '').trim();
+
+    const btn = ev.submitter || document.querySelector('#form-ingreso button[type="submit"], #form-ingreso .primary-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.dataset.originalText = btn.innerHTML;
+      btn.innerHTML = '<span class="material-symbols-outlined">progress_activity</span>Guardando...';
+    }
+
+    const proceed = () => {
+      api('guardarIngreso', payload).then(res => {
+        showSuccess(`Solicitud guardada: ${res.solicitud_id}`);
+        clearIngresoForm(false);
+        loadFicha({ solicitud_id: res.solicitud_id, organizacion_id: '' });
+      }).catch(showError).finally(() => {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = btn.dataset.originalText || 'Guardar solicitud';
+        }
+      });
+    };
+
+    if (APP.state.ingresoMatches && APP.state.ingresoMatches.length) {
+      const ok = window.confirm('Se detectaron coincidencias posibles. ¿Deseas guardar igualmente la nueva solicitud?');
+      if (!ok) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = btn.dataset.originalText || 'Guardar solicitud';
+        }
+        return;
+      }
+    }
+
+    proceed();
+  }
+
+  function clearIngresoForm(showMessage = true) {
+    const form = document.getElementById('form-ingreso');
+    if (!form) return;
+
+    form.reset();
+
+    const fecha = document.getElementById('ing-fecha_solicitud');
+    if (fecha) fecha.value = todayISO_();
+
+    syncIngresoSectorOptions();
+    renderIngresoPreview();
+
+    const matches = document.getElementById('ingreso-matches');
+    if (matches) {
+      matches.innerHTML = 'Puedes revisar coincidencias por nombre, teléfono o dirección antes de crear la solicitud.';
+      matches.className = 'ingreso-matches empty-state';
+    }
+
+    if (showMessage) showSuccess('Formulario limpio.');
+  }
+
+  function reviewIngresoMatches() {
+    const payload = getIngresoPayload();
+    const queries = [
+      payload.telefono_contacto,
+      payload.direccion_original,
+      buildFullName(payload.nombre_vecino, payload.apellido_vecino)
+    ].map(v => String(v || '').trim()).filter(Boolean);
+
+    if (!queries.length) {
+      showError('Completa al menos nombre, teléfono o dirección para revisar coincidencias.');
+      return;
+    }
+
+    api('buscarCoincidenciasIngreso', payload).then(rows => {
+      const matches = Array.isArray(rows) ? rows.slice(0, 10) : [];
+
+      APP.state.ingresoMatches = matches;
+      renderIngresoMatches(matches);
+
+      if (matches.length) {
+        showError('Se detectaron coincidencias posibles. Revisa antes de guardar.');
+      } else {
+        showSuccess('No se detectaron coincidencias evidentes. Puedes continuar.');
+      }
+    }).catch(showError);
+  }
+
+  function renderIngresoMatches(rows) {
+    const el = document.getElementById('ingreso-matches');
+    if (!el) return;
+
+    if (!rows || !rows.length) {
+      el.className = 'ingreso-matches empty-state';
+      el.innerHTML = '<div class="empty-state">No se detectaron coincidencias con nombre, teléfono o dirección.</div>';
+      return;
+    }
+
+    el.className = 'ingreso-matches';
+    el.innerHTML = `<div class="matches-list">${rows.map(r => `
+      <div class="match-card">
+        <h4>${escapeHtml(r.nombre_completo || 'Vecino registrado')}</h4>
+        <p><strong>Solicitud:</strong> ${escapeHtml(r.solicitud_id || '')}</p>
+        <p><strong>Teléfono:</strong> ${escapeHtml(r.telefono_contacto || '')}</p>
+        <p><strong>Dirección:</strong> ${escapeHtml(r.direccion_original || '')}</p>
+        <p><strong>Estado actual:</strong> ${escapeHtml(r.estado_actual || '')}</p>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function saveSeguimientoFromForm(ev) {
+    ev.preventDefault();
+    showError('El módulo Seguimiento fue reemplazado por Avance.');
+  }
+
+  function saveOrganizacionFromForm(ev) {
+    ev.preventDefault();
+    const payload = serializeForm(ev.target);
+    api('guardarOrganizacion', payload).then(res => {
+      showSuccess(`Organización guardada: ${res.organizacion_id}`);
+      if (payload.solicitud_id) loadFicha({ solicitud_id: payload.solicitud_id, organizacion_id: res.organizacion_id });
+    }).catch(showError);
+  }
+
+  function saveInstrumentoFromForm(ev) {
+    ev.preventDefault();
+    const payload = serializeForm(ev.target);
+    api('guardarInstrumento', payload).then(res => showSuccess(`Instrumento guardado: ${res.org_instrumento_id}`)).catch(showError);
+  }
+
+  function saveRequisitoFromForm(ev) {
+    ev.preventDefault();
+    const payload = serializeForm(ev.target);
+    api('guardarRequisito', payload).then(res => showSuccess(`Requisito guardado: ${res.requisito_registro_id}`)).catch(showError);
+  }
+
+  function parseSociosBulk(text, organizacionId, nombreComite) {
+    const lines = text.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+    return lines.map(line => {
+      const parts = line.includes('\t') ? line.split('\t') : line.split(',');
+      return {
+        organizacion_id: organizacionId,
+        run_socio: parts[0] || '',
+        numero_registro: parts[1] || '',
+        nombre_socio: parts[2] || '',
+        edad: parts[3] || '',
+        cargo: parts[4] || '',
+        direccion_socio: parts[5] || '',
+        ubicacion_socio: parts[6] || '',
+        nombre_comite_origen: nombreComite || ''
+      };
+    });
+  }
+
+  function validateSociosInput() {
+    const organizacionId = document.getElementById('socios-organizacion-id')?.value.trim() || '';
+    const nombreComite = document.getElementById('socios-comite-origen')?.value.trim() || '';
+    const text = document.getElementById('socios-bulk')?.value || '';
+    const rows = parseSociosBulk(text, organizacionId, nombreComite);
+
+    if (!rows.length) {
+      showError('No hay filas para validar.');
+      return;
+    }
+
+    const html = `<div class="panel"><h3>Vista previa</h3><p class="muted">Filas detectadas: ${rows.length}</p><div class="table-wrap"><table class="data-table"><thead><tr><th>RUN</th><th>Registro</th><th>Nombre</th><th>Cargo</th></tr></thead><tbody>${rows.slice(0, 20).map(r => `<tr><td>${escapeHtml(r.run_socio)}</td><td>${escapeHtml(r.numero_registro)}</td><td>${escapeHtml(r.nombre_socio)}</td><td>${escapeHtml(r.cargo)}</td></tr>`).join('')}</tbody></table></div></div>`;
+    document.getElementById('socios-preview').innerHTML = html;
+    APP.state.pendingSociosRows = rows;
+    showSuccess('Carga validada visualmente. Revisa la vista previa y luego guarda.');
+  }
+
+  function saveSociosInput() {
+    const rows = APP.state.pendingSociosRows || [];
+    if (!rows.length) {
+      showError('Primero valida la carga.');
+      return;
+    }
+
+    api('importarSocios', { rows }).then(res => {
+      showSuccess(`Socios importados: ${res.imported} de ${res.total}`);
+      if (res.errors && res.errors.length) {
+        document.getElementById('socios-preview').insertAdjacentHTML('beforeend', `<div class="message error">Errores: ${escapeHtml(JSON.stringify(res.errors))}</div>`);
+      }
+    }).catch(showError);
+  }
+
+  function loadHistorial() {
+    api('listarHistorial', {}).then(rows => {
+      const tbody = document.getElementById('history-results');
+      if (!tbody) return;
+
+      if (!rows || !rows.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="muted">No hay acciones registradas.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.timestamp || '')}</td>
+          <td>${escapeHtml(r.email || '')}</td>
+          <td>${escapeHtml(r.action || '')}</td>
+          <td>${escapeHtml(r.entity_type || '')}</td>
+          <td>${escapeHtml(r.entity_id || '')}</td>
+          <td>${escapeHtml(r.result || '')}</td>
+        </tr>
+      `).join('');
+    }).catch(showError);
+  }
+
+  function loadUsers() {
+    if (!APP.state.permissions.canManageUsers) return;
+
+    api('listUsers').then(rows => {
+      const tbody = document.getElementById('users-results');
+      if (!tbody) return;
+
+      tbody.innerHTML = rows.map(r => `
+        <tr>
+          <td>${escapeHtml(r.email)}</td>
+          <td>${escapeHtml(r.nombre_visible)}</td>
+          <td>${escapeHtml(r.perfil)}</td>
+          <td>${r.activo_flag ? 'Sí' : 'No'}</td>
+          <td>${r.superuser_flag ? 'Sí' : 'No'}</td>
+          <td>${escapeHtml(r.fecha_ultima_actividad || '')}</td>
+          <td><button class="secondary-btn js-edit-user" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(r.perfil)}" data-active="${r.activo_flag}" data-super="${r.superuser_flag}">Editar</button></td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.js-edit-user').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('user-email').value = btn.dataset.email;
+          document.getElementById('user-name-input').value = btn.dataset.name;
+          document.getElementById('user-role-input').value = btn.dataset.role;
+          document.getElementById('user-active-input').value = btn.dataset.active;
+          document.getElementById('user-super-input').value = btn.dataset.super;
+        });
+      });
+    }).catch(showError);
+  }
+
+  function saveUserFromForm() {
+    const payload = {
+      email: document.getElementById('user-email')?.value.trim() || '',
+      nombre_visible: document.getElementById('user-name-input')?.value.trim() || '',
+      perfil: document.getElementById('user-role-input')?.value || '',
+      activo_flag: document.getElementById('user-active-input')?.value === 'true',
+      superuser_flag: document.getElementById('user-super-input')?.value === 'true'
+    };
+
+    api('updateUser', payload).then(() => {
+      showSuccess('Usuario actualizado.');
+      loadUsers();
+    }).catch(showError);
+  }
+
+  function showSuccess(message) {
+    setStatus(message, true);
+  }
+
+  function showError(error) {
+    setStatus(typeof error === 'string' ? error : 'Ocurrió un error.', false);
+  }
+
+  function setStatus(message, ok) {
+    const el = document.getElementById('status-message');
+    if (!el) return;
+    el.textContent = message;
+    el.style.color = ok === false ? '#A12A2A' : ok === true ? '#0C6844' : '';
+  }
+
+  function friendlyViewName_(view) {
+    const map = {
+      inicio: 'inicio',
+      buscar: 'buscar ficha',
+      ficha: 'ficha',
+      'nuevo-ingreso': 'nuevo ingreso',
+      seguimiento: 'avance',
+      organizacion: 'organización',
+      instrumento: 'instrumentos',
+      requisito: 'requisitos',
+      socios: 'socios',
+      historial: 'historial',
+      usuarios: 'usuarios'
+    };
+    return map[view] || view;
+  }
+
+  function buildFullName(name, last) {
+    return [name, last].map(v => String(v || '').trim()).filter(Boolean).join(' ');
+  }
+
+  function todayISO_() {
+    const d = new Date();
+    const m = `${d.getMonth() + 1}`.padStart(2, '0');
+    const day = `${d.getDate()}`.padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${day}`;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function renderNuevoIngresoView_() {
+    showContentLoading('Iniciando Gestor Operativo');
+
+    requestAnimationFrame(() => {
+      syncIngresoSectorOptions();
+      renderIngresoPreview();
+
+      setTimeout(() => {
+        document.getElementById('ing-nombre_vecino')?.focus();
+        hideContentLoading();
+      }, 80);
+    });
+  }
+
+  function initOrganizacionForm_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form || form.dataset.orgInit === 'true') return;
+
+    form.dataset.orgInit = 'true';
+
+    const selector = form.querySelector('[name="organizacion_id"]');
+    if (!selector) return;
+
+    initOrganizacionImageField_();
+    toggleOrganizacionFormLock_(true);
+
+    selector.disabled = false;
+
+    selector.addEventListener('change', () => {
+      const orgId = String(selector.value || '').trim();
+
+      if (!orgId) {
+        clearOrganizacionFormExceptSelector_();
+        toggleOrganizacionFormLock_(true);
+        selector.disabled = false;
+        return;
+      }
+
+      hydrateOrganizacionForm_(orgId);
+      toggleOrganizacionFormLock_(false);
+      selector.disabled = false;
+    });
+  }
+
+  function toggleOrganizacionFormLock_(locked) {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return;
+
+    Array.from(form.elements).forEach(el => {
+      if (!el.name && !el.dataset.orgImageAction) return;
+      if (el.name === 'organizacion_id') return;
+
+      const tag = String(el.tagName || '').toLowerCase();
+      const type = String(el.type || '').toLowerCase();
+
+      if (type === 'hidden') return;
+
+      if (tag === 'select' || type === 'file' || tag === 'button' || type === 'submit') {
+        el.disabled = locked;
+      } else {
+        el.readOnly = locked;
+      }
+    });
+
+    form.querySelectorAll('[data-org-image-action]').forEach(btn => {
+      btn.disabled = locked;
+    });
+
+    form.querySelectorAll('.image-upload__file').forEach(input => {
+      input.disabled = locked;
+    });
+  }
+
+  function clearOrganizacionFormExceptSelector_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return;
+
+    Array.from(form.elements).forEach(el => {
+      if (!el.name || el.name === 'organizacion_id') return;
+      setFormFieldValue_(el, '');
+    });
+
+    refreshOrganizacionImageField_();
+  }
+
+  function hydrateOrganizacionForm_(organizacionId) {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return;
+
+    const data = (APP.state.catalogs.organizacionesById || {})[organizacionId];
+    if (!data) return;
+
+    Array.from(form.elements).forEach(el => {
+      if (!el.name || el.name === 'organizacion_id') return;
+      const value = data[el.name] !== undefined ? data[el.name] : '';
+      setFormFieldValue_(el, value);
+    });
+
+    const uvSelect = form.querySelector('[name="uv"]');
+    const sectorSelect = form.querySelector('[name="sector"]');
+    if (uvSelect && sectorSelect) {
+      syncSectorOptions(sectorSelect, uvSelect.value);
+      if (data.sector) sectorSelect.value = data.sector;
+    }
+
+    refreshOrganizacionImageField_();
+  }
+
+  function setFormFieldValue_(el, value) {
+    if (!el) return;
+
+    let finalValue = value == null ? '' : value;
+
+    if (String(el.type || '').toLowerCase() === 'date' && String(finalValue).trim()) {
+      finalValue = String(finalValue).slice(0, 10);
+    }
+
+    el.value = finalValue;
+  }
+
+  function initOrganizacionImageField_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return;
+
+    const wrapper = form.querySelector('[data-image-field="imagen_logo_base64"]');
+    if (!wrapper || wrapper.dataset.initialized === 'true') return;
+
+    wrapper.dataset.initialized = 'true';
+
+    const hidden = wrapper.querySelector('input[type="hidden"][name="imagen_logo_base64"]');
+    const fileInput = wrapper.querySelector('.image-upload__file');
+    const uploadBtn = wrapper.querySelector('[data-org-image-action="upload"]');
+    const removeBtn = wrapper.querySelector('[data-org-image-action="remove"]');
+
+    if (uploadBtn && fileInput) {
+      uploadBtn.addEventListener('click', () => fileInput.click());
+    }
+
+    if (fileInput && hidden) {
+      fileInput.addEventListener('change', ev => {
+        const file = ev.target.files && ev.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = e => {
+          hidden.value = String(e.target.result || '');
+          refreshOrganizacionImageField_();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (removeBtn && hidden && fileInput) {
+      removeBtn.addEventListener('click', () => {
+        hidden.value = '';
+        fileInput.value = '';
+        refreshOrganizacionImageField_();
+      });
+    }
+
+    refreshOrganizacionImageField_();
+  }
+
+  function refreshOrganizacionImageField_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return;
+
+    const wrapper = form.querySelector('[data-image-field="imagen_logo_base64"]');
+    if (!wrapper) return;
+
+    const hidden = wrapper.querySelector('input[type="hidden"][name="imagen_logo_base64"]');
+    const preview = wrapper.querySelector('.image-upload__preview');
+
+    if (!hidden || !preview) return;
+
+    const value = String(hidden.value || '').trim();
+
+    if (!value) {
+      preview.innerHTML = '<div class="empty-state">Sin imagen</div>';
+      return;
+    }
+
+    preview.innerHTML = `<img src="${escapeHtml(value)}" alt="Imagen organización" class="image-upload__img">`;
+  }
+
+  function renderAvanceView_() {
+    const container = document.getElementById('form-seguimiento');
+    if (!container) return;
+
+    container.className = 'avance-shell';
+    container.innerHTML = `
+      <div class="avance-header">
+        <div class="field field--grow">
+          <label>Organización</label>
+          <select id="avance-organizacion-select"></select>
+        </div>
+
+        <div class="avance-header__actions">
+          <button type="button" class="secondary-btn" id="avance-nueva-org-btn">
+            <span class="material-symbols-outlined">add_circle</span>Nueva organización
+          </button>
+          <button type="button" class="secondary-btn" id="avance-standby-btn">
+            <span class="material-symbols-outlined">pause_circle</span>Stand by
+          </button>
+          <button type="button" class="secondary-btn" id="avance-detener-btn">
+            <span class="material-symbols-outlined">stop_circle</span>Detener
+          </button>
+          <button type="button" class="secondary-btn" id="avance-reactivar-btn">
+            <span class="material-symbols-outlined">play_circle</span>Reactivar
+          </button>
+        </div>
+      </div>
+
+      <div id="avance-resumen" class="avance-resumen empty-state">
+        Selecciona una organización para visualizar su avance.
+      </div>
+
+      <section class="avance-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Tramo 1</p>
+            <h3>Preconstitución</h3>
+          </div>
+        </div>
+        <div id="avance-pre-grid" class="avance-progress-list"></div>
+      </section>
+
+      <section class="avance-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Tramo 2</p>
+            <h3>Formalización posterior</h3>
+          </div>
+        </div>
+        <div id="avance-for-grid" class="avance-progress-list"></div>
+      </section>
+
+      <section class="avance-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Historial</p>
+            <h3>Timeline de avance</h3>
+          </div>
+        </div>
+        <div id="avance-timeline" class="avance-timeline empty-state">
+          No hay hitos registrados.
+        </div>
+      </section>
+
+      <div id="avance-hito-modal" class="avance-modal is-hidden">
+        <div class="avance-modal__backdrop" data-avance-modal-close="true"></div>
+        <div class="avance-modal__dialog">
+          <div class="avance-modal__head">
+            <div>
+              <p class="eyebrow">Registrar hito</p>
+              <h3 id="avance-modal-title">Hito</h3>
+            </div>
+            <button type="button" class="secondary-btn" id="avance-modal-close-btn">
+              <span class="material-symbols-outlined">close</span>Cerrar
+            </button>
+          </div>
+
+          <input type="hidden" id="avance-modal-codigo">
+
+          <div class="field">
+            <label>Fecha del hito</label>
+            <input id="avance-modal-fecha" type="date">
+          </div>
+
+          <div class="field">
+            <label>Observación</label>
+            <textarea id="avance-modal-observacion" rows="4" placeholder="Observación opcional"></textarea>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="secondary-btn" id="avance-modal-cancel-btn">
+              <span class="material-symbols-outlined">undo</span>Cancelar
+            </button>
+            <button type="button" class="primary-btn" id="avance-modal-save-btn">
+              <span class="material-symbols-outlined">save</span>Guardar hito
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    initAvanceView_();
+  }
+
+  function initAvanceView_() {
+    const select = document.getElementById('avance-organizacion-select');
+    const nuevaBtn = document.getElementById('avance-nueva-org-btn');
+    const standbyBtn = document.getElementById('avance-standby-btn');
+    const detenerBtn = document.getElementById('avance-detener-btn');
+    const reactivarBtn = document.getElementById('avance-reactivar-btn');
+
+    const modalCloseBtn = document.getElementById('avance-modal-close-btn');
+    const modalCancelBtn = document.getElementById('avance-modal-cancel-btn');
+    const modalSaveBtn = document.getElementById('avance-modal-save-btn');
+    const modal = document.getElementById('avance-hito-modal');
+
+    if (nuevaBtn && !nuevaBtn.dataset.bound) {
+      nuevaBtn.dataset.bound = 'true';
+      nuevaBtn.addEventListener('click', () => route('organizacion'));
+    }
+
+    if (standbyBtn && !standbyBtn.dataset.bound) {
+      standbyBtn.dataset.bound = 'true';
+      standbyBtn.addEventListener('click', () => cambiarEstadoAvanceUi_('Stand by'));
+    }
+
+    if (detenerBtn && !detenerBtn.dataset.bound) {
+      detenerBtn.dataset.bound = 'true';
+      detenerBtn.addEventListener('click', () => cambiarEstadoAvanceUi_('Detenido'));
+    }
+
+    if (reactivarBtn && !reactivarBtn.dataset.bound) {
+      reactivarBtn.dataset.bound = 'true';
+      reactivarBtn.addEventListener('click', () => cambiarEstadoAvanceUi_('Activo'));
+    }
+
+    if (modalCloseBtn && !modalCloseBtn.dataset.bound) {
+      modalCloseBtn.dataset.bound = 'true';
+      modalCloseBtn.addEventListener('click', closeAvanceHitoModal_);
+    }
+
+    if (modalCancelBtn && !modalCancelBtn.dataset.bound) {
+      modalCancelBtn.dataset.bound = 'true';
+      modalCancelBtn.addEventListener('click', closeAvanceHitoModal_);
+    }
+
+    if (modalSaveBtn && !modalSaveBtn.dataset.bound) {
+      modalSaveBtn.dataset.bound = 'true';
+      modalSaveBtn.addEventListener('click', submitAvanceHitoModal_);
+    }
+
+    if (modal && !modal.dataset.bound) {
+      modal.dataset.bound = 'true';
+      modal.addEventListener('click', ev => {
+        if (ev.target && ev.target.dataset && ev.target.dataset.avanceModalClose === 'true') {
+          closeAvanceHitoModal_();
+        }
+      });
+    }
+
+    loadAvanceCatalogos_().then(() => {
+      fillSelect(
+        select,
+        APP.state.avanceOrganizaciones.map(x => ({
+          value: x.value,
+          label: x.label
+        })),
+        'Seleccionar organización'
+      );
+
+      if (select && !select.dataset.bound) {
+        select.dataset.bound = 'true';
+        select.addEventListener('change', () => {
+          const orgId = String(select.value || '').trim();
+          if (!orgId) {
+            clearAvanceView_();
+            return;
+          }
+          loadAvanceOrganizacion_(orgId);
+        });
+      }
+
+      lockAvanceActions_(true);
+    }).catch(showError);
+  }
+
+  function clampPct_(value) {
+    const n = Number(value || 0);
+    if (!isFinite(n)) return 0;
+    return Math.max(0, Math.min(100, Math.round(n)));
+  }
+
+  function buildProgressBarHtml_(label, done, total) {
+    const safeDone = Number(done || 0);
+    const safeTotal = Number(total || 0);
+    const pct = safeTotal > 0 ? clampPct_((safeDone / safeTotal) * 100) : 0;
+
+    return `
+      <div class="avance-resumen-bar">
+        <div class="avance-resumen-bar__head">
+          <div class="avance-resumen-bar__label">${escapeHtml(label)}</div>
+          <div class="avance-resumen-bar__meta">${safeDone} de ${safeTotal}</div>
+        </div>
+
+        <div class="avance-resumen-bar__row">
+          <div class="avance-resumen-bar__track">
+            <div class="avance-resumen-bar__fill" style="width:${pct}%"></div>
+          </div>
+          <div class="avance-resumen-bar__pct">${pct}%</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function refreshAvanceViewOnRoute_() {
+    const select = document.getElementById('avance-organizacion-select');
+    if (!select) return;
+
+    const currentValue = String(select.value || '').trim();
+
+    api('getOrganizacionesAvanceClient').then(data => {
+      APP.state.avanceOrganizaciones = (data && data.organizacionesList) || [];
+      fillSelect(
+        select,
+        APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label })),
+        'Seleccionar organización'
+      );
+
+      if (currentValue && APP.state.avanceOrganizaciones.some(x => String(x.value) === currentValue)) {
+        select.value = currentValue;
+      }
+    }).catch(console.error);
+  }
+
+  function loadAvanceCatalogos_() {
+    if (APP.state.avanceCatalogos && APP.state.avanceOrganizaciones.length) {
+      return Promise.resolve();
+    }
+
+    showContentLoading('Cargando módulo de avance...');
+
+    return Promise.all([
+      api('getCatalogosAvanceClient'),
+      api('getOrganizacionesAvanceClient')
+    ]).then(([catalogos, organizaciones]) => {
+      APP.state.avanceCatalogos = catalogos || {};
+      APP.state.avanceOrganizaciones = (organizaciones && organizaciones.organizacionesList) || [];
+    }).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function loadAvanceOrganizacion_(organizacionId) {
+    showContentLoading('Cargando avance...');
+
+    api('getAvanceOrganizacion', { organizacion_id: organizacionId }).then(data => {
+      APP.state.currentAvance = data;
+      renderAvanceResumen_(data);
+      renderAvanceBotones_(data);
+      renderAvanceTimeline_(data.timeline || []);
+      lockAvanceActions_(false, data);
+      setStatus('Avance cargado correctamente.', true);
+    }).catch(err => {
+      APP.state.currentAvance = null;
+      clearAvanceView_();
+      showError(err);
+    }).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function renderAvanceResumen_(data) {
+    const el = document.getElementById('avance-resumen');
+    if (!el) return;
+
+    const r = (data && data.resumen) || {};
+    const estado = (data && data.estado && data.estado.estado_avance) || 'Activo';
+    const tramos = (data && data.botones && data.botones.tramos) || [];
+
+    const tramoPre = tramos.find(t => t.tramo === 'Preconstitución') || { items: [] };
+    const tramoFor = tramos.find(t => t.tramo === 'Formalización posterior') || { items: [] };
+
+    const totalPre = tramoPre.items.length;
+    const donePre = tramoPre.items.filter(x => x.completed_flag).length;
+
+    const totalFor = tramoFor.items.length;
+    const doneFor = tramoFor.items.filter(x => x.completed_flag).length;
+
+    const totalGeneral = totalPre + totalFor;
+    const doneGeneral = donePre + doneFor;
+
+    el.className = 'avance-resumen';
+    el.innerHTML = `
+      <div class="preview-block">
+        <div class="preview-block__title">Resumen de avance</div>
+
+        <div class="preview-grid">
+          <div class="preview-item"><strong>Estado</strong><span>${escapeHtml(estado)}</span></div>
+          <div class="preview-item"><strong>Organización</strong><span>${escapeHtml(r.nombre_organizacion || '')}</span></div>
+          <div class="preview-item"><strong>Solicitud</strong><span>${escapeHtml(r.solicitud_id || '')}</span></div>
+          <div class="preview-item"><strong>Último hito</strong><span>${escapeHtml(r.ultimo_hito_nombre || 'Sin registros')}</span></div>
+          <div class="preview-item"><strong>Fecha último hito</strong><span>${escapeHtml(r.ultimo_hito_fecha || '')}</span></div>
+          <div class="preview-item"><strong>Usuario último hito</strong><span>${escapeHtml(r.usuario_ultimo_hito || '')}</span></div>
+        </div>
+
+        <div class="avance-resumen-bars">
+          ${buildProgressBarHtml_('Total hitos cumplidos', doneGeneral, totalGeneral)}
+          ${buildProgressBarHtml_('Preconstitución', donePre, totalPre)}
+          ${buildProgressBarHtml_('Formalización posterior', doneFor, totalFor)}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderAvanceBotones_(data) {
+    const pre = document.getElementById('avance-pre-grid');
+    const post = document.getElementById('avance-for-grid');
+    if (!pre || !post) return;
+
+    const tramos = (data && data.botones && data.botones.tramos) || [];
+    const tramoPre = tramos.find(t => t.tramo === 'Preconstitución') || { items: [] };
+    const tramoFor = tramos.find(t => t.tramo === 'Formalización posterior') || { items: [] };
+
+    pre.innerHTML = tramoPre.items.map(renderAvanceProgressRow_).join('');
+    post.innerHTML = tramoFor.items.map(renderAvanceProgressRow_).join('');
+
+    document.querySelectorAll('.js-avance-hito').forEach(btn => {
+      btn.addEventListener('click', () => registrarHitoAvanceUi_(btn.dataset.codigo));
+    });
+  }
+
+  function renderAvanceProgressRow_(item) {
+    const disabled = !item.enabled_flag ? 'disabled' : '';
+    const completed = item.completed_flag ? 'is-completed' : '';
+    const blocked = !item.enabled_flag && !item.completed_flag ? 'is-blocked' : '';
+
+    const meta = item.completed_flag
+      ? `Cumplido · ${escapeHtml(item.fecha_hito || '')}`
+      : item.blocked_reason
+        ? escapeHtml(item.blocked_reason)
+        : 'Disponible para registrar';
+
+    return `
+      <button
+        type="button"
+        class="avance-progress js-avance-hito ${completed} ${blocked}"
+        data-codigo="${escapeHtml(item.codigo_hito || '')}"
+        ${disabled}>
+        <div class="avance-progress__top">
+          <div class="avance-progress__title">${escapeHtml(item.nombre_hito || '')}</div>
+          <div class="avance-progress__status">${meta}</div>
+        </div>
+      </button>
+    `;
+  }
+
+  function renderAvanceTimeline_(rows) {
+    const el = document.getElementById('avance-timeline');
+    if (!el) return;
+
+    if (!rows || !rows.length) {
+      el.className = 'avance-timeline empty-state';
+      el.innerHTML = 'No hay hitos registrados.';
+      return;
+    }
+
+    el.className = 'avance-timeline';
+    el.innerHTML = rows.map(r => `
+      <div class="match-card">
+        <h4>${escapeHtml(r.nombre_hito || '')}</h4>
+        <p><strong>Tramo:</strong> ${escapeHtml(r.tramo || '')}</p>
+        <p><strong>Fecha:</strong> ${escapeHtml(r.fecha_hito || '')}</p>
+        <p><strong>Usuario:</strong> ${escapeHtml(r.usuario_registro || '')}</p>
+        <p><strong>Observación:</strong> ${escapeHtml(r.observacion || '')}</p>
+      </div>
+    `).join('');
+  }
+
+  function registrarHitoAvanceUi_(codigoHito) {
+    const select = document.getElementById('avance-organizacion-select');
+    const organizacionId = String(select?.value || '').trim();
+
+    if (!organizacionId) {
+      showError('Debes seleccionar una organización.');
+      return;
+    }
+
+    const tramos = (((APP.state.currentAvance || {}).botones || {}).tramos || []);
+    const items = tramos.flatMap(t => t.items || []);
+    const item = items.find(x => String(x.codigo_hito || '') === String(codigoHito || ''));
+
+    if (!item) {
+      showError('No se encontró el hito seleccionado.');
+      return;
+    }
+
+    if (!item.enabled_flag) {
+      showError(item.blocked_reason || 'Este hito no está disponible.');
+      return;
+    }
+
+    openAvanceHitoModal_(item);
+  }
+
+  function openAvanceHitoModal_(item) {
+    const modal = document.getElementById('avance-hito-modal');
+    const title = document.getElementById('avance-modal-title');
+    const codigo = document.getElementById('avance-modal-codigo');
+    const fecha = document.getElementById('avance-modal-fecha');
+    const obs = document.getElementById('avance-modal-observacion');
+
+    if (!modal || !title || !codigo || !fecha || !obs) return;
+
+    title.textContent = item.nombre_hito || 'Registrar hito';
+    codigo.value = item.codigo_hito || '';
+    fecha.value = todayISO_();
+    obs.value = '';
+
+    modal.classList.remove('is-hidden');
+  }
+
+  function closeAvanceHitoModal_() {
+    const modal = document.getElementById('avance-hito-modal');
+    if (!modal) return;
+    modal.classList.add('is-hidden');
+  }
+
+  function submitAvanceHitoModal_() {
+    const select = document.getElementById('avance-organizacion-select');
+    const codigo = document.getElementById('avance-modal-codigo');
+    const fecha = document.getElementById('avance-modal-fecha');
+    const obs = document.getElementById('avance-modal-observacion');
+
+    const organizacionId = String(select?.value || '').trim();
+    const codigoHito = String(codigo?.value || '').trim();
+    const fechaHito = String(fecha?.value || '').trim();
+    const observacion = String(obs?.value || '').trim();
+
+    if (!organizacionId) {
+      showError('Debes seleccionar una organización.');
+      return;
+    }
+
+    if (!codigoHito) {
+      showError('No se encontró el código del hito.');
+      return;
+    }
+
+    if (!fechaHito) {
+      showError('Debes indicar la fecha del hito.');
+      return;
+    }
+
+    showContentLoading('Registrando hito...');
+
+    api('registrarHitoAvance', {
+      organizacion_id: organizacionId,
+      codigo_hito: codigoHito,
+      fecha_hito: fechaHito,
+      observacion: observacion
+    }).then(() => {
+      closeAvanceHitoModal_();
+      showSuccess('Hito registrado correctamente.');
+      loadAvanceOrganizacion_(organizacionId);
+    }).catch(showError).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function cambiarEstadoAvanceUi_(nuevoEstado) {
+    const select = document.getElementById('avance-organizacion-select');
+    const organizacionId = String(select?.value || '').trim();
+
+    if (!organizacionId) {
+      showError('Debes seleccionar una organización.');
+      return;
+    }
+
+    const fechaEstado = window.prompt('Ingresa la fecha del estado (YYYY-MM-DD)', todayISO_()) || '';
+    if (!String(fechaEstado).trim()) {
+      showError('Debes indicar una fecha.');
+      return;
+    }
+
+    let motivo = '';
+    if (nuevoEstado === 'Stand by' || nuevoEstado === 'Detenido') {
+      motivo = window.prompt(`Indica el motivo para "${nuevoEstado}"`) || '';
+      if (!String(motivo).trim()) {
+        showError('Debes indicar un motivo.');
+        return;
+      }
+    }
+
+    showContentLoading('Actualizando estado de avance...');
+
+    api('cambiarEstadoAvance', {
+      organizacion_id: organizacionId,
+      estado_avance: nuevoEstado,
+      motivo_estado: motivo,
+      fecha_estado: fechaEstado
+    }).then(() => {
+      showSuccess(`Estado actualizado a: ${nuevoEstado}`);
+      loadAvanceOrganizacion_(organizacionId);
+    }).catch(showError).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function lockAvanceActions_(locked, data) {
+    const standbyBtn = document.getElementById('avance-standby-btn');
+    const detenerBtn = document.getElementById('avance-detener-btn');
+    const reactivarBtn = document.getElementById('avance-reactivar-btn');
+
+    if (standbyBtn) standbyBtn.disabled = !!locked;
+    if (detenerBtn) detenerBtn.disabled = !!locked;
+    if (reactivarBtn) reactivarBtn.disabled = !!locked;
+
+    if (!locked && data && data.estado) {
+      const estado = String(data.estado.estado_avance || 'Activo');
+      if (standbyBtn) standbyBtn.disabled = estado !== 'Activo';
+      if (detenerBtn) detenerBtn.disabled = estado !== 'Activo';
+      if (reactivarBtn) reactivarBtn.disabled = estado === 'Activo';
+    }
+  }
+
+  function clearAvanceView_() {
+    APP.state.currentAvance = null;
+
+    const badge = document.getElementById('avance-estado-badge');
+    const resumen = document.getElementById('avance-resumen');
+    const pre = document.getElementById('avance-pre-grid');
+    const post = document.getElementById('avance-for-grid');
+    const timeline = document.getElementById('avance-timeline');
+
+    if (badge) badge.textContent = 'Sin selección';
+    if (resumen) {
+      resumen.className = 'avance-resumen empty-state';
+      resumen.innerHTML = 'Selecciona una organización para visualizar su avance.';
+    }
+    if (pre) pre.innerHTML = '';
+    if (post) post.innerHTML = '';
+    if (timeline) {
+      timeline.className = 'avance-timeline empty-state';
+      timeline.innerHTML = 'No hay hitos registrados.';
+    }
+
+    closeAvanceHitoModal_();
+    lockAvanceActions_(true);
+  }
+})();
+</script>

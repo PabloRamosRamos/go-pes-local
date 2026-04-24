@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <?!= include('Styles'); ?>
+  </head>
+  <body>
+    <div id="app-loading" class="app-loading" aria-live="polite" aria-busy="true">
+      <div class="app-loading__box">
+        <div class="app-loading__spinner"></div>
+        <div class="app-loading__text">Iniciando Gestor Operativo</div>
+      </div>
+    </div>
+    <div id="app" data-bootstrap='<?= bootstrap ?>'>
+      <header class="hero">
+        <div class="hero__brand">
+          <div class="hero__logo">
+            <div class="brand-mark">
+              <img id="appLogo" class="brand-logo" alt="Municipalidad de Providencia" src="<?= logoDataUri ?>" />
+            </div>
+          </div>
+          <div>
+            <p class="eyebrow">Municipalidad de Providencia</p>
+            <h1 class="hero__title">Gestor Operativo PES</h1>
+            <p class="hero__subtitle">Programa Estamos Seguros · Gestión de vecinos, seguimiento y organizaciones</p>
+          </div>
+        </div>
+        <div class="hero__user">
+          <div class="pill"><span class="material-symbols-outlined">person</span><span id="user-name">Usuario</span></div>
+          <div class="pill"><span class="material-symbols-outlined">verified_user</span><span id="user-role">perfil</span></div>
+        </div>
+      </header>
+
+      <section class="toolbar">
+        <div class="toolbar__left"></div>
+        <span class="muted" id="status-message">Listo.</span>
+      </section>
+
+      <main class="layout">
+        <aside class="sidebar">
+          <button class="nav-btn" data-view="nuevo-ingreso"><span class="material-symbols-outlined">person_add</span>Nuevo ingreso</button>
+          <button class="nav-btn" data-view="buscar"><span class="material-symbols-outlined">search</span>Buscar ficha</button>
+          <button class="nav-btn" data-view="seguimiento"><span class="material-symbols-outlined">event_note</span>Registrar avance</button>
+          <button class="nav-btn" data-view="organizacion"><span class="material-symbols-outlined">groups</span>Actualizar organización</button>
+          <button class="nav-btn" data-view="instrumento"><span class="material-symbols-outlined">handshake</span>Gestionar instrumentos</button>
+          <button class="nav-btn" data-view="requisito"><span class="material-symbols-outlined">inventory_2</span>Registrar requisitos</button>
+          <button class="nav-btn" data-view="socios"><span class="material-symbols-outlined">badge</span>Cargar socios</button>
+          <button class="nav-btn" data-view="historial"><span class="material-symbols-outlined">history</span>Historial</button>
+          <button class="nav-btn is-admin" data-view="usuarios"><span class="material-symbols-outlined">manage_accounts</span>Gestión de usuarios</button>
+        </aside>
+
+        <section class="content">
+          <div id="content-loading" class="content-loading is-hidden" aria-live="polite" aria-busy="true">
+            <div class="content-loading__box">
+              <div class="content-loading__spinner"></div>
+              <div class="content-loading__text">Iniciando Gestor Operativo</div>
+            </div>
+          </div>
+          <section class="view active" id="view-inicio">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Portal operativo</p>
+                <h2>Accesos principales</h2>
+                <p class="muted">Selecciona una acción para continuar. Toda la operación se realiza desde esta interfaz.</p>
+              </div>
+            </div>
+
+          </section>
+
+          <section class="view" id="view-buscar">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Búsqueda</p>
+                <h2>Buscar ficha</h2>
+              </div>
+            </div>
+            <div class="panel search-panel">
+              <div class="field field--grow">
+                <label>Nombre, teléfono, dirección, ID de solicitud u organización</label>
+                <input id="search-query" type="text" placeholder="Ej.: María, SOL-000001, ORG-000012, Pedro de Valdivia 1234">
+              </div>
+              <div class="field field--auto">
+                <label>&nbsp;</label>
+                <button class="primary-btn" id="search-btn"><span class="material-symbols-outlined">search</span>Buscar</button>
+              </div>
+            </div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Solicitud</th><th>Vecino</th><th>Dirección</th><th>Estado actual</th><th>Organización</th><th></th></tr></thead><tbody id="search-results"></tbody></table></div>
+          </section>
+
+          <section class="view" id="view-ficha">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Ficha operativa</p>
+                <h2>Resumen del vecino y su avance</h2>
+              </div>
+            </div>
+            <div id="ficha-container"></div>
+          </section>
+
+          <section class="view" id="view-nuevo-ingreso">
+            <div class="section-head section-head--stacked">
+              <div>
+                <p class="eyebrow">Nuevo vecino</p>
+                <h2>Registrar nueva solicitud</h2>
+                <p class="muted">Usa esta pantalla cuando un vecino solicita información del programa por primera vez. El sistema generará la solicitud y dejará trazabilidad automática.</p>
+              </div>
+            </div>
+
+            <div class="ingreso-layout">
+              <div class="ingreso-main">
+                <form id="form-ingreso" class="ingreso-form" novalidate>
+                  <section class="module-card">
+                    <div class="module-card__head">
+                      <div>
+                        <p class="eyebrow">Bloque 1</p>
+                        <h3><span class="material-symbols-outlined">person</span>Datos del vecino</h3>
+                      </div>
+                      <p class="muted">Información básica de contacto del solicitante.</p>
+                    </div>
+                    <div class="form-grid form-grid--dense">
+                      <div class="field">
+                        <label for="ing-nombre_vecino">Nombre</label>
+                        <input id="ing-nombre_vecino" name="nombre_vecino" type="text" required placeholder="Ej.: María">
+                      </div>
+                      <div class="field">
+                        <label for="ing-apellido_vecino">Apellido</label>
+                        <input id="ing-apellido_vecino" name="apellido_vecino" type="text" required placeholder="Ej.: González">
+                      </div>
+                      <div class="field">
+                        <label for="ing-rut_vecino">RUT</label>
+                        <input id="ing-rut_vecino" name="rut_vecino" type="text" placeholder="12.345.678-9">
+                      </div>
+                      <div class="field">
+                        <label for="ing-telefono_contacto">Teléfono de contacto</label>
+                        <input id="ing-telefono_contacto" name="telefono_contacto" type="text" required placeholder="Ej.: 987654321">
+                      </div>
+                      <div class="field" data-span="2">
+                        <label for="ing-correo_contacto">Correo electrónico</label>
+                        <input id="ing-correo_contacto" name="correo_contacto" type="email" placeholder="correo@dominio.cl">
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="module-card">
+                    <div class="module-card__head">
+                      <div>
+                        <p class="eyebrow">Bloque 2</p>
+                        <h3><span class="material-symbols-outlined">home_pin</span>Ubicación y caracterización</h3>
+                      </div>
+                      <p class="muted">Ayuda a segmentar correctamente la solicitud para seguimiento y análisis.</p>
+                    </div>
+                    <div class="form-grid form-grid--dense">
+                      <div class="field" data-span="2">
+                        <label for="ing-direccion_original">Dirección</label>
+                        <input id="ing-direccion_original" name="direccion_original" rows="3" required placeholder="Ej.: Av. Providencia 1234, Solo calle y número"></input>
+                      </div>
+                      <div class="field">
+                        <label for="ing-uv">UV</label>
+                        <select id="ing-uv" name="uv"></select>
+                      </div>
+                      <div class="field">
+                        <label for="ing-sector">Sector</label>
+                        <select id="ing-sector" name="sector"></select>
+                      </div>
+                      <div class="field">
+                        <label for="ing-tipo_vivienda">Tipo de vivienda</label>
+                        <select id="ing-tipo_vivienda" name="tipo_vivienda"></select>
+                      </div>
+                      <div class="field">
+                        <label for="ing-fecha_solicitud">Fecha de solicitud</label>
+                        <input id="ing-fecha_solicitud" name="fecha_solicitud" type="date">
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="module-card">
+                    <div class="module-card__head">
+                      <div>
+                        <p class="eyebrow">Bloque 3</p>
+                        <h3><span class="material-symbols-outlined">info</span>Datos de la solicitud</h3>
+                      </div>
+                      <p class="muted">Registra cómo llegó el vecino y qué información o apoyo solicita.</p>
+                    </div>
+                    <div class="form-grid form-grid--dense">
+                      <div class="field">
+                        <label for="ing-medio_solicitud">Medio de solicitud</label>
+                        <select id="ing-medio_solicitud" name="medio_solicitud"></select>
+                      </div>
+                      <div class="field">
+                        <label for="ing-unidad_origen">Unidad de origen</label>
+                        <select id="ing-unidad_origen" name="unidad_origen"></select>
+                      </div>
+                      <div class="field" data-span="2">
+                        <label for="ing-requerimiento_inicial">Requerimiento inicial</label>
+                        <input id="ing-requerimiento_inicial" name="requerimiento_inicial" rows="4" required value="Visita Inicial" readonly></input>
+                      </div>
+                      <div class="field" data-span="2">
+                        <label for="ing-observaciones_form">Observaciones</label>
+                        <textarea id="ing-observaciones_form" name="observaciones_form" rows="4" placeholder="Antecedentes adicionales relevantes para el seguimiento"></textarea>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section class="module-card module-card--actions">
+                    <div class="module-card__head">
+                      <div>
+                        <p class="eyebrow">Control</p>
+                        <h3><span class="material-symbols-outlined">fact_check</span>Validación y guardado</h3>
+                      </div>
+                    </div>
+                    <div class="form-actions-row">
+                      <button type="button" class="secondary-btn" id="ingreso-review-btn"><span class="material-symbols-outlined">search</span>Revisar coincidencias</button>
+                      <button type="button" class="secondary-btn" id="ingreso-clear-btn"><span class="material-symbols-outlined">ink_eraser</span>Limpiar</button>
+                      <button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar solicitud</button>
+                    </div>
+                  </section>
+                </form>
+              </div>
+
+              <aside class="ingreso-side">
+                <div class="module-card sticky-card">
+                  <div class="module-card__head">
+                    <div>
+                      <p class="eyebrow">Revisión previa</p>
+                      <h3><span class="material-symbols-outlined">preview</span>Resumen del ingreso</h3>
+                    </div>
+                  </div>
+                  <div id="ingreso-preview" class="ingreso-preview empty-state">Completa los datos para revisar el resumen antes de guardar.</div>
+                </div>
+
+                <div class="module-card sticky-card">
+                  <div class="module-card__head">
+                    <div>
+                      <p class="eyebrow">Coincidencias</p>
+                      <h3><span class="material-symbols-outlined">content_paste_search</span>Posibles duplicados</h3>
+                    </div>
+                  </div>
+                  <div id="ingreso-matches" class="ingreso-matches empty-state">Puedes revisar coincidencias por nombre, teléfono o dirección antes de crear la solicitud.</div>
+                </div>
+
+                <div class="module-card sticky-card">
+                  <div class="module-card__head">
+                    <div>
+                      <p class="eyebrow">Buenas prácticas</p>
+                      <h3><span class="material-symbols-outlined">lightbulb</span>Recomendaciones</h3>
+                    </div>
+                  </div>
+                  <ul class="tips-list">
+                    <li>Usa el nombre y apellido tal como lo indica el vecino.</li>
+                    <li>Completa UV y sector usando las listas para evitar errores.</li>
+                    <li>Describe el requerimiento inicial de forma breve y clara.</li>
+                    <li>Si encuentras coincidencias, revisa antes de guardar una nueva solicitud.</li>
+                  </ul>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="view" id="view-seguimiento">
+            <div class="section-head"><div><p class="eyebrow">Seguimiento</p><h2>Registrar gestión o avance</h2></div></div>
+            <form id="form-seguimiento" class="form-grid"></form>
+          </section>
+
+          <section class="view" id="view-organizacion">
+            <div class="section-head"><div><p class="eyebrow">Organización</p><h2>Crear o actualizar organización</h2></div></div>
+            <form id="form-organizacion" class="form-grid"></form>
+          </section>
+
+          <section class="view" id="view-instrumento">
+            <div class="section-head"><div><p class="eyebrow">Instrumentos</p><h2>Gestionar beneficios y fondos</h2></div></div>
+            <form id="form-instrumento" class="form-grid"></form>
+          </section>
+
+          <section class="view" id="view-requisito">
+            <div class="section-head"><div><p class="eyebrow">Requisitos</p><h2>Registrar requisito documental</h2></div></div>
+            <form id="form-requisito" class="form-grid"></form>
+          </section>
+
+          <section class="view" id="view-socios">
+            <div class="section-head"><div><p class="eyebrow">Socios</p><h2>Carga manual o masiva</h2></div></div>
+            <div class="panel">
+              <div class="field field--half"><label>Organización</label><input id="socios-organizacion-id" type="text" placeholder="ORG-000001"></div>
+              <div class="field field--half"><label>Nombre comité origen</label><input id="socios-comite-origen" type="text" placeholder="Nombre del comité"></div>
+              <div class="field field--full"><label>Pegado masivo (tablas separadas por tab o coma)</label><textarea id="socios-bulk" rows="8" placeholder="run_socio\tnumero_registro\tnombre_socio\tedad\tcargo\tdireccion_socio\tubicacion_socio"></textarea></div>
+              <div class="actions"><button type="button" class="primary-btn" id="socios-validate-btn"><span class="material-symbols-outlined">rule</span>Validar carga</button><button type="button" class="secondary-btn" id="socios-save-btn"><span class="material-symbols-outlined">upload</span>Guardar socios</button></div>
+            </div>
+            <div id="socios-preview"></div>
+          </section>
+
+          <section class="view" id="view-historial">
+            <div class="section-head"><div><p class="eyebrow">Trazabilidad</p><h2>Historial de acciones</h2></div></div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Resultado</th></tr></thead><tbody id="history-results"></tbody></table></div>
+          </section>
+
+          <section class="view" id="view-usuarios">
+            <div class="section-head"><div><p class="eyebrow">Administración</p><h2>Gestión de usuarios</h2></div></div>
+            <div class="panel admin-form">
+              <div class="field field--half"><label>Email</label><input id="user-email" type="email"></div>
+              <div class="field field--half"><label>Nombre visible</label><input id="user-name-input" type="text"></div>
+              <div class="field field--third"><label>Perfil</label><select id="user-role-input"></select></div>
+              <div class="field field--third"><label>Activo</label><select id="user-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>
+              <div class="field field--third"><label>Superuser</label><select id="user-super-input"><option value="false">No</option><option value="true">Sí</option></select></div>
+              <div class="actions"><button type="button" class="primary-btn" id="save-user-btn"><span class="material-symbols-outlined">save</span>Guardar usuario</button></div>
+            </div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Nombre</th><th>Perfil</th><th>Activo</th><th>Superuser</th><th>Última actividad</th><th></th></tr></thead><tbody id="users-results"></tbody></table></div>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      window.GO_PES_TEMPLATE = {
+        logoDataUri: <?!= JSON.stringify(logoDataUri || '') ?>
+      };
+    </script>
+
+    <?!= include('Scripts'); ?>
+  </body>
+</html>

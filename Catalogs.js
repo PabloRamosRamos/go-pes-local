@@ -4,9 +4,7 @@
  */
 const GO_PES_CATALOG_CACHE_KEYS = {
   APP_CLIENT: 'go_pes_catalogs_app_client',
-  INGRESO_CLIENT: 'go_pes_catalogs_ingreso_client',
-  ORGANIZACION_CLIENT: 'go_pes_catalogs_organizacion_client',
-  AVANCE_ORGS_CLIENT: 'go_pes_catalogs_avance_orgs_client'
+  INGRESO_CLIENT: 'go_pes_catalogs_ingreso_client'
 };
 
 function seedGoPesV2Catalogs_() {
@@ -429,7 +427,7 @@ function buildCatalogosAppClientBundle_() {
   };
 }
 
-function buildOrganizacionCatalogListBundle_() {
+function getOrganizacionCatalogBundle_() {
   const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
     .filter(function(r) {
       return String(r.organizacion_id || '').trim() && String(r.nombre_organizacion || '').trim();
@@ -453,27 +451,8 @@ function buildOrganizacionCatalogListBundle_() {
 function buildOrganizacionClientSnapshot_(row) {
   const id = String(row && row.organizacion_id || '').trim();
   return {
-    organizacion_id: id,
-    solicitud_id: String(row && row.solicitud_id || '').trim(),
-    tipo_organizacion: String(row && row.tipo_organizacion || '').trim(),
-    nombre_organizacion: String(row && row.nombre_organizacion || '').trim(),
-    uv: String(row && row.uv || '').trim(),
-    sector: String(row && row.sector || '').trim(),
-    direccion_referencia: String(row && row.direccion_referencia || '').trim(),
-    fecha_inicio_acompanamiento: row && row.fecha_inicio_acompanamiento || '',
-    cantidad_socios_declarada: row && row.cantidad_socios_declarada || '',
-    estado_constitucion: String(row && row.estado_constitucion || '').trim(),
-    fecha_asamblea_constitucion: row && row.fecha_asamblea_constitucion || '',
-    fecha_ratificacion: row && row.fecha_ratificacion || '',
-    vigencia_directiva_hasta: row && row.vigencia_directiva_hasta || '',
-    personalidad_juridica_flag: String(row && row.personalidad_juridica_flag || '').trim(),
-    certificado_provisorio_flag: String(row && row.certificado_provisorio_flag || '').trim(),
-    certificado_definitivo_flag: String(row && row.certificado_definitivo_flag || '').trim(),
-    directiva_vigente_flag: String(row && row.directiva_vigente_flag || '').trim(),
-    organizacion_constituida_flag: String(row && row.organizacion_constituida_flag || '').trim(),
-    estado_general_organizacion: String(row && row.estado_general_organizacion || '').trim(),
-    responsable_actual: String(row && row.responsable_actual || '').trim(),
-    observacion_resumen: String(row && row.observacion_resumen || '').trim()
+    organizacionesList: organizacionesList,
+    organizacionesById: organizacionesById
   };
 }
 
@@ -499,9 +478,7 @@ function invalidateCatalogClientCaches_() {
   try {
     CacheService.getScriptCache().removeAll([
       GO_PES_CATALOG_CACHE_KEYS.APP_CLIENT,
-      GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT,
-      GO_PES_CATALOG_CACHE_KEYS.ORGANIZACION_CLIENT,
-      GO_PES_CATALOG_CACHE_KEYS.AVANCE_ORGS_CLIENT
+      GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT
     ]);
   } catch (err) {}
 }

@@ -318,6 +318,11 @@ function guardarIngreso(payload) {
       vistaTerritorialPairs: [{ uv: clean.uv, sector: clean.sector }],
       sugerenciaSolicitudIds: [solicitudId]
     });
+    refreshDerivedArtifacts_({
+      master: true,
+      vistaTerritorial: true,
+      sugerencias: true
+    });
 
     const result = {
       ok: true,
@@ -394,6 +399,10 @@ function guardarSeguimiento(payload) {
   });
 
   maybeCallMaker_('recalcularFicha', { solicitud_id: payload.solicitud_id, organizacion_id: payload.organizacion_id || '' });
+  refreshDerivedArtifacts_({
+    master: true,
+    sugerencias: true
+  });
   refreshDerivedArtifacts_({
     master: true,
     sugerencias: true
@@ -491,6 +500,14 @@ function guardarOrganizacion(payload) {
     ],
     responsables: [payload.responsable_actual || user.nombre_visible]
   });
+  refreshDerivedArtifacts_({
+    master: true,
+    vistaOrganizaciones: true,
+    vistaTerritorial: true,
+    sugerencias: true,
+    territorioCatalogo: true,
+    responsablesCatalogo: true
+  });
   logProcessing_('INFO', 'guardarOrganizacion', 'organizacion', organizacionId, user.email, 'OK', payload);
   logUserAction_('UPSERT_ORGANIZACION', 'organizacion', organizacionId, 'OK', payload);
   const result = { ok: true, organizacion_id: organizacionId };
@@ -580,6 +597,12 @@ function guardarInstrumento(payload) {
     vistaInstrumentos: true,
     vistaTerritorial: true
   });
+  refreshDerivedArtifacts_({
+    master: true,
+    vistaOrganizaciones: true,
+    vistaInstrumentos: true,
+    vistaTerritorial: true
+  });
   logProcessing_('INFO', 'guardarInstrumento', 'instrumento', orgInstrumentoId, user.email, 'OK', payload);
   logUserAction_('UPSERT_INSTRUMENTO', 'instrumento', orgInstrumentoId, 'OK', payload);
   return { ok: true, org_instrumento_id: orgInstrumentoId };
@@ -632,6 +655,9 @@ function guardarRequisito(payload) {
     updated_at: now
   });
 
+  refreshDerivedArtifacts_({
+    master: true
+  });
   refreshDerivedArtifacts_({
     master: true
   });
@@ -716,6 +742,10 @@ function importarSocios(payload) {
       return solicitudesByOrg[orgId] || '';
     })),
     vistaOrganizacionIds: affectedOrgIds
+  });
+  refreshDerivedArtifacts_({
+    master: true,
+    vistaOrganizaciones: true
   });
   logProcessing_('INFO', 'importarSocios', 'socios', '', user.email, errors.length ? 'PARCIAL' : 'OK', { total: rows.length, validos: validRows.length, errores: errors.length });
   logUserAction_('IMPORT_SOCIOS', 'socios', '', errors.length ? 'PARCIAL' : 'OK', { total: rows.length, errores: errors });

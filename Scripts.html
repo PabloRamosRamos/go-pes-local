@@ -54,8 +54,8 @@
       ingresoMatches: [],
       renderedViews: {},
       catalogStatus: {
-        app: !!(BOOTSTRAP.catalogs && Object.keys(BOOTSTRAP.catalogs).length),
-        ingreso: !!(BOOTSTRAP.catalogs && Object.keys(BOOTSTRAP.catalogs).length),
+        app: false,
+        ingreso: false,
         organizacion: false
       }
     }
@@ -141,10 +141,12 @@
 
     showAppLoading('Iniciando Gestor Operativo');
 
-    Promise.resolve().then(() => {
-      APP.state.user = BOOTSTRAP.user || APP.state.user;
-      APP.state.permissions = BOOTSTRAP.permissions || APP.state.permissions;
-      mergeCatalogs_(BOOTSTRAP.catalogs || {});
+    api('getAppBootstrap').then(bootstrap => {
+      bootstrap = bootstrap || {};
+
+      APP.state.user = bootstrap.user || APP.state.user;
+      APP.state.permissions = bootstrap.permissions || APP.state.permissions;
+      mergeCatalogs_(bootstrap.catalogs || {});
 
       hydrateStaticUser();
       applyPermissions();
@@ -589,7 +591,7 @@
         renderFicha(APP.state.currentFicha);
       }
 
-      if (view === 'seguimiento' && wasRendered) {
+      if (view === 'seguimiento') {
         refreshAvanceViewOnRoute_();
       }
 

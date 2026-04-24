@@ -449,11 +449,8 @@ function getOrganizacionCatalogBundle_() {
 }
 
 function buildOrganizacionClientSnapshot_(row) {
-  const id = String(row && row.organizacion_id || '').trim();
-  return {
-    organizacionesList: organizacionesList,
-    organizacionesById: organizacionesById
-  };
+  if (!row) return {};
+  return Object.assign({}, row);
 }
 
 function getCatalogCacheJson_(key) {

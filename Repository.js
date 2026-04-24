@@ -68,6 +68,14 @@ function ensureGoPesV2Sheets_() {
   Object.keys(defs).forEach(name => ensureSheetWithHeaders_(name, defs[name]));
 }
 
+function ensureSheetsSubset_(sheetNames) {
+  const defs = buildSheetDefinitions_();
+  (sheetNames || []).forEach(function(sheetName) {
+    if (!sheetName || !defs[sheetName]) return;
+    ensureSheetWithHeaders_(sheetName, defs[sheetName]);
+  });
+}
+
 function buildSheetDefinitions_() {
   if (typeof goPesApplyAvancePhase1Config_ === 'function') {
     try {
@@ -164,16 +172,40 @@ function getSheetDataFromHeaderRow_(sheetName, headerRow) {
 
 function getSheetDataFromSheet_(sh, headerRow) {
   headerRow = headerRow || 1;
-  if (!sh || sh.getLastRow() <= headerRow) return [];
-  const headers = sh.getRange(headerRow, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
-  const values = sh.getRange(headerRow + 1, 1, sh.getLastRow() - headerRow, headers.length).getValues();
-  return values
-    .filter(r => r.join('').trim() !== '')
-    .map(r => {
-      const obj = {};
-      headers.forEach((h, i) => obj[h] = r[i]);
-      return obj;
+
+  const diag = goPesDiagStart_('Repository.getSheetDataFromSheet_', {
+    sheet: sh ? sh.getName() : '',
+    header_row: headerRow
+  });
+
+  let rowsRead = 0;
+  let colsRead = 0;
+
+  try {
+    if (!sh) return [];
+
+    const lastRow = sh.getLastRow();
+    const lastCol = sh.getLastColumn();
+    if (lastRow <= headerRow || !lastCol) return [];
+
+    rowsRead = lastRow - headerRow;
+    colsRead = lastCol;
+
+    const headers = sh.getRange(headerRow, 1, 1, lastCol).getValues()[0].map(String);
+    const values = sh.getRange(headerRow + 1, 1, rowsRead, headers.length).getValues();
+    return values
+      .filter(r => r.join('').trim() !== '')
+      .map(r => {
+        const obj = {};
+        headers.forEach((h, i) => obj[h] = r[i]);
+        return obj;
+      });
+  } finally {
+    goPesDiagEnd_(diag, {
+      rows_read: rowsRead,
+      cols_read: colsRead
     });
+  }
 }
 
 function getSheetDataMap_(sheetNames) {
@@ -184,112 +216,172 @@ function getSheetDataMap_(sheetNames) {
 }
 
 function appendRowObject_(sheetName, obj) {
-  const sh = ensureSheetWithHeaders_(sheetName, buildSheetDefinitions_()[sheetName] || Object.keys(obj));
-  const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  sh.appendRow(headers.map(h => obj[h] !== undefined ? obj[h] : ''));
-  invalidateSheetRuntimeCache_(sheetName);
+  const diag = goPesDiagStart_('Repository.appendRowObject_', {
+    sheet: sheetName
+  });
+
+  try {
+    const sh = ensureSheetWithHeaders_(sheetName, buildSheetDefinitions_()[sheetName] || Object.keys(obj));
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    sh.appendRow(headers.map(h => obj[h] !== undefined ? obj[h] : ''));
+    invalidateSheetRuntimeCache_(sheetName);
+  } finally {
+    goPesDiagEnd_(diag, { rows_written: 1 });
+  }
 }
 
 function appendRowObjects_(sheetName, objects) {
   const rowsToAppend = Array.isArray(objects) ? objects : [];
   if (!rowsToAppend.length) return;
 
-  const headers = buildSheetDefinitions_()[sheetName] || Object.keys(rowsToAppend[0] || {});
-  const sh = ensureSheetWithHeaders_(sheetName, headers);
-  const values = rowsToAppend.map(function(obj) {
-    return headers.map(function(header) {
-      return obj && obj[header] !== undefined ? obj[header] : '';
-    });
+  const diag = goPesDiagStart_('Repository.appendRowObjects_', {
+    sheet: sheetName,
+    rows_written: rowsToAppend.length
   });
 
-  sh.getRange(sh.getLastRow() + 1, 1, values.length, headers.length).setValues(values);
-  invalidateSheetRuntimeCache_(sheetName);
+  try {
+    const headers = buildSheetDefinitions_()[sheetName] || Object.keys(rowsToAppend[0] || {});
+    const sh = ensureSheetWithHeaders_(sheetName, headers);
+    const values = rowsToAppend.map(function(obj) {
+      return headers.map(function(header) {
+        return obj && obj[header] !== undefined ? obj[header] : '';
+      });
+    });
+
+    sh.getRange(sh.getLastRow() + 1, 1, values.length, headers.length).setValues(values);
+    invalidateSheetRuntimeCache_(sheetName);
+  } finally {
+    goPesDiagEnd_(diag);
+  }
 }
 
 function upsertByKey_(sheetName, keyField, obj, caseInsensitive) {
-  const headers = buildSheetDefinitions_()[sheetName] || Object.keys(obj);
-  const sh = ensureSheetWithHeaders_(sheetName, headers);
-  const data = getSheetData_(sheetName);
-  const target = caseInsensitive ? normalizeText_(obj[keyField]) : String(obj[keyField] || '');
-  let rowIndex = -1;
+  const diag = goPesDiagStart_('Repository.upsertByKey_', {
+    sheet: sheetName,
+    key_field: keyField
+  });
 
-  for (let i = 0; i < data.length; i++) {
-    const candidate = caseInsensitive ? normalizeText_(data[i][keyField]) : String(data[i][keyField] || '');
-    if (candidate === target) {
-      rowIndex = i + 2;
-      break;
+  let mode = 'append';
+
+  try {
+    const headers = buildSheetDefinitions_()[sheetName] || Object.keys(obj);
+    const sh = ensureSheetWithHeaders_(sheetName, headers);
+    const data = getSheetData_(sheetName);
+    const target = caseInsensitive ? normalizeText_(obj[keyField]) : String(obj[keyField] || '');
+    let rowIndex = -1;
+
+    for (let i = 0; i < data.length; i++) {
+      const candidate = caseInsensitive ? normalizeText_(data[i][keyField]) : String(data[i][keyField] || '');
+      if (candidate === target) {
+        rowIndex = i + 2;
+        break;
+      }
     }
-  }
 
-  const row = headers.map(h => obj[h] !== undefined ? obj[h] : '');
-  if (rowIndex === -1) {
-    sh.appendRow(row);
-  } else {
-    sh.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
+    const row = headers.map(h => obj[h] !== undefined ? obj[h] : '');
+    if (rowIndex === -1) {
+      sh.appendRow(row);
+    } else {
+      mode = 'update';
+      sh.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
+    }
+    invalidateSheetRuntimeCache_(sheetName);
+  } finally {
+    goPesDiagEnd_(diag, {
+      mode: mode,
+      rows_written: 1
+    });
   }
-  invalidateSheetRuntimeCache_(sheetName);
 }
 
 function upsertRowsByKey_(sheetName, keyField, objects, caseInsensitive) {
   const items = Array.isArray(objects) ? objects : [];
   if (!items.length) return;
 
-  const headers = buildSheetDefinitions_()[sheetName] || Object.keys(items[0] || {});
-  const sh = ensureSheetWithHeaders_(sheetName, headers);
-  const data = getSheetData_(sheetName);
-  const index = {};
-  const appendIndexByKey = {};
-
-  data.forEach(function(row, idx) {
-    const value = caseInsensitive ? normalizeText_(row[keyField]) : String(row[keyField] || '');
-    index[value] = idx + 2;
+  const diag = goPesDiagStart_('Repository.upsertRowsByKey_', {
+    sheet: sheetName,
+    key_field: keyField,
+    rows_input: items.length
   });
 
-  const updates = [];
-  const appends = [];
+  let updatesCount = 0;
+  let appendsCount = 0;
 
-  items.forEach(function(obj) {
-    const keyValue = caseInsensitive ? normalizeText_(obj[keyField]) : String(obj[keyField] || '');
-    const row = headers.map(function(header) {
-      return obj[header] !== undefined ? obj[header] : '';
+  try {
+    const headers = buildSheetDefinitions_()[sheetName] || Object.keys(items[0] || {});
+    const sh = ensureSheetWithHeaders_(sheetName, headers);
+    const data = getSheetData_(sheetName);
+    const index = {};
+    const appendIndexByKey = {};
+
+    data.forEach(function(row, idx) {
+      const value = caseInsensitive ? normalizeText_(row[keyField]) : String(row[keyField] || '');
+      index[value] = idx + 2;
     });
 
-    if (index[keyValue]) {
-      updates.push({ rowIndex: index[keyValue], values: row });
-      return;
+    const updates = [];
+    const appends = [];
+
+    items.forEach(function(obj) {
+      const keyValue = caseInsensitive ? normalizeText_(obj[keyField]) : String(obj[keyField] || '');
+      const row = headers.map(function(header) {
+        return obj[header] !== undefined ? obj[header] : '';
+      });
+
+      if (index[keyValue]) {
+        updates.push({ rowIndex: index[keyValue], values: row });
+        return;
+      }
+
+      if (appendIndexByKey[keyValue] !== undefined) {
+        appends[appendIndexByKey[keyValue]] = row;
+        return;
+      }
+
+      appendIndexByKey[keyValue] = appends.length;
+      appends.push(row);
+    });
+
+    updatesCount = updates.length;
+    appendsCount = appends.length;
+
+    updates.forEach(function(update) {
+      sh.getRange(update.rowIndex, 1, 1, headers.length).setValues([update.values]);
+    });
+
+    if (appends.length) {
+      sh.getRange(sh.getLastRow() + 1, 1, appends.length, headers.length).setValues(appends);
     }
 
-    if (appendIndexByKey[keyValue] !== undefined) {
-      appends[appendIndexByKey[keyValue]] = row;
-      return;
-    }
-
-    appendIndexByKey[keyValue] = appends.length;
-    appends.push(row);
-  });
-
-  updates.forEach(function(update) {
-    sh.getRange(update.rowIndex, 1, 1, headers.length).setValues([update.values]);
-  });
-
-  if (appends.length) {
-    sh.getRange(sh.getLastRow() + 1, 1, appends.length, headers.length).setValues(appends);
+    invalidateSheetRuntimeCache_(sheetName);
+  } finally {
+    goPesDiagEnd_(diag, {
+      rows_updated: updatesCount,
+      rows_appended: appendsCount
+    });
   }
-
-  invalidateSheetRuntimeCache_(sheetName);
 }
 
 function replaceSheetData_(sheetName, headers, rows) {
-  const sh = ensureSheetWithHeaders_(sheetName, headers);
-  const lastRow = sh.getLastRow();
-  const lastCol = Math.max(headers.length, sh.getLastColumn());
-  if (lastRow > 1) {
-    sh.getRange(2, 1, lastRow - 1, lastCol).clearContent();
+  const diag = goPesDiagStart_('Repository.replaceSheetData_', {
+    sheet: sheetName,
+    rows_written: rows ? rows.length : 0
+  });
+
+  try {
+    const sh = ensureSheetWithHeaders_(sheetName, headers);
+    const lastRow = sh.getLastRow();
+    const lastCol = Math.max(headers.length, sh.getLastColumn());
+    if (lastRow > 1) {
+      sh.getRange(2, 1, lastRow - 1, lastCol).clearContent();
+    }
+    if (rows && rows.length) {
+      sh.getRange(2, 1, rows.length, headers.length).setValues(rows);
+    }
+    invalidateSheetRuntimeCache_(sheetName);
+  } finally {
+    goPesDiagEnd_(diag);
   }
-  if (rows && rows.length) {
-    sh.getRange(2, 1, rows.length, headers.length).setValues(rows);
-  }
-  invalidateSheetRuntimeCache_(sheetName);
 }
 
 function findByField_(sheetName, field, value, caseInsensitive) {

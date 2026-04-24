@@ -49,9 +49,15 @@
       currentAvance: null,
       avanceCatalogos: null,
       avanceOrganizaciones: [],
+      avanceOrganizacionesFetchedAt: 0,
       pendingSociosRows: [],
       ingresoMatches: [],
-      renderedViews: {}
+      renderedViews: {},
+      catalogStatus: {
+        app: !!(BOOTSTRAP.catalogs && Object.keys(BOOTSTRAP.catalogs).length),
+        ingreso: !!(BOOTSTRAP.catalogs && Object.keys(BOOTSTRAP.catalogs).length),
+        organizacion: false
+      }
     }
   };
 
@@ -135,12 +141,10 @@
 
     showAppLoading('Iniciando Gestor Operativo');
 
-    api('getAppBootstrap').then(bootstrap => {
-      bootstrap = bootstrap || {};
-
-      APP.state.user = bootstrap.user || APP.state.user;
-      APP.state.permissions = bootstrap.permissions || APP.state.permissions;
-      APP.state.catalogs = normalizeCatalogs(bootstrap.catalogs || {});
+    Promise.resolve().then(() => {
+      APP.state.user = BOOTSTRAP.user || APP.state.user;
+      APP.state.permissions = BOOTSTRAP.permissions || APP.state.permissions;
+      mergeCatalogs_(BOOTSTRAP.catalogs || {});
 
       hydrateStaticUser();
       applyPermissions();
@@ -175,10 +179,7 @@
     const img = document.getElementById('appLogo');
     if (!img) return;
 
-    const logo =
-      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) ||
-      img.getAttribute('src') ||
-      '';
+    const logo = img.getAttribute('src') || '';
 
     if (logo) {
       img.src = logo;
@@ -201,6 +202,58 @@
       instrumentosOrigen: [...new Set((c.instrumentos || []).map(i => i.origen_instrumento).filter(Boolean))],
       requisitoCategorias: ['legal', 'administrativo', 'financiero', 'documental', 'tecnico', 'otro']
     };
+  }
+
+  function mergeCatalogs_(catalogs) {
+    APP.state.catalogs = normalizeCatalogs({
+      ...(APP.state.catalogs || {}),
+      ...(catalogs || {})
+    });
+  }
+
+  function ensureIngresoCatalogs_() {
+    if (APP.state.catalogStatus.ingreso) return null;
+
+    return api('getCatalogosNuevoIngresoClient').then(data => {
+      mergeCatalogs_(data || {});
+      APP.state.catalogStatus.ingreso = true;
+    });
+  }
+
+  function ensureAppCatalogs_() {
+    if (APP.state.catalogStatus.app) return null;
+
+    return api('getCatalogosAppClient').then(data => {
+      mergeCatalogs_(data || {});
+      APP.state.catalogStatus.app = true;
+    });
+  }
+
+  function ensureOrganizacionCatalogs_() {
+    if (APP.state.catalogStatus.organizacion) return null;
+
+    return api('getCatalogosOrganizacionClient').then(data => {
+      mergeCatalogs_(data || {});
+      APP.state.catalogStatus.organizacion = true;
+    });
+  }
+
+  function ensureCatalogsForView_(view) {
+    switch (view) {
+      case 'nuevo-ingreso':
+        return ensureIngresoCatalogs_();
+      case 'organizacion': {
+        const pending = [ensureAppCatalogs_(), ensureOrganizacionCatalogs_()].filter(Boolean);
+        return pending.length ? Promise.all(pending) : null;
+      }
+      case 'instrumento':
+      case 'requisito': {
+        const pending = [ensureAppCatalogs_()].filter(Boolean);
+        return pending.length ? Promise.all(pending) : null;
+      }
+      default:
+        return null;
+    }
   }
 
   function hydrateStaticUser() {
@@ -518,6 +571,7 @@
 
   function route(view, params = {}) {
     APP.state.activeView = view;
+    const wasRendered = !!APP.state.renderedViews[view];
 
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.getElementById(`view-${view}`)?.classList.add('active');
@@ -527,24 +581,35 @@
     );
 
     toggleTopQuickActions_(view);
-    hideContentLoading();
-    ensureViewRendered_(view);
+    const finalizeRoute = () => {
+      hideContentLoading();
+      ensureViewRendered_(view);
 
-    if (view === 'ficha' && APP.state.currentFicha && APP.state.currentFicha.summary) {
-      renderFicha(APP.state.currentFicha);
+      if (view === 'ficha' && APP.state.currentFicha && APP.state.currentFicha.summary) {
+        renderFicha(APP.state.currentFicha);
+      }
+
+      if (view === 'seguimiento' && wasRendered) {
+        refreshAvanceViewOnRoute_();
+      }
+
+      if (view === 'historial') loadHistorial();
+      if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
+      if (view === 'nuevo-ingreso') {
+        renderNuevoIngresoView_();
+      }
+
+      setStatus(`Vista actual: ${friendlyViewName_(view)}`);
+    };
+
+    const catalogPromise = ensureCatalogsForView_(view);
+    if (catalogPromise) {
+      showContentLoading(`Cargando ${friendlyViewName_(view)}...`);
+      catalogPromise.then(finalizeRoute).catch(showError).finally(hideContentLoading);
+      return;
     }
 
-    if (view === 'seguimiento') {
-      refreshAvanceViewOnRoute_();
-    }
-
-    if (view === 'historial') loadHistorial();
-    if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
-    if (view === 'nuevo-ingreso') {
-      renderNuevoIngresoView_();
-    }
-
-    setStatus(`Vista actual: ${friendlyViewName_(view)}`);
+    finalizeRoute();
   }
 
   function runSearch() {
@@ -1003,6 +1068,9 @@
     ev.preventDefault();
     const payload = serializeForm(ev.target);
     api('guardarOrganizacion', payload).then(res => {
+      upsertOrganizacionCatalogEntry_(Object.assign({}, payload, {
+        organizacion_id: res.organizacion_id
+      }));
       showSuccess(`Organización guardada: ${res.organizacion_id}`);
       if (payload.solicitud_id) loadFicha({ solicitud_id: payload.solicitud_id, organizacion_id: res.organizacion_id });
     }).catch(showError);
@@ -1229,9 +1297,11 @@
         return;
       }
 
-      hydrateOrganizacionForm_(orgId);
-      toggleOrganizacionFormLock_(false);
-      selector.disabled = false;
+      toggleOrganizacionFormLock_(true);
+      hydrateOrganizacionForm_(orgId).then(() => {
+        toggleOrganizacionFormLock_(false);
+        selector.disabled = false;
+      }).catch(showError);
     });
   }
 
@@ -1278,11 +1348,30 @@
 
   function hydrateOrganizacionForm_(organizacionId) {
     const form = document.getElementById('form-organizacion');
-    if (!form) return;
+    if (!form) return Promise.resolve();
 
     const data = (APP.state.catalogs.organizacionesById || {})[organizacionId];
-    if (!data) return;
+    if (data) {
+      applyOrganizacionFormData_(form, data);
+      return Promise.resolve(data);
+    }
 
+    showContentLoading('Cargando organizaciÃ³n...');
+
+    return api('getOrganizacionClientById', { organizacion_id: organizacionId }).then(payload => {
+      const snapshot = payload || {};
+      APP.state.catalogs.organizacionesById = {
+        ...(APP.state.catalogs.organizacionesById || {}),
+        [organizacionId]: snapshot
+      };
+      applyOrganizacionFormData_(form, snapshot);
+      return snapshot;
+    }).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function applyOrganizacionFormData_(form, data) {
     Array.from(form.elements).forEach(el => {
       if (!el.name || el.name === 'organizacion_id') return;
       const value = data[el.name] !== undefined ? data[el.name] : '';
@@ -1297,6 +1386,44 @@
     }
 
     refreshOrganizacionImageField_();
+  }
+
+  function upsertOrganizacionCatalogEntry_(record) {
+    if (!record || !record.organizacion_id) return;
+
+    const orgId = String(record.organizacion_id || '').trim();
+    const label = String(record.nombre_organizacion || '').trim();
+    if (!orgId || !label) return;
+
+    const list = Array.isArray(APP.state.catalogs.organizacionesList)
+      ? APP.state.catalogs.organizacionesList.slice()
+      : [];
+
+    const nextEntry = { value: orgId, label: label };
+    const index = list.findIndex(item => String(item && item.value || '') === orgId);
+
+    if (index === -1) {
+      list.push(nextEntry);
+    } else {
+      list[index] = nextEntry;
+    }
+
+    list.sort((a, b) => String(a.label || '').localeCompare(String(b.label || ''), 'es'));
+    APP.state.catalogs.organizacionesList = list;
+    APP.state.catalogs.organizacionesById = {
+      ...(APP.state.catalogs.organizacionesById || {}),
+      [orgId]: {
+        ...((APP.state.catalogs.organizacionesById || {})[orgId] || {}),
+        ...record
+      }
+    };
+
+    const selector = document.querySelector('#form-organizacion [name="organizacion_id"]');
+    if (selector) {
+      const currentValue = String(selector.value || '').trim() || orgId;
+      fillSelect(selector, list, 'Seleccionar organizaciÃ³n');
+      selector.value = currentValue;
+    }
   }
 
   function setFormFieldValue_(el, value) {
@@ -1594,10 +1721,20 @@
     const select = document.getElementById('avance-organizacion-select');
     if (!select) return;
 
+    const now = Date.now();
+    if (
+      APP.state.avanceOrganizaciones.length &&
+      APP.state.avanceOrganizacionesFetchedAt &&
+      (now - APP.state.avanceOrganizacionesFetchedAt) < 30000
+    ) {
+      return;
+    }
+
     const currentValue = String(select.value || '').trim();
 
     api('getOrganizacionesAvanceClient').then(data => {
       APP.state.avanceOrganizaciones = (data && data.organizacionesList) || [];
+      APP.state.avanceOrganizacionesFetchedAt = Date.now();
       fillSelect(
         select,
         APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label })),
@@ -1623,6 +1760,7 @@
     ]).then(([catalogos, organizaciones]) => {
       APP.state.avanceCatalogos = catalogos || {};
       APP.state.avanceOrganizaciones = (organizaciones && organizaciones.organizacionesList) || [];
+      APP.state.avanceOrganizacionesFetchedAt = Date.now();
     }).finally(() => {
       hideContentLoading();
     });

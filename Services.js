@@ -3,11 +3,13 @@
  * Esta capa orquesta validación, persistencia y refresco de vistas derivadas.
  */
 function buscarVecino(query) {
+  const diag = goPesDiagStart_('Services.buscarVecino', {
+    query_length: String(query || '').trim().length
+  });
   requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
 
   const term = normalizeText_(query || '');
 
-  const masterRows = getSheetData_(GO_PES_V2.SHEETS.MASTER);
   const caseRows = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS);
   const orgRows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES);
 
@@ -17,29 +19,17 @@ function buscarVecino(query) {
     if (key && !orgBySolicitud[key]) orgBySolicitud[key] = r;
   });
 
-  const mergedMap = {};
-
-  masterRows.forEach(function(r) {
+  let rows = caseRows.map(function(r) {
     const key = String(r.solicitud_id || '').trim();
-    if (!key) return;
-    mergedMap[key] = Object.assign({}, r);
-  });
-
-  caseRows.forEach(function(r) {
-    const key = String(r.solicitud_id || '').trim();
-    if (!key) return;
-
     const org = orgBySolicitud[key] || {};
-    mergedMap[key] = Object.assign({}, r, mergedMap[key] || {}, {
-      organizacion_id: (mergedMap[key] && mergedMap[key].organizacion_id) || r.organizacion_id || org.organizacion_id || '',
-      nombre_organizacion: (mergedMap[key] && mergedMap[key].nombre_organizacion) || org.nombre_organizacion || '',
-      estado_constitucion: (mergedMap[key] && mergedMap[key].estado_constitucion) || org.estado_constitucion || '',
-      estado_general_organizacion: (mergedMap[key] && mergedMap[key].estado_general_organizacion) || org.estado_general_organizacion || ''
-    });
-  });
 
-  let rows = Object.keys(mergedMap).map(function(k) {
-    return mergedMap[k];
+    return Object.assign({}, r, {
+      organizacion_id: r.organizacion_id || org.organizacion_id || '',
+      nombre_organizacion: org.nombre_organizacion || '',
+      estado_constitucion: org.estado_constitucion || '',
+      estado_general_organizacion: org.estado_general_organizacion || '',
+      responsable_actual: org.responsable_actual || r.responsable_actual || ''
+    });
   });
 
   if (term) {
@@ -60,7 +50,7 @@ function buscarVecino(query) {
     });
   }
 
-  return rows.slice(0, 50).map(function(r) {
+  const result = rows.slice(0, 50).map(function(r) {
     return {
       solicitud_id: String(r.solicitud_id || ''),
       organizacion_id: String(r.organizacion_id || ''),
@@ -78,6 +68,11 @@ function buscarVecino(query) {
       sector: String(r.sector || '')
     };
   });
+
+  goPesDiagEnd_(diag, {
+    result_count: result.length
+  });
+  return result;
 }
 
 function buscarSolicitud(query) {
@@ -92,25 +87,53 @@ function buscarOrganizacion(query) {
 }
 
 function obtenerFicha(payload) {
+  const diag = goPesDiagStart_('Services.obtenerFicha', payload || {});
   requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
 
   const solicitudId = payload && payload.solicitud_id ? String(payload.solicitud_id) : '';
   const organizacionId = payload && payload.organizacion_id ? String(payload.organizacion_id) : '';
 
-  const master = getSheetData_(GO_PES_V2.SHEETS.MASTER);
-  let base = null;
+  let caseRow = solicitudId
+    ? findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false)
+    : null;
 
-  if (solicitudId) {
-    base = master.find(r => String(r.solicitud_id) === solicitudId) || null;
+  let orgRow = organizacionId
+    ? findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false)
+    : null;
+
+  if (!caseRow && orgRow && orgRow.solicitud_id) {
+    caseRow = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', orgRow.solicitud_id, false);
   }
-  if (!base && organizacionId) {
-    base = master.find(r => String(r.organizacion_id) === organizacionId) || null;
-  }
-  if (!base && payload && payload.query) {
-    base = buscarVecino(payload.query)[0] || null;
+  if ((!caseRow && !orgRow) && payload && payload.query) {
+    const match = buscarVecino(payload.query)[0] || null;
+    if (match && match.solicitud_id) {
+      caseRow = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', match.solicitud_id, false);
+    }
+    if (!orgRow && match && match.organizacion_id) {
+      orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', match.organizacion_id, false);
+    }
   }
 
-  const caseRow =
+  if (!orgRow && caseRow && caseRow.organizacion_id) {
+    orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', caseRow.organizacion_id, false);
+  }
+  if (!caseRow && !orgRow) {
+    throw new Error('No se encontrÃ³ la ficha solicitada.');
+  }
+  const finalSolicitudId = String(
+    (caseRow && caseRow.solicitud_id) ||
+    (orgRow && orgRow.solicitud_id) ||
+    solicitudId ||
+    ''
+  );
+  const finalOrgId = String(
+    (orgRow && orgRow.organizacion_id) ||
+    (caseRow && caseRow.organizacion_id) ||
+    organizacionId ||
+    ''
+  );
+  /* legacy block removed
+  const _legacyCaseRow =
     (solicitudId
       ? findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false)
       : null) ||
@@ -125,7 +148,7 @@ function obtenerFicha(payload) {
 
   if (!base && !caseRow) {
     throw new Error('No se encontró la ficha solicitada.');
-  }
+  
 
   const orgRow = finalOrgId
     ? findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', finalOrgId, false)
@@ -136,6 +159,8 @@ function obtenerFicha(payload) {
     (caseRow && caseRow.solicitud_id) ||
     solicitudId ||
     '';
+
+  */
 
   const hitos = finalSolicitudId
     ? filterByField_(GO_PES_V2.SHEETS.FACT_HITOS, 'solicitud_id', finalSolicitudId, false)
@@ -161,12 +186,23 @@ function obtenerFicha(payload) {
     )
     .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
 
-  const summary = Object.assign({}, caseRow || {}, base || {}, {
+  const lastAction = acciones[0] || {};
+  const summary = Object.assign({}, caseRow || {}, orgRow || {}, {
     solicitud_id: finalSolicitudId,
-    organizacion_id: finalOrgId
+    organizacion_id: finalOrgId,
+    nombre_organizacion: String(orgRow && orgRow.nombre_organizacion || ''),
+    estado_constitucion: String(orgRow && orgRow.estado_constitucion || ''),
+    estado_general_organizacion: String(orgRow && orgRow.estado_general_organizacion || ''),
+    responsable_actual: String(
+      (orgRow && orgRow.responsable_actual) ||
+      (caseRow && caseRow.responsable_actual) ||
+      ''
+    ),
+    ultimo_usuario: String(lastAction.email || ''),
+    ultima_actualizacion: lastAction.timestamp || (caseRow && caseRow.updated_at) || (orgRow && orgRow.updated_at) || ''
   });
 
-  return toClientSafe_({
+  const result = toClientSafe_({
     summary: summary,
     vecino: caseRow || {},
     organizacion: orgRow,
@@ -176,15 +212,21 @@ function obtenerFicha(payload) {
     socios: socios,
     trazabilidad: acciones.slice(0, 25)
   });
+
+  goPesDiagEnd_(diag, {
+    found: !!(result && result.summary)
+  });
+  return result;
 }
 
 function guardarIngreso(payload) {
+  const diag = goPesDiagStart_('Services.guardarIngreso', {});
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);
 
   try {
     const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
-    ensureGoPesV2Sheets_();
+    ensureSheetsSubset_([GO_PES_V2.SHEETS.RAW_INGRESO, GO_PES_V2.SHEETS.MAE_CASOS]);
 
     payload = payload || {};
 
@@ -271,14 +313,23 @@ function guardarIngreso(payload) {
     logProcessing_('INFO', 'guardarIngreso', 'solicitud', solicitudId, user.email || '', 'OK', clean);
     logUserAction_('CREATE_INGRESO', 'solicitud', solicitudId, 'OK', clean);
 
-    goPesRefrescarVistasYMaster();
+    refreshPartialArtifacts_({
+      masterSolicitudIds: [solicitudId],
+      vistaTerritorialPairs: [{ uv: clean.uv, sector: clean.sector }],
+      sugerenciaSolicitudIds: [solicitudId]
+    });
 
-    return {
+    const result = {
       ok: true,
       solicitud_id: solicitudId,
       vecino_id: vecinoId,
       message: 'Solicitud guardada correctamente.'
     };
+    goPesDiagEnd_(diag, {
+      ok: true,
+      solicitud_id: solicitudId
+    });
+    return result;
   } finally {
     lock.releaseLock();
   }
@@ -343,17 +394,24 @@ function guardarSeguimiento(payload) {
   });
 
   maybeCallMaker_('recalcularFicha', { solicitud_id: payload.solicitud_id, organizacion_id: payload.organizacion_id || '' });
-  goPesRefrescarVistasYMaster();
+  refreshDerivedArtifacts_({
+    master: true,
+    sugerencias: true
+  });
   logProcessing_('INFO', 'guardarSeguimiento', 'seguimiento', hitoId, user.email, 'OK', payload);
   logUserAction_('CREATE_SEGUIMIENTO', 'seguimiento', hitoId, 'OK', payload);
   return { ok: true, hito_id: hitoId };
 }
 
 function guardarOrganizacion(payload) {
+  const diag = goPesDiagStart_('Services.guardarOrganizacion', {});
   const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
   validateOrganizacionV2_(payload);
   const now = new Date();
   const organizacionId = payload.organizacion_id || nextId_('organizacion', 'ORG');
+  const existingOrg = payload.organizacion_id
+    ? findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', payload.organizacion_id, false)
+    : null;
 
   appendRowObject_(GO_PES_V2.SHEETS.RAW_ORGANIZACIONES, {
     created_at: now,
@@ -418,10 +476,29 @@ function guardarOrganizacion(payload) {
   }
 
   maybeCallMaker_('recalcularFicha', { solicitud_id: payload.solicitud_id || '', organizacion_id: organizacionId });
-  goPesRefrescarVistasYMaster();
+  refreshPartialArtifacts_({
+    masterSolicitudIds: uniqueNonBlank_([payload.solicitud_id, existingOrg && existingOrg.solicitud_id]),
+    vistaOrganizacionIds: [organizacionId],
+    vistaTerritorialPairs: [
+      { uv: payload.uv || '', sector: payload.sector || '' },
+      { uv: existingOrg && existingOrg.uv || '', sector: existingOrg && existingOrg.sector || '' }
+    ],
+    sugerenciaSolicitudIds: uniqueNonBlank_([payload.solicitud_id, existingOrg && existingOrg.solicitud_id]),
+    sugerenciaOrganizacionIds: [organizacionId],
+    territorioCatalogPairs: [
+      { uv: payload.uv || '', sector: payload.sector || '' },
+      { uv: existingOrg && existingOrg.uv || '', sector: existingOrg && existingOrg.sector || '' }
+    ],
+    responsables: [payload.responsable_actual || user.nombre_visible]
+  });
   logProcessing_('INFO', 'guardarOrganizacion', 'organizacion', organizacionId, user.email, 'OK', payload);
   logUserAction_('UPSERT_ORGANIZACION', 'organizacion', organizacionId, 'OK', payload);
-  return { ok: true, organizacion_id: organizacionId };
+  const result = { ok: true, organizacion_id: organizacionId };
+  goPesDiagEnd_(diag, {
+    ok: true,
+    organizacion_id: organizacionId
+  });
+  return result;
 }
 
 function guardarInstrumento(payload) {
@@ -497,7 +574,12 @@ function guardarInstrumento(payload) {
     updated_at: now
   });
 
-  goPesRefrescarVistasYMaster();
+  refreshDerivedArtifacts_({
+    master: true,
+    vistaOrganizaciones: true,
+    vistaInstrumentos: true,
+    vistaTerritorial: true
+  });
   logProcessing_('INFO', 'guardarInstrumento', 'instrumento', orgInstrumentoId, user.email, 'OK', payload);
   logUserAction_('UPSERT_INSTRUMENTO', 'instrumento', orgInstrumentoId, 'OK', payload);
   return { ok: true, org_instrumento_id: orgInstrumentoId };
@@ -550,13 +632,18 @@ function guardarRequisito(payload) {
     updated_at: now
   });
 
-  goPesRefrescarVistasYMaster();
+  refreshDerivedArtifacts_({
+    master: true
+  });
   logProcessing_('INFO', 'guardarRequisito', 'requisito', registroId, user.email, 'OK', payload);
   logUserAction_('UPSERT_REQUISITO', 'requisito', registroId, 'OK', payload);
   return { ok: true, requisito_registro_id: registroId };
 }
 
 function importarSocios(payload) {
+  const diag = goPesDiagStart_('Services.importarSocios', {
+    rows_input: payload && Array.isArray(payload.rows) ? payload.rows.length : 0
+  });
   const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
   const rows = payload && Array.isArray(payload.rows) ? payload.rows : [];
   const validRows = [];
@@ -614,10 +701,31 @@ function importarSocios(payload) {
   appendRowObjects_(GO_PES_V2.SHEETS.RAW_SOCIOS, rawRows);
   upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', factRows, false);
 
-  goPesRefrescarVistasYMaster();
+  const affectedOrgIds = uniqueNonBlank_(validRows.map(function(row) {
+    return row.organizacion_id;
+  }));
+  const solicitudesByOrg = {};
+  getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).forEach(function(row) {
+    const orgId = String(row.organizacion_id || '').trim();
+    if (!orgId) return;
+    solicitudesByOrg[orgId] = String(row.solicitud_id || '').trim();
+  });
+
+  refreshPartialArtifacts_({
+    masterSolicitudIds: uniqueNonBlank_(affectedOrgIds.map(function(orgId) {
+      return solicitudesByOrg[orgId] || '';
+    })),
+    vistaOrganizacionIds: affectedOrgIds
+  });
   logProcessing_('INFO', 'importarSocios', 'socios', '', user.email, errors.length ? 'PARCIAL' : 'OK', { total: rows.length, validos: validRows.length, errores: errors.length });
   logUserAction_('IMPORT_SOCIOS', 'socios', '', errors.length ? 'PARCIAL' : 'OK', { total: rows.length, errores: errors });
-  return { ok: errors.length === 0, total: rows.length, imported: validRows.length, errors: errors };
+  const result = { ok: errors.length === 0, total: rows.length, imported: validRows.length, errors: errors };
+  goPesDiagEnd_(diag, {
+    ok: result.ok,
+    imported: validRows.length,
+    errors: errors.length
+  });
+  return result;
 }
 
 function listarHistorial(filters) {

@@ -165,17 +165,12 @@ function buildBootstrapForTemplate_(e) {
     initialView: params.view || GO_PES_V2.DEFAULT_VIEW,
     query: params,
     user: user,
-    permissions: buildPermissionMap_(user),
-    iconSet: 'material-symbols-outlined',
-    logoDataUri: getLogoDataUri_(),
-    generatedAt: new Date().toISOString()
+    permissions: buildPermissionMap_(user)
   };
 }
 
 function getAppBootstrap() {
   const user = getUsuarioActual();
-  const catalogs = Object.assign({}, getCatalogosApp(), getOrganizacionCatalogBundle_());
-
   return serializeForClient_({
     appName: GO_PES_V2.APP_NAME,
     programTitle: GO_PES_V2.PROGRAM_TITLE,
@@ -185,7 +180,7 @@ function getAppBootstrap() {
     user: user,
     permissions: buildPermissionMap_(user),
     views: GO_PES_V2.VIEWS,
-    catalogs: catalogs
+    catalogs: {}
   });
 }
 

@@ -44,8 +44,21 @@ function getCatalogosAvanceClient() {
 }
 
 function getOrganizacionesAvanceClient() {
+  const diag = goPesDiagStart_('ZZ_AvanceBackend.getOrganizacionesAvanceClient', {});
   requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
+
+  const cached = typeof getCatalogCacheJson_ === 'function' &&
+    typeof GO_PES_CATALOG_CACHE_KEYS !== 'undefined'
+    ? getCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.AVANCE_ORGS_CLIENT)
+    : null;
+  if (cached) {
+    goPesDiagEnd_(diag, {
+      result_count: (cached.organizacionesList || []).length,
+      cache_hit: true
+    });
+    return cached;
+  }
 
   const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
     .filter(function(r) {
@@ -55,16 +68,21 @@ function getOrganizacionesAvanceClient() {
       return String(a.nombre_organizacion || '').localeCompare(String(b.nombre_organizacion || ''), 'es');
     });
 
-  return goPesAvanceToClientSafe_({
+  const result = goPesAvanceToClientSafe_({
     organizacionesList: rows.map(function(r) {
       return {
         value: String(r.organizacion_id || '').trim(),
-        label: String(r.nombre_organizacion || '').trim(),
-        solicitud_id: String(r.solicitud_id || '').trim(),
-        estado_constitucion: String(r.estado_constitucion || '').trim()
+        label: String(r.nombre_organizacion || '').trim()
       };
     })
   });
+  if (typeof putCatalogCacheJson_ === 'function' && typeof GO_PES_CATALOG_CACHE_KEYS !== 'undefined') {
+    putCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.AVANCE_ORGS_CLIENT, result, 300);
+  }
+  goPesDiagEnd_(diag, {
+    result_count: result.organizacionesList.length
+  });
+  return result;
 }
 
 function getTimelineAvance(payload) {
@@ -88,6 +106,7 @@ function getBotonesAvanceEstado(payload) {
 }
 
 function getAvanceOrganizacion(payload) {
+  const diag = goPesDiagStart_('ZZ_AvanceBackend.getAvanceOrganizacion', payload || {});
   requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
@@ -102,16 +121,21 @@ function getAvanceOrganizacion(payload) {
   const botones = goPesBuildBotonesAvanceEstado_(orgId, solicitudId);
   const resumen = goPesBuildResumenAvance_(ctx.organizacion, estadoActual, timeline);
 
-  return goPesAvanceToClientSafe_({
+  const result = goPesAvanceToClientSafe_({
     organizacion: ctx.organizacion,
     estado: estadoActual,
     resumen: resumen,
     botones: botones,
     timeline: timeline
   });
+  goPesDiagEnd_(diag, {
+    timeline_count: result.timeline.length
+  });
+  return result;
 }
 
 function registrarHitoAvance(payload) {
+  const diag = goPesDiagStart_('ZZ_AvanceBackend.registrarHitoAvance', payload || {});
   const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
@@ -167,7 +191,7 @@ function registrarHitoAvance(payload) {
     observacion: observacion
   });
 
-  buildVistaAvanceOrganizacion_();
+  upsertVistaAvanceOrganizacionRowById_(organizacionId);
 
   logProcessing_(
     'INFO',
@@ -196,7 +220,7 @@ function registrarHitoAvance(payload) {
     }
   );
 
-  return goPesAvanceToClientSafe_({
+  const result = goPesAvanceToClientSafe_({
     ok: true,
     avance_hito_id: avanceHitoId,
     organizacion_id: organizacionId,
@@ -204,9 +228,16 @@ function registrarHitoAvance(payload) {
     codigo_hito: codigoHito,
     nombre_hito: hitoCatalogo.nombre_hito
   });
+  goPesDiagEnd_(diag, {
+    ok: true,
+    organizacion_id: organizacionId,
+    codigo_hito: codigoHito
+  });
+  return result;
 }
 
 function cambiarEstadoAvance(payload) {
+  const diag = goPesDiagStart_('ZZ_AvanceBackend.cambiarEstadoAvance', payload || {});
   const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
@@ -252,7 +283,7 @@ function cambiarEstadoAvance(payload) {
     activo_flag: true
   });
 
-  buildVistaAvanceOrganizacion_();
+  upsertVistaAvanceOrganizacionRowById_(organizacionId);
 
   logProcessing_(
     'INFO',
@@ -281,13 +312,19 @@ function cambiarEstadoAvance(payload) {
     }
   );
 
-  return goPesAvanceToClientSafe_({
+  const result = goPesAvanceToClientSafe_({
     ok: true,
     avance_estado_id: avanceEstadoId,
     organizacion_id: organizacionId,
     solicitud_id: solicitudId,
     estado_avance: nuevoEstado
   });
+  goPesDiagEnd_(diag, {
+    ok: true,
+    organizacion_id: organizacionId,
+    estado_avance: nuevoEstado
+  });
+  return result;
 }
 
 /** =========================
@@ -295,6 +332,7 @@ function cambiarEstadoAvance(payload) {
  *  ========================= */
 
 function buildVistaAvanceOrganizacion_() {
+  const diag = goPesDiagStart_('ZZ_AvanceBackend.buildVistaAvanceOrganizacion_', {});
   goPesEnsureAvanceBackendReady_();
 
   const headers = goPesGetAvanceHeaders_(GO_PES_V2.SHEETS.VW_AVANCE_ORGANIZACION);
@@ -343,10 +381,53 @@ function buildVistaAvanceOrganizacion_() {
 
   replaceSheetData_(GO_PES_V2.SHEETS.VW_AVANCE_ORGANIZACION, headers, rows);
 
-  return {
+  const result = {
     ok: true,
     total: rows.length
   };
+  goPesDiagEnd_(diag, {
+    rows_written: rows.length
+  });
+  return result;
+}
+
+function buildVistaAvanceOrganizacionRecordById_(organizacionId) {
+  goPesEnsureAvanceBackendReady_();
+
+  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (!org) return null;
+
+  const solicitudId = String(org.solicitud_id || '').trim();
+  const estadoActual = goPesGetEstadoAvanceActual_(organizacionId, solicitudId);
+  const timeline = goPesGetTimelineAvanceRows_(organizacionId);
+  const ultimo = timeline[0] || {};
+  const totalPre = timeline.filter(function(x) {
+    return String(x.tramo || '') === 'PreconstituciÃ³n';
+  }).length;
+  const totalFor = timeline.filter(function(x) {
+    return String(x.tramo || '') === 'FormalizaciÃ³n posterior';
+  }).length;
+
+  return {
+    organizacion_id: String(org.organizacion_id || '').trim(),
+    solicitud_id: solicitudId,
+    nombre_organizacion: String(org.nombre_organizacion || ''),
+    estado_avance: String(estadoActual.estado_avance || 'Activo'),
+    ultimo_hito_codigo: String(ultimo.codigo_hito || ''),
+    ultimo_hito_nombre: String(ultimo.nombre_hito || ''),
+    ultimo_hito_fecha: ultimo.fecha_hito || '',
+    usuario_ultimo_hito: String(ultimo.usuario_registro || ''),
+    total_hitos_cumplidos: timeline.length,
+    total_hitos_tramo_pre: totalPre,
+    total_hitos_tramo_for: totalFor
+  };
+}
+
+function upsertVistaAvanceOrganizacionRowById_(organizacionId) {
+  const record = buildVistaAvanceOrganizacionRecordById_(organizacionId);
+  if (!record) return;
+
+  upsertByKey_(GO_PES_V2.SHEETS.VW_AVANCE_ORGANIZACION, 'organizacion_id', record, false);
 }
 
 /** =========================
@@ -491,6 +572,8 @@ function goPesEnsureEstadoAvanceInicial_(organizacionId, solicitudId, user) {
     timestamp_registro: now,
     activo_flag: true
   });
+
+  upsertVistaAvanceOrganizacionRowById_(organizacionId);
 }
 
 function goPesDeactivateEstadosAvanceActivos_(organizacionId) {

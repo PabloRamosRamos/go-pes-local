@@ -2,6 +2,13 @@
  * Catálogos y payloads auxiliares para la UI.
  * Reúne catálogos de dominio y catálogos derivados desde datos operativos.
  */
+const GO_PES_CATALOG_CACHE_KEYS = {
+  APP_CLIENT: 'go_pes_catalogs_app_client',
+  INGRESO_CLIENT: 'go_pes_catalogs_ingreso_client',
+  ORGANIZACION_CLIENT: 'go_pes_catalogs_organizacion_client',
+  AVANCE_ORGS_CLIENT: 'go_pes_catalogs_avance_orgs_client'
+};
+
 function seedGoPesV2Catalogs_() {
   ensureGoPesV2Sheets_();
   seedEstados_();
@@ -95,7 +102,24 @@ function seedEstados_() {
 
 function getCatalogosOrganizacionClient() {
   requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
-  return serializeForClient_(getOrganizacionCatalogBundle_());
+  const cached = getCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.ORGANIZACION_CLIENT);
+  if (cached) return cached;
+
+  const payload = serializeForClient_(buildOrganizacionCatalogListBundle_());
+  putCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.ORGANIZACION_CLIENT, payload, 300);
+  return payload;
+}
+
+function getOrganizacionClientById(payload) {
+  requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+
+  const organizacionId = String(payload && payload.organizacion_id || '').trim();
+  if (!organizacionId) throw new Error('Falta organizacion_id.');
+
+  const row = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (!row) throw new Error('No se encontró la organización indicada.');
+
+  return serializeForClient_(buildOrganizacionClientSnapshot_(row));
 }
 
 function buildEstadoRows_(tipo, values) {
@@ -109,7 +133,12 @@ function sanitizeForClient_(value) {
 }
 
 function getCatalogosAppClient() {
-  return sanitizeForClient_(getCatalogosApp());
+  const cached = getCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.APP_CLIENT);
+  if (cached) return cached;
+
+  const payload = sanitizeForClient_(buildCatalogosAppClientBundle_());
+  putCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.APP_CLIENT, payload, 300);
+  return payload;
 }
 
 function seedEtapas_() {
@@ -262,20 +291,23 @@ function mergeCatalogRows_(sheetName, headers, newRows, keyFields) {
 }
 
 function getCatalogosNuevoIngresoClient() {
-  const c = sanitizeForClient_(getCatalogosApp());
+  const cached = getCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT);
+  if (cached) return cached;
 
-  return {
+  const c = getCatalogosAppClient();
+  const payload = {
     uvList: c.uvList || [],
     sectorByUv: c.sectorByUv || {},
     tipoVivienda: c.tipoVivienda || ['Casa', 'Departamento', 'Condominio', 'Pasaje', 'Villa', 'Mixto', 'Otro'],
     medioSolicitud: c.medioSolicitud || [],
     unidadOrigen: c.unidadOrigen || []
   };
+
+  putCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT, payload, 300);
+  return payload;
 }
 
 function getCatalogosApp() {
-  ensureGoPesV2Sheets_();
-
   const S = GO_PES_V2.SHEETS;
   const sheets = getSheetDataMap_([
     S.DIM_TERRITORIO,
@@ -381,7 +413,23 @@ function getCatalogosApp() {
   };
 }
 
-function getOrganizacionCatalogBundle_() {
+function buildCatalogosAppClientBundle_() {
+  const c = getCatalogosApp();
+  return {
+    uvList: c.uvList || [],
+    sectorByUv: c.sectorByUv || {},
+    tipoVivienda: c.tipoVivienda || [],
+    medioSolicitud: c.medioSolicitud || [],
+    unidadOrigen: c.unidadOrigen || [],
+    estadosPorTipo: c.estadosPorTipo || {},
+    instrumentos: c.instrumentos || [],
+    requisitosPorInstrumento: c.requisitosPorInstrumento || {},
+    responsables: c.responsables || [],
+    cargosSocios: c.cargosSocios || []
+  };
+}
+
+function buildOrganizacionCatalogListBundle_() {
   const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
     .filter(function(r) {
       return String(r.organizacion_id || '').trim() && String(r.nombre_organizacion || '').trim();
@@ -397,40 +445,65 @@ function getOrganizacionCatalogBundle_() {
     };
   });
 
-  const organizacionesById = {};
-  rows.forEach(function(r) {
-    const id = String(r.organizacion_id || '').trim();
-    if (!id) return;
-
-    organizacionesById[id] = {
-      organizacion_id: id,
-      solicitud_id: String(r.solicitud_id || '').trim(),
-      tipo_organizacion: String(r.tipo_organizacion || '').trim(),
-      nombre_organizacion: String(r.nombre_organizacion || '').trim(),
-      uv: String(r.uv || '').trim(),
-      sector: String(r.sector || '').trim(),
-      direccion_referencia: String(r.direccion_referencia || '').trim(),
-      fecha_inicio_acompanamiento: r.fecha_inicio_acompanamiento || '',
-      cantidad_socios_declarada: r.cantidad_socios_declarada || '',
-      estado_constitucion: String(r.estado_constitucion || '').trim(),
-      fecha_asamblea_constitucion: r.fecha_asamblea_constitucion || '',
-      fecha_ratificacion: r.fecha_ratificacion || '',
-      vigencia_directiva_hasta: r.vigencia_directiva_hasta || '',
-      personalidad_juridica_flag: String(r.personalidad_juridica_flag || '').trim(),
-      certificado_provisorio_flag: String(r.certificado_provisorio_flag || '').trim(),
-      certificado_definitivo_flag: String(r.certificado_definitivo_flag || '').trim(),
-      directiva_vigente_flag: String(r.directiva_vigente_flag || '').trim(),
-      organizacion_constituida_flag: String(r.organizacion_constituida_flag || '').trim(),
-      estado_general_organizacion: String(r.estado_general_organizacion || '').trim(),
-      responsable_actual: String(r.responsable_actual || '').trim(),
-      observacion_resumen: String(r.observacion_resumen || '').trim()
-    };
-  });
-
   return {
-    organizacionesList: organizacionesList,
-    organizacionesById: organizacionesById
+    organizacionesList: organizacionesList
   };
+}
+
+function buildOrganizacionClientSnapshot_(row) {
+  const id = String(row && row.organizacion_id || '').trim();
+  return {
+    organizacion_id: id,
+    solicitud_id: String(row && row.solicitud_id || '').trim(),
+    tipo_organizacion: String(row && row.tipo_organizacion || '').trim(),
+    nombre_organizacion: String(row && row.nombre_organizacion || '').trim(),
+    uv: String(row && row.uv || '').trim(),
+    sector: String(row && row.sector || '').trim(),
+    direccion_referencia: String(row && row.direccion_referencia || '').trim(),
+    fecha_inicio_acompanamiento: row && row.fecha_inicio_acompanamiento || '',
+    cantidad_socios_declarada: row && row.cantidad_socios_declarada || '',
+    estado_constitucion: String(row && row.estado_constitucion || '').trim(),
+    fecha_asamblea_constitucion: row && row.fecha_asamblea_constitucion || '',
+    fecha_ratificacion: row && row.fecha_ratificacion || '',
+    vigencia_directiva_hasta: row && row.vigencia_directiva_hasta || '',
+    personalidad_juridica_flag: String(row && row.personalidad_juridica_flag || '').trim(),
+    certificado_provisorio_flag: String(row && row.certificado_provisorio_flag || '').trim(),
+    certificado_definitivo_flag: String(row && row.certificado_definitivo_flag || '').trim(),
+    directiva_vigente_flag: String(row && row.directiva_vigente_flag || '').trim(),
+    organizacion_constituida_flag: String(row && row.organizacion_constituida_flag || '').trim(),
+    estado_general_organizacion: String(row && row.estado_general_organizacion || '').trim(),
+    responsable_actual: String(row && row.responsable_actual || '').trim(),
+    observacion_resumen: String(row && row.observacion_resumen || '').trim()
+  };
+}
+
+function getCatalogCacheJson_(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const raw = cache.get(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function putCatalogCacheJson_(key, value, ttlSeconds) {
+  try {
+    const payload = JSON.stringify(value);
+    if (payload.length > 90000) return;
+    CacheService.getScriptCache().put(key, payload, ttlSeconds || 300);
+  } catch (err) {}
+}
+
+function invalidateCatalogClientCaches_() {
+  try {
+    CacheService.getScriptCache().removeAll([
+      GO_PES_CATALOG_CACHE_KEYS.APP_CLIENT,
+      GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT,
+      GO_PES_CATALOG_CACHE_KEYS.ORGANIZACION_CLIENT,
+      GO_PES_CATALOG_CACHE_KEYS.AVANCE_ORGS_CLIENT
+    ]);
+  } catch (err) {}
 }
 
 function seedDerivedTerritorio_() {

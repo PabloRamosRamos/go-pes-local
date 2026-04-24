@@ -3,13 +3,13 @@
  * Este archivo es la fuente canónica para reconstrucciones materializadas.
  */
 function goPesRefrescarVistasYMaster_() {
-  ensureGoPesV2Sheets_();
-
-  buildMasterDatos_();
-  buildVistaOrganizaciones_();
-  buildVistaInstrumentos_();
-  buildVistaTerritorial_();
-  rebuildSuggestionDims_();
+  refreshDerivedArtifacts_({
+    master: true,
+    vistaOrganizaciones: true,
+    vistaInstrumentos: true,
+    vistaTerritorial: true,
+    sugerencias: true
+  });
 
   SpreadsheetApp.getActiveSpreadsheet().toast(
     'Vistas y MASTER_DATOS actualizados.',
@@ -22,10 +22,46 @@ function goPesRefrescarVistasYMaster() {
   return goPesRefrescarVistasYMaster_();
 }
 
-function rebuildSuggestionDims_() {
-  ensureGoPesV2Sheets_();
-
+function refreshDerivedArtifacts_(options) {
   const S = GO_PES_V2.SHEETS;
+  const config = Object.assign({
+    master: false,
+    vistaOrganizaciones: false,
+    vistaInstrumentos: false,
+    vistaTerritorial: false,
+    sugerencias: false,
+    territorioCatalogo: false,
+    responsablesCatalogo: false,
+    invalidateCatalogs: true
+  }, options || {});
+
+  const targetSheets = [];
+  if (config.master) targetSheets.push(S.MASTER);
+  if (config.vistaOrganizaciones) targetSheets.push(S.VW_ORGS);
+  if (config.vistaInstrumentos) targetSheets.push(S.VW_INSTR);
+  if (config.vistaTerritorial) targetSheets.push(S.VW_TERR);
+  if (config.sugerencias) targetSheets.push(S.DIM_VEC_SUG, S.DIM_SOL_SUG, S.DIM_ORG_SUG);
+  if (config.territorioCatalogo) targetSheets.push(S.DIM_TERRITORIO);
+  if (config.responsablesCatalogo) targetSheets.push(S.DIM_RESPONSABLES);
+
+  ensureSheetsSubset_(targetSheets);
+
+  if (config.master) buildMasterDatos_();
+  if (config.vistaOrganizaciones) buildVistaOrganizaciones_();
+  if (config.vistaInstrumentos) buildVistaInstrumentos_();
+  if (config.vistaTerritorial) buildVistaTerritorial_();
+  if (config.sugerencias) rebuildSuggestionDims_();
+  if (config.territorioCatalogo) seedDerivedTerritorio_();
+  if (config.responsablesCatalogo) seedDerivedResponsables_();
+
+  if (config.invalidateCatalogs && typeof invalidateCatalogClientCaches_ === 'function') {
+    invalidateCatalogClientCaches_();
+  }
+}
+
+function rebuildSuggestionDims_() {
+  const S = GO_PES_V2.SHEETS;
+  ensureSheetsSubset_([S.DIM_VEC_SUG, S.DIM_SOL_SUG, S.DIM_ORG_SUG]);
 
   const casos = sheetExists_(S.MAE_CASOS) ? getSheetData_(S.MAE_CASOS) : [];
   const orgs = sheetExists_(S.MAE_ORGANIZACIONES) ? getSheetData_(S.MAE_ORGANIZACIONES) : [];

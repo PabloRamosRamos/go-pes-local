@@ -184,7 +184,7 @@ function guardarIngreso(payload) {
 
   try {
     const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
-    ensureGoPesV2Sheets_();
+    ensureSheetsSubset_([GO_PES_V2.SHEETS.RAW_INGRESO, GO_PES_V2.SHEETS.MAE_CASOS]);
 
     payload = payload || {};
 
@@ -271,7 +271,11 @@ function guardarIngreso(payload) {
     logProcessing_('INFO', 'guardarIngreso', 'solicitud', solicitudId, user.email || '', 'OK', clean);
     logUserAction_('CREATE_INGRESO', 'solicitud', solicitudId, 'OK', clean);
 
-    goPesRefrescarVistasYMaster();
+    refreshDerivedArtifacts_({
+      master: true,
+      vistaTerritorial: true,
+      sugerencias: true
+    });
 
     return {
       ok: true,
@@ -343,7 +347,10 @@ function guardarSeguimiento(payload) {
   });
 
   maybeCallMaker_('recalcularFicha', { solicitud_id: payload.solicitud_id, organizacion_id: payload.organizacion_id || '' });
-  goPesRefrescarVistasYMaster();
+  refreshDerivedArtifacts_({
+    master: true,
+    sugerencias: true
+  });
   logProcessing_('INFO', 'guardarSeguimiento', 'seguimiento', hitoId, user.email, 'OK', payload);
   logUserAction_('CREATE_SEGUIMIENTO', 'seguimiento', hitoId, 'OK', payload);
   return { ok: true, hito_id: hitoId };
@@ -418,7 +425,14 @@ function guardarOrganizacion(payload) {
   }
 
   maybeCallMaker_('recalcularFicha', { solicitud_id: payload.solicitud_id || '', organizacion_id: organizacionId });
-  goPesRefrescarVistasYMaster();
+  refreshDerivedArtifacts_({
+    master: true,
+    vistaOrganizaciones: true,
+    vistaTerritorial: true,
+    sugerencias: true,
+    territorioCatalogo: true,
+    responsablesCatalogo: true
+  });
   logProcessing_('INFO', 'guardarOrganizacion', 'organizacion', organizacionId, user.email, 'OK', payload);
   logUserAction_('UPSERT_ORGANIZACION', 'organizacion', organizacionId, 'OK', payload);
   return { ok: true, organizacion_id: organizacionId };
@@ -497,7 +511,12 @@ function guardarInstrumento(payload) {
     updated_at: now
   });
 
-  goPesRefrescarVistasYMaster();
+  refreshDerivedArtifacts_({
+    master: true,
+    vistaOrganizaciones: true,
+    vistaInstrumentos: true,
+    vistaTerritorial: true
+  });
   logProcessing_('INFO', 'guardarInstrumento', 'instrumento', orgInstrumentoId, user.email, 'OK', payload);
   logUserAction_('UPSERT_INSTRUMENTO', 'instrumento', orgInstrumentoId, 'OK', payload);
   return { ok: true, org_instrumento_id: orgInstrumentoId };
@@ -550,7 +569,9 @@ function guardarRequisito(payload) {
     updated_at: now
   });
 
-  goPesRefrescarVistasYMaster();
+  refreshDerivedArtifacts_({
+    master: true
+  });
   logProcessing_('INFO', 'guardarRequisito', 'requisito', registroId, user.email, 'OK', payload);
   logUserAction_('UPSERT_REQUISITO', 'requisito', registroId, 'OK', payload);
   return { ok: true, requisito_registro_id: registroId };
@@ -614,7 +635,10 @@ function importarSocios(payload) {
   appendRowObjects_(GO_PES_V2.SHEETS.RAW_SOCIOS, rawRows);
   upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', factRows, false);
 
-  goPesRefrescarVistasYMaster();
+  refreshDerivedArtifacts_({
+    master: true,
+    vistaOrganizaciones: true
+  });
   logProcessing_('INFO', 'importarSocios', 'socios', '', user.email, errors.length ? 'PARCIAL' : 'OK', { total: rows.length, validos: validRows.length, errores: errors.length });
   logUserAction_('IMPORT_SOCIOS', 'socios', '', errors.length ? 'PARCIAL' : 'OK', { total: rows.length, errores: errors });
   return { ok: errors.length === 0, total: rows.length, imported: validRows.length, errors: errors };

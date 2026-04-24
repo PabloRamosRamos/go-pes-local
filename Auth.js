@@ -7,7 +7,7 @@ function getUsuarioActual() {
     return Object.assign({}, GO_PES_RUNTIME.currentUser);
   }
 
-  ensureGoPesV2Sheets_();
+  ensureSheetsSubset_([GO_PES_V2.SHEETS.DIM_USUARIOS]);
 
   const email = getCurrentUserEmail_();
   const users = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS);
@@ -118,7 +118,7 @@ function updateUser(payload) {
 }
 
 function seedSuperUsers_() {
-  ensureGoPesV2Sheets_();
+  ensureSheetsSubset_([GO_PES_V2.SHEETS.DIM_USUARIOS]);
 
   GO_PES_V2.SUPERUSERS.forEach(email => {
     upsertByKey_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', {

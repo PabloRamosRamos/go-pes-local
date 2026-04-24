@@ -174,8 +174,6 @@ function buildBootstrapForTemplate_(e) {
 
 function getAppBootstrap() {
   const user = getUsuarioActual();
-  const catalogs = Object.assign({}, getCatalogosApp(), getOrganizacionCatalogBundle_());
-
   return serializeForClient_({
     appName: GO_PES_V2.APP_NAME,
     programTitle: GO_PES_V2.PROGRAM_TITLE,
@@ -185,7 +183,7 @@ function getAppBootstrap() {
     user: user,
     permissions: buildPermissionMap_(user),
     views: GO_PES_V2.VIEWS,
-    catalogs: catalogs
+    catalogs: {}
   });
 }
 

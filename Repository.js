@@ -68,6 +68,14 @@ function ensureGoPesV2Sheets_() {
   Object.keys(defs).forEach(name => ensureSheetWithHeaders_(name, defs[name]));
 }
 
+function ensureSheetsSubset_(sheetNames) {
+  const defs = buildSheetDefinitions_();
+  (sheetNames || []).forEach(function(sheetName) {
+    if (!sheetName || !defs[sheetName]) return;
+    ensureSheetWithHeaders_(sheetName, defs[sheetName]);
+  });
+}
+
 function buildSheetDefinitions_() {
   if (typeof goPesApplyAvancePhase1Config_ === 'function') {
     try {

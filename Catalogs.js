@@ -2,6 +2,11 @@
  * Catálogos y payloads auxiliares para la UI.
  * Reúne catálogos de dominio y catálogos derivados desde datos operativos.
  */
+const GO_PES_CATALOG_CACHE_KEYS = {
+  APP_CLIENT: 'go_pes_catalogs_app_client',
+  INGRESO_CLIENT: 'go_pes_catalogs_ingreso_client'
+};
+
 function seedGoPesV2Catalogs_() {
   ensureGoPesV2Sheets_();
   seedEstados_();
@@ -109,7 +114,12 @@ function sanitizeForClient_(value) {
 }
 
 function getCatalogosAppClient() {
-  return sanitizeForClient_(getCatalogosApp());
+  const cached = getCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.APP_CLIENT);
+  if (cached) return cached;
+
+  const payload = sanitizeForClient_(buildCatalogosAppClientBundle_());
+  putCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.APP_CLIENT, payload, 300);
+  return payload;
 }
 
 function seedEtapas_() {
@@ -262,20 +272,23 @@ function mergeCatalogRows_(sheetName, headers, newRows, keyFields) {
 }
 
 function getCatalogosNuevoIngresoClient() {
-  const c = sanitizeForClient_(getCatalogosApp());
+  const cached = getCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT);
+  if (cached) return cached;
 
-  return {
+  const c = getCatalogosAppClient();
+  const payload = {
     uvList: c.uvList || [],
     sectorByUv: c.sectorByUv || {},
     tipoVivienda: c.tipoVivienda || ['Casa', 'Departamento', 'Condominio', 'Pasaje', 'Villa', 'Mixto', 'Otro'],
     medioSolicitud: c.medioSolicitud || [],
     unidadOrigen: c.unidadOrigen || []
   };
+
+  putCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT, payload, 300);
+  return payload;
 }
 
 function getCatalogosApp() {
-  ensureGoPesV2Sheets_();
-
   const S = GO_PES_V2.SHEETS;
   const sheets = getSheetDataMap_([
     S.DIM_TERRITORIO,
@@ -381,6 +394,22 @@ function getCatalogosApp() {
   };
 }
 
+function buildCatalogosAppClientBundle_() {
+  const c = getCatalogosApp();
+  return {
+    uvList: c.uvList || [],
+    sectorByUv: c.sectorByUv || {},
+    tipoVivienda: c.tipoVivienda || [],
+    medioSolicitud: c.medioSolicitud || [],
+    unidadOrigen: c.unidadOrigen || [],
+    estadosPorTipo: c.estadosPorTipo || {},
+    instrumentos: c.instrumentos || [],
+    requisitosPorInstrumento: c.requisitosPorInstrumento || {},
+    responsables: c.responsables || [],
+    cargosSocios: c.cargosSocios || []
+  };
+}
+
 function getOrganizacionCatalogBundle_() {
   const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
     .filter(function(r) {
@@ -431,6 +460,33 @@ function getOrganizacionCatalogBundle_() {
     organizacionesList: organizacionesList,
     organizacionesById: organizacionesById
   };
+}
+
+function getCatalogCacheJson_(key) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const raw = cache.get(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function putCatalogCacheJson_(key, value, ttlSeconds) {
+  try {
+    const payload = JSON.stringify(value);
+    if (payload.length > 90000) return;
+    CacheService.getScriptCache().put(key, payload, ttlSeconds || 300);
+  } catch (err) {}
+}
+
+function invalidateCatalogClientCaches_() {
+  try {
+    CacheService.getScriptCache().removeAll([
+      GO_PES_CATALOG_CACHE_KEYS.APP_CLIENT,
+      GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT
+    ]);
+  } catch (err) {}
 }
 
 function seedDerivedTerritorio_() {

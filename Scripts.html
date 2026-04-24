@@ -49,9 +49,15 @@
       currentAvance: null,
       avanceCatalogos: null,
       avanceOrganizaciones: [],
+      avanceOrganizacionesFetchedAt: 0,
       pendingSociosRows: [],
       ingresoMatches: [],
-      renderedViews: {}
+      renderedViews: {},
+      catalogStatus: {
+        app: false,
+        ingreso: false,
+        organizacion: false
+      }
     }
   };
 
@@ -140,7 +146,7 @@
 
       APP.state.user = bootstrap.user || APP.state.user;
       APP.state.permissions = bootstrap.permissions || APP.state.permissions;
-      APP.state.catalogs = normalizeCatalogs(bootstrap.catalogs || {});
+      mergeCatalogs_(bootstrap.catalogs || {});
 
       hydrateStaticUser();
       applyPermissions();
@@ -201,6 +207,58 @@
       instrumentosOrigen: [...new Set((c.instrumentos || []).map(i => i.origen_instrumento).filter(Boolean))],
       requisitoCategorias: ['legal', 'administrativo', 'financiero', 'documental', 'tecnico', 'otro']
     };
+  }
+
+  function mergeCatalogs_(catalogs) {
+    APP.state.catalogs = normalizeCatalogs({
+      ...(APP.state.catalogs || {}),
+      ...(catalogs || {})
+    });
+  }
+
+  function ensureIngresoCatalogs_() {
+    if (APP.state.catalogStatus.ingreso) return null;
+
+    return api('getCatalogosNuevoIngresoClient').then(data => {
+      mergeCatalogs_(data || {});
+      APP.state.catalogStatus.ingreso = true;
+    });
+  }
+
+  function ensureAppCatalogs_() {
+    if (APP.state.catalogStatus.app) return null;
+
+    return api('getCatalogosAppClient').then(data => {
+      mergeCatalogs_(data || {});
+      APP.state.catalogStatus.app = true;
+    });
+  }
+
+  function ensureOrganizacionCatalogs_() {
+    if (APP.state.catalogStatus.organizacion) return null;
+
+    return api('getCatalogosOrganizacionClient').then(data => {
+      mergeCatalogs_(data || {});
+      APP.state.catalogStatus.organizacion = true;
+    });
+  }
+
+  function ensureCatalogsForView_(view) {
+    switch (view) {
+      case 'nuevo-ingreso':
+        return ensureIngresoCatalogs_();
+      case 'organizacion': {
+        const pending = [ensureAppCatalogs_(), ensureOrganizacionCatalogs_()].filter(Boolean);
+        return pending.length ? Promise.all(pending) : null;
+      }
+      case 'instrumento':
+      case 'requisito': {
+        const pending = [ensureAppCatalogs_()].filter(Boolean);
+        return pending.length ? Promise.all(pending) : null;
+      }
+      default:
+        return null;
+    }
   }
 
   function hydrateStaticUser() {
@@ -527,24 +585,35 @@
     );
 
     toggleTopQuickActions_(view);
-    hideContentLoading();
-    ensureViewRendered_(view);
+    const finalizeRoute = () => {
+      hideContentLoading();
+      ensureViewRendered_(view);
 
-    if (view === 'ficha' && APP.state.currentFicha && APP.state.currentFicha.summary) {
-      renderFicha(APP.state.currentFicha);
+      if (view === 'ficha' && APP.state.currentFicha && APP.state.currentFicha.summary) {
+        renderFicha(APP.state.currentFicha);
+      }
+
+      if (view === 'seguimiento') {
+        refreshAvanceViewOnRoute_();
+      }
+
+      if (view === 'historial') loadHistorial();
+      if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
+      if (view === 'nuevo-ingreso') {
+        renderNuevoIngresoView_();
+      }
+
+      setStatus(`Vista actual: ${friendlyViewName_(view)}`);
+    };
+
+    const catalogPromise = ensureCatalogsForView_(view);
+    if (catalogPromise) {
+      showContentLoading(`Cargando ${friendlyViewName_(view)}...`);
+      catalogPromise.then(finalizeRoute).catch(showError).finally(hideContentLoading);
+      return;
     }
 
-    if (view === 'seguimiento') {
-      refreshAvanceViewOnRoute_();
-    }
-
-    if (view === 'historial') loadHistorial();
-    if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
-    if (view === 'nuevo-ingreso') {
-      renderNuevoIngresoView_();
-    }
-
-    setStatus(`Vista actual: ${friendlyViewName_(view)}`);
+    finalizeRoute();
   }
 
   function runSearch() {
@@ -1594,10 +1663,20 @@
     const select = document.getElementById('avance-organizacion-select');
     if (!select) return;
 
+    const now = Date.now();
+    if (
+      APP.state.avanceOrganizaciones.length &&
+      APP.state.avanceOrganizacionesFetchedAt &&
+      (now - APP.state.avanceOrganizacionesFetchedAt) < 30000
+    ) {
+      return;
+    }
+
     const currentValue = String(select.value || '').trim();
 
     api('getOrganizacionesAvanceClient').then(data => {
       APP.state.avanceOrganizaciones = (data && data.organizacionesList) || [];
+      APP.state.avanceOrganizacionesFetchedAt = Date.now();
       fillSelect(
         select,
         APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label })),
@@ -1623,6 +1702,7 @@
     ]).then(([catalogos, organizaciones]) => {
       APP.state.avanceCatalogos = catalogos || {};
       APP.state.avanceOrganizaciones = (organizaciones && organizaciones.organizacionesList) || [];
+      APP.state.avanceOrganizacionesFetchedAt = Date.now();
     }).finally(() => {
       hideContentLoading();
     });

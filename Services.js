@@ -318,11 +318,6 @@ function guardarIngreso(payload) {
       vistaTerritorialPairs: [{ uv: clean.uv, sector: clean.sector }],
       sugerenciaSolicitudIds: [solicitudId]
     });
-    refreshDerivedArtifacts_({
-      master: true,
-      vistaTerritorial: true,
-      sugerencias: true
-    });
 
     const result = {
       ok: true,
@@ -499,14 +494,6 @@ function guardarOrganizacion(payload) {
       { uv: existingOrg && existingOrg.uv || '', sector: existingOrg && existingOrg.sector || '' }
     ],
     responsables: [payload.responsable_actual || user.nombre_visible]
-  });
-  refreshDerivedArtifacts_({
-    master: true,
-    vistaOrganizaciones: true,
-    vistaTerritorial: true,
-    sugerencias: true,
-    territorioCatalogo: true,
-    responsablesCatalogo: true
   });
   logProcessing_('INFO', 'guardarOrganizacion', 'organizacion', organizacionId, user.email, 'OK', payload);
   logUserAction_('UPSERT_ORGANIZACION', 'organizacion', organizacionId, 'OK', payload);
@@ -742,10 +729,6 @@ function importarSocios(payload) {
       return solicitudesByOrg[orgId] || '';
     })),
     vistaOrganizacionIds: affectedOrgIds
-  });
-  refreshDerivedArtifacts_({
-    master: true,
-    vistaOrganizaciones: true
   });
   logProcessing_('INFO', 'importarSocios', 'socios', '', user.email, errors.length ? 'PARCIAL' : 'OK', { total: rows.length, validos: validRows.length, errores: errors.length });
   logUserAction_('IMPORT_SOCIOS', 'socios', '', errors.length ? 'PARCIAL' : 'OK', { total: rows.length, errores: errors });

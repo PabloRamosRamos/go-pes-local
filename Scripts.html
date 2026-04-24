@@ -141,13 +141,10 @@
 
     showAppLoading('Iniciando Gestor Operativo');
 
-    api('getAppBootstrap').then(bootstrap => {
-      bootstrap = bootstrap || {};
-
-      APP.state.user = bootstrap.user || APP.state.user;
-      APP.state.permissions = bootstrap.permissions || APP.state.permissions;
-      mergeCatalogs_(bootstrap.catalogs || {});
-
+    Promise.resolve().then(() => {
+      APP.state.user = BOOTSTRAP.user || APP.state.user;
+      APP.state.permissions = BOOTSTRAP.permissions || APP.state.permissions;
+      mergeCatalogs_(BOOTSTRAP.catalogs || {});
       hydrateStaticUser();
       applyPermissions();
       route(APP.state.activeView, BOOTSTRAP.query || {});
@@ -591,7 +588,7 @@
         renderFicha(APP.state.currentFicha);
       }
 
-      if (view === 'seguimiento') {
+      if (view === 'seguimiento' && wasRendered) {
         refreshAvanceViewOnRoute_();
       }
 

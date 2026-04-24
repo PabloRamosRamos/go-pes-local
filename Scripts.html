@@ -178,7 +178,10 @@
     const img = document.getElementById('appLogo');
     if (!img) return;
 
-    const logo = img.getAttribute('src') || '';
+    const logo =
+      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) ||
+      img.getAttribute('src') ||
+      '';
 
     if (logo) {
       img.src = logo;

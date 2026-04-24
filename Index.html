@@ -314,6 +314,12 @@
       </main>
     </div>
 
+    <script>
+      window.GO_PES_TEMPLATE = {
+        logoDataUri: <?!= JSON.stringify(logoDataUri || '') ?>
+      };
+    </script>
+
     <?!= include('Scripts'); ?>
   </body>
 </html>

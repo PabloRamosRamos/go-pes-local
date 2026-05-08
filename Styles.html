@@ -1232,13 +1232,15 @@
 
   .avance-progress-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 280px));
+    gap: 12px;
+    justify-content: start;
     align-items: stretch;
+    align-content: start;
+    grid-auto-rows: 1fr;
   }
 
   .avance-progress {
-    width: 100%;
     text-align: left;
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -1252,6 +1254,8 @@
     gap: 12px;
     align-items: center;
     min-height: 78px;
+    width: auto;
+    max-width: 280px;
   }
 
   .avance-progress:hover:not(:disabled) {
@@ -1400,6 +1404,14 @@
   @media (max-width: 980px) {
     .avance-header {
       grid-template-columns: 1fr;
+    }
+
+    .avance-progress-list {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    .avance-progress {
+      max-width: none;
     }
   }
 

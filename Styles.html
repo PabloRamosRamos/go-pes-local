@@ -1232,19 +1232,26 @@
 
   .avance-progress-list {
     display: grid;
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 10px;
+    align-items: stretch;
   }
 
   .avance-progress {
     width: 100%;
     text-align: left;
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 12px;
     background: #fff;
-    padding: 14px;
+    padding: 12px 14px;
     cursor: pointer;
     transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
     box-shadow: var(--shadow);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    min-height: 78px;
   }
 
   .avance-progress:hover:not(:disabled) {
@@ -1263,24 +1270,65 @@
 
   .avance-progress.is-blocked {
     background: #f8fafc;
-    opacity: .7;
+    border-color: #d5dee8;
+    opacity: .9;
   }
 
-  .avance-progress__top {
+  .avance-progress__icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #eef4fb;
+    color: var(--blue);
+    border: 1px solid #d8e6f1;
+  }
+
+  .avance-progress.is-completed .avance-progress__icon {
+    background: #eaf6ed;
+    border-color: #b9d79a;
+    color: #5d8c18;
+  }
+
+  .avance-progress.is-blocked .avance-progress__icon {
+    background: #e9eef3;
+    border-color: #d1d8e0;
+    color: #7f8a97;
+  }
+
+  .avance-progress__icon .material-symbols-outlined {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  .avance-progress__body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-bottom: 10px;
+    gap: 4px;
+    min-width: 0;
   }
 
   .avance-progress__title {
     font-weight: 700;
     color: var(--ink);
+    line-height: 1.25;
   }
 
   .avance-progress__status {
     font-size: 12px;
     color: var(--muted);
+    line-height: 1.35;
+  }
+
+  .avance-progress.is-completed .avance-progress__status {
+    color: #4f6d22;
+  }
+
+  .avance-progress.is-blocked .avance-progress__status {
+    color: #667281;
   }
 
   .avance-progress__track {
@@ -1355,6 +1403,16 @@
     }
   }
 
+  @media (max-width: 640px) {
+    .avance-progress-list {
+      grid-template-columns: 1fr;
+    }
+
+    .avance-progress {
+      min-height: 72px;
+    }
+  }
+
   .avance-resumen-bars {
     margin-top: 18px;
     display: grid;
@@ -1416,48 +1474,4 @@
     color: #24364b;
   }
 
-  .avance-progress {
-    width: 100%;
-    text-align: left;
-    border: 1px solid #5bb2df;
-    border-radius: 14px;
-    background: #fff;
-    padding: 14px 16px;
-    cursor: pointer;
-    transition: .18s ease;
-  }
-
-  .avance-progress:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(36, 54, 75, 0.08);
-  }
-
-  .avance-progress.is-completed {
-    border-color: #8BB844;
-    background: #f7fbf2;
-  }
-
-  .avance-progress.is-blocked {
-    opacity: .72;
-  }
-
-  .avance-progress:disabled {
-    cursor: not-allowed;
-  }
-
-  .avance-progress__top {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .avance-progress__title {
-    font-weight: 700;
-    color: #24364b;
-  }
-
-  .avance-progress__status {
-    font-size: 12px;
-    color: #5d7287;
-  }
 </style>

@@ -1851,6 +1851,12 @@
     const disabled = !item.enabled_flag ? 'disabled' : '';
     const completed = item.completed_flag ? 'is-completed' : '';
     const blocked = !item.enabled_flag && !item.completed_flag ? 'is-blocked' : '';
+    const icon = item.completed_flag
+      ? 'check'
+      : (!item.enabled_flag && !item.completed_flag ? 'remove' : 'radio_button_unchecked');
+    const iconLabel = item.completed_flag
+      ? 'Hito cumplido'
+      : (!item.enabled_flag && !item.completed_flag ? 'Hito bloqueado' : 'Hito disponible');
 
     const meta = item.completed_flag
       ? `Cumplido · ${escapeHtml(item.fecha_hito || '')}`
@@ -1863,8 +1869,12 @@
         type="button"
         class="avance-progress js-avance-hito ${completed} ${blocked}"
         data-codigo="${escapeHtml(item.codigo_hito || '')}"
+        aria-label="${iconLabel}: ${escapeHtml(item.nombre_hito || '')}"
         ${disabled}>
-        <div class="avance-progress__top">
+        <div class="avance-progress__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">${icon}</span>
+        </div>
+        <div class="avance-progress__body">
           <div class="avance-progress__title">${escapeHtml(item.nombre_hito || '')}</div>
           <div class="avance-progress__status">${meta}</div>
         </div>

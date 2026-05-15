@@ -1241,6 +1241,16 @@
     grid-auto-rows: 1fr;
   }
 
+  #avance-pre-grid.avance-progress-list,
+  #avance-for-grid.avance-progress-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
+    gap: 14px;
+    align-items: stretch;
+    justify-content: start;
+    justify-items: stretch;
+  }
+
   .avance-progress {
     appearance: none;
     border: 1px solid var(--border);
@@ -1256,10 +1266,10 @@
     justify-content: flex-start;
     gap: 14px;
     min-height: 168px;
-    width: 100%;
     max-width: none;
     text-align: left;
-    inline-size: 100%;
+    justify-self: stretch;
+    align-self: stretch;
   }
 
   .avance-progress:hover:not(:disabled) {

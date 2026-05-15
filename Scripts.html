@@ -1544,7 +1544,7 @@
             <h3>Preconstitución</h3>
           </div>
         </div>
-        <div id="avance-pre-grid" class="avance-progress-list"></div>
+        <div id="avance-pre-grid" class="avance-progress-list" data-layout="grid"></div>
       </section>
 
       <section class="avance-section">
@@ -1554,7 +1554,7 @@
             <h3>Formalización posterior</h3>
           </div>
         </div>
-        <div id="avance-for-grid" class="avance-progress-list"></div>
+        <div id="avance-for-grid" class="avance-progress-list" data-layout="grid"></div>
       </section>
 
       <section class="avance-section">
@@ -1834,6 +1834,11 @@
     const pre = document.getElementById('avance-pre-grid');
     const post = document.getElementById('avance-for-grid');
     if (!pre || !post) return;
+
+    pre.className = 'avance-progress-list';
+    post.className = 'avance-progress-list';
+    pre.dataset.layout = 'grid';
+    post.dataset.layout = 'grid';
 
     const tramos = (data && data.botones && data.botones.tramos) || [];
     const tramoPre = tramos.find(t => t.tramo === 'Preconstitución') || { items: [] };

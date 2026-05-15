@@ -1544,7 +1544,7 @@
             <h3>Preconstitución</h3>
           </div>
         </div>
-        <div id="avance-pre-grid" class="avance-progress-list" data-layout="grid"></div>
+        <div id="avance-pre-grid" class="avance-progress-list avance-hitos-grid" data-layout="grid"></div>
       </section>
 
       <section class="avance-section">
@@ -1554,7 +1554,7 @@
             <h3>Formalización posterior</h3>
           </div>
         </div>
-        <div id="avance-for-grid" class="avance-progress-list" data-layout="grid"></div>
+        <div id="avance-for-grid" class="avance-progress-list avance-hitos-grid" data-layout="grid"></div>
       </section>
 
       <section class="avance-section">
@@ -1835,8 +1835,8 @@
     const post = document.getElementById('avance-for-grid');
     if (!pre || !post) return;
 
-    pre.className = 'avance-progress-list';
-    post.className = 'avance-progress-list';
+    pre.className = 'avance-progress-list avance-hitos-grid';
+    post.className = 'avance-progress-list avance-hitos-grid';
     pre.dataset.layout = 'grid';
     post.dataset.layout = 'grid';
 
@@ -1856,7 +1856,7 @@
     const disabled = !item.enabled_flag ? 'disabled' : '';
     const completed = item.completed_flag ? 'is-completed' : '';
     const blocked = !item.enabled_flag && !item.completed_flag ? 'is-blocked' : '';
-    const active = item.enabled_flag && !item.completed_flag ? 'is-active' : '';
+    const active = item.enabled_flag && !item.completed_flag ? 'is-active is-enabled' : '';
     const icon = item.completed_flag
       ? 'check'
       : (!item.enabled_flag && !item.completed_flag ? 'remove' : 'radio_button_unchecked');
@@ -1885,20 +1885,20 @@
     return `
       <button
         type="button"
-        class="avance-progress js-avance-hito ${completed} ${blocked} ${active}"
+        class="avance-progress avance-hito-card js-avance-hito ${completed} ${blocked} ${active}"
         data-codigo="${escapeHtml(item.codigo_hito || '')}"
         aria-label="${iconLabel}: ${escapeHtml(item.nombre_hito || '')}"
         aria-disabled="${disabled ? 'true' : 'false'}"
         data-estado="${escapeHtml(statusText)}"
         ${titleAttr}
         ${disabled}>
-        <div class="avance-progress__icon" aria-hidden="true">
+        <div class="avance-progress__icon avance-hito-card__icon" aria-hidden="true">
           <span class="material-symbols-outlined">${icon}</span>
         </div>
-        <div class="avance-progress__body">
-          <div class="avance-progress__title">${escapeHtml(item.nombre_hito || '')}</div>
-          <div class="avance-progress__status">${statusText}</div>
-          <div class="avance-progress__detail">${statusDetail}</div>
+        <div class="avance-progress__body avance-hito-card__body">
+          <div class="avance-progress__title avance-hito-card__title">${escapeHtml(item.nombre_hito || '')}</div>
+          <div class="avance-progress__status avance-hito-card__status">${statusText}</div>
+          <div class="avance-progress__detail avance-hito-card__detail">${statusDetail}</div>
         </div>
       </button>
     `;

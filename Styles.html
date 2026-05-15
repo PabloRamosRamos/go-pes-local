@@ -1230,7 +1230,10 @@
     gap: 12px;
   }
 
-  .avance-progress-list {
+  .avance-progress-list,
+  .avance-hitos-grid,
+  #avance-pre-grid.avance-progress-list,
+  #avance-for-grid.avance-progress-list {
     display: grid;
     grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 12px;
@@ -1239,159 +1242,158 @@
     grid-auto-rows: 1fr;
   }
 
-  #avance-pre-grid.avance-progress-list,
-  #avance-for-grid.avance-progress-list {
-    display: grid;
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    gap: 12px;
-    align-items: stretch;
-    align-content: start;
-  }
-
-  .avance-progress {
-    appearance: none;
-    border: 1px solid var(--border);
+  .avance-progress,
+  .avance-hito-card {
+    width: 100%;
+    min-height: 160px;
+    aspect-ratio: 1 / 1;
+    border: 1.5px solid #3E96B4;
     border-radius: 14px;
-    background: #fff;
-    padding: 16px 10px 14px;
-    cursor: pointer;
-    transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
-    box-shadow: 0 6px 18px rgba(33, 78, 138, 0.08);
+    background: #ffffff;
+    padding: 14px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    min-height: 156px;
-    min-width: 0;
-    width: auto;
-    max-width: none;
+    gap: 10px;
     text-align: center;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    box-shadow: 0 4px 12px rgba(36, 54, 75, 0.05);
+    min-width: 0;
+    max-width: none;
     grid-column: auto;
     justify-self: stretch;
     align-self: stretch;
+    appearance: none;
   }
 
   .avance-progress-list > .avance-progress,
+  .avance-progress-list > .avance-hito-card,
   #avance-pre-grid > .avance-progress,
   #avance-for-grid > .avance-progress {
-    display: flex;
-    width: auto;
+    width: 100%;
     grid-column: auto;
     min-width: 0;
   }
 
-  .avance-progress:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 22px rgba(0,0,0,.08);
+  .avance-progress:hover:not(:disabled),
+  .avance-hito-card:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(36, 54, 75, 0.08);
   }
 
-  .avance-progress:disabled {
+  .avance-progress:disabled,
+  .avance-hito-card:disabled {
     cursor: not-allowed;
   }
 
-  .avance-progress.is-active {
-    border-color: #56a9d8;
-    background: #ffffff;
-  }
-
-  .avance-progress.is-completed {
-    background: linear-gradient(180deg, #ffffff 0%, #f7fcf2 100%);
-    border-color: #98ca54;
-  }
-
-  .avance-progress.is-blocked {
-    background: #ffffff;
-    border-color: #d8dee8;
-    opacity: 1;
-  }
-
-  .avance-progress__icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 999px;
+  .avance-progress__icon,
+  .avance-hito-card__icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
-    background: #ffffff;
-    color: var(--blue);
-    border: 4px solid #49a5d8;
   }
 
-  .avance-progress.is-completed .avance-progress__icon {
-    background: #86bd3f;
-    border-color: #86bd3f;
-    color: #ffffff;
-  }
-
-  .avance-progress.is-blocked .avance-progress__icon {
-    background: #b9c0ca;
-    border-color: #b9c0ca;
-    color: #ffffff;
-  }
-
-  .avance-progress__icon .material-symbols-outlined {
-    font-size: 22px;
+  .avance-progress__icon .material-symbols-outlined,
+  .avance-hito-card__icon .material-symbols-outlined {
+    font-size: 34px;
     line-height: 1;
   }
 
-  .avance-progress__body {
-    display: grid;
-    grid-template-rows: minmax(0, auto) auto auto;
-    gap: 5px;
-    min-width: 0;
+  .avance-progress__body,
+  .avance-hito-card__body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
     width: 100%;
-    justify-items: center;
-    align-content: center;
+    min-width: 0;
   }
 
-  .avance-progress__title {
+  .avance-progress__title,
+  .avance-hito-card__title {
+    font-size: 13px;
     font-weight: 700;
-    color: var(--ink);
-    font-size: 12px;
     line-height: 1.25;
-    min-height: 3.8em;
-    max-width: 15ch;
+    color: #24364B;
+    max-width: 16ch;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .avance-progress__status {
-    font-size: 11px;
+  .avance-progress__status,
+  .avance-hito-card__status {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.2;
     color: var(--muted);
-    line-height: 1.35;
-    font-weight: 600;
-    letter-spacing: 0;
-    text-transform: none;
   }
 
-  .avance-progress.is-completed .avance-progress__status {
-    color: #4f6d22;
-  }
-
-  .avance-progress.is-blocked .avance-progress__status {
-    color: #667281;
-  }
-
-  .avance-progress__detail {
-    font-size: 10px;
-    line-height: 1.35;
-    color: #5f6b7a;
+  .avance-progress__detail,
+  .avance-hito-card__detail {
+    font-size: 11px;
+    line-height: 1.2;
+    color: #64748B;
+    min-height: 26px;
+    max-width: 16ch;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .avance-progress.is-completed .avance-progress__detail {
-    color: #4f6d22;
+  .avance-progress.is-completed,
+  .avance-hito-card.is-completed {
+    border-color: #8BB844;
+    background: #F7FBF2;
   }
 
-  .avance-progress.is-blocked .avance-progress__detail {
-    color: #667281;
+  .avance-progress.is-completed .avance-progress__icon .material-symbols-outlined,
+  .avance-hito-card.is-completed .avance-hito-card__icon .material-symbols-outlined {
+    color: #8BB844;
+  }
+
+  .avance-progress.is-completed .avance-progress__status,
+  .avance-hito-card.is-completed .avance-hito-card__status {
+    color: #587A24;
+  }
+
+  .avance-progress.is-active,
+  .avance-progress.is-enabled,
+  .avance-hito-card.is-enabled {
+    border-color: #3E96B4;
+    background: #FFFFFF;
+  }
+
+  .avance-progress.is-active .avance-progress__icon .material-symbols-outlined,
+  .avance-progress.is-enabled .avance-progress__icon .material-symbols-outlined,
+  .avance-hito-card.is-enabled .avance-hito-card__icon .material-symbols-outlined {
+    color: #3E96B4;
+  }
+
+  .avance-progress.is-active .avance-progress__status,
+  .avance-progress.is-enabled .avance-progress__status,
+  .avance-hito-card.is-enabled .avance-hito-card__status {
+    color: #3E96B4;
+  }
+
+  .avance-progress.is-blocked,
+  .avance-hito-card.is-blocked {
+    border-color: #C9D3DD;
+    background: #F8FAFC;
+  }
+
+  .avance-progress.is-blocked .avance-progress__icon .material-symbols-outlined,
+  .avance-hito-card.is-blocked .avance-hito-card__icon .material-symbols-outlined {
+    color: #AAB4BF;
+  }
+
+  .avance-progress.is-blocked .avance-progress__status,
+  .avance-hito-card.is-blocked .avance-hito-card__status {
+    color: #7C8B99;
   }
 
   .avance-progress__track {
@@ -1460,47 +1462,48 @@
     color: var(--blue);
   }
 
+  @media (max-width: 1600px) {
+    .avance-progress-list,
+    .avance-hitos-grid,
+    #avance-pre-grid.avance-progress-list,
+    #avance-for-grid.avance-progress-list {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
   @media (max-width: 1280px) {
     .avance-header {
       grid-template-columns: 1fr;
     }
 
-    .avance-progress-list {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-
+    .avance-progress-list,
+    .avance-hitos-grid,
     #avance-pre-grid.avance-progress-list,
     #avance-for-grid.avance-progress-list {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
-
-    .avance-progress {
-      min-height: 150px;
-    }
   }
 
-  @media (max-width: 768px) {
-    .avance-progress-list {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
+  @media (max-width: 900px) {
+    .avance-progress-list,
+    .avance-hitos-grid,
     #avance-pre-grid.avance-progress-list,
     #avance-for-grid.avance-progress-list {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  @media (max-width: 480px) {
-    .avance-progress-list {
-      grid-template-columns: 1fr;
-    }
-
+  @media (max-width: 640px) {
+    .avance-progress-list,
+    .avance-hitos-grid,
     #avance-pre-grid.avance-progress-list,
     #avance-for-grid.avance-progress-list {
       grid-template-columns: 1fr;
     }
 
-    .avance-progress {
+    .avance-progress,
+    .avance-hito-card {
+      aspect-ratio: auto;
       min-height: 144px;
     }
   }

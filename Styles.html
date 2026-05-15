@@ -1230,10 +1230,9 @@
     gap: 12px;
   }
 
-  .avance-progress-list,
   .avance-hitos-grid,
-  #avance-pre-grid.avance-progress-list,
-  #avance-for-grid.avance-progress-list {
+  #avance-pre-grid,
+  #avance-for-grid {
     display: grid;
     grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 12px;
@@ -1242,9 +1241,8 @@
     grid-auto-rows: 1fr;
   }
 
-  .avance-progress,
   .avance-hito-card {
-    width: 100%;
+    width: auto;
     min-height: 160px;
     aspect-ratio: 1 / 1;
     border: 1.5px solid #3E96B4;
@@ -1268,40 +1266,38 @@
     appearance: none;
   }
 
-  .avance-progress-list > .avance-progress,
-  .avance-progress-list > .avance-hito-card,
-  #avance-pre-grid > .avance-progress,
-  #avance-for-grid > .avance-progress {
-    width: 100%;
+  .avance-hitos-grid > *,
+  #avance-pre-grid > *,
+  #avance-for-grid > * {
+    display: flex;
+    width: auto;
     grid-column: auto;
     min-width: 0;
+    max-width: none;
+    justify-self: stretch;
+    align-self: stretch;
   }
 
-  .avance-progress:hover:not(:disabled),
   .avance-hito-card:hover:not(:disabled) {
     transform: translateY(-1px);
     box-shadow: 0 8px 18px rgba(36, 54, 75, 0.08);
   }
 
-  .avance-progress:disabled,
   .avance-hito-card:disabled {
     cursor: not-allowed;
   }
 
-  .avance-progress__icon,
   .avance-hito-card__icon {
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
-  .avance-progress__icon .material-symbols-outlined,
   .avance-hito-card__icon .material-symbols-outlined {
     font-size: 34px;
     line-height: 1;
   }
 
-  .avance-progress__body,
   .avance-hito-card__body {
     display: flex;
     flex-direction: column;
@@ -1311,7 +1307,6 @@
     min-width: 0;
   }
 
-  .avance-progress__title,
   .avance-hito-card__title {
     font-size: 13px;
     font-weight: 700;
@@ -1319,12 +1314,10 @@
     color: #24364B;
     max-width: 16ch;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .avance-progress__status,
   .avance-hito-card__status {
     font-size: 12px;
     font-weight: 700;
@@ -1332,7 +1325,6 @@
     color: var(--muted);
   }
 
-  .avance-progress__detail,
   .avance-hito-card__detail {
     font-size: 11px;
     line-height: 1.2;
@@ -1340,58 +1332,45 @@
     min-height: 26px;
     max-width: 16ch;
     display: -webkit-box;
-    -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
-  .avance-progress.is-completed,
   .avance-hito-card.is-completed {
     border-color: #8BB844;
     background: #F7FBF2;
   }
 
-  .avance-progress.is-completed .avance-progress__icon .material-symbols-outlined,
   .avance-hito-card.is-completed .avance-hito-card__icon .material-symbols-outlined {
     color: #8BB844;
   }
 
-  .avance-progress.is-completed .avance-progress__status,
   .avance-hito-card.is-completed .avance-hito-card__status {
     color: #587A24;
   }
 
-  .avance-progress.is-active,
-  .avance-progress.is-enabled,
   .avance-hito-card.is-enabled {
     border-color: #3E96B4;
     background: #FFFFFF;
   }
 
-  .avance-progress.is-active .avance-progress__icon .material-symbols-outlined,
-  .avance-progress.is-enabled .avance-progress__icon .material-symbols-outlined,
   .avance-hito-card.is-enabled .avance-hito-card__icon .material-symbols-outlined {
     color: #3E96B4;
   }
 
-  .avance-progress.is-active .avance-progress__status,
-  .avance-progress.is-enabled .avance-progress__status,
   .avance-hito-card.is-enabled .avance-hito-card__status {
     color: #3E96B4;
   }
 
-  .avance-progress.is-blocked,
   .avance-hito-card.is-blocked {
     border-color: #C9D3DD;
     background: #F8FAFC;
   }
 
-  .avance-progress.is-blocked .avance-progress__icon .material-symbols-outlined,
   .avance-hito-card.is-blocked .avance-hito-card__icon .material-symbols-outlined {
     color: #AAB4BF;
   }
 
-  .avance-progress.is-blocked .avance-progress__status,
   .avance-hito-card.is-blocked .avance-hito-card__status {
     color: #7C8B99;
   }
@@ -1463,10 +1442,9 @@
   }
 
   @media (max-width: 1600px) {
-    .avance-progress-list,
     .avance-hitos-grid,
-    #avance-pre-grid.avance-progress-list,
-    #avance-for-grid.avance-progress-list {
+    #avance-pre-grid,
+    #avance-for-grid {
       grid-template-columns: repeat(6, minmax(0, 1fr));
     }
   }
@@ -1476,32 +1454,28 @@
       grid-template-columns: 1fr;
     }
 
-    .avance-progress-list,
     .avance-hitos-grid,
-    #avance-pre-grid.avance-progress-list,
-    #avance-for-grid.avance-progress-list {
+    #avance-pre-grid,
+    #avance-for-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
   }
 
   @media (max-width: 900px) {
-    .avance-progress-list,
     .avance-hitos-grid,
-    #avance-pre-grid.avance-progress-list,
-    #avance-for-grid.avance-progress-list {
+    #avance-pre-grid,
+    #avance-for-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
   @media (max-width: 640px) {
-    .avance-progress-list,
     .avance-hitos-grid,
-    #avance-pre-grid.avance-progress-list,
-    #avance-for-grid.avance-progress-list {
+    #avance-pre-grid,
+    #avance-for-grid {
       grid-template-columns: 1fr;
     }
 
-    .avance-progress,
     .avance-hito-card {
       aspect-ratio: auto;
       min-height: 144px;

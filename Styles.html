@@ -1232,10 +1232,8 @@
 
   .avance-progress-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
-    gap: 14px;
-    justify-content: start;
-    justify-items: stretch;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 12px;
     align-items: stretch;
     align-content: start;
     grid-auto-rows: 1fr;
@@ -1244,11 +1242,10 @@
   #avance-pre-grid.avance-progress-list,
   #avance-for-grid.avance-progress-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 220px));
-    gap: 14px;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 12px;
     align-items: stretch;
-    justify-content: start;
-    justify-items: stretch;
+    align-content: start;
   }
 
   .avance-progress {
@@ -1256,7 +1253,7 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     background: #fff;
-    padding: 16px 14px;
+    padding: 14px 12px;
     cursor: pointer;
     transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
     box-shadow: var(--shadow);
@@ -1264,12 +1261,24 @@
     flex-direction: column;
     align-items: flex-start;
     justify-content: flex-start;
-    gap: 14px;
-    min-height: 168px;
+    gap: 10px;
+    min-height: 148px;
+    min-width: 0;
+    width: auto;
     max-width: none;
     text-align: left;
+    grid-column: auto;
     justify-self: stretch;
     align-self: stretch;
+  }
+
+  .avance-progress-list > .avance-progress,
+  #avance-pre-grid > .avance-progress,
+  #avance-for-grid > .avance-progress {
+    display: flex;
+    width: auto;
+    grid-column: auto;
+    min-width: 0;
   }
 
   .avance-progress:hover:not(:disabled) {
@@ -1298,8 +1307,8 @@
   }
 
   .avance-progress__icon {
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border-radius: 999px;
     display: flex;
     align-items: center;
@@ -1323,14 +1332,14 @@
   }
 
   .avance-progress__icon .material-symbols-outlined {
-    font-size: 24px;
+    font-size: 22px;
     line-height: 1;
   }
 
   .avance-progress__body {
     display: grid;
     grid-template-rows: minmax(0, auto) auto auto;
-    gap: 6px;
+    gap: 5px;
     min-width: 0;
     width: 100%;
     margin-top: auto;
@@ -1339,16 +1348,17 @@
   .avance-progress__title {
     font-weight: 700;
     color: var(--ink);
-    line-height: 1.25;
-    min-height: 3.2em;
+    font-size: 13px;
+    line-height: 1.2;
+    min-height: 4.8em;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    -webkit-line-clamp: 4;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
 
   .avance-progress__status {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--muted);
     line-height: 1.35;
     font-weight: 700;
@@ -1365,7 +1375,7 @@
   }
 
   .avance-progress__detail {
-    font-size: 12px;
+    font-size: 11px;
     line-height: 1.35;
     color: #5f6b7a;
     display: -webkit-box;
@@ -1448,22 +1458,43 @@
     color: var(--blue);
   }
 
-  @media (max-width: 980px) {
+  @media (max-width: 1280px) {
     .avance-header {
       grid-template-columns: 1fr;
     }
 
     .avance-progress-list {
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    #avance-pre-grid.avance-progress-list,
+    #avance-for-grid.avance-progress-list {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .avance-progress {
-      min-height: 156px;
+      min-height: 144px;
     }
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 768px) {
     .avance-progress-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    #avance-pre-grid.avance-progress-list,
+    #avance-for-grid.avance-progress-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 480px) {
+    .avance-progress-list {
+      grid-template-columns: 1fr;
+    }
+
+    #avance-pre-grid.avance-progress-list,
+    #avance-for-grid.avance-progress-list {
       grid-template-columns: 1fr;
     }
 

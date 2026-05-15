@@ -1251,22 +1251,22 @@
   .avance-progress {
     appearance: none;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 14px;
     background: #fff;
-    padding: 14px 12px;
+    padding: 16px 10px 14px;
     cursor: pointer;
     transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease;
-    box-shadow: var(--shadow);
+    box-shadow: 0 6px 18px rgba(33, 78, 138, 0.08);
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    justify-content: flex-start;
-    gap: 10px;
-    min-height: 148px;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    min-height: 156px;
     min-width: 0;
     width: auto;
     max-width: none;
-    text-align: left;
+    text-align: center;
     grid-column: auto;
     justify-self: stretch;
     align-self: stretch;
@@ -1291,19 +1291,19 @@
   }
 
   .avance-progress.is-active {
-    border-color: #c8d9e6;
-    background: linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
+    border-color: #56a9d8;
+    background: #ffffff;
   }
 
   .avance-progress.is-completed {
-    background: #f2fbf5;
-    border-color: #8BB844;
+    background: linear-gradient(180deg, #ffffff 0%, #f7fcf2 100%);
+    border-color: #98ca54;
   }
 
   .avance-progress.is-blocked {
-    background: #f8fafc;
-    border-color: #d5dee8;
-    opacity: .9;
+    background: #ffffff;
+    border-color: #d8dee8;
+    opacity: 1;
   }
 
   .avance-progress__icon {
@@ -1314,21 +1314,21 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    background: #eef4fb;
+    background: #ffffff;
     color: var(--blue);
-    border: 1px solid #d8e6f1;
+    border: 4px solid #49a5d8;
   }
 
   .avance-progress.is-completed .avance-progress__icon {
-    background: #eaf6ed;
-    border-color: #b9d79a;
-    color: #5d8c18;
+    background: #86bd3f;
+    border-color: #86bd3f;
+    color: #ffffff;
   }
 
   .avance-progress.is-blocked .avance-progress__icon {
-    background: #e9eef3;
-    border-color: #d1d8e0;
-    color: #7f8a97;
+    background: #b9c0ca;
+    border-color: #b9c0ca;
+    color: #ffffff;
   }
 
   .avance-progress__icon .material-symbols-outlined {
@@ -1342,17 +1342,19 @@
     gap: 5px;
     min-width: 0;
     width: 100%;
-    margin-top: auto;
+    justify-items: center;
+    align-content: center;
   }
 
   .avance-progress__title {
     font-weight: 700;
     color: var(--ink);
-    font-size: 13px;
-    line-height: 1.2;
-    min-height: 4.8em;
+    font-size: 12px;
+    line-height: 1.25;
+    min-height: 3.8em;
+    max-width: 15ch;
     display: -webkit-box;
-    -webkit-line-clamp: 4;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
@@ -1361,9 +1363,9 @@
     font-size: 11px;
     color: var(--muted);
     line-height: 1.35;
-    font-weight: 700;
-    letter-spacing: .02em;
-    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
   }
 
   .avance-progress.is-completed .avance-progress__status {
@@ -1375,7 +1377,7 @@
   }
 
   .avance-progress__detail {
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.35;
     color: #5f6b7a;
     display: -webkit-box;
@@ -1473,7 +1475,7 @@
     }
 
     .avance-progress {
-      min-height: 144px;
+      min-height: 150px;
     }
   }
 

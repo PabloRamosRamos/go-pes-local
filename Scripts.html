@@ -1851,6 +1851,7 @@
     const disabled = !item.enabled_flag ? 'disabled' : '';
     const completed = item.completed_flag ? 'is-completed' : '';
     const blocked = !item.enabled_flag && !item.completed_flag ? 'is-blocked' : '';
+    const active = item.enabled_flag && !item.completed_flag ? 'is-active' : '';
     const icon = item.completed_flag
       ? 'check'
       : (!item.enabled_flag && !item.completed_flag ? 'remove' : 'radio_button_unchecked');
@@ -1864,19 +1865,35 @@
         ? escapeHtml(item.blocked_reason)
         : 'Disponible para registrar';
 
+    const statusText = item.completed_flag
+      ? 'Cumplido'
+      : (!item.enabled_flag && !item.completed_flag ? 'Bloqueado' : 'Disponible');
+    const statusDetail = item.completed_flag
+      ? escapeHtml(item.fecha_hito || 'Registrado')
+      : item.blocked_reason
+        ? escapeHtml(item.blocked_reason)
+        : 'Clic para registrar';
+    const titleAttr = item.blocked_reason
+      ? ` title="${escapeHtml(item.blocked_reason)}"`
+      : '';
+
     return `
       <button
         type="button"
-        class="avance-progress js-avance-hito ${completed} ${blocked}"
+        class="avance-progress js-avance-hito ${completed} ${blocked} ${active}"
         data-codigo="${escapeHtml(item.codigo_hito || '')}"
         aria-label="${iconLabel}: ${escapeHtml(item.nombre_hito || '')}"
+        aria-disabled="${disabled ? 'true' : 'false'}"
+        data-estado="${escapeHtml(statusText)}"
+        ${titleAttr}
         ${disabled}>
         <div class="avance-progress__icon" aria-hidden="true">
           <span class="material-symbols-outlined">${icon}</span>
         </div>
         <div class="avance-progress__body">
           <div class="avance-progress__title">${escapeHtml(item.nombre_hito || '')}</div>
-          <div class="avance-progress__status">${meta}</div>
+          <div class="avance-progress__status">${statusText}</div>
+          <div class="avance-progress__detail">${statusDetail}</div>
         </div>
       </button>
     `;

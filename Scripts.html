@@ -1796,7 +1796,7 @@
     const tramos = (data && data.botones && data.botones.tramos) || [];
 
     const tramoPre = tramos.find(t => t.tramo === 'Preconstitución') || { items: [] };
-    const tramoFor = tramos.find(t => t.tramo === 'Formalización posterior') || { items: [] };
+    const tramoFor = tramos.find(t => t.tramo === 'Formalización') || { items: [] };
 
     const totalPre = tramoPre.items.length;
     const donePre = tramoPre.items.filter(x => x.completed_flag).length;
@@ -1824,7 +1824,7 @@
         <div class="avance-resumen-bars">
           ${buildProgressBarHtml_('Total hitos cumplidos', doneGeneral, totalGeneral)}
           ${buildProgressBarHtml_('Preconstitución', donePre, totalPre)}
-          ${buildProgressBarHtml_('Formalización posterior', doneFor, totalFor)}
+          ${buildProgressBarHtml_('Formalización', doneFor, totalFor)}
         </div>
       </div>
     `;
@@ -1842,7 +1842,7 @@
 
     const tramos = (data && data.botones && data.botones.tramos) || [];
     const tramoPre = tramos.find(t => t.tramo === 'Preconstitución') || { items: [] };
-    const tramoFor = tramos.find(t => t.tramo === 'Formalización posterior') || { items: [] };
+    const tramoFor = tramos.find(t => t.tramo === 'Formalización') || { items: [] };
 
     pre.innerHTML = tramoPre.items.map(renderAvanceProgressRow_).join('');
     post.innerHTML = tramoFor.items.map(renderAvanceProgressRow_).join('');

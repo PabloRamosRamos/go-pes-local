@@ -1,0 +1,148 @@
+function getOrganizacionesModuloClient() {
+  requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+
+  const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
+    .filter(function(r) {
+      return String(r.organizacion_id || '').trim() && String(r.nombre_organizacion || '').trim();
+    })
+    .sort(function(a, b) {
+      return String(a.nombre_organizacion || '').localeCompare(String(b.nombre_organizacion || ''), 'es');
+    });
+
+  return serializeForClient_({
+    organizaciones: rows.map(function(r) {
+      return {
+        value: String(r.organizacion_id || '').trim(),
+        label: String(r.nombre_organizacion || '').trim(),
+        estado_general_organizacion: String(r.estado_general_organizacion || ''),
+        estado_constitucion: String(r.estado_constitucion || ''),
+        uv: String(r.uv || ''),
+        sector: String(r.sector || '')
+      };
+    })
+  });
+}
+
+function getOrganizacionModuloDetalle(payload) {
+  requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+
+  const organizacionId = String(payload && payload.organizacion_id || '').trim();
+  if (!organizacionId) throw new Error('Falta organizacion_id.');
+
+  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (!org) throw new Error('No se encontró la organización indicada.');
+
+  const socios = filterByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'organizacion_id', organizacionId, false) || [];
+  const instrumentos = filterByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'organizacion_id', organizacionId, false) || [];
+  const requisitos = filterByField_(GO_PES_V2.SHEETS.FACT_REQUISITOS, 'organizacion_id', organizacionId, false) || [];
+  const casos = filterByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'organizacion_id', organizacionId, false) || [];
+  const hitosLegacy = filterByField_(GO_PES_V2.SHEETS.FACT_HITOS, 'organizacion_id', organizacionId, false) || [];
+  const avanceHitos = goPesOrgGetSheetRowsSafe_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'organizacion_id', organizacionId);
+  const avanceEstados = goPesOrgGetSheetRowsSafe_(GO_PES_V2.SHEETS.FACT_AVANCE_ESTADO, 'organizacion_id', organizacionId);
+  const avanceVista = goPesOrgGetSheetRowsSafe_(GO_PES_V2.SHEETS.VW_AVANCE_ORGANIZACION, 'organizacion_id', organizacionId)[0] || {};
+  const historial = (getSheetData_(GO_PES_V2.SHEETS.LOG_ACCIONES) || [])
+    .filter(function(r) {
+      return String(r.entity_id || '') === organizacionId || String(r.detail || '').indexOf(organizacionId) !== -1;
+    })
+    .sort(function(a, b) {
+      return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+    })
+    .slice(0, 10);
+
+  return serializeForClient_({
+    organizacion: org,
+    resumen: {
+      cantidad_socios: socios.length,
+      cantidad_casos: casos.length,
+      cantidad_instrumentos: instrumentos.length,
+      cantidad_requisitos: requisitos.length,
+      cantidad_hitos_legacy: hitosLegacy.length,
+      cantidad_avance_hitos: avanceHitos.length,
+      estado_avance: String((avanceEstados[0] && avanceEstados[0].estado_avance) || avanceVista.estado_avance || ''),
+      ultimo_hito: String((avanceHitos[0] && (avanceHitos[0].nombre_hito || avanceHitos[0].codigo_hito)) || (hitosLegacy[0] && hitosLegacy[0].hito) || '')
+    },
+    socios: socios.slice(0, 20),
+    instrumentos: instrumentos.slice(0, 20),
+    requisitos: requisitos.slice(0, 20),
+    casos: casos.slice(0, 20),
+    avance: {
+      vista: avanceVista,
+      hitos: avanceHitos.slice(0, 20),
+      estados: avanceEstados.slice(0, 10),
+      legacy: hitosLegacy.slice(0, 20)
+    },
+    historial: historial
+  });
+}
+
+function suspenderOrganizacion(payload) {
+  return cambiarEstadoAdministrativoOrganizacion_(payload, 'Suspendida', 'SUSPENDER_ORGANIZACION');
+}
+
+function eliminarOrganizacion(payload) {
+  return cambiarEstadoAdministrativoOrganizacion_(payload, 'Eliminada', 'ELIMINAR_ORGANIZACION_LOGICA');
+}
+
+function cambiarEstadoAdministrativoOrganizacion_(payload, estado, action) {
+  const user = requireRole_(['coordinador', 'administrador', 'superuser']);
+  const organizacionId = String(payload && payload.organizacion_id || '').trim();
+  const motivo = String(payload && payload.motivo || '').trim();
+  if (!organizacionId) throw new Error('Falta organizacion_id.');
+
+  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (!org) throw new Error('No se encontró la organización indicada.');
+
+  const now = new Date();
+  const nextOrg = Object.assign({}, org, {
+    estado_general_organizacion: estado,
+    observacion_resumen: [org.observacion_resumen || '', motivo ? '[' + estado + '] ' + motivo : ''].filter(Boolean).join('\n'),
+    responsable_actual: user.nombre_visible || user.email,
+    updated_at: now
+  });
+
+  appendRowObject_(GO_PES_V2.SHEETS.RAW_ORGANIZACIONES, {
+    created_at: now,
+    source: action,
+    user_email: user.email,
+    solicitud_id: nextOrg.solicitud_id || '',
+    organizacion_id: nextOrg.organizacion_id,
+    tipo_organizacion: nextOrg.tipo_organizacion || '',
+    nombre_organizacion: nextOrg.nombre_organizacion || '',
+    uv: nextOrg.uv || '',
+    sector: nextOrg.sector || '',
+    direccion_referencia: nextOrg.direccion_referencia || '',
+    fecha_inicio_acompanamiento: nextOrg.fecha_inicio_acompanamiento || '',
+    cantidad_socios_declarada: nextOrg.cantidad_socios_declarada || '',
+    estado_constitucion: nextOrg.estado_constitucion || '',
+    fecha_asamblea_constitucion: nextOrg.fecha_asamblea_constitucion || '',
+    fecha_ratificacion: nextOrg.fecha_ratificacion || '',
+    vigencia_directiva_hasta: nextOrg.vigencia_directiva_hasta || '',
+    personalidad_juridica_flag: nextOrg.personalidad_juridica_flag || '',
+    certificado_provisorio_flag: nextOrg.certificado_provisorio_flag || '',
+    certificado_definitivo_flag: nextOrg.certificado_definitivo_flag || '',
+    directiva_vigente_flag: nextOrg.directiva_vigente_flag || '',
+    organizacion_constituida_flag: nextOrg.organizacion_constituida_flag || '',
+    estado_general_organizacion: estado,
+    responsable_actual: nextOrg.responsable_actual || '',
+    observacion_resumen: nextOrg.observacion_resumen || ''
+  });
+
+  upsertByKey_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', nextOrg, false);
+  refreshPartialArtifacts_({
+    masterSolicitudIds: uniqueNonBlank_([nextOrg.solicitud_id]),
+    vistaOrganizacionIds: [organizacionId],
+    sugerenciaOrganizacionIds: [organizacionId]
+  });
+  logProcessing_('INFO', action, 'organizacion', organizacionId, user.email, 'OK', { estado: estado, motivo: motivo });
+  logUserAction_(action, 'organizacion', organizacionId, 'OK', { estado: estado, motivo: motivo });
+  return serializeForClient_({ ok: true, organizacion_id: organizacionId, estado_general_organizacion: estado });
+}
+
+function goPesOrgGetSheetRowsSafe_(sheetName, field, value) {
+  if (!sheetName) return [];
+  try {
+    return filterByField_(sheetName, field, value, false) || [];
+  } catch (err) {
+    return [];
+  }
+}

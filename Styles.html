@@ -1636,7 +1636,7 @@
   .socios-map {
     display: block;
     width: 100%;
-    height: min(68vh, 680px);
+    height: min(68vh, 760px);
     min-height: 560px;
     border: 0;
   }
@@ -1764,6 +1764,198 @@
 
     .socios-manual-grid {
       grid-template-columns: 1fr;
+    }
+  }
+
+  /* Modulo Organizaciones */
+  .organizaciones-shell {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  .organizaciones-head,
+  .organizaciones-summary {
+    align-items: center;
+  }
+
+  .organizaciones-actions,
+  .organizaciones-badges {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .organizaciones-selector-panel {
+    display: flex;
+    align-items: end;
+    gap: var(--space-4);
+  }
+
+  .organizaciones-detail {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .organizaciones-summary,
+  .organizaciones-block,
+  .organizaciones-metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-sm);
+    padding: var(--space-6);
+  }
+
+  .organizaciones-summary {
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .organizaciones-summary h3,
+  .organizaciones-block h4,
+  .organizaciones-modal__head h3 {
+    margin: 0;
+    color: var(--brand-blue);
+  }
+
+  .organizaciones-metrics {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .organizaciones-metric {
+    text-align: center;
+  }
+
+  .organizaciones-metric strong {
+    display: block;
+    color: var(--brand-blue);
+    font-size: var(--font-size-2xl);
+  }
+
+  .organizaciones-metric span {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .organizaciones-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5);
+  }
+
+  .organizaciones-block {
+    min-width: 0;
+  }
+
+  .organizaciones-block h4 {
+    margin-bottom: var(--space-4);
+  }
+
+  .organizaciones-kv {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .organizaciones-kv > div {
+    display: grid;
+    grid-template-columns: 160px minmax(0, 1fr);
+    gap: var(--space-3);
+    align-items: start;
+    font-size: var(--font-size-sm);
+  }
+
+  .organizaciones-kv span {
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  .organizaciones-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .organizaciones-modal.is-hidden {
+    display: none;
+  }
+
+  .organizaciones-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.4);
+  }
+
+  .organizaciones-modal__dialog {
+    position: relative;
+    z-index: 2;
+    width: min(900px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-7);
+  }
+
+  .organizaciones-modal__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+
+  .organizaciones-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .organizaciones-form-grid .field--half,
+  .organizaciones-form-grid .field--full {
+    width: 100%;
+    display: flex;
+  }
+
+  .organizaciones-form-grid .field--full {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 1100px) {
+    .organizaciones-metrics {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .organizaciones-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .organizaciones-summary {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .organizaciones-actions {
+      justify-content: flex-start;
+    }
+
+    .organizaciones-metrics,
+    .organizaciones-form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .organizaciones-kv > div {
+      grid-template-columns: 1fr;
+      gap: 2px;
     }
   }
 

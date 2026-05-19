@@ -103,7 +103,7 @@ function getCatalogosOrganizacionClient() {
   const cached = getCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.ORGANIZACION_CLIENT);
   if (cached) return cached;
 
-  const payload = serializeForClient_(buildOrganizacionCatalogListBundle_());
+  const payload = serializeForClient_(getOrganizacionCatalogBundle_());
   putCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.ORGANIZACION_CLIENT, payload, 300);
   return payload;
 }

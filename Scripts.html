@@ -1787,6 +1787,20 @@
     });
   }
 
+  function normalizeAvanceTramoKey_(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function getAvanceTramoItems_(tramos, aliases) {
+    const keys = (aliases || []).map(normalizeAvanceTramoKey_);
+    const tramo = (tramos || []).find(t => keys.includes(normalizeAvanceTramoKey_(t && t.tramo)));
+    return tramo && Array.isArray(tramo.items) ? tramo.items : [];
+  }
+
   function renderAvanceResumen_(data) {
     const el = document.getElementById('avance-resumen');
     if (!el) return;
@@ -1795,14 +1809,14 @@
     const estado = (data && data.estado && data.estado.estado_avance) || 'Activo';
     const tramos = (data && data.botones && data.botones.tramos) || [];
 
-    const tramoPre = tramos.find(t => t.tramo === 'Preconstitución') || { items: [] };
-    const tramoFor = tramos.find(t => t.tramo === 'Formalización') || { items: [] };
+    const tramoPreItems = getAvanceTramoItems_(tramos, ['Preconstitucion']);
+    const tramoForItems = getAvanceTramoItems_(tramos, ['Formalizacion', 'Formalizacion posterior']);
 
-    const totalPre = tramoPre.items.length;
-    const donePre = tramoPre.items.filter(x => x.completed_flag).length;
+    const totalPre = tramoPreItems.length;
+    const donePre = tramoPreItems.filter(x => x.completed_flag).length;
 
-    const totalFor = tramoFor.items.length;
-    const doneFor = tramoFor.items.filter(x => x.completed_flag).length;
+    const totalFor = tramoForItems.length;
+    const doneFor = tramoForItems.filter(x => x.completed_flag).length;
 
     const totalGeneral = totalPre + totalFor;
     const doneGeneral = donePre + doneFor;
@@ -1841,11 +1855,11 @@
     post.dataset.layout = 'grid';
 
     const tramos = (data && data.botones && data.botones.tramos) || [];
-    const tramoPre = tramos.find(t => t.tramo === 'Preconstitución') || { items: [] };
-    const tramoFor = tramos.find(t => t.tramo === 'Formalización') || { items: [] };
+    const tramoPreItems = getAvanceTramoItems_(tramos, ['Preconstitucion']);
+    const tramoForItems = getAvanceTramoItems_(tramos, ['Formalizacion', 'Formalizacion posterior']);
 
-    pre.innerHTML = tramoPre.items.map(renderAvanceProgressRow_).join('');
-    post.innerHTML = tramoFor.items.map(renderAvanceProgressRow_).join('');
+    pre.innerHTML = tramoPreItems.map(renderAvanceProgressRow_).join('');
+    post.innerHTML = tramoForItems.map(renderAvanceProgressRow_).join('');
 
     document.querySelectorAll('.js-avance-hito').forEach(btn => {
       btn.addEventListener('click', () => registrarHitoAvanceUi_(btn.dataset.codigo));

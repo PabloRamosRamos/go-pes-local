@@ -1727,6 +1727,20 @@
     grid-column: 1 / -1;
   }
 
+  .socios-manual-message {
+    margin: var(--space-4) 0 0;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--success);
+    border-radius: var(--radius-lg);
+    background: var(--success-soft);
+    color: var(--success-dark);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .socios-manual-message.is-hidden {
+    display: none;
+  }
+
   @media (max-width: 900px) {
     .socios-head {
       align-items: flex-start;

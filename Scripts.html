@@ -1298,9 +1298,14 @@
             <div class="field field--full"><label>UbicaciÃ³n socio</label><input id="socios-manual-ubicacion" type="text"></div>
           </div>
 
+          <div id="socios-manual-last-message" class="socios-manual-message is-hidden" aria-live="polite"></div>
+
           <div class="actions">
             <button type="button" class="secondary-btn" data-socios-modal-close="true">
               <span class="material-symbols-outlined">undo</span>Cancelar
+            </button>
+            <button type="button" class="secondary-btn" id="socios-manual-save-add-btn">
+              <span class="material-symbols-outlined">add_circle</span>Guardar y agregar otro
             </button>
             <button type="button" class="primary-btn" id="socios-manual-save-btn">
               <span class="material-symbols-outlined">save</span>Guardar socio
@@ -1316,7 +1321,8 @@
     document.getElementById('socios-open-manual-btn')?.addEventListener('click', () => openSociosModal_('socios-manual-modal'));
     document.getElementById('socios-validate-btn')?.addEventListener('click', validateSociosInput);
     document.getElementById('socios-save-btn')?.addEventListener('click', saveSociosInput);
-    document.getElementById('socios-manual-save-btn')?.addEventListener('click', saveSocioManual_);
+    document.getElementById('socios-manual-save-btn')?.addEventListener('click', () => saveSocioManual_({ keepOpen: false }));
+    document.getElementById('socios-manual-save-add-btn')?.addEventListener('click', () => saveSocioManual_({ keepOpen: true }));
     document.getElementById('socios-bulk-file')?.addEventListener('change', handleSociosBulkFile_);
 
     document.querySelectorAll('[data-socios-modal-close]').forEach(btn => {
@@ -1378,7 +1384,8 @@
     return { organizacionId, nombreComite };
   }
 
-  function saveSocioManual_() {
+  function saveSocioManual_(options = {}) {
+    const keepOpen = !!options.keepOpen;
     const selected = getSelectedSociosOrganizacion_('socios-manual-organizacion');
     if (!selected.organizacionId) {
       showError('Debes seleccionar un comitÃ©.');
@@ -1404,9 +1411,37 @@
 
     api('importarSocios', { rows: [row] }).then(res => {
       showSuccess(`Socio guardado: ${res.imported} de ${res.total}`);
-      closeSociosModals_();
+      if (keepOpen) {
+        showSociosManualLastMessage_(row.nombre_socio);
+        clearSociosManualFields_();
+      } else {
+        closeSociosModals_();
+      }
       renderSociosManualSavedPreview_(row);
     }).catch(showError);
+  }
+
+  function clearSociosManualFields_() {
+    [
+      'socios-manual-run',
+      'socios-manual-registro',
+      'socios-manual-nombre',
+      'socios-manual-edad',
+      'socios-manual-cargo',
+      'socios-manual-direccion',
+      'socios-manual-ubicacion'
+    ].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('socios-manual-run')?.focus();
+  }
+
+  function showSociosManualLastMessage_(nombreSocio) {
+    const el = document.getElementById('socios-manual-last-message');
+    if (!el) return;
+    el.textContent = `Ultimo socio agregado: ${nombreSocio}`;
+    el.classList.remove('is-hidden');
   }
 
   function renderSociosManualSavedPreview_(row) {

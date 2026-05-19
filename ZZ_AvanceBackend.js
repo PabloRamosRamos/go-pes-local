@@ -150,16 +150,8 @@ function registrarHitoAvance(payload) {
   if (!codigoHito) throw new Error('Falta codigo_hito.');
   if (!fechaHito) throw new Error('Debes indicar una fecha del hito.');
 
-  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  let org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
   if (!org) throw new Error('No se encontró la organización indicada.');
-
-  const solicitudId = String(org.solicitud_id || '').trim();
-  goPesEnsureEstadoAvanceInicial_(organizacionId, solicitudId, user);
-
-  const estadoActual = goPesGetEstadoAvanceActual_(organizacionId, solicitudId);
-  if (String(estadoActual.estado_avance || 'Activo') !== 'Activo') {
-    throw new Error('No se pueden registrar hitos porque el avance no está en estado Activo.');
-  }
 
   const hitoCatalogo = goPesFindHitoCatalogo_(codigoHito);
   if (!hitoCatalogo) throw new Error('El código de hito no existe en el catálogo.');
@@ -169,9 +161,22 @@ function registrarHitoAvance(payload) {
     throw new Error('Este hito ya fue registrado para la organización.');
   }
 
+  let solicitudId = String(org.solicitud_id || '').trim();
+  goPesEnsureEstadoAvanceInicial_(organizacionId, solicitudId, user);
+
+  const estadoActual = goPesGetEstadoAvanceActual_(organizacionId, solicitudId);
+  if (String(estadoActual.estado_avance || 'Activo') !== 'Activo') {
+    throw new Error('No se pueden registrar hitos porque el avance no está en estado Activo.');
+  }
+
   const validacion = goPesValidatePuedeRegistrarHito_(organizacionId, hitoCatalogo);
   if (!validacion.ok) {
     throw new Error(validacion.message || 'No se puede registrar el hito.');
+  }
+
+  if (goPesIsHitoCreacionOrganizacion_(hitoCatalogo)) {
+    org = goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user);
+    solicitudId = String(org.solicitud_id || '').trim();
   }
 
   const now = new Date();
@@ -514,6 +519,125 @@ function goPesFindHitoCatalogo_(codigoHito) {
     if (String(hitos[i].codigo_hito || '') === term) return hitos[i];
   }
   return null;
+}
+
+function goPesNormalizeOrganizacionNombre_(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+function goPesIsHitoCreacionOrganizacion_(hito) {
+  const tramo = goPesNormalizeOrganizacionNombre_(hito && hito.tramo);
+  const nombre = goPesNormalizeOrganizacionNombre_(hito && hito.nombre_hito);
+  return Number(hito && hito.orden_hito || 0) === 5
+    && tramo.indexOf('preconstitucion') !== -1
+    && (nombre.indexOf('ingreso') !== -1 || nombre.indexOf('documentacion') !== -1);
+}
+
+function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
+  const nombreAsamblea = String(payload && payload.nombre_organizacion_asamblea || '').trim();
+  if (!nombreAsamblea) {
+    throw new Error('Debes indicar el nombre asignado en la asamblea para crear la organización.');
+  }
+
+  const organizacionId = String(org.organizacion_id || '').trim();
+  const solicitudId = String(org.solicitud_id || '').trim();
+  const nombreNormalizado = goPesNormalizeOrganizacionNombre_(nombreAsamblea);
+  const orgs = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES) || [];
+
+  for (var i = 0; i < orgs.length; i++) {
+    const row = orgs[i] || {};
+    const rowOrgId = String(row.organizacion_id || '').trim();
+    const rowNombreNormalizado = goPesNormalizeOrganizacionNombre_(row.nombre_organizacion);
+
+    if (rowOrgId && rowOrgId !== organizacionId && rowNombreNormalizado && rowNombreNormalizado === nombreNormalizado) {
+      throw new Error('Ya existe una organización con ese nombre: ' + String(row.nombre_organizacion || row.organizacion_id));
+    }
+
+    if (
+      solicitudId &&
+      rowOrgId &&
+      rowOrgId !== organizacionId &&
+      String(row.solicitud_id || '').trim() === solicitudId
+    ) {
+      throw new Error('Ya existe una organización asociada a esta solicitud/proceso: ' + String(row.nombre_organizacion || row.organizacion_id));
+    }
+  }
+
+  const now = new Date();
+  const nextOrg = Object.assign({}, org, {
+    nombre_organizacion: nombreAsamblea,
+    estado_general_organizacion: org.estado_general_organizacion || 'Activo',
+    estado_constitucion: org.estado_constitucion || 'Documentación ingresada',
+    responsable_actual: org.responsable_actual || goPesGetUserEmail_(user),
+    updated_at: now
+  });
+
+  appendRowObject_(GO_PES_V2.SHEETS.RAW_ORGANIZACIONES, {
+    created_at: now,
+    source: 'AVANCE_HITO_5',
+    user_email: goPesGetUserEmail_(user),
+    solicitud_id: solicitudId,
+    organizacion_id: organizacionId,
+    tipo_organizacion: nextOrg.tipo_organizacion || '',
+    nombre_organizacion: nextOrg.nombre_organizacion || '',
+    uv: nextOrg.uv || '',
+    sector: nextOrg.sector || '',
+    direccion_referencia: nextOrg.direccion_referencia || '',
+    fecha_inicio_acompanamiento: nextOrg.fecha_inicio_acompanamiento || now,
+    cantidad_socios_declarada: nextOrg.cantidad_socios_declarada || '',
+    estado_constitucion: nextOrg.estado_constitucion || '',
+    fecha_asamblea_constitucion: nextOrg.fecha_asamblea_constitucion || '',
+    fecha_ratificacion: nextOrg.fecha_ratificacion || '',
+    vigencia_directiva_hasta: nextOrg.vigencia_directiva_hasta || '',
+    personalidad_juridica_flag: nextOrg.personalidad_juridica_flag || '',
+    certificado_provisorio_flag: nextOrg.certificado_provisorio_flag || '',
+    certificado_definitivo_flag: nextOrg.certificado_definitivo_flag || '',
+    directiva_vigente_flag: nextOrg.directiva_vigente_flag || '',
+    organizacion_constituida_flag: nextOrg.organizacion_constituida_flag || '',
+    estado_general_organizacion: nextOrg.estado_general_organizacion || '',
+    responsable_actual: nextOrg.responsable_actual || '',
+    observacion_resumen: nextOrg.observacion_resumen || ''
+  });
+
+  upsertByKey_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', nextOrg, false);
+
+  if (solicitudId) {
+    patchCaseSummary_(solicitudId, {
+      organizacion_id: organizacionId,
+      estado_actual: nextOrg.estado_general_organizacion || 'Activo',
+      etapa_actual: nextOrg.estado_constitucion || 'Documentación ingresada',
+      responsable_actual: nextOrg.responsable_actual || goPesGetUserEmail_(user),
+      observacion_resumen: nextOrg.observacion_resumen || ''
+    });
+  }
+
+  refreshPartialArtifacts_({
+    masterSolicitudIds: uniqueNonBlank_([solicitudId]),
+    vistaOrganizacionIds: [organizacionId],
+    sugerenciaSolicitudIds: uniqueNonBlank_([solicitudId]),
+    sugerenciaOrganizacionIds: [organizacionId],
+    territorioCatalogPairs: [{ uv: nextOrg.uv || '', sector: nextOrg.sector || '' }],
+    responsables: [nextOrg.responsable_actual || goPesGetUserEmail_(user)]
+  });
+
+  logProcessing_('INFO', 'crearOrganizacionDesdeHito5', 'organizacion', organizacionId, goPesGetUserEmail_(user), 'OK', {
+    organizacion_id: organizacionId,
+    solicitud_id: solicitudId,
+    nombre_organizacion: nombreAsamblea
+  });
+  logUserAction_('CREAR_ORGANIZACION_HITO_5', 'organizacion', organizacionId, 'OK', {
+    organizacion_id: organizacionId,
+    solicitud_id: solicitudId,
+    nombre_organizacion: nombreAsamblea
+  });
+
+  return nextOrg;
 }
 
 function goPesGetTimelineAvanceRows_(organizacionId) {

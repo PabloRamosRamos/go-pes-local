@@ -1147,9 +1147,6 @@
             <p class="muted">Consulta, administra y actualiza la información integral de cada organización.</p>
           </div>
           <div class="organizaciones-actions">
-            <button type="button" class="primary-btn" id="org-new-btn">
-              <span class="material-symbols-outlined">add_circle</span>Nueva organización
-            </button>
             <button type="button" class="secondary-btn" id="org-edit-btn" disabled>
               <span class="material-symbols-outlined">edit</span>Editar
             </button>
@@ -1240,7 +1237,6 @@
       if (orgId) loadOrganizacionDetalle_(orgId);
       else clearOrganizacionesDetail_();
     });
-    document.getElementById('org-new-btn')?.addEventListener('click', () => openOrganizacionEditModal_());
     document.getElementById('org-edit-btn')?.addEventListener('click', () => {
       const data = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.organizacion;
       if (data) openOrganizacionEditModal_(data);
@@ -1409,9 +1405,13 @@
     const form = document.getElementById('org-edit-form');
     const title = document.getElementById('org-edit-title');
     if (!modal || !form) return;
+    if (!data || !data.organizacion_id) {
+      showError('Selecciona una organización existente para editar.');
+      return;
+    }
 
     form.reset();
-    if (title) title.textContent = data.organizacion_id ? 'Editar organización' : 'Nueva organización';
+    if (title) title.textContent = 'Editar organización';
     Array.from(form.elements).forEach(el => {
       if (!el.name) return;
       setFormFieldValue_(el, data[el.name] !== undefined ? data[el.name] : '');
@@ -1432,6 +1432,10 @@
   function saveOrganizacionDesdeModulo_(ev) {
     ev.preventDefault();
     const payload = serializeForm(ev.target);
+    if (!String(payload.organizacion_id || '').trim()) {
+      showError('El módulo Organizaciones solo permite editar organizaciones existentes.');
+      return;
+    }
     api('guardarOrganizacion', payload).then(res => {
       showSuccess(`Organización guardada: ${res.organizacion_id}`);
       closeOrganizacionEditModal_();
@@ -2189,9 +2193,6 @@
         </div>
 
         <div class="avance-header__actions">
-          <button type="button" class="secondary-btn" id="avance-nueva-org-btn">
-            <span class="material-symbols-outlined">add_circle</span>Nueva organización
-          </button>
           <button type="button" class="secondary-btn" id="avance-standby-btn">
             <span class="material-symbols-outlined">pause_circle</span>Stand by
           </button>
@@ -2260,6 +2261,12 @@
             <input id="avance-modal-fecha" type="date">
           </div>
 
+          <div class="field is-hidden" id="avance-modal-org-nombre-field">
+            <label>Nombre asignado en la asamblea</label>
+            <input id="avance-modal-org-nombre" type="text" placeholder="Nombre formal de la organización">
+            <p class="muted">Requerido para registrar el hito Ingreso de documentación.</p>
+          </div>
+
           <div class="field">
             <label>Observación</label>
             <textarea id="avance-modal-observacion" rows="4" placeholder="Observación opcional"></textarea>
@@ -2282,7 +2289,6 @@
 
   function initAvanceView_() {
     const select = document.getElementById('avance-organizacion-select');
-    const nuevaBtn = document.getElementById('avance-nueva-org-btn');
     const standbyBtn = document.getElementById('avance-standby-btn');
     const detenerBtn = document.getElementById('avance-detener-btn');
     const reactivarBtn = document.getElementById('avance-reactivar-btn');
@@ -2291,11 +2297,6 @@
     const modalCancelBtn = document.getElementById('avance-modal-cancel-btn');
     const modalSaveBtn = document.getElementById('avance-modal-save-btn');
     const modal = document.getElementById('avance-hito-modal');
-
-    if (nuevaBtn && !nuevaBtn.dataset.bound) {
-      nuevaBtn.dataset.bound = 'true';
-      nuevaBtn.addEventListener('click', () => route('organizacion'));
-    }
 
     if (standbyBtn && !standbyBtn.dataset.bound) {
       standbyBtn.dataset.bound = 'true';
@@ -2464,6 +2465,14 @@
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  }
+
+  function isAvanceHitoCreacionOrganizacion_(item) {
+    const tramo = normalizeAvanceTramoKey_(item && item.tramo);
+    const nombre = normalizeAvanceTramoKey_(item && item.nombre_hito);
+    return Number(item && item.orden_hito || 0) === 5
+      && tramo.includes('preconstitucion')
+      && (nombre.includes('ingreso') || nombre.includes('documentacion'));
   }
 
   function getAvanceTramoItems_(tramos, aliases) {
@@ -2642,6 +2651,8 @@
     const codigo = document.getElementById('avance-modal-codigo');
     const fecha = document.getElementById('avance-modal-fecha');
     const obs = document.getElementById('avance-modal-observacion');
+    const orgNombreField = document.getElementById('avance-modal-org-nombre-field');
+    const orgNombre = document.getElementById('avance-modal-org-nombre');
 
     if (!modal || !title || !codigo || !fecha || !obs) return;
 
@@ -2649,6 +2660,12 @@
     codigo.value = item.codigo_hito || '';
     fecha.value = todayISO_();
     obs.value = '';
+    if (orgNombreField && orgNombre) {
+      const requiereNombre = isAvanceHitoCreacionOrganizacion_(item);
+      orgNombreField.classList.toggle('is-hidden', !requiereNombre);
+      orgNombre.required = requiereNombre;
+      orgNombre.value = '';
+    }
 
     modal.classList.remove('is-hidden');
   }
@@ -2664,11 +2681,13 @@
     const codigo = document.getElementById('avance-modal-codigo');
     const fecha = document.getElementById('avance-modal-fecha');
     const obs = document.getElementById('avance-modal-observacion');
+    const orgNombre = document.getElementById('avance-modal-org-nombre');
 
     const organizacionId = String(select?.value || '').trim();
     const codigoHito = String(codigo?.value || '').trim();
     const fechaHito = String(fecha?.value || '').trim();
     const observacion = String(obs?.value || '').trim();
+    const nombreOrganizacionAsamblea = String(orgNombre?.value || '').trim();
 
     if (!organizacionId) {
       showError('Debes seleccionar una organización.');
@@ -2685,13 +2704,22 @@
       return;
     }
 
+    const tramos = (((APP.state.currentAvance || {}).botones || {}).tramos || []);
+    const items = tramos.flatMap(t => t.items || []);
+    const item = items.find(x => String(x.codigo_hito || '') === codigoHito);
+    if (item && isAvanceHitoCreacionOrganizacion_(item) && !nombreOrganizacionAsamblea) {
+      showError('Debes indicar el nombre asignado en la asamblea.');
+      return;
+    }
+
     showContentLoading('Registrando hito...');
 
     api('registrarHitoAvance', {
       organizacion_id: organizacionId,
       codigo_hito: codigoHito,
       fecha_hito: fechaHito,
-      observacion: observacion
+      observacion: observacion,
+      nombre_organizacion_asamblea: nombreOrganizacionAsamblea
     }).then(() => {
       closeAvanceHitoModal_();
       showSuccess('Hito registrado correctamente.');

@@ -1145,7 +1145,7 @@
     const rows = parseSociosBulk(text, selected.organizacionId, selected.nombreComite);
 
     if (!selected.organizacionId) {
-      showError('Debes seleccionar un comitÃ©.');
+      showError('Debes seleccionar un comité.');
       return;
     }
 
@@ -1193,10 +1193,10 @@
           <div>
             <p class="eyebrow">Socios</p>
             <h2>Mapa y carga de socios</h2>
-            <p class="muted">Visualiza el mapa temporal de socios y registra cargas asociadas a un comitÃ© existente.</p>
+            <p class="muted">Visualiza el mapa temporal de socios y registra cargas asociadas a un comité existente.</p>
           </div>
           <div class="socios-actions">
-            <button type="button" class="primary-btn" id="socios-open-bulk-btn">
+            <button type="button" class="secondary-btn" id="socios-open-bulk-btn">
               <span class="material-symbols-outlined">upload_file</span>Agregar socios masivamente
             </button>
             <button type="button" class="secondary-btn" id="socios-open-manual-btn">
@@ -1208,7 +1208,7 @@
         <div class="socios-map-panel">
           ${SOCIOS_MY_MAPS_EMBED_URL
             ? `<iframe class="socios-map" src="${escapeHtml(SOCIOS_MY_MAPS_EMBED_URL)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa de socios"></iframe>`
-            : `<div class="socios-map socios-map--empty"><span class="material-symbols-outlined">map</span><strong>Mapa My Maps pendiente de configuraciÃ³n</strong><span>Define la URL en <code>SOCIOS_MY_MAPS_EMBED_URL</code> para mostrar el mapa embebido.</span></div>`}
+            : `<div class="socios-map socios-map--empty"><span class="material-symbols-outlined">map</span><strong>Mapa My Maps pendiente de configuración</strong><span>Define la URL en <code>SOCIOS_MY_MAPS_EMBED_URL</code> para mostrar el mapa embebido.</span></div>`}
         </div>
 
         <div id="socios-preview" class="socios-preview"></div>
@@ -1238,7 +1238,7 @@
           </div>
 
           <div class="field">
-            <label>ComitÃ©</label>
+            <label>Comité</label>
             <select id="socios-bulk-organizacion"></select>
           </div>
 
@@ -1250,7 +1250,7 @@
 
           <div class="field">
             <label>Datos detectados</label>
-            <textarea id="socios-bulk" rows="7" placeholder="El archivo cargado se mostrarÃ¡ aquÃ­ para validaciÃ³n."></textarea>
+            <textarea id="socios-bulk" rows="7" placeholder="El archivo cargado se mostrará aquí para validación."></textarea>
           </div>
 
           <div class="actions">
@@ -1286,16 +1286,16 @@
 
           <div class="form-grid socios-manual-grid">
             <div class="field field--full">
-              <label>ComitÃ©</label>
+              <label>Comité</label>
               <select id="socios-manual-organizacion"></select>
             </div>
             <div class="field field--half"><label>RUN</label><input id="socios-manual-run" type="text"></div>
-            <div class="field field--half"><label>NÃºmero registro</label><input id="socios-manual-registro" type="text"></div>
+            <div class="field field--half"><label>Número registro</label><input id="socios-manual-registro" type="text"></div>
             <div class="field field--full"><label>Nombre socio</label><input id="socios-manual-nombre" type="text"></div>
             <div class="field field--half"><label>Edad</label><input id="socios-manual-edad" type="number"></div>
             <div class="field field--half"><label>Cargo</label><input id="socios-manual-cargo" type="text"></div>
-            <div class="field field--full"><label>DirecciÃ³n socio</label><input id="socios-manual-direccion" type="text"></div>
-            <div class="field field--full"><label>UbicaciÃ³n socio</label><input id="socios-manual-ubicacion" type="text"></div>
+            <div class="field field--full"><label>Dirección socio</label><input id="socios-manual-direccion" type="text"></div>
+            <div class="field field--full"><label>Ubicación socio</label><input id="socios-manual-ubicacion" type="text"></div>
           </div>
 
           <div id="socios-manual-last-message" class="socios-manual-message is-hidden" aria-live="polite"></div>
@@ -1332,8 +1332,8 @@
 
   function fillSociosComiteSelects_() {
     const options = getSociosComiteOptions_();
-    fillSelect(document.getElementById('socios-bulk-organizacion'), options, 'Seleccionar comitÃ©');
-    fillSelect(document.getElementById('socios-manual-organizacion'), options, 'Seleccionar comitÃ©');
+    fillSelect(document.getElementById('socios-bulk-organizacion'), options, 'Seleccionar comité');
+    fillSelect(document.getElementById('socios-manual-organizacion'), options, 'Seleccionar comité');
   }
 
   function refreshSociosComites_() {
@@ -1388,7 +1388,7 @@
     const keepOpen = !!options.keepOpen;
     const selected = getSelectedSociosOrganizacion_('socios-manual-organizacion');
     if (!selected.organizacionId) {
-      showError('Debes seleccionar un comitÃ©.');
+      showError('Debes seleccionar un comité.');
       return;
     }
 
@@ -1440,7 +1440,7 @@
   function showSociosManualLastMessage_(nombreSocio) {
     const el = document.getElementById('socios-manual-last-message');
     if (!el) return;
-    el.textContent = `Ultimo socio agregado: ${nombreSocio}`;
+    el.textContent = `Último socio agregado: ${nombreSocio}`;
     el.classList.remove('is-hidden');
   }
 
@@ -1450,7 +1450,7 @@
 
     preview.innerHTML = `
       <div class="panel">
-        <h3>Ãšltimo socio guardado</h3>
+        <h3>Último socio guardado</h3>
         <p class="muted">${escapeHtml(row.nombre_socio)} asociado a ${escapeHtml(row.nombre_comite_origen || row.organizacion_id)}</p>
       </div>
     `;
@@ -1674,7 +1674,7 @@
       return Promise.resolve(data);
     }
 
-    showContentLoading('Cargando organizaciÃ³n...');
+    showContentLoading('Cargando organización...');
 
     return api('getOrganizacionClientById', { organizacion_id: organizacionId }).then(payload => {
       const snapshot = payload || {};
@@ -1739,7 +1739,7 @@
     const selector = document.querySelector('#form-organizacion [name="organizacion_id"]');
     if (selector) {
       const currentValue = String(selector.value || '').trim() || orgId;
-      fillSelect(selector, list, 'Seleccionar organizaciÃ³n');
+      fillSelect(selector, list, 'Seleccionar organización');
       selector.value = currentValue;
     }
   }

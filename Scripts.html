@@ -317,9 +317,9 @@
       ['search', 'Buscar ficha', 'Encontrar vecinos, solicitudes u organizaciones', 'buscar'],
       ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'seguimiento'],
       ['groups', 'Actualizar organización', 'Crear o actualizar datos de una organización', 'organizacion'],
+      ['badge', 'Socios', 'Mapa y carga de socios', 'socios'],
       ['handshake', 'Gestionar instrumentos', 'Beneficios, fondos e instrumentos', 'instrumento'],
-      ['inventory_2', 'Registrar requisitos', 'Control documental por instrumento', 'requisito'],
-      ['badge', 'Socios', 'Mapa y carga de socios', 'socios']
+      ['inventory_2', 'Registrar requisitos', 'Control documental por instrumento', 'requisito']
     ];
 
     container.innerHTML = items.map(item => `
@@ -343,9 +343,9 @@
       ['Nuevo ingreso', 'Registrar la solicitud inicial del vecino.', 'person_add', 'nuevo-ingreso'],
       ['Avance', 'Registrar hitos del proceso de constitución.', 'event_note', 'seguimiento'],
       ['Organización', 'Actualizar la información estructural de la organización.', 'groups', 'organizacion'],
+      ['Socios', 'Mapa y carga manual o masiva.', 'badge', 'socios'],
       ['Instrumentos', 'Gestionar beneficios, fondos y otros apoyos.', 'handshake', 'instrumento'],
-      ['Requisitos', 'Registrar o validar documentación.', 'inventory_2', 'requisito'],
-      ['Socios', 'Mapa y carga manual o masiva.', 'badge', 'socios']
+      ['Requisitos', 'Registrar o validar documentación.', 'inventory_2', 'requisito']
     ];
 
     container.innerHTML = tiles.map(([title, text, icon, view]) => `

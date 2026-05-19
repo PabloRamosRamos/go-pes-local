@@ -887,12 +887,7 @@
 
     const organizacionBlock = hasOrg
       ? fichaBlock('groups', 'Organización', [
-          ['ID organización', s.organizacion_id],
-          ['Nombre', s.nombre_organizacion],
-          ['Estado constitución', s.estado_constitucion],
-          ['Estado general', s.estado_general_organizacion],
-          ['Vigencia directiva', o.vigencia_directiva_hasta],
-          ['Constituida', o.organizacion_constituida_flag]
+          ['Antigüedad', formatOrganizacionAntiguedad_(s.fecha_antiguedad_organizacion)]
         ])
       : '';
 
@@ -978,6 +973,41 @@
         `).join('')}
       </div>
     `;
+  }
+
+  function formatOrganizacionAntiguedad_(value) {
+    const date = parseDateForAge_(value);
+    if (!date) return 'Sin antigüedad disponible';
+
+    const today = new Date();
+    let years = today.getFullYear() - date.getFullYear();
+    let months = today.getMonth() - date.getMonth();
+
+    if (today.getDate() < date.getDate()) months -= 1;
+    if (months < 0) {
+      years -= 1;
+      months += 12;
+    }
+
+    years = Math.max(0, years);
+    months = Math.max(0, months);
+
+    return `${years} ${years === 1 ? 'año' : 'años'} y ${months} ${months === 1 ? 'mes' : 'meses'}`;
+  }
+
+  function parseDateForAge_(value) {
+    if (!value) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+      const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
   }
 
   function serializeForm(form) {

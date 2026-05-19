@@ -199,6 +199,19 @@ function obtenerFicha(payload) {
       )
     : [];
 
+  if (typeof goPesApplyAvancePhase1Config_ === 'function') {
+    goPesApplyAvancePhase1Config_();
+  }
+  const avanceHitos = finalOrgId
+    ? getRowsByFieldValuesSelective_(
+        GO_PES_V2.SHEETS.FACT_AVANCE_HITOS,
+        'organizacion_id',
+        [finalOrgId],
+        false
+      )
+    : [];
+  const hitoCreacionOrganizacion = getHitoCreacionOrganizacionFromAvance_(avanceHitos);
+
   const acciones = getRowsByFieldValuesSelective_(
     GO_PES_V2.SHEETS.LOG_ACCIONES,
     'entity_id',
@@ -214,6 +227,20 @@ function obtenerFicha(payload) {
     nombre_organizacion: String(orgRow && orgRow.nombre_organizacion || ''),
     estado_constitucion: String(orgRow && orgRow.estado_constitucion || ''),
     estado_general_organizacion: String(orgRow && orgRow.estado_general_organizacion || ''),
+    fecha_antiguedad_organizacion:
+      (hitoCreacionOrganizacion && hitoCreacionOrganizacion.fecha_hito) ||
+      (orgRow && orgRow.fecha_asamblea_constitucion) ||
+      (orgRow && orgRow.fecha_inicio_acompanamiento) ||
+      (orgRow && orgRow.updated_at) ||
+      '',
+    fuente_fecha_antiguedad_organizacion: hitoCreacionOrganizacion
+      ? 'Hito 5: Ingreso de documentación'
+      : (
+          (orgRow && orgRow.fecha_asamblea_constitucion && 'Fecha asamblea constitución') ||
+          (orgRow && orgRow.fecha_inicio_acompanamiento && 'Fecha inicio acompañamiento') ||
+          (orgRow && orgRow.updated_at && 'Última actualización') ||
+          ''
+        ),
     responsable_actual: String(
       (orgRow && orgRow.responsable_actual) ||
       (caseRow && caseRow.responsable_actual) ||
@@ -228,6 +255,7 @@ function obtenerFicha(payload) {
     vecino: caseRow || {},
     organizacion: orgRow,
     hitos: hitos,
+    avance_hitos: avanceHitos,
     instrumentos: instrumentos,
     requisitos: requisitos,
     socios: socios,
@@ -238,6 +266,27 @@ function obtenerFicha(payload) {
     found: !!(result && result.summary)
   });
   return result;
+}
+
+function getHitoCreacionOrganizacionFromAvance_(rows) {
+  const hitos = (rows || []).slice().sort(function(a, b) {
+    return new Date(a.fecha_hito || a.timestamp_registro || 0) - new Date(b.fecha_hito || b.timestamp_registro || 0);
+  });
+
+  for (var i = 0; i < hitos.length; i++) {
+    const h = hitos[i] || {};
+    const tramo = normalizeText_(h.tramo || '');
+    const nombre = normalizeText_(h.nombre_hito || '');
+    if (
+      Number(h.orden_hito || 0) === 5 &&
+      tramo.indexOf('preconstitucion') !== -1 &&
+      (nombre.indexOf('ingreso') !== -1 || nombre.indexOf('documentacion') !== -1)
+    ) {
+      return h;
+    }
+  }
+
+  return null;
 }
 
 function guardarIngreso(payload) {

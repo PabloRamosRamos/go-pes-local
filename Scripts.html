@@ -36,6 +36,9 @@
 (() => {
   const root = document.getElementById('app');
   const BOOTSTRAP = root ? JSON.parse(root.dataset.bootstrap || '{}') : {};
+  // Configuracion temporal del mapa My Maps de Socios.
+  const SOCIOS_MY_MAPS_EMBED_URL =
+    (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.sociosMyMapsEmbedUrl) || '';
 
   const APP = {
     state: {
@@ -50,6 +53,8 @@
       avanceCatalogos: null,
       avanceOrganizaciones: [],
       avanceOrganizacionesFetchedAt: 0,
+      sociosOrganizaciones: [],
+      sociosOrganizacionesFetchedAt: 0,
       pendingSociosRows: [],
       ingresoMatches: [],
       renderedViews: {},
@@ -240,6 +245,22 @@
     });
   }
 
+  function ensureSociosCatalogs_() {
+    const now = Date.now();
+    if (
+      APP.state.sociosOrganizaciones.length &&
+      APP.state.sociosOrganizacionesFetchedAt &&
+      (now - APP.state.sociosOrganizacionesFetchedAt) < 30000
+    ) {
+      return Promise.resolve();
+    }
+
+    return api('getOrganizacionesAvanceClient').then(data => {
+      APP.state.sociosOrganizaciones = (data && data.organizacionesList) || [];
+      APP.state.sociosOrganizacionesFetchedAt = Date.now();
+    });
+  }
+
   function ensureCatalogsForView_(view) {
     switch (view) {
       case 'nuevo-ingreso':
@@ -253,6 +274,8 @@
         const pending = [ensureAppCatalogs_()].filter(Boolean);
         return pending.length ? Promise.all(pending) : null;
       }
+      case 'socios':
+        return ensureSociosCatalogs_();
       default:
         return null;
     }
@@ -296,7 +319,7 @@
       ['groups', 'Actualizar organización', 'Crear o actualizar datos de una organización', 'organizacion'],
       ['handshake', 'Gestionar instrumentos', 'Beneficios, fondos e instrumentos', 'instrumento'],
       ['inventory_2', 'Registrar requisitos', 'Control documental por instrumento', 'requisito'],
-      ['badge', 'Cargar socios', 'Carga manual o masiva', 'socios']
+      ['badge', 'Socios', 'Mapa y carga de socios', 'socios']
     ];
 
     container.innerHTML = items.map(item => `
@@ -322,7 +345,7 @@
       ['Organización', 'Actualizar la información estructural de la organización.', 'groups', 'organizacion'],
       ['Instrumentos', 'Gestionar beneficios, fondos y otros apoyos.', 'handshake', 'instrumento'],
       ['Requisitos', 'Registrar o validar documentación.', 'inventory_2', 'requisito'],
-      ['Socios', 'Subir carga manual o masiva.', 'badge', 'socios']
+      ['Socios', 'Mapa y carga manual o masiva.', 'badge', 'socios']
     ];
 
     container.innerHTML = tiles.map(([title, text, icon, view]) => `
@@ -362,6 +385,10 @@
         break;
       case 'requisito':
         buildForm('form-requisito', FORM_SCHEMAS.requisito, saveRequisitoFromForm);
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'socios':
+        renderSociosView_();
         APP.state.renderedViews[view] = true;
         break;
       default:
@@ -595,6 +622,10 @@
         refreshAvanceViewOnRoute_();
       }
 
+      if (view === 'socios' && wasRendered) {
+        refreshSociosComites_();
+      }
+
       if (view === 'historial') loadHistorial();
       if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
       if (view === 'nuevo-ingreso') {
@@ -606,7 +637,7 @@
 
     const catalogPromise = ensureCatalogsForView_(view);
     if (catalogPromise) {
-      showContentLoading(`Cargando ${friendlyViewName_(view)}...`);
+      showContentLoading(view === 'socios' ? 'Cargando socios' : `Cargando ${friendlyViewName_(view)}...`);
       catalogPromise.then(finalizeRoute).catch(showError).finally(hideContentLoading);
       return;
     }
@@ -1105,14 +1136,18 @@
         ubicacion_socio: parts[6] || '',
         nombre_comite_origen: nombreComite || ''
       };
-    });
+    }).filter(row => String(row.run_socio || '').toLowerCase() !== 'run_socio');
   }
 
   function validateSociosInput() {
-    const organizacionId = document.getElementById('socios-organizacion-id')?.value.trim() || '';
-    const nombreComite = document.getElementById('socios-comite-origen')?.value.trim() || '';
+    const selected = getSelectedSociosOrganizacion_('socios-bulk-organizacion');
     const text = document.getElementById('socios-bulk')?.value || '';
-    const rows = parseSociosBulk(text, organizacionId, nombreComite);
+    const rows = parseSociosBulk(text, selected.organizacionId, selected.nombreComite);
+
+    if (!selected.organizacionId) {
+      showError('Debes seleccionar un comitÃ©.');
+      return;
+    }
 
     if (!rows.length) {
       showError('No hay filas para validar.');
@@ -1134,10 +1169,256 @@
 
     api('importarSocios', { rows }).then(res => {
       showSuccess(`Socios importados: ${res.imported} de ${res.total}`);
+      closeSociosModals_();
       if (res.errors && res.errors.length) {
         document.getElementById('socios-preview').insertAdjacentHTML('beforeend', `<div class="message error">Errores: ${escapeHtml(JSON.stringify(res.errors))}</div>`);
       }
     }).catch(showError);
+  }
+
+  function getSociosComiteOptions_() {
+    return (APP.state.sociosOrganizaciones || []).map(item => ({
+      value: item.value,
+      label: item.label
+    }));
+  }
+
+  function renderSociosView_() {
+    const root = document.getElementById('socios-root');
+    if (!root) return;
+
+    root.innerHTML = `
+      <div class="socios-shell">
+        <div class="section-head socios-head">
+          <div>
+            <p class="eyebrow">Socios</p>
+            <h2>Mapa y carga de socios</h2>
+            <p class="muted">Visualiza el mapa temporal de socios y registra cargas asociadas a un comitÃ© existente.</p>
+          </div>
+          <div class="socios-actions">
+            <button type="button" class="primary-btn" id="socios-open-bulk-btn">
+              <span class="material-symbols-outlined">upload_file</span>Agregar socios masivamente
+            </button>
+            <button type="button" class="secondary-btn" id="socios-open-manual-btn">
+              <span class="material-symbols-outlined">person_add</span>Agregar socio manualmente
+            </button>
+          </div>
+        </div>
+
+        <div class="socios-map-panel">
+          ${SOCIOS_MY_MAPS_EMBED_URL
+            ? `<iframe class="socios-map" src="${escapeHtml(SOCIOS_MY_MAPS_EMBED_URL)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa de socios"></iframe>`
+            : `<div class="socios-map socios-map--empty"><span class="material-symbols-outlined">map</span><strong>Mapa My Maps pendiente de configuraciÃ³n</strong><span>Define la URL en <code>SOCIOS_MY_MAPS_EMBED_URL</code> para mostrar el mapa embebido.</span></div>`}
+        </div>
+
+        <div id="socios-preview" class="socios-preview"></div>
+
+        ${renderSociosBulkModal_()}
+        ${renderSociosManualModal_()}
+      </div>
+    `;
+
+    bindSociosView_();
+    fillSociosComiteSelects_();
+  }
+
+  function renderSociosBulkModal_() {
+    return `
+      <div id="socios-bulk-modal" class="socios-modal is-hidden">
+        <div class="socios-modal__backdrop" data-socios-modal-close="true"></div>
+        <div class="socios-modal__dialog">
+          <div class="socios-modal__head">
+            <div>
+              <p class="eyebrow">Carga masiva</p>
+              <h3>Agregar socios masivamente</h3>
+            </div>
+            <button type="button" class="secondary-btn" data-socios-modal-close="true">
+              <span class="material-symbols-outlined">close</span>Cerrar
+            </button>
+          </div>
+
+          <div class="field">
+            <label>ComitÃ©</label>
+            <select id="socios-bulk-organizacion"></select>
+          </div>
+
+          <div class="field">
+            <label>Archivo Excel o CSV</label>
+            <input id="socios-bulk-file" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls">
+            <p class="muted">Formato esperado: run_socio, numero_registro, nombre_socio, edad, cargo, direccion_socio, ubicacion_socio.</p>
+          </div>
+
+          <div class="field">
+            <label>Datos detectados</label>
+            <textarea id="socios-bulk" rows="7" placeholder="El archivo cargado se mostrarÃ¡ aquÃ­ para validaciÃ³n."></textarea>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="secondary-btn" data-socios-modal-close="true">
+              <span class="material-symbols-outlined">undo</span>Cancelar
+            </button>
+            <button type="button" class="secondary-btn" id="socios-validate-btn">
+              <span class="material-symbols-outlined">rule</span>Validar carga
+            </button>
+            <button type="button" class="primary-btn" id="socios-save-btn">
+              <span class="material-symbols-outlined">upload</span>Guardar socios
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSociosManualModal_() {
+    return `
+      <div id="socios-manual-modal" class="socios-modal is-hidden">
+        <div class="socios-modal__backdrop" data-socios-modal-close="true"></div>
+        <div class="socios-modal__dialog">
+          <div class="socios-modal__head">
+            <div>
+              <p class="eyebrow">Carga manual</p>
+              <h3>Agregar socio manualmente</h3>
+            </div>
+            <button type="button" class="secondary-btn" data-socios-modal-close="true">
+              <span class="material-symbols-outlined">close</span>Cerrar
+            </button>
+          </div>
+
+          <div class="form-grid socios-manual-grid">
+            <div class="field field--full">
+              <label>ComitÃ©</label>
+              <select id="socios-manual-organizacion"></select>
+            </div>
+            <div class="field field--half"><label>RUN</label><input id="socios-manual-run" type="text"></div>
+            <div class="field field--half"><label>NÃºmero registro</label><input id="socios-manual-registro" type="text"></div>
+            <div class="field field--full"><label>Nombre socio</label><input id="socios-manual-nombre" type="text"></div>
+            <div class="field field--half"><label>Edad</label><input id="socios-manual-edad" type="number"></div>
+            <div class="field field--half"><label>Cargo</label><input id="socios-manual-cargo" type="text"></div>
+            <div class="field field--full"><label>DirecciÃ³n socio</label><input id="socios-manual-direccion" type="text"></div>
+            <div class="field field--full"><label>UbicaciÃ³n socio</label><input id="socios-manual-ubicacion" type="text"></div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="secondary-btn" data-socios-modal-close="true">
+              <span class="material-symbols-outlined">undo</span>Cancelar
+            </button>
+            <button type="button" class="primary-btn" id="socios-manual-save-btn">
+              <span class="material-symbols-outlined">save</span>Guardar socio
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function bindSociosView_() {
+    document.getElementById('socios-open-bulk-btn')?.addEventListener('click', () => openSociosModal_('socios-bulk-modal'));
+    document.getElementById('socios-open-manual-btn')?.addEventListener('click', () => openSociosModal_('socios-manual-modal'));
+    document.getElementById('socios-validate-btn')?.addEventListener('click', validateSociosInput);
+    document.getElementById('socios-save-btn')?.addEventListener('click', saveSociosInput);
+    document.getElementById('socios-manual-save-btn')?.addEventListener('click', saveSocioManual_);
+    document.getElementById('socios-bulk-file')?.addEventListener('change', handleSociosBulkFile_);
+
+    document.querySelectorAll('[data-socios-modal-close]').forEach(btn => {
+      btn.addEventListener('click', () => closeSociosModals_());
+    });
+  }
+
+  function fillSociosComiteSelects_() {
+    const options = getSociosComiteOptions_();
+    fillSelect(document.getElementById('socios-bulk-organizacion'), options, 'Seleccionar comitÃ©');
+    fillSelect(document.getElementById('socios-manual-organizacion'), options, 'Seleccionar comitÃ©');
+  }
+
+  function refreshSociosComites_() {
+    const promise = ensureSociosCatalogs_();
+    if (!promise) {
+      fillSociosComiteSelects_();
+      return;
+    }
+    promise.then(fillSociosComiteSelects_).catch(showError);
+  }
+
+  function openSociosModal_(id) {
+    refreshSociosComites_();
+    document.getElementById(id)?.classList.remove('is-hidden');
+  }
+
+  function closeSociosModals_() {
+    document.querySelectorAll('.socios-modal').forEach(modal => modal.classList.add('is-hidden'));
+  }
+
+  function handleSociosBulkFile_(ev) {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+
+    if (/\.(xlsx|xls)$/i.test(file.name)) {
+      showError('Para esta carga usa Excel exportado como CSV o TSV.');
+      ev.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const textarea = document.getElementById('socios-bulk');
+      if (textarea) textarea.value = String(reader.result || '');
+      APP.state.pendingSociosRows = [];
+      showSuccess('Archivo cargado. Valida la carga antes de guardar.');
+    };
+    reader.onerror = () => showError('No se pudo leer el archivo.');
+    reader.readAsText(file);
+  }
+
+  function getSelectedSociosOrganizacion_(selectId) {
+    const select = document.getElementById(selectId);
+    const organizacionId = select ? String(select.value || '').trim() : '';
+    const nombreComite = select && select.selectedOptions && select.selectedOptions[0]
+      ? String(select.selectedOptions[0].textContent || '').trim()
+      : '';
+    return { organizacionId, nombreComite };
+  }
+
+  function saveSocioManual_() {
+    const selected = getSelectedSociosOrganizacion_('socios-manual-organizacion');
+    if (!selected.organizacionId) {
+      showError('Debes seleccionar un comitÃ©.');
+      return;
+    }
+
+    const row = {
+      organizacion_id: selected.organizacionId,
+      run_socio: document.getElementById('socios-manual-run')?.value.trim() || '',
+      numero_registro: document.getElementById('socios-manual-registro')?.value.trim() || '',
+      nombre_socio: document.getElementById('socios-manual-nombre')?.value.trim() || '',
+      edad: document.getElementById('socios-manual-edad')?.value.trim() || '',
+      cargo: document.getElementById('socios-manual-cargo')?.value.trim() || '',
+      direccion_socio: document.getElementById('socios-manual-direccion')?.value.trim() || '',
+      ubicacion_socio: document.getElementById('socios-manual-ubicacion')?.value.trim() || '',
+      nombre_comite_origen: selected.nombreComite
+    };
+
+    if (!row.nombre_socio) {
+      showError('Debes indicar el nombre del socio.');
+      return;
+    }
+
+    api('importarSocios', { rows: [row] }).then(res => {
+      showSuccess(`Socio guardado: ${res.imported} de ${res.total}`);
+      closeSociosModals_();
+      renderSociosManualSavedPreview_(row);
+    }).catch(showError);
+  }
+
+  function renderSociosManualSavedPreview_(row) {
+    const preview = document.getElementById('socios-preview');
+    if (!preview) return;
+
+    preview.innerHTML = `
+      <div class="panel">
+        <h3>Ãšltimo socio guardado</h3>
+        <p class="muted">${escapeHtml(row.nombre_socio)} asociado a ${escapeHtml(row.nombre_comite_origen || row.organizacion_id)}</p>
+      </div>
+    `;
   }
 
   function loadHistorial() {

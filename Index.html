@@ -50,7 +50,7 @@
           <button class="nav-btn" data-view="organizacion"><span class="material-symbols-outlined">groups</span>Actualizar organización</button>
           <button class="nav-btn" data-view="instrumento"><span class="material-symbols-outlined">handshake</span>Gestionar instrumentos</button>
           <button class="nav-btn" data-view="requisito"><span class="material-symbols-outlined">inventory_2</span>Registrar requisitos</button>
-          <button class="nav-btn" data-view="socios"><span class="material-symbols-outlined">badge</span>Cargar socios</button>
+          <button class="nav-btn" data-view="socios"><span class="material-symbols-outlined">badge</span>Socios</button>
           <button class="nav-btn" data-view="historial"><span class="material-symbols-outlined">history</span>Historial</button>
           <button class="nav-btn is-admin" data-view="usuarios"><span class="material-symbols-outlined">manage_accounts</span>Gestión de usuarios</button>
         </aside>
@@ -283,14 +283,7 @@
           </section>
 
           <section class="view" id="view-socios">
-            <div class="section-head"><div><p class="eyebrow">Socios</p><h2>Carga manual o masiva</h2></div></div>
-            <div class="panel">
-              <div class="field field--half"><label>Organización</label><input id="socios-organizacion-id" type="text" placeholder="ORG-000001"></div>
-              <div class="field field--half"><label>Nombre comité origen</label><input id="socios-comite-origen" type="text" placeholder="Nombre del comité"></div>
-              <div class="field field--full"><label>Pegado masivo (tablas separadas por tab o coma)</label><textarea id="socios-bulk" rows="8" placeholder="run_socio\tnumero_registro\tnombre_socio\tedad\tcargo\tdireccion_socio\tubicacion_socio"></textarea></div>
-              <div class="actions"><button type="button" class="primary-btn" id="socios-validate-btn"><span class="material-symbols-outlined">rule</span>Validar carga</button><button type="button" class="secondary-btn" id="socios-save-btn"><span class="material-symbols-outlined">upload</span>Guardar socios</button></div>
-            </div>
-            <div id="socios-preview"></div>
+            <div id="socios-root"></div>
           </section>
 
           <section class="view" id="view-historial">
@@ -316,7 +309,8 @@
 
     <script>
       window.GO_PES_TEMPLATE = {
-        logoDataUri: <?!= JSON.stringify(logoDataUri || '') ?>
+        logoDataUri: <?!= JSON.stringify(logoDataUri || '') ?>,
+        sociosMyMapsEmbedUrl: ''
       };
     </script>
 

@@ -6,7 +6,8 @@
  * usuarios, permisos, logs ni configuraciones.
  */
 
-const GO_PES_ADMIN_RESET_PIN_PROPERTY = 'GO_PES_ADMIN_RESET_PIN';
+const GO_PES_ADMIN_RESET_PIN_SALT = 'GO_PES_ADMIN_RESET_PIN_V1';
+const GO_PES_ADMIN_RESET_PIN_HASH = 'xUGcfZmxbUgq7J3VGUoJPCj+O5upODLuZTWCHH+zefk=';
 
 function getAdminDataResetPlan() {
   const user = requireRole_(['superuser']);
@@ -65,20 +66,6 @@ function limpiarDatosPruebaAdmin(payload) {
     skipped: skipped,
     protected: goPesGetAdminResetProtectedSheets_()
   });
-}
-
-function goPesSetAdminDataResetPin(pin) {
-  const user = requireRole_(['superuser']);
-  goPesAssertAdminResetSuperuser_(user);
-
-  const value = String(pin || '').trim();
-  if (value.length < 6) {
-    throw new Error('El PIN debe tener al menos 6 caracteres.');
-  }
-
-  PropertiesService.getScriptProperties().setProperty(GO_PES_ADMIN_RESET_PIN_PROPERTY, value);
-  logUserAction_('SET_ADMIN_RESET_PIN', 'admin_reset', '', 'OK', { actor: user.email });
-  return { ok: true };
 }
 
 function goPesGetAdminResetCleanableSheets_() {
@@ -150,14 +137,16 @@ function goPesAssertAdminResetSuperuser_(user) {
 }
 
 function goPesValidateAdminResetPin_(pin) {
-  const expected = String(PropertiesService.getScriptProperties().getProperty(GO_PES_ADMIN_RESET_PIN_PROPERTY) || '').trim();
-  if (!expected) {
-    throw new Error('No existe PIN configurado. Define Script Property GO_PES_ADMIN_RESET_PIN antes de usar esta accion.');
-  }
-
-  if (String(pin || '').trim() !== expected) {
+  const candidate = goPesHashAdminResetPin_(pin);
+  if (candidate !== GO_PES_ADMIN_RESET_PIN_HASH) {
     throw new Error('PIN invalido.');
   }
+}
+
+function goPesHashAdminResetPin_(pin) {
+  const raw = GO_PES_ADMIN_RESET_PIN_SALT + ':' + String(pin || '').trim();
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
+  return Utilities.base64Encode(digest);
 }
 
 function goPesCountDataRows_(sheetName) {

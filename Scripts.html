@@ -1823,23 +1823,28 @@
 
     el.className = 'avance-resumen';
     el.innerHTML = `
-      <div class="preview-block">
-        <div class="preview-block__title">Resumen de avance</div>
+      <div class="avance-resumen-layout">
+        <aside class="avance-resumen-card" aria-label="Resumen de organizacion">
+          <div class="avance-resumen-card__title">Ficha de avance</div>
 
-        <div class="preview-grid">
-          <div class="preview-item"><strong>Estado</strong><span>${escapeHtml(estado)}</span></div>
-          <div class="preview-item"><strong>Organización</strong><span>${escapeHtml(r.nombre_organizacion || '')}</span></div>
-          <div class="preview-item"><strong>Solicitud</strong><span>${escapeHtml(r.solicitud_id || '')}</span></div>
-          <div class="preview-item"><strong>Último hito</strong><span>${escapeHtml(r.ultimo_hito_nombre || 'Sin registros')}</span></div>
-          <div class="preview-item"><strong>Fecha último hito</strong><span>${escapeHtml(r.ultimo_hito_fecha || '')}</span></div>
-          <div class="preview-item"><strong>Usuario último hito</strong><span>${escapeHtml(r.usuario_ultimo_hito || '')}</span></div>
-        </div>
+          <div class="avance-resumen-card__grid">
+            <div class="avance-resumen-card__item"><strong>Estado</strong><span>${escapeHtml(estado)}</span></div>
+            <div class="avance-resumen-card__item"><strong>Organización</strong><span>${escapeHtml(r.nombre_organizacion || '')}</span></div>
+            <div class="avance-resumen-card__item"><strong>Solicitud</strong><span>${escapeHtml(r.solicitud_id || '')}</span></div>
+            <div class="avance-resumen-card__item"><strong>Último hito</strong><span>${escapeHtml(r.ultimo_hito_nombre || 'Sin registros')}</span></div>
+            <div class="avance-resumen-card__item"><strong>Fecha último hito</strong><span>${escapeHtml(r.ultimo_hito_fecha || '')}</span></div>
+            <div class="avance-resumen-card__item"><strong>Usuario último hito</strong><span>${escapeHtml(r.usuario_ultimo_hito || '')}</span></div>
+          </div>
+        </aside>
 
-        <div class="avance-resumen-bars">
-          ${buildProgressBarHtml_('Total hitos cumplidos', doneGeneral, totalGeneral)}
-          ${buildProgressBarHtml_('Preconstitución', donePre, totalPre)}
-          ${buildProgressBarHtml_('Formalización', doneFor, totalFor)}
-        </div>
+        <section class="avance-resumen-progress" aria-label="Resumen de avance">
+          <div class="avance-resumen-progress__title">Resumen de avance</div>
+          <div class="avance-resumen-bars">
+            ${buildProgressBarHtml_('Total hitos cumplidos', doneGeneral, totalGeneral)}
+            ${buildProgressBarHtml_('Preconstitución', donePre, totalPre)}
+            ${buildProgressBarHtml_('Formalización', doneFor, totalFor)}
+          </div>
+        </section>
       </div>
     `;
   }

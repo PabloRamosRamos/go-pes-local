@@ -34,8 +34,50 @@
         <div class="hero__user">
           <div class="pill"><span class="material-symbols-outlined">person</span><span id="user-name">Usuario</span></div>
           <div class="pill"><span class="material-symbols-outlined">verified_user</span><span id="user-role">perfil</span></div>
+          <button type="button" class="admin-reset-btn is-hidden" id="admin-reset-open-btn">
+            <span class="material-symbols-outlined">delete_sweep</span>Limpiar datos
+          </button>
         </div>
       </header>
+
+      <div id="admin-reset-modal" class="admin-reset-modal is-hidden" aria-hidden="true">
+        <div class="admin-reset-modal__backdrop" data-admin-reset-close="true"></div>
+        <form id="admin-reset-form" class="admin-reset-modal__dialog">
+          <div class="admin-reset-modal__head">
+            <div>
+              <p class="eyebrow">Administración avanzada</p>
+              <h3>Limpiar datos de prueba</h3>
+            </div>
+            <button type="button" class="secondary-btn" data-admin-reset-close="true">
+              <span class="material-symbols-outlined">close</span>Cerrar
+            </button>
+          </div>
+
+          <div class="admin-reset-warning">
+            Esta acción borra solo datos operativos permitidos y conserva hojas, encabezados, catálogos, usuarios, permisos y logs.
+          </div>
+
+          <div class="field">
+            <label>PIN de seguridad</label>
+            <input id="admin-reset-pin" type="password" autocomplete="off" required>
+          </div>
+
+          <div class="field">
+            <label>Confirmación</label>
+            <input id="admin-reset-confirm" type="text" placeholder="Escribe LIMPIAR" autocomplete="off" required>
+            <p class="field-help">Para continuar debes escribir exactamente LIMPIAR.</p>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="secondary-btn" data-admin-reset-close="true">
+              <span class="material-symbols-outlined">undo</span>Cancelar
+            </button>
+            <button type="submit" class="danger-btn">
+              <span class="material-symbols-outlined">delete_sweep</span>Limpiar datos
+            </button>
+          </div>
+        </form>
+      </div>
 
       <section class="toolbar">
         <div class="toolbar__left"></div>

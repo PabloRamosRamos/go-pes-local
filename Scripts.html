@@ -309,10 +309,15 @@
     const userName = document.getElementById('user-name');
     const userRole = document.getElementById('user-role');
     const badgeUser = document.getElementById('ingreso-current-user');
+    const resetBtn = document.getElementById('admin-reset-open-btn');
 
     if (userName) userName.textContent = user.nombre_visible || user.email || 'Usuario';
     if (userRole) userRole.textContent = user.roleLabel || user.perfil || 'Sin perfil';
     if (badgeUser) badgeUser.textContent = user.nombre_visible || user.email || 'Usuario activo';
+    if (resetBtn) {
+      resetBtn.classList.toggle('is-visible', !!APP.state.permissions.canResetData);
+      resetBtn.classList.toggle('is-hidden', !APP.state.permissions.canResetData);
+    }
   }
 
   function bindGlobalNav() {
@@ -324,11 +329,18 @@
     const saveUserBtn = document.getElementById('save-user-btn');
     const sociosValidateBtn = document.getElementById('socios-validate-btn');
     const sociosSaveBtn = document.getElementById('socios-save-btn');
+    const adminResetOpenBtn = document.getElementById('admin-reset-open-btn');
+    const adminResetForm = document.getElementById('admin-reset-form');
 
     if (searchBtn) searchBtn.addEventListener('click', runSearch);
     if (saveUserBtn) saveUserBtn.addEventListener('click', saveUserFromForm);
     if (sociosValidateBtn) sociosValidateBtn.addEventListener('click', validateSociosInput);
     if (sociosSaveBtn) sociosSaveBtn.addEventListener('click', saveSociosInput);
+    if (adminResetOpenBtn) adminResetOpenBtn.addEventListener('click', openAdminResetModal_);
+    if (adminResetForm) adminResetForm.addEventListener('submit', submitAdminReset_);
+    document.querySelectorAll('[data-admin-reset-close]').forEach(btn => {
+      btn.addEventListener('click', closeAdminResetModal_);
+    });
   }
 
   function renderQuickActions() {
@@ -605,12 +617,83 @@
       if (APP.state.permissions.canManageUsers) el.classList.add('show-admin');
     });
 
+    const resetBtn = document.getElementById('admin-reset-open-btn');
+    if (resetBtn) {
+      resetBtn.classList.toggle('is-visible', !!APP.state.permissions.canResetData);
+      resetBtn.classList.toggle('is-hidden', !APP.state.permissions.canResetData);
+    }
+
     const usersView = document.getElementById('view-usuarios');
     if (usersView && !APP.state.permissions.canManageUsers) {
       usersView.innerHTML = '<div class="empty-state">No tienes permisos para administrar usuarios.</div>';
     }
 
     fillSelect(document.getElementById('user-role-input'), ['operador', 'coordinador', 'administrador', 'superuser']);
+  }
+
+  function openAdminResetModal_() {
+    if (!APP.state.permissions.canResetData) {
+      showError('Solo un SUPERUSER puede limpiar datos de prueba.');
+      return;
+    }
+
+    const modal = document.getElementById('admin-reset-modal');
+    const form = document.getElementById('admin-reset-form');
+    if (form) form.reset();
+    if (modal) {
+      modal.classList.remove('is-hidden');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+    setTimeout(() => document.getElementById('admin-reset-pin')?.focus(), 20);
+  }
+
+  function closeAdminResetModal_() {
+    const modal = document.getElementById('admin-reset-modal');
+    if (!modal) return;
+    modal.classList.add('is-hidden');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function submitAdminReset_(ev) {
+    ev.preventDefault();
+    if (!APP.state.permissions.canResetData) {
+      showError('Solo un SUPERUSER puede limpiar datos de prueba.');
+      return;
+    }
+
+    const pin = String(document.getElementById('admin-reset-pin')?.value || '').trim();
+    const confirmacion = String(document.getElementById('admin-reset-confirm')?.value || '').trim();
+
+    if (!pin) {
+      showError('Debes ingresar el PIN de seguridad.');
+      return;
+    }
+
+    if (confirmacion.toUpperCase() !== 'LIMPIAR') {
+      showError('Debes escribir LIMPIAR para confirmar.');
+      return;
+    }
+
+    showContentLoading('Limpiando datos de prueba...');
+    api('limpiarDatosPruebaAdmin', { pin, confirmacion }).then(res => {
+      closeAdminResetModal_();
+      const totalRows = (res.cleared || []).reduce((sum, item) => sum + Number(item.rows_cleared || 0), 0);
+      showSuccess(`Datos de prueba limpiados. Hojas: ${(res.cleared || []).length}. Filas: ${totalRows}.`);
+      APP.state.catalogStatus = { app: false, ingreso: false, organizacion: false };
+      APP.state.currentFicha = null;
+      APP.state.currentAvance = null;
+      APP.state.avanceCatalogos = null;
+      APP.state.avanceOrganizaciones = [];
+      APP.state.avanceOrganizacionesFetchedAt = 0;
+      APP.state.organizacionesModulo = [];
+      APP.state.organizacionesModuloFetchedAt = 0;
+      APP.state.sociosOrganizaciones = [];
+      APP.state.sociosOrganizacionesFetchedAt = 0;
+      APP.state.renderedViews = {};
+      route('inicio');
+    }).catch(showError).finally(() => {
+      hideContentLoading();
+    });
   }
 
   function toggleTopQuickActions_(view) {

@@ -168,6 +168,7 @@
 
   .hero__user {
     display: flex;
+    align-items: center;
     gap: var(--space-4);
     flex-wrap: wrap;
   }
@@ -582,7 +583,9 @@
   }
 
   .primary-btn,
-  .secondary-btn {
+  .secondary-btn,
+  .danger-btn,
+  .admin-reset-btn {
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);
@@ -606,6 +609,22 @@
     background: var(--surface);
     border-color: var(--border);
     color: var(--brand-blue);
+  }
+
+  .danger-btn,
+  .admin-reset-btn {
+    background: #fff5f5;
+    border-color: #fecaca;
+    color: #b42318;
+  }
+
+  .admin-reset-btn {
+    display: none;
+    padding: var(--space-3) var(--space-5);
+  }
+
+  .admin-reset-btn.is-visible {
+    display: inline-flex;
   }
 
   .actions {
@@ -939,6 +958,60 @@
     font-weight: var(--font-weight-bold);
     color: var(--text);
     letter-spacing: 0.02em;
+  }
+
+  .admin-reset-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .admin-reset-modal.is-hidden {
+    display: none;
+  }
+
+  .admin-reset-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.48);
+  }
+
+  .admin-reset-modal__dialog {
+    position: relative;
+    z-index: 2;
+    width: min(560px, calc(100vw - 32px));
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-7);
+  }
+
+  .admin-reset-modal__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+
+  .admin-reset-modal__head h3 {
+    margin: 0;
+    color: var(--brand-blue);
+  }
+
+  .admin-reset-warning {
+    border: 1px solid #fecaca;
+    border-radius: var(--radius-lg);
+    background: #fff5f5;
+    color: #7a271a;
+    padding: var(--space-4);
+    margin-bottom: var(--space-5);
+    font-size: var(--font-size-base);
+    line-height: var(--line-normal);
   }
 
   @keyframes appLoadingSpin {

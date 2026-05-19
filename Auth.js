@@ -220,6 +220,7 @@ function buildPermissionMap_(user) {
     canImportSocios: user && user.canAccess,
     canViewHistorial: user && user.canAccess,
     canManageUsers: isSuper || role === 'administrador',
+    canResetData: isSuper,
     canAdmin: isSuper || role === 'administrador'
   };
 }

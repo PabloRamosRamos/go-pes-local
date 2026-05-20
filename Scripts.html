@@ -2555,9 +2555,13 @@
           </div>
 
           <div class="field is-hidden" id="avance-modal-org-nombre-field">
-            <label>Nombre asignado en la asamblea</label>
-            <input id="avance-modal-org-nombre" type="text" placeholder="Nombre formal de la organización">
-            <p class="muted">Requerido para registrar el hito Ingreso de documentación.</p>
+            <label>Nombre de la organización</label>
+            <div class="avance-org-name-input">
+              <span class="avance-org-name-prefix">COMITE DE SEGURIDAD</span>
+              <input id="avance-modal-org-nombre" type="text" placeholder="Nombre elegido">
+            </div>
+            <p class="avance-modal-error is-hidden" id="avance-modal-org-nombre-error">Debe ingresar un nombre para la organización</p>
+            <p class="muted">Requerido solo para registrar el hito Ingreso de documentación.</p>
           </div>
 
           <div class="field">
@@ -2620,6 +2624,15 @@
     if (modalSaveBtn && !modalSaveBtn.dataset.bound) {
       modalSaveBtn.dataset.bound = 'true';
       modalSaveBtn.addEventListener('click', submitAvanceHitoModal_);
+    }
+
+    const orgNombre = document.getElementById('avance-modal-org-nombre');
+    const orgNombreError = document.getElementById('avance-modal-org-nombre-error');
+    if (orgNombre && !orgNombre.dataset.bound) {
+      orgNombre.dataset.bound = 'true';
+      orgNombre.addEventListener('input', () => {
+        if (orgNombreError) orgNombreError.classList.add('is-hidden');
+      });
     }
 
     if (modal && !modal.dataset.bound) {
@@ -2832,11 +2845,14 @@
   }
 
   function isAvanceHitoCreacionOrganizacion_(item) {
+    const current = APP.state.currentAvance || {};
+    const isGrupo = String(current.context_type || '') === 'grupo_vecinos';
     const tramo = normalizeAvanceTramoKey_(item && item.tramo);
-    const nombre = normalizeAvanceTramoKey_(item && item.nombre_hito);
-    return Number(item && item.orden_hito || 0) === 5
-      && tramo.includes('preconstitucion')
-      && (nombre.includes('ingreso') || nombre.includes('documentacion'));
+    const codigo = String(item && item.codigo_hito || '').trim().toUpperCase();
+    const isHito5 = codigo ? codigo === 'PRE_05' : Number(item && item.orden_hito || 0) === 5;
+    return isGrupo
+      && isHito5
+      && tramo.includes('preconstitucion');
   }
 
   function getAvanceTramoItems_(tramos, aliases) {
@@ -3020,6 +3036,7 @@
     const obs = document.getElementById('avance-modal-observacion');
     const orgNombreField = document.getElementById('avance-modal-org-nombre-field');
     const orgNombre = document.getElementById('avance-modal-org-nombre');
+    const orgNombreError = document.getElementById('avance-modal-org-nombre-error');
 
     if (!modal || !title || !codigo || !fecha || !obs) return;
 
@@ -3032,6 +3049,7 @@
       orgNombreField.classList.toggle('is-hidden', !requiereNombre);
       orgNombre.required = requiereNombre;
       orgNombre.value = '';
+      if (orgNombreError) orgNombreError.classList.add('is-hidden');
     }
 
     modal.classList.remove('is-hidden');
@@ -3052,13 +3070,14 @@
     const fecha = document.getElementById('avance-modal-fecha');
     const obs = document.getElementById('avance-modal-observacion');
     const orgNombre = document.getElementById('avance-modal-org-nombre');
+    const orgNombreError = document.getElementById('avance-modal-org-nombre-error');
 
     const organizacionId = String(orgSelect?.value || '').trim();
     const solicitudId = String(grupoSelect?.value || '').trim();
     const codigoHito = String(codigo?.value || '').trim();
     const fechaHito = String(fecha?.value || '').trim();
     const observacion = String(obs?.value || '').trim();
-    const nombreOrganizacionAsamblea = String(orgNombre?.value || '').trim();
+    const nombreOrganizacionVariable = String(orgNombre?.value || '').trim();
 
     if (isGrupo && !solicitudId) {
       showError('Debes seleccionar un Grupo de vecinos.');
@@ -3083,12 +3102,20 @@
     const tramos = (((APP.state.currentAvance || {}).botones || {}).tramos || []);
     const items = tramos.flatMap(t => t.items || []);
     const item = items.find(x => String(x.codigo_hito || '') === codigoHito);
-    if (item && isAvanceHitoCreacionOrganizacion_(item) && !nombreOrganizacionAsamblea) {
-      showError('Debes indicar el nombre asignado en la asamblea.');
+    const requiereNombreOrganizacion = item && isAvanceHitoCreacionOrganizacion_(item);
+    if (orgNombreError) orgNombreError.classList.add('is-hidden');
+    if (requiereNombreOrganizacion && !nombreOrganizacionVariable) {
+      if (orgNombreError) orgNombreError.classList.remove('is-hidden');
+      if (orgNombre) orgNombre.focus();
       return;
     }
 
-    showContentLoading('Registrando hito...');
+    const nombreOrganizacionAsamblea = requiereNombreOrganizacion
+      ? `COMITE DE SEGURIDAD ${nombreOrganizacionVariable}`.replace(/\s+/g, ' ').trim()
+      : '';
+
+    closeAvanceHitoModal_();
+    showContentLoading(requiereNombreOrganizacion ? 'Creando organización...' : 'Registrando hito...');
 
     api('registrarHitoAvance', {
       organizacion_id: isGrupo ? '' : organizacionId,
@@ -3098,7 +3125,6 @@
       observacion: observacion,
       nombre_organizacion_asamblea: nombreOrganizacionAsamblea
     }).then(res => {
-      closeAvanceHitoModal_();
       showSuccess(res && res.warning_nombre_duplicado
         ? `Hito registrado correctamente. Advertencia: ${res.warning_nombre_duplicado}`
         : 'Hito registrado correctamente.');

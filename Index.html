@@ -86,15 +86,19 @@
 
       <main class="layout">
         <aside class="sidebar">
-          <button class="nav-btn" data-view="nuevo-ingreso"><span class="material-symbols-outlined">person_add</span>Nuevo ingreso</button>
-          <button class="nav-btn" data-view="buscar"><span class="material-symbols-outlined">search</span>Buscar vecino</button>
-          <button class="nav-btn" data-view="seguimiento"><span class="material-symbols-outlined">event_note</span>Registrar avance</button>
-          <button class="nav-btn" data-view="organizacion"><span class="material-symbols-outlined">groups</span>Organizaciones</button>
-          <button class="nav-btn" data-view="socios"><span class="material-symbols-outlined">badge</span>Socios</button>
-          <button class="nav-btn" data-view="instrumento"><span class="material-symbols-outlined">handshake</span>Gestionar instrumentos</button>
-          <button class="nav-btn" data-view="requisito"><span class="material-symbols-outlined">inventory_2</span>Registrar requisitos</button>
-          <button class="nav-btn" data-view="historial"><span class="material-symbols-outlined">history</span>Historial</button>
-          <button class="nav-btn is-admin" data-view="usuarios"><span class="material-symbols-outlined">manage_accounts</span>Gestión de usuarios</button>
+          <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Contraer menú" aria-expanded="true" title="Contraer menú">
+            <span class="material-symbols-outlined" id="sidebar-toggle-icon">keyboard_double_arrow_left</span>
+            <span class="sidebar-toggle__label" id="sidebar-toggle-label">Contraer menú</span>
+          </button>
+          <button class="nav-btn" data-view="nuevo-ingreso" title="Nuevo ingreso"><span class="material-symbols-outlined">person_add</span><span class="nav-label">Nuevo ingreso</span></button>
+          <button class="nav-btn" data-view="buscar" title="Buscar vecino"><span class="material-symbols-outlined">search</span><span class="nav-label">Buscar vecino</span></button>
+          <button class="nav-btn" data-view="seguimiento" title="Registrar avance"><span class="material-symbols-outlined">event_note</span><span class="nav-label">Registrar avance</span></button>
+          <button class="nav-btn" data-view="organizacion" title="Organizaciones"><span class="material-symbols-outlined">groups</span><span class="nav-label">Organizaciones</span></button>
+          <button class="nav-btn" data-view="socios" title="Socios"><span class="material-symbols-outlined">badge</span><span class="nav-label">Socios</span></button>
+          <button class="nav-btn" data-view="instrumento" title="Gestionar instrumentos"><span class="material-symbols-outlined">handshake</span><span class="nav-label">Gestionar instrumentos</span></button>
+          <button class="nav-btn" data-view="requisito" title="Registrar requisitos"><span class="material-symbols-outlined">inventory_2</span><span class="nav-label">Registrar requisitos</span></button>
+          <button class="nav-btn" data-view="historial" title="Historial"><span class="material-symbols-outlined">history</span><span class="nav-label">Historial</span></button>
+          <button class="nav-btn is-admin" data-view="usuarios" title="Gestión de usuarios"><span class="material-symbols-outlined">manage_accounts</span><span class="nav-label">Gestión de usuarios</span></button>
         </aside>
 
         <section class="content">

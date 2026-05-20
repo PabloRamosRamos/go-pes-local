@@ -153,6 +153,7 @@
 
   function init() {
     bindGlobalNav();
+    initSidebarCollapse_();
     hydrateStaticUser();
     hydrateLogo();
     renderQuickActions();
@@ -182,6 +183,41 @@
         hideAppLoading();
         hideContentLoading();
       }, 120);
+    });
+  }
+
+  function initSidebarCollapse_() {
+    const layout = document.querySelector('.layout');
+    const toggle = document.getElementById('sidebar-toggle');
+    const icon = document.getElementById('sidebar-toggle-icon');
+    const label = document.getElementById('sidebar-toggle-label');
+    if (!layout || !toggle) return;
+
+    const applyState = collapsed => {
+      layout.classList.toggle('is-sidebar-collapsed', collapsed);
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.setAttribute('aria-label', collapsed ? 'Expandir menú' : 'Contraer menú');
+      toggle.title = collapsed ? 'Expandir menú' : 'Contraer menú';
+      if (icon) icon.textContent = collapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left';
+      if (label) label.textContent = collapsed ? 'Expandir menú' : 'Contraer menú';
+    };
+
+    let stored = false;
+    try {
+      stored = localStorage.getItem('goPesSidebarCollapsed') === 'true';
+    } catch (err) {
+      stored = false;
+    }
+    applyState(stored);
+
+    toggle.addEventListener('click', () => {
+      const collapsed = !layout.classList.contains('is-sidebar-collapsed');
+      try {
+        localStorage.setItem('goPesSidebarCollapsed', String(collapsed));
+      } catch (err) {
+        console.warn('No se pudo persistir el estado del menú lateral.', err);
+      }
+      applyState(collapsed);
     });
   }
 

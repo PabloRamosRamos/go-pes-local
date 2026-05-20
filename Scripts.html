@@ -361,7 +361,7 @@
 
     const items = [
       ['person_add', 'Nuevo ingreso', 'Registrar un nuevo vecino o solicitud', 'nuevo-ingreso'],
-      ['search', 'Buscar ficha', 'Encontrar vecinos, solicitudes u organizaciones', 'buscar'],
+      ['search', 'Buscar vecino', 'Encontrar vecinos, solicitudes u organizaciones', 'buscar'],
       ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'seguimiento'],
       ['groups', 'Organizaciones', 'Consultar y administrar organizaciones', 'organizacion'],
       ['badge', 'Socios', 'Mapa y carga de socios', 'socios'],
@@ -2872,11 +2872,14 @@
 
     const tramoPreItems = getAvanceTramoItems_(tramos, ['Preconstitucion']);
     const tramoForItems = getAvanceTramoItems_(tramos, ['Formalizacion', 'Formalizacion posterior']);
+    const catalogosAvance = APP.state.avanceCatalogos || {};
+    const catalogoPreItems = ((catalogosAvance.hitosPorTramo || {}).preconstitucion || []);
+    const catalogoForItems = ((catalogosAvance.hitosPorTramo || {}).formalizacion || []);
 
-    const totalPre = tramoPreItems.length;
+    const totalPre = Math.max(tramoPreItems.length, catalogoPreItems.length, Number(r.total_hitos_tramo_pre || 0));
     const donePre = tramoPreItems.filter(x => x.completed_flag).length;
 
-    const totalFor = tramoForItems.length;
+    const totalFor = Math.max(tramoForItems.length, catalogoForItems.length, Number(r.total_hitos_tramo_for || 0));
     const doneFor = tramoForItems.filter(x => x.completed_flag).length;
 
     const totalGeneral = totalPre + totalFor;
@@ -3048,6 +3051,7 @@
       const requiereNombre = isAvanceHitoCreacionOrganizacion_(item);
       orgNombreField.classList.toggle('is-hidden', !requiereNombre);
       orgNombre.required = requiereNombre;
+      orgNombre.disabled = !requiereNombre;
       orgNombre.value = '';
       if (orgNombreError) orgNombreError.classList.add('is-hidden');
     }

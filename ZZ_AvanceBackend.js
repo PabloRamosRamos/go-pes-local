@@ -1226,8 +1226,9 @@ function goPesBuildBotonesAvanceGrupoVecinos_(solicitudId) {
 
 function goPesBuildResumenAvance_(org, estadoActual, timeline) {
   const ultimo = timeline[0] || {};
-  const totalPre = timeline.filter(function(x) { return String(x.tramo || '') === 'Preconstitución'; }).length;
-  const totalFor = timeline.filter(function(x) { return String(x.tramo || '') === 'Formalización posterior'; }).length;
+  const hitosCatalogo = goPesGetCatalogoHitosAvance_();
+  const totalPre = hitosCatalogo.filter(function(x) { return goPesIsTramoPreconstitucion_(x.tramo); }).length;
+  const totalFor = hitosCatalogo.filter(function(x) { return goPesIsTramoFormalizacion_(x.tramo); }).length;
 
   return {
     organizacion_id: String(org.organizacion_id || ''),
@@ -1246,6 +1247,10 @@ function goPesBuildResumenAvance_(org, estadoActual, timeline) {
 
 function goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline) {
   const ultimo = timeline[0] || {};
+  const hitosCatalogo = goPesGetCatalogoHitosAvance_();
+  const totalPre = hitosCatalogo.filter(function(x) { return goPesIsTramoPreconstitucion_(x.tramo); }).length;
+  const totalFor = hitosCatalogo.filter(function(x) { return goPesIsTramoFormalizacion_(x.tramo); }).length;
+
   return {
     context_type: 'grupo_vecinos',
     solicitud_id: String(caso.solicitud_id || ''),
@@ -1256,8 +1261,8 @@ function goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline) {
     ultimo_hito_fecha: ultimo.fecha_hito || '',
     usuario_ultimo_hito: String(ultimo.usuario_registro || ''),
     total_hitos_cumplidos: timeline.length,
-    total_hitos_tramo_pre: timeline.filter(function(x) { return goPesIsTramoPreconstitucion_(x.tramo); }).length,
-    total_hitos_tramo_for: 0
+    total_hitos_tramo_pre: totalPre,
+    total_hitos_tramo_for: totalFor
   };
 }
 

@@ -2259,10 +2259,6 @@
         return;
       }
 
-      const moduleLabel = user => user.superuser_flag
-        ? 'Todos'
-        : moduleLabelsFromKeys_(String(user.modulos_permitidos || '').split(','));
-
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td>${escapeHtml(formatFechaHoraUi_(r.timestamp || ''))}</td>
@@ -2282,6 +2278,10 @@
     api('listUsers').then(rows => {
       const tbody = document.getElementById('users-results');
       if (!tbody) return;
+
+      const moduleLabel = user => user.superuser_flag
+        ? 'Todos'
+        : moduleLabelsFromKeys_(String(user.modulos_permitidos || '').split(','));
 
       tbody.innerHTML = rows.map(r => `
         <tr>
@@ -2344,7 +2344,10 @@
   }
 
   function showError(error) {
-    setStatus(typeof error === 'string' ? error : 'Ocurrió un error.', false);
+    const message = typeof error === 'string'
+      ? error
+      : (error && error.message ? error.message : 'Ocurrió un error.');
+    setStatus(message, false);
   }
 
   function setStatus(message, ok) {

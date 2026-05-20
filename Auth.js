@@ -93,15 +93,22 @@ function requireAnyModuleAccess_(moduleKeys, allowedRoles) {
 function listUsers() {
   const user = requireRole_(['superuser']);
 
-  ensureSheetsSubset_([GO_PES_V2.SHEETS.DIM_USUARIOS]);
-
-  const rows = (getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS) || [])
-    .filter(function(row) { return !!row.email; })
+  const result = readDimUsuariosUsers_();
+  const rows = result.users
     .map(decorateUser_)
+    .map(serializeUserForClient_)
     .sort((a, b) => String(a.nombre_visible).localeCompare(String(b.nombre_visible)));
 
-  logUserAction_('LIST_USERS', 'usuario', user.email, 'OK', { total: rows.length });
-  return rows;
+  logUserAction_('LIST_USERS', 'usuario', user.email, 'OK', {
+    total: rows.length,
+    totalRows: result.totalRows,
+    headers: result.headers
+  });
+  return {
+    users: rows,
+    headers: result.headers,
+    totalRows: result.totalRows
+  };
 }
 
 function updateUser(payload) {
@@ -112,7 +119,7 @@ function updateUser(payload) {
   }
 
   const normalizedEmail = normalizeText_(payload.email);
-  const existing = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS)
+  const existing = readDimUsuariosUsers_().users
     .find(r => normalizeText_(r.email) === normalizedEmail);
   const isConfiguredSuper = isConfiguredSuperUserEmail_(payload.email);
   const activeNext = isConfiguredSuper ? true : toBool_(payload.activo_flag);
@@ -146,10 +153,153 @@ function updateUser(payload) {
     row.modulos_permitidos = '*';
   }
 
-  upsertByKey_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', row, true);
+  upsertDimUsuarioByEmail_(row);
   logUserAction_('UPDATE_USER', 'usuario', payload.email, 'OK', { actor: actor.email, payload: row });
 
-  return { ok: true, user: decorateUser_(row) };
+  return { ok: true, user: serializeUserForClient_(decorateUser_(row)) };
+}
+
+function readDimUsuariosUsers_() {
+  const sheetName = GO_PES_V2.SHEETS.DIM_USUARIOS;
+  let sh = getSheet_(sheetName);
+  if (!sh) {
+    sh = ensureSheetWithHeaders_(sheetName, buildSheetDefinitions_()[sheetName]);
+  }
+  if (!sh || sh.getLastRow() < 2 || !sh.getLastColumn()) {
+    return { users: [], headers: [], totalRows: 0 };
+  }
+
+  const lastCol = sh.getLastColumn();
+  const headers = sh.getRange(1, 1, 1, lastCol).getValues()[0].map(function(h) {
+    return String(h || '').trim();
+  });
+  const values = sh.getRange(2, 1, sh.getLastRow() - 1, lastCol).getValues();
+  const users = values
+    .filter(function(row) {
+      return row.join('').trim() !== '';
+    })
+    .map(function(row) {
+      return normalizeDimUsuarioRow_(headers, row);
+    })
+    .filter(function(row) {
+      return !!row.email;
+    });
+
+  return {
+    users: users,
+    headers: headers,
+    totalRows: values.length
+  };
+}
+
+function serializeUserForClient_(user) {
+  user = user || {};
+  return {
+    user_id: user.user_id || '',
+    email: user.email || '',
+    nombre_visible: user.nombre_visible || '',
+    perfil: user.perfil || '',
+    activo_flag: !!user.activo_flag,
+    superuser_flag: !!user.superuser_flag,
+    modulos_permitidos: user.modulos_permitidos || '',
+    modules: Array.isArray(user.modules) ? user.modules.slice() : [],
+    fecha_alta: serializeDateForClient_(user.fecha_alta),
+    fecha_ultima_actividad: serializeDateForClient_(user.fecha_ultima_actividad),
+    updated_at: serializeDateForClient_(user.updated_at),
+    updated_by: user.updated_by || '',
+    canAccess: !!user.canAccess,
+    roleLabel: user.roleLabel || user.perfil || ''
+  };
+}
+
+function serializeDateForClient_(value) {
+  if (!value) return '';
+  if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
+  }
+  return String(value);
+}
+
+function normalizeDimUsuarioRow_(headers, row) {
+  const byHeader = {};
+  (headers || []).forEach(function(header, index) {
+    byHeader[normalizeHeaderKey_(header)] = row[index];
+  });
+
+  const get = function(aliases, fallbackIndex) {
+    for (let i = 0; i < aliases.length; i++) {
+      const key = normalizeHeaderKey_(aliases[i]);
+      if (byHeader[key] !== undefined && byHeader[key] !== '') return byHeader[key];
+    }
+    return fallbackIndex >= 0 && row[fallbackIndex] !== undefined ? row[fallbackIndex] : '';
+  };
+
+  const col0 = String(row[0] || '');
+  const col1 = String(row[1] || '');
+  const firstEmailIndex = row.findIndex(function(value) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+  });
+  const canonicalEmail = get(['email', 'correo', 'correo_electronico', 'correo electronico', 'mail', 'usuario', 'user_email'], firstEmailIndex);
+  const userIdFallback = firstEmailIndex === 0 ? '' : col0;
+  const nameFallbackIndex = firstEmailIndex === 0 ? 1 : 2;
+
+  return {
+    user_id: get(['user_id', 'id_usuario', 'usuario_id'], -1) || userIdFallback,
+    email: String(canonicalEmail || '').trim(),
+    nombre_visible: get(['nombre_visible', 'nombre visible', 'nombre', 'name', 'display_name'], nameFallbackIndex),
+    perfil: get(['perfil', 'rol', 'role'], 3) || 'operador',
+    activo_flag: normalizeUserBoolLike_(get(['activo_flag', 'activo', 'estado', 'active'], 4), true),
+    superuser_flag: normalizeUserBoolLike_(get(['superuser_flag', 'superuser', 'is_superuser'], 5), false),
+    fecha_alta: get(['fecha_alta', 'created_at', 'fecha_creacion'], 6),
+    fecha_ultima_actividad: get(['fecha_ultima_actividad', 'ultima_actividad', 'last_activity'], 7),
+    modulos_permitidos: get(['modulos_permitidos', 'modulos visibles', 'modulos', 'modules', 'permisos'], 8),
+    updated_at: get(['updated_at', 'fecha_actualizacion'], 9),
+    updated_by: get(['updated_by', 'actualizado_por'], 10)
+  };
+}
+
+function normalizeHeaderKey_(value) {
+  return normalizeText_(value).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function normalizeUserBoolLike_(value, defaultValue) {
+  const normalized = normalizeText_(value);
+  if (!normalized) return defaultValue;
+  if (['si', 'sí', 'true', '1', 'activo', 'activa', 'active'].indexOf(normalized) !== -1) return true;
+  if (['no', 'false', '0', 'inactivo', 'inactiva', 'inactive'].indexOf(normalized) !== -1) return false;
+  return value;
+}
+
+function upsertDimUsuarioByEmail_(row) {
+  const sheetName = GO_PES_V2.SHEETS.DIM_USUARIOS;
+  const headers = buildSheetDefinitions_()[sheetName];
+  const sh = ensureSheetWithHeaders_(sheetName, headers);
+  const normalizedEmail = normalizeText_(row.email);
+  let rowIndex = -1;
+
+  if (sh.getLastRow() >= 2) {
+    const values = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
+    for (let i = 0; i < values.length; i++) {
+      const hasEmail = values[i].some(function(value) {
+        return normalizeText_(value) === normalizedEmail;
+      });
+      if (hasEmail) {
+        rowIndex = i + 2;
+        break;
+      }
+    }
+  }
+
+  const valuesToWrite = headers.map(function(header) {
+    return row[header] !== undefined ? row[header] : '';
+  });
+
+  if (rowIndex === -1) {
+    sh.appendRow(valuesToWrite);
+  } else {
+    sh.getRange(rowIndex, 1, 1, headers.length).setValues([valuesToWrite]);
+  }
+  invalidateSheetRuntimeCache_(sheetName);
 }
 
 function deactivateUser(payload) {
@@ -169,7 +319,7 @@ function deactivateUser(payload) {
   goPesValidateAdminResetPin_(payload.pin);
 
   const normalizedEmail = normalizeText_(payload.email);
-  const existing = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS)
+  const existing = readDimUsuariosUsers_().users
     .find(function(r) { return normalizeText_(r.email) === normalizedEmail; });
 
   if (!existing) {
@@ -192,10 +342,10 @@ function deactivateUser(payload) {
     updated_by: actor.email
   });
 
-  upsertByKey_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', row, true);
+  upsertDimUsuarioByEmail_(row);
   logUserAction_('DEACTIVATE_USER', 'usuario', existing.email, 'OK', { actor: actor.email });
 
-  return { ok: true, user: decorateUser_(row) };
+  return { ok: true, user: serializeUserForClient_(decorateUser_(row)) };
 }
 
 function seedSuperUsers_() {
@@ -399,7 +549,7 @@ function safeModuleDefinitions_() {
 }
 
 function ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail) {
-  const rows = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS);
+  const rows = readDimUsuariosUsers_().users;
   const others = rows.filter(function(row) {
     return normalizeText_(row.email) !== normalizedEmail &&
       (toBool_(row.superuser_flag) || isConfiguredSuperUserEmail_(row.email)) &&

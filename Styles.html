@@ -1114,6 +1114,66 @@
     color: var(--brand-blue);
   }
 
+  .user-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .user-modal.is-hidden {
+    display: none;
+  }
+
+  .user-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(17, 24, 39, 0.48);
+  }
+
+  .user-modal__dialog {
+    position: relative;
+    z-index: 2;
+    width: min(720px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    overflow: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-7);
+  }
+
+  .user-modal__dialog--sm {
+    width: min(520px, calc(100vw - 32px));
+  }
+
+  .user-modal__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+
+  .user-modal__head h3 {
+    margin: 0;
+    color: var(--brand-blue);
+  }
+
+  .user-delete-warning {
+    border: 1px solid #fecaca;
+    border-radius: var(--radius-lg);
+    background: #fff5f5;
+    color: #7a271a;
+    padding: var(--space-4);
+    margin-bottom: var(--space-5);
+    font-size: var(--font-size-base);
+    line-height: var(--line-normal);
+  }
+
   .admin-reset-warning {
     border: 1px solid #fecaca;
     border-radius: var(--radius-lg);
@@ -2215,6 +2275,17 @@
 
   .table-action-btn .material-symbols-outlined {
     font-size: 18px;
+  }
+
+  .table-action-btn--danger {
+    color: var(--danger);
+    border-color: #fecaca;
+  }
+
+  .user-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
   }
 
   .organizacion-socio-modal-summary {

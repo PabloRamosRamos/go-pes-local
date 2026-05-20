@@ -157,7 +157,7 @@ function buildBootstrapForTemplate_(e) {
   const requestedView = params.view || GO_PES_V2.DEFAULT_VIEW;
   const initialView = user.canAccess && (permissions.modules || {})[requestedView]
     ? requestedView
-    : GO_PES_V2.DEFAULT_VIEW;
+    : getFirstAllowedView_(permissions);
 
   logAccess_('OPEN_APP', params);
 
@@ -173,6 +173,26 @@ function buildBootstrapForTemplate_(e) {
     permissions: permissions,
     moduleDefinitions: getModuleDefinitions_()
   };
+}
+
+function getFirstAllowedView_(permissions) {
+  const modules = (permissions && permissions.modules) || {};
+  const priority = [
+    GO_PES_V2.DEFAULT_VIEW,
+    GO_PES_V2.VIEWS.NEW_INGRESO,
+    GO_PES_V2.VIEWS.SEARCH,
+    GO_PES_V2.VIEWS.SEGUIMIENTO,
+    GO_PES_V2.VIEWS.ORGANIZACION,
+    GO_PES_V2.VIEWS.SOCIOS,
+    GO_PES_V2.VIEWS.INSTRUMENTO,
+    GO_PES_V2.VIEWS.REQUISITO,
+    GO_PES_V2.VIEWS.HISTORIAL,
+    GO_PES_V2.VIEWS.USERS
+  ];
+  for (var i = 0; i < priority.length; i++) {
+    if (modules[priority[i]]) return priority[i];
+  }
+  return GO_PES_V2.DEFAULT_VIEW;
 }
 
 function getAppBootstrap() {

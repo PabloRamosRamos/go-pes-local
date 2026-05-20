@@ -90,15 +90,15 @@
             <span class="material-symbols-outlined" id="sidebar-toggle-icon">keyboard_double_arrow_left</span>
             <span class="sidebar-toggle__label" id="sidebar-toggle-label">Modulos</span>
           </button>
-          <button class="nav-btn" data-view="nuevo-ingreso" title="Nuevo ingreso"><span class="material-symbols-outlined">person_add</span><span class="nav-label">Nuevo ingreso</span></button>
-          <button class="nav-btn" data-view="buscar" title="Buscar vecino"><span class="material-symbols-outlined">search</span><span class="nav-label">Buscar vecino</span></button>
-          <button class="nav-btn" data-view="seguimiento" title="Registrar avance"><span class="material-symbols-outlined">event_note</span><span class="nav-label">Registrar avance</span></button>
-          <button class="nav-btn" data-view="organizacion" title="Organizaciones"><span class="material-symbols-outlined">groups</span><span class="nav-label">Organizaciones</span></button>
-          <button class="nav-btn" data-view="socios" title="Socios"><span class="material-symbols-outlined">badge</span><span class="nav-label">Socios</span></button>
-          <button class="nav-btn" data-view="instrumento" title="Gestionar instrumentos"><span class="material-symbols-outlined">handshake</span><span class="nav-label">Gestionar instrumentos</span></button>
-          <button class="nav-btn" data-view="requisito" title="Registrar requisitos"><span class="material-symbols-outlined">inventory_2</span><span class="nav-label">Registrar requisitos</span></button>
-          <button class="nav-btn" data-view="historial" title="Historial"><span class="material-symbols-outlined">history</span><span class="nav-label">Historial</span></button>
-          <button class="nav-btn is-admin" data-view="usuarios" title="Gestión de usuarios"><span class="material-symbols-outlined">manage_accounts</span><span class="nav-label">Gestión de usuarios</span></button>
+          <button class="nav-btn is-hidden" data-view="nuevo-ingreso" title="Nuevo ingreso"><span class="material-symbols-outlined">person_add</span><span class="nav-label">Nuevo ingreso</span></button>
+          <button class="nav-btn is-hidden" data-view="buscar" title="Buscar vecino"><span class="material-symbols-outlined">search</span><span class="nav-label">Buscar vecino</span></button>
+          <button class="nav-btn is-hidden" data-view="seguimiento" title="Registrar avance"><span class="material-symbols-outlined">event_note</span><span class="nav-label">Registrar avance</span></button>
+          <button class="nav-btn is-hidden" data-view="organizacion" title="Organizaciones"><span class="material-symbols-outlined">groups</span><span class="nav-label">Organizaciones</span></button>
+          <button class="nav-btn is-hidden" data-view="socios" title="Socios"><span class="material-symbols-outlined">badge</span><span class="nav-label">Socios</span></button>
+          <button class="nav-btn is-hidden" data-view="instrumento" title="Gestionar instrumentos"><span class="material-symbols-outlined">handshake</span><span class="nav-label">Gestionar instrumentos</span></button>
+          <button class="nav-btn is-hidden" data-view="requisito" title="Registrar requisitos"><span class="material-symbols-outlined">inventory_2</span><span class="nav-label">Registrar requisitos</span></button>
+          <button class="nav-btn is-hidden" data-view="historial" title="Historial"><span class="material-symbols-outlined">history</span><span class="nav-label">Historial</span></button>
+          <button class="nav-btn is-admin is-hidden" data-view="usuarios" title="Gestión de usuarios"><span class="material-symbols-outlined">manage_accounts</span><span class="nav-label">Gestión de usuarios</span></button>
         </aside>
 
         <section class="content">
@@ -347,8 +347,69 @@
               <div class="field field--full"><label>Módulos visibles</label><div id="user-modules-input" class="module-check-grid"></div></div>
               <div class="actions"><button type="button" class="primary-btn" id="save-user-btn"><span class="material-symbols-outlined">save</span>Guardar usuario</button></div>
             </div>
-            <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Nombre</th><th>Perfil</th><th>Activo</th><th>Superuser</th><th>Módulos</th><th>Última actividad</th><th></th></tr></thead><tbody id="users-results"></tbody></table></div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Nombre</th><th>Perfil</th><th>Activo</th><th>Superuser</th><th>Módulos</th><th>Última actividad</th><th>Acciones</th></tr></thead><tbody id="users-results"></tbody></table></div>
           </section>
+            <div id="user-edit-modal" class="user-modal is-hidden" aria-hidden="true">
+              <div class="user-modal__backdrop" data-user-edit-close="true"></div>
+              <form id="user-edit-form" class="user-modal__dialog">
+                <div class="user-modal__head">
+                  <div>
+                    <p class="eyebrow">Usuario registrado</p>
+                    <h3>Editar permisos</h3>
+                  </div>
+                  <button type="button" class="secondary-btn" data-user-edit-close="true">
+                    <span class="material-symbols-outlined">close</span>Cerrar
+                  </button>
+                </div>
+                <div class="form-grid">
+                  <div class="field field--half"><label>Email</label><input id="user-edit-email" type="email" readonly></div>
+                  <div class="field field--half"><label>Nombre visible</label><input id="user-edit-name-input" type="text"></div>
+                  <div class="field field--third"><label>Perfil</label><select id="user-edit-role-input"></select></div>
+                  <div class="field field--third"><label>Activo</label><select id="user-edit-active-input"><option value="true">Si</option><option value="false">No</option></select></div>
+                  <div class="field field--third"><label>Superuser</label><select id="user-edit-super-input"><option value="false">No</option><option value="true">Si</option></select></div>
+                  <div class="field field--full"><label>Modulos visibles</label><div id="user-edit-modules-input" class="module-check-grid"></div></div>
+                </div>
+                <div class="actions">
+                  <button type="button" class="secondary-btn" data-user-edit-close="true">
+                    <span class="material-symbols-outlined">undo</span>Cancelar
+                  </button>
+                  <button type="submit" class="primary-btn" id="user-edit-save-btn">
+                    <span class="material-symbols-outlined">save</span>Guardar cambios
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div id="user-delete-modal" class="user-modal is-hidden" aria-hidden="true">
+              <div class="user-modal__backdrop" data-user-delete-close="true"></div>
+              <form id="user-delete-form" class="user-modal__dialog user-modal__dialog--sm">
+                <div class="user-modal__head">
+                  <div>
+                    <p class="eyebrow">Operacion protegida</p>
+                    <h3>Desactivar usuario</h3>
+                  </div>
+                  <button type="button" class="secondary-btn" data-user-delete-close="true">
+                    <span class="material-symbols-outlined">close</span>Cerrar
+                  </button>
+                </div>
+                <input id="user-delete-email" type="hidden">
+                <div class="user-delete-warning">
+                  Esta accion desactivara el acceso del usuario <strong id="user-delete-label"></strong>. Ingresa la clave de SUPERUSER para confirmar.
+                </div>
+                <div class="field">
+                  <label>Clave SUPERUSER</label>
+                  <input id="user-delete-pin" type="password" autocomplete="off">
+                </div>
+                <div class="actions">
+                  <button type="button" class="secondary-btn" data-user-delete-close="true">
+                    <span class="material-symbols-outlined">undo</span>Cancelar
+                  </button>
+                  <button type="submit" class="primary-btn" id="user-delete-confirm-btn">
+                    <span class="material-symbols-outlined">delete</span>Desactivar
+                  </button>
+                </div>
+              </form>
+            </div>
         </section>
       </main>
     </div>

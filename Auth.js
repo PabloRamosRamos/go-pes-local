@@ -93,7 +93,10 @@ function requireAnyModuleAccess_(moduleKeys, allowedRoles) {
 function listUsers() {
   const user = requireRole_(['superuser']);
 
+  ensureSheetsSubset_([GO_PES_V2.SHEETS.DIM_USUARIOS]);
+
   const rows = (getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS) || [])
+    .filter(function(row) { return !!row.email; })
     .map(decorateUser_)
     .sort((a, b) => String(a.nombre_visible).localeCompare(String(b.nombre_visible)));
 
@@ -145,6 +148,52 @@ function updateUser(payload) {
 
   upsertByKey_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', row, true);
   logUserAction_('UPDATE_USER', 'usuario', payload.email, 'OK', { actor: actor.email, payload: row });
+
+  return { ok: true, user: decorateUser_(row) };
+}
+
+function deactivateUser(payload) {
+  const actor = requireRole_(['superuser']);
+  payload = payload || {};
+
+  if (!payload.email) {
+    throw new Error('Falta email del usuario a desactivar.');
+  }
+  if (!payload.pin) {
+    throw new Error('Debes ingresar la clave de SUPERUSER.');
+  }
+  if (typeof goPesValidateAdminResetPin_ !== 'function') {
+    throw new Error('No esta disponible la validacion de clave de SUPERUSER.');
+  }
+
+  goPesValidateAdminResetPin_(payload.pin);
+
+  const normalizedEmail = normalizeText_(payload.email);
+  const existing = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS)
+    .find(function(r) { return normalizeText_(r.email) === normalizedEmail; });
+
+  if (!existing) {
+    throw new Error('Usuario no encontrado.');
+  }
+
+  if (isConfiguredSuperUserEmail_(existing.email)) {
+    throw new Error('No se puede desactivar un SUPERUSER configurado.');
+  }
+
+  if (toBool_(existing.superuser_flag)) {
+    ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail);
+  }
+
+  const row = Object.assign({}, existing, {
+    activo_flag: false,
+    superuser_flag: false,
+    modulos_permitidos: normalizeModulePermissionsInput_(existing.modulos_permitidos),
+    updated_at: new Date(),
+    updated_by: actor.email
+  });
+
+  upsertByKey_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', row, true);
+  logUserAction_('DEACTIVATE_USER', 'usuario', existing.email, 'OK', { actor: actor.email });
 
   return { ok: true, user: decorateUser_(row) };
 }
@@ -291,15 +340,7 @@ function getModuleDefinitions_() {
 }
 
 function defaultModulesForRole_(role) {
-  const normalized = normalizeText_(role || 'operador');
-  const base = ['inicio', 'buscar', 'ficha'];
-  if (normalized === 'administrador') {
-    return ['inicio', 'nuevo-ingreso', 'buscar', 'ficha', 'seguimiento', 'organizacion', 'socios', 'instrumento', 'requisito', 'historial'];
-  }
-  if (normalized === 'coordinador') {
-    return ['inicio', 'nuevo-ingreso', 'buscar', 'ficha', 'seguimiento', 'organizacion', 'socios', 'instrumento', 'requisito', 'historial'];
-  }
-  return base.concat(['nuevo-ingreso', 'seguimiento', 'organizacion', 'socios', 'instrumento', 'requisito']);
+  return ['inicio'];
 }
 
 function parseUserModules_(value, role) {
@@ -328,6 +369,8 @@ function userModuleAllowed_(user, moduleKey) {
   if (user.superuser_flag) return true;
   const key = String(moduleKey || '').trim();
   if (!key) return false;
+  const moduleDef = safeModuleDefinitions_().find(function(m) { return m.key === key; });
+  if (moduleDef && moduleDef.superOnly) return false;
   const modules = Array.isArray(user.modules)
     ? user.modules
     : parseUserModules_(user.modulos_permitidos, user.perfil);

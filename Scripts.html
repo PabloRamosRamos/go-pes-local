@@ -411,6 +411,8 @@
     const sociosSaveBtn = document.getElementById('socios-save-btn');
     const adminResetOpenBtn = document.getElementById('admin-reset-open-btn');
     const adminResetForm = document.getElementById('admin-reset-form');
+    const userEditForm = document.getElementById('user-edit-form');
+    const userDeleteForm = document.getElementById('user-delete-form');
 
     if (searchBtn) searchBtn.addEventListener('click', runSearch);
     if (saveUserBtn) saveUserBtn.addEventListener('click', saveUserFromForm);
@@ -418,8 +420,16 @@
     if (sociosSaveBtn) sociosSaveBtn.addEventListener('click', saveSociosInput);
     if (adminResetOpenBtn) adminResetOpenBtn.addEventListener('click', openAdminResetModal_);
     if (adminResetForm) adminResetForm.addEventListener('submit', submitAdminReset_);
+    if (userEditForm) userEditForm.addEventListener('submit', saveUserEditModal_);
+    if (userDeleteForm) userDeleteForm.addEventListener('submit', confirmDeactivateUser_);
     document.querySelectorAll('[data-admin-reset-close]').forEach(btn => {
       btn.addEventListener('click', closeAdminResetModal_);
+    });
+    document.querySelectorAll('[data-user-edit-close]').forEach(btn => {
+      btn.addEventListener('click', closeUserEditModal_);
+    });
+    document.querySelectorAll('[data-user-delete-close]').forEach(btn => {
+      btn.addEventListener('click', closeUserDeleteModal_);
     });
   }
 
@@ -701,7 +711,7 @@
     });
 
     document.querySelectorAll('.is-admin').forEach(el => {
-      if (APP.state.permissions.canManageUsers) el.classList.add('show-admin');
+      el.classList.toggle('show-admin', !!APP.state.permissions.canManageUsers);
     });
 
     const resetBtn = document.getElementById('admin-reset-open-btn');
@@ -716,18 +726,20 @@
     }
 
     fillSelect(document.getElementById('user-role-input'), ['operador', 'coordinador', 'administrador', 'superuser']);
+    fillSelect(document.getElementById('user-edit-role-input'), ['operador', 'coordinador', 'administrador', 'superuser']);
     renderUserModuleOptions_();
   }
 
   function canOpenView_(view) {
     if (!APP.state.user || !APP.state.user.canAccess) return false;
     if (!view) return false;
+    if (view === 'usuarios') return !!APP.state.permissions.canManageUsers;
     if (view === 'ficha') return !!((APP.state.permissions.modules || {}).ficha);
     return !!((APP.state.permissions.modules || {})[view]);
   }
 
-  function renderUserModuleOptions_(selectedModules) {
-    const root = document.getElementById('user-modules-input');
+  function renderUserModuleOptions_(selectedModules, targetId) {
+    const root = document.getElementById(targetId || 'user-modules-input');
     if (!root) return;
     const selected = Array.isArray(selectedModules)
       ? selectedModules
@@ -817,8 +829,8 @@
   function route(view, params = {}) {
     if (!canOpenView_(view)) {
       showError('No tienes permisos para acceder a este módulo.');
-      view = 'inicio';
-      if (!canOpenView_(view)) return;
+      view = getFirstAllowedViewClient_();
+      if (!view || !canOpenView_(view)) return;
     }
 
     APP.state.activeView = view;
@@ -1094,6 +1106,23 @@
         `).join('')}
       </div>
     `;
+  }
+
+  function getFirstAllowedViewClient_() {
+    const modules = APP.state.permissions.modules || {};
+    const priority = [
+      'inicio',
+      'nuevo-ingreso',
+      'buscar',
+      'seguimiento',
+      'organizacion',
+      'socios',
+      'instrumento',
+      'requisito',
+      'historial',
+      'usuarios'
+    ];
+    return priority.find(view => modules[view]) || '';
   }
 
   function formatOrganizacionAntiguedad_(value) {
@@ -2276,6 +2305,7 @@
   function loadUsers() {
     if (!APP.state.permissions.canManageUsers) return;
 
+    showContentLoading('Cargando usuarios...');
     api('listUsers').then(rows => {
       const tbody = document.getElementById('users-results');
       if (!tbody) return;
@@ -2284,7 +2314,11 @@
         ? 'Todos'
         : moduleLabelsFromKeys_(String(user.modulos_permitidos || '').split(','));
 
-      rows = Array.isArray(rows) ? rows : [];
+      rows = Array.isArray(rows) ? rows : (Array.isArray(rows?.users) ? rows.users : []);
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="muted">No hay usuarios registrados para mostrar.</td></tr>';
+        return;
+      }
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td>${escapeHtml(r.email)}</td>
@@ -2294,21 +2328,28 @@
           <td>${r.superuser_flag ? 'Sí' : 'No'}</td>
           <td>${escapeHtml(moduleLabel(r))}</td>
           <td>${escapeHtml(formatFechaHoraUi_(r.fecha_ultima_actividad || ''))}</td>
-          <td><button class="secondary-btn js-edit-user" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(r.perfil)}" data-active="${r.activo_flag}" data-super="${r.superuser_flag}" data-modules="${escapeHtml(r.modulos_permitidos || '')}">Editar</button></td>
+          <td>
+            <div class="user-row-actions">
+              <button class="table-action-btn js-edit-user" type="button" title="Editar usuario" aria-label="Editar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(r.perfil)}" data-active="${r.activo_flag}" data-super="${r.superuser_flag}" data-modules="${escapeHtml(r.modulos_permitidos || '')}">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+              <button class="table-action-btn table-action-btn--danger js-delete-user" type="button" title="Desactivar usuario" aria-label="Desactivar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible || r.email)}">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          </td>
         </tr>
       `).join('');
 
       tbody.querySelectorAll('.js-edit-user').forEach(btn => {
         btn.addEventListener('click', () => {
-          document.getElementById('user-email').value = btn.dataset.email;
-          document.getElementById('user-name-input').value = btn.dataset.name;
-          document.getElementById('user-role-input').value = btn.dataset.role;
-          document.getElementById('user-active-input').value = btn.dataset.active;
-          document.getElementById('user-super-input').value = btn.dataset.super;
-          renderUserModuleOptions_(btn.dataset.modules || '');
+          openUserEditModal_(btn);
         });
       });
-    }).catch(showError);
+      tbody.querySelectorAll('.js-delete-user').forEach(btn => {
+        btn.addEventListener('click', () => openUserDeleteModal_(btn));
+      });
+    }).catch(showError).finally(hideContentLoading);
   }
 
   function moduleLabelsFromKeys_(keys) {
@@ -2324,8 +2365,8 @@
   }
 
   function saveUserFromForm() {
-    const modules = Array.from(document.querySelectorAll('#user-modules-input input[type="checkbox"]:checked'))
-      .map(input => input.value);
+    const btn = document.getElementById('save-user-btn');
+    const modules = collectUserModules_('user-modules-input');
     const payload = {
       email: document.getElementById('user-email')?.value.trim() || '',
       nombre_visible: document.getElementById('user-name-input')?.value.trim() || '',
@@ -2335,10 +2376,109 @@
       modulos_permitidos: modules
     };
 
+    if (btn) btn.disabled = true;
+    showContentLoading('Guardando usuario...');
     api('updateUser', payload).then(() => {
       showSuccess('Usuario actualizado.');
       loadUsers();
-    }).catch(showError);
+    }).catch(showError).finally(() => {
+      if (btn) btn.disabled = false;
+      hideContentLoading();
+    });
+  }
+
+  function collectUserModules_(targetId) {
+    return Array.from(document.querySelectorAll(`#${targetId} input[type="checkbox"]:checked`))
+      .map(input => input.value);
+  }
+
+  function openUserEditModal_(btn) {
+    const modal = document.getElementById('user-edit-modal');
+    if (!modal || !btn) return;
+
+    document.getElementById('user-edit-email').value = btn.dataset.email || '';
+    document.getElementById('user-edit-name-input').value = btn.dataset.name || '';
+    document.getElementById('user-edit-role-input').value = btn.dataset.role || '';
+    document.getElementById('user-edit-active-input').value = btn.dataset.active || 'true';
+    document.getElementById('user-edit-super-input').value = btn.dataset.super || 'false';
+    renderUserModuleOptions_(btn.dataset.modules || '', 'user-edit-modules-input');
+
+    modal.classList.remove('is-hidden');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeUserEditModal_() {
+    const modal = document.getElementById('user-edit-modal');
+    if (!modal) return;
+    modal.classList.add('is-hidden');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function saveUserEditModal_(ev) {
+    ev.preventDefault();
+    const btn = document.getElementById('user-edit-save-btn');
+    const payload = {
+      email: document.getElementById('user-edit-email')?.value.trim() || '',
+      nombre_visible: document.getElementById('user-edit-name-input')?.value.trim() || '',
+      perfil: document.getElementById('user-edit-role-input')?.value || '',
+      activo_flag: document.getElementById('user-edit-active-input')?.value === 'true',
+      superuser_flag: document.getElementById('user-edit-super-input')?.value === 'true',
+      modulos_permitidos: collectUserModules_('user-edit-modules-input')
+    };
+
+    if (btn) btn.disabled = true;
+    closeUserEditModal_();
+    showContentLoading('Guardando usuario...');
+    api('updateUser', payload).then(() => {
+      showSuccess('Usuario actualizado.');
+      loadUsers();
+    }).catch(showError).finally(() => {
+      if (btn) btn.disabled = false;
+      hideContentLoading();
+    });
+  }
+
+  function openUserDeleteModal_(btn) {
+    const modal = document.getElementById('user-delete-modal');
+    if (!modal || !btn) return;
+    document.getElementById('user-delete-email').value = btn.dataset.email || '';
+    document.getElementById('user-delete-label').textContent = btn.dataset.name || btn.dataset.email || '';
+    document.getElementById('user-delete-pin').value = '';
+    modal.classList.remove('is-hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    setTimeout(() => document.getElementById('user-delete-pin')?.focus(), 20);
+  }
+
+  function closeUserDeleteModal_() {
+    const modal = document.getElementById('user-delete-modal');
+    if (!modal) return;
+    modal.classList.add('is-hidden');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function confirmDeactivateUser_(ev) {
+    ev.preventDefault();
+    const btn = document.getElementById('user-delete-confirm-btn');
+    const payload = {
+      email: document.getElementById('user-delete-email')?.value.trim() || '',
+      pin: document.getElementById('user-delete-pin')?.value.trim() || ''
+    };
+
+    if (!payload.pin) {
+      showError('Debes ingresar la clave de SUPERUSER.');
+      return;
+    }
+
+    if (btn) btn.disabled = true;
+    closeUserDeleteModal_();
+    showContentLoading('Desactivando usuario...');
+    api('deactivateUser', payload).then(() => {
+      showSuccess('Usuario desactivado.');
+      loadUsers();
+    }).catch(showError).finally(() => {
+      if (btn) btn.disabled = false;
+      hideContentLoading();
+    });
   }
 
   function showSuccess(message) {

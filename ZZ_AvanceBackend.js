@@ -85,6 +85,38 @@ function getOrganizacionesAvanceClient() {
   return result;
 }
 
+function getGruposVecinosAvanceClient() {
+  const diag = goPesDiagStart_('ZZ_AvanceBackend.getGruposVecinosAvanceClient', {});
+  requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  goPesEnsureAvanceBackendReady_();
+
+  const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS)
+    .filter(function(r) {
+      return String(r.solicitud_id || '').trim() && !String(r.organizacion_id || '').trim();
+    })
+    .sort(function(a, b) {
+      return String(a.fecha_ingreso || '').localeCompare(String(b.fecha_ingreso || ''));
+    });
+
+  const result = goPesAvanceToClientSafe_({
+    gruposList: rows.map(function(r) {
+      const solicitudId = String(r.solicitud_id || '').trim();
+      const nombre = String(r.nombre_completo || '').trim();
+      const direccion = String(r.direccion_original || '').trim();
+      return {
+        value: solicitudId,
+        label: [nombre || 'Grupo de vecinos', solicitudId, direccion].filter(Boolean).join(' - '),
+        solicitud_id: solicitudId,
+        nombre_completo: nombre,
+        direccion_original: direccion
+      };
+    })
+  });
+
+  goPesDiagEnd_(diag, { result_count: result.gruposList.length });
+  return result;
+}
+
 function getTimelineAvance(payload) {
   requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
@@ -134,6 +166,37 @@ function getAvanceOrganizacion(payload) {
   return result;
 }
 
+function getAvanceGrupoVecinos(payload) {
+  const diag = goPesDiagStart_('ZZ_AvanceBackend.getAvanceGrupoVecinos', payload || {});
+  requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  goPesEnsureAvanceBackendReady_();
+
+  const solicitudId = String(payload && payload.solicitud_id || '').trim();
+  if (!solicitudId) throw new Error('Falta solicitud_id.');
+
+  const caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
+  if (!caso) throw new Error('No se encontró el Grupo de vecinos indicado.');
+  if (String(caso.organizacion_id || '').trim()) {
+    throw new Error('Esta solicitud ya tiene organización creada. Continúa el Tramo 2 desde Organización.');
+  }
+
+  const timeline = goPesGetTimelineAvanceRowsBySolicitud_(solicitudId);
+  const estadoActual = goPesGetEstadoAvanceActualBySolicitud_(solicitudId);
+  const botones = goPesBuildBotonesAvanceGrupoVecinos_(solicitudId);
+  const resumen = goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline);
+
+  const result = goPesAvanceToClientSafe_({
+    context_type: 'grupo_vecinos',
+    grupo: caso,
+    estado: estadoActual,
+    resumen: resumen,
+    botones: botones,
+    timeline: timeline
+  });
+  goPesDiagEnd_(diag, { timeline_count: result.timeline.length });
+  return result;
+}
+
 function registrarHitoAvance(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.registrarHitoAvance', payload || {});
   const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
@@ -142,13 +205,19 @@ function registrarHitoAvance(payload) {
   payload = payload || {};
 
   const organizacionId = String(payload.organizacion_id || '').trim();
+  const solicitudIdPayload = String(payload.solicitud_id || '').trim();
   const codigoHito = String(payload.codigo_hito || '').trim();
   const observacion = String(payload.observacion || '').trim();
   const fechaHito = asDateOrBlank_(payload.fecha_hito);
 
-  if (!organizacionId) throw new Error('Falta organizacion_id.');
   if (!codigoHito) throw new Error('Falta codigo_hito.');
   if (!fechaHito) throw new Error('Debes indicar una fecha del hito.');
+
+  if (!organizacionId && solicitudIdPayload) {
+    return registrarHitoAvanceGrupoVecinos_(payload, user, diag);
+  }
+
+  if (!organizacionId) throw new Error('Falta organizacion_id.');
 
   let org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
   if (!org) throw new Error('No se encontró la organización indicada.');
@@ -235,6 +304,91 @@ function registrarHitoAvance(payload) {
   });
   goPesDiagEnd_(diag, {
     ok: true,
+    organizacion_id: organizacionId,
+    codigo_hito: codigoHito
+  });
+  return result;
+}
+
+function registrarHitoAvanceGrupoVecinos_(payload, user, diag) {
+  const solicitudId = String(payload.solicitud_id || '').trim();
+  const codigoHito = String(payload.codigo_hito || '').trim();
+  const observacion = String(payload.observacion || '').trim();
+  const fechaHito = asDateOrBlank_(payload.fecha_hito);
+
+  const caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
+  if (!caso) throw new Error('No se encontró el Grupo de vecinos indicado.');
+  if (String(caso.organizacion_id || '').trim()) {
+    throw new Error('Esta solicitud ya tiene organización creada. Continúa el Tramo 2 desde Organización.');
+  }
+
+  const hitoCatalogo = goPesFindHitoCatalogo_(codigoHito);
+  if (!hitoCatalogo) throw new Error('El código de hito no existe en el catálogo.');
+  if (!goPesIsTramoPreconstitucion_(hitoCatalogo.tramo)) {
+    throw new Error('El Tramo 1 solo permite registrar hitos de Grupo de vecinos.');
+  }
+
+  const yaExiste = goPesFindAvanceHitoBySolicitudAndCodigo_(solicitudId, codigoHito);
+  if (yaExiste) {
+    throw new Error('Este hito ya fue registrado para el Grupo de vecinos.');
+  }
+
+  const validacion = goPesValidatePuedeRegistrarHitoSolicitud_(solicitudId, hitoCatalogo);
+  if (!validacion.ok) {
+    throw new Error(validacion.message || 'No se puede registrar el hito.');
+  }
+
+  let organizacionCreada = null;
+  if (goPesIsHitoCreacionOrganizacion_(hitoCatalogo)) {
+    organizacionCreada = goPesCrearOrganizacionDesdeGrupoVecinos_(caso, payload, user);
+  }
+
+  const now = new Date();
+  const avanceHitoId = goPesNextIdSafe_('avance_hito', 'AVH');
+  const organizacionId = organizacionCreada ? String(organizacionCreada.organizacion_id || '') : '';
+
+  appendRowObject_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, {
+    avance_hito_id: avanceHitoId,
+    organizacion_id: organizacionId,
+    solicitud_id: solicitudId,
+    codigo_hito: hitoCatalogo.codigo_hito,
+    tramo: hitoCatalogo.tramo,
+    orden_hito: hitoCatalogo.orden_hito,
+    nombre_hito: hitoCatalogo.nombre_hito,
+    fecha_hito: fechaHito,
+    usuario_registro: goPesGetUserEmail_(user),
+    timestamp_registro: now,
+    observacion: observacion
+  });
+
+  if (organizacionId) {
+    upsertVistaAvanceOrganizacionRowById_(organizacionId);
+  }
+
+  logProcessing_('INFO', 'registrarHitoAvanceGrupoVecinos', 'avance_hito', avanceHitoId, goPesGetUserEmail_(user), 'OK', {
+    solicitud_id: solicitudId,
+    organizacion_id: organizacionId,
+    codigo_hito: codigoHito
+  });
+  logUserAction_('REGISTRAR_HITO_AVANCE_GRUPO_VECINOS', 'avance_hito', avanceHitoId, 'OK', {
+    solicitud_id: solicitudId,
+    organizacion_id: organizacionId,
+    codigo_hito: codigoHito,
+    nombre_hito: hitoCatalogo.nombre_hito
+  });
+
+  const result = goPesAvanceToClientSafe_({
+    ok: true,
+    avance_hito_id: avanceHitoId,
+    solicitud_id: solicitudId,
+    organizacion_id: organizacionId,
+    codigo_hito: codigoHito,
+    nombre_hito: hitoCatalogo.nombre_hito,
+    warning_nombre_duplicado: organizacionCreada ? String(organizacionCreada.warning_nombre_duplicado || '') : ''
+  });
+  goPesDiagEnd_(diag, {
+    ok: true,
+    solicitud_id: solicitudId,
     organizacion_id: organizacionId,
     codigo_hito: codigoHito
   });
@@ -453,7 +607,8 @@ function goPesEnsureAvanceBackendReady_() {
     'FACT_AVANCE_HITOS',
     'FACT_AVANCE_ESTADO',
     'VW_AVANCE_ORGANIZACION',
-    'MAE_ORGANIZACIONES'
+    'MAE_ORGANIZACIONES',
+    'MAE_CASOS'
   ];
 
   required.forEach(function(key) {
@@ -539,6 +694,144 @@ function goPesIsHitoCreacionOrganizacion_(hito) {
     && (nombre.indexOf('ingreso') !== -1 || nombre.indexOf('documentacion') !== -1);
 }
 
+function goPesIsTramoPreconstitucion_(tramo) {
+  return goPesNormalizeOrganizacionNombre_(tramo).indexOf('preconstitucion') !== -1;
+}
+
+function goPesIsTramoFormalizacion_(tramo) {
+  return goPesNormalizeOrganizacionNombre_(tramo).indexOf('formalizacion') !== -1;
+}
+
+function goPesCrearOrganizacionDesdeGrupoVecinos_(caso, payload, user) {
+  const nombreAsamblea = String(payload && payload.nombre_organizacion_asamblea || '').trim();
+  if (!nombreAsamblea) {
+    throw new Error('Debes indicar el nombre de la organización para completar el hito 5.');
+  }
+
+  const solicitudId = String(caso.solicitud_id || '').trim();
+  if (String(caso.organizacion_id || '').trim()) {
+    throw new Error('La solicitud ya tiene una organización asociada: ' + String(caso.organizacion_id || ''));
+  }
+
+  const existingBySolicitud = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).filter(function(row) {
+    return String(row.solicitud_id || '').trim() === solicitudId;
+  });
+  if (existingBySolicitud.length) {
+    throw new Error('Ya existe una organización asociada a esta solicitud/proceso: ' + String(existingBySolicitud[0].nombre_organizacion || existingBySolicitud[0].organizacion_id));
+  }
+
+  const nombreNormalizado = goPesNormalizeOrganizacionNombre_(nombreAsamblea);
+  const existingByName = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).find(function(row) {
+    return goPesNormalizeOrganizacionNombre_(row.nombre_organizacion) === nombreNormalizado;
+  });
+  const warningNombreDuplicado = existingByName
+    ? 'Existe otra organización con nombre similar: ' + String(existingByName.nombre_organizacion || existingByName.organizacion_id)
+    : '';
+
+  const now = new Date();
+  const organizacionId = goPesNextIdSafe_('organizacion', 'ORG');
+  const org = {
+    organizacion_id: organizacionId,
+    solicitud_id: solicitudId,
+    tipo_organizacion: '',
+    nombre_organizacion: nombreAsamblea,
+    uv: caso.uv || '',
+    sector: caso.sector || '',
+    direccion_referencia: caso.direccion_original || '',
+    fecha_inicio_acompanamiento: now,
+    cantidad_socios_declarada: '',
+    estado_constitucion: 'Documentación ingresada',
+    fecha_asamblea_constitucion: '',
+    fecha_ratificacion: '',
+    vigencia_directiva_hasta: '',
+    personalidad_juridica_flag: '',
+    certificado_provisorio_flag: '',
+    certificado_definitivo_flag: '',
+    directiva_vigente_flag: '',
+    organizacion_constituida_flag: '',
+    estado_general_organizacion: 'Activo',
+    responsable_actual: caso.responsable_actual || goPesGetUserEmail_(user),
+    observacion_resumen: caso.observacion_resumen || '',
+    updated_at: now
+  };
+
+  appendRowObject_(GO_PES_V2.SHEETS.RAW_ORGANIZACIONES, {
+    created_at: now,
+    source: 'AVANCE_HITO_5',
+    user_email: goPesGetUserEmail_(user),
+    solicitud_id: solicitudId,
+    organizacion_id: organizacionId,
+    tipo_organizacion: org.tipo_organizacion,
+    nombre_organizacion: org.nombre_organizacion,
+    uv: org.uv,
+    sector: org.sector,
+    direccion_referencia: org.direccion_referencia,
+    fecha_inicio_acompanamiento: org.fecha_inicio_acompanamiento,
+    cantidad_socios_declarada: org.cantidad_socios_declarada,
+    estado_constitucion: org.estado_constitucion,
+    fecha_asamblea_constitucion: org.fecha_asamblea_constitucion,
+    fecha_ratificacion: org.fecha_ratificacion,
+    vigencia_directiva_hasta: org.vigencia_directiva_hasta,
+    personalidad_juridica_flag: org.personalidad_juridica_flag,
+    certificado_provisorio_flag: org.certificado_provisorio_flag,
+    certificado_definitivo_flag: org.certificado_definitivo_flag,
+    directiva_vigente_flag: org.directiva_vigente_flag,
+    organizacion_constituida_flag: org.organizacion_constituida_flag,
+    estado_general_organizacion: org.estado_general_organizacion,
+    responsable_actual: org.responsable_actual,
+    observacion_resumen: org.observacion_resumen
+  });
+
+  upsertByKey_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', org, false);
+  patchCaseSummary_(solicitudId, {
+    organizacion_id: organizacionId,
+    estado_actual: org.estado_general_organizacion,
+    etapa_actual: org.estado_constitucion,
+    responsable_actual: org.responsable_actual,
+    observacion_resumen: org.observacion_resumen
+  });
+
+  refreshPartialArtifacts_({
+    masterSolicitudIds: [solicitudId],
+    vistaOrganizacionIds: [organizacionId],
+    sugerenciaSolicitudIds: [solicitudId],
+    sugerenciaOrganizacionIds: [organizacionId],
+    vistaTerritorialPairs: [{ uv: org.uv || '', sector: org.sector || '' }],
+    territorioCatalogPairs: [{ uv: org.uv || '', sector: org.sector || '' }],
+    responsables: [org.responsable_actual || goPesGetUserEmail_(user)]
+  });
+  goPesInvalidateAvanceSelectorCaches_();
+
+  if (warningNombreDuplicado) {
+    logProcessing_('WARN', 'crearOrganizacionDesdeGrupoVecinos.nombreSimilar', 'organizacion', organizacionId, goPesGetUserEmail_(user), 'WARN', {
+      solicitud_id: solicitudId,
+      nombre_organizacion: nombreAsamblea,
+      warning: warningNombreDuplicado
+    });
+  }
+
+  logProcessing_('INFO', 'crearOrganizacionDesdeGrupoVecinos', 'organizacion', organizacionId, goPesGetUserEmail_(user), 'OK', {
+    solicitud_id: solicitudId,
+    nombre_organizacion: nombreAsamblea
+  });
+  logUserAction_('CREAR_ORGANIZACION_HITO_5', 'organizacion', organizacionId, 'OK', {
+    solicitud_id: solicitudId,
+    nombre_organizacion: nombreAsamblea
+  });
+
+  return Object.assign({}, org, {
+    warning_nombre_duplicado: warningNombreDuplicado
+  });
+}
+
+function goPesInvalidateAvanceSelectorCaches_() {
+  try {
+    if (typeof GO_PES_CATALOG_CACHE_KEYS !== 'undefined' && GO_PES_CATALOG_CACHE_KEYS.AVANCE_ORGS_CLIENT) {
+      CacheService.getScriptCache().remove(GO_PES_CATALOG_CACHE_KEYS.AVANCE_ORGS_CLIENT);
+    }
+  } catch (err) {}
+}
+
 function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
   const nombreAsamblea = String(payload && payload.nombre_organizacion_asamblea || '').trim();
   if (!nombreAsamblea) {
@@ -556,7 +849,11 @@ function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
     const rowNombreNormalizado = goPesNormalizeOrganizacionNombre_(row.nombre_organizacion);
 
     if (rowOrgId && rowOrgId !== organizacionId && rowNombreNormalizado && rowNombreNormalizado === nombreNormalizado) {
-      throw new Error('Ya existe una organización con ese nombre: ' + String(row.nombre_organizacion || row.organizacion_id));
+      logProcessing_('WARN', 'crearOrganizacionDesdeHito5.nombreSimilar', 'organizacion', organizacionId, goPesGetUserEmail_(user), 'WARN', {
+        solicitud_id: solicitudId,
+        nombre_organizacion: nombreAsamblea,
+        existente: String(row.nombre_organizacion || row.organizacion_id)
+      });
     }
 
     if (
@@ -625,6 +922,7 @@ function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
     territorioCatalogPairs: [{ uv: nextOrg.uv || '', sector: nextOrg.sector || '' }],
     responsables: [nextOrg.responsable_actual || goPesGetUserEmail_(user)]
   });
+  goPesInvalidateAvanceSelectorCaches_();
 
   logProcessing_('INFO', 'crearOrganizacionDesdeHito5', 'organizacion', organizacionId, goPesGetUserEmail_(user), 'OK', {
     organizacion_id: organizacionId,
@@ -641,7 +939,19 @@ function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
 }
 
 function goPesGetTimelineAvanceRows_(organizacionId) {
-  const rows = filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'organizacion_id', organizacionId, false) || [];
+  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  const solicitudId = org && org.solicitud_id ? String(org.solicitud_id || '').trim() : '';
+  const rows = (getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS) || []).filter(function(row) {
+    return String(row.organizacion_id || '').trim() === String(organizacionId || '').trim()
+      || (solicitudId && String(row.solicitud_id || '').trim() === solicitudId);
+  });
+  return rows.sort(function(a, b) {
+    return new Date(b.timestamp_registro || 0) - new Date(a.timestamp_registro || 0);
+  });
+}
+
+function goPesGetTimelineAvanceRowsBySolicitud_(solicitudId) {
+  const rows = filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'solicitud_id', solicitudId, false) || [];
   return rows.sort(function(a, b) {
     return new Date(b.timestamp_registro || 0) - new Date(a.timestamp_registro || 0);
   });
@@ -649,6 +959,11 @@ function goPesGetTimelineAvanceRows_(organizacionId) {
 
 function goPesGetEstadoAvanceActual_(organizacionId, solicitudId) {
   const rows = filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_ESTADO, 'organizacion_id', organizacionId, false) || [];
+  return goPesGetEstadoAvanceActualFromRows_(rows, solicitudId);
+}
+
+function goPesGetEstadoAvanceActualBySolicitud_(solicitudId) {
+  const rows = filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_ESTADO, 'solicitud_id', solicitudId, false) || [];
   return goPesGetEstadoAvanceActualFromRows_(rows, solicitudId);
 }
 
@@ -729,7 +1044,17 @@ function goPesDeactivateEstadosAvanceActivos_(organizacionId) {
 }
 
 function goPesFindAvanceHitoByOrgAndCodigo_(organizacionId, codigoHito) {
-  const rows = filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'organizacion_id', organizacionId, false) || [];
+  const rows = goPesGetTimelineAvanceRows_(organizacionId);
+  const target = String(codigoHito || '').trim();
+
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].codigo_hito || '').trim() === target) return rows[i];
+  }
+  return null;
+}
+
+function goPesFindAvanceHitoBySolicitudAndCodigo_(solicitudId, codigoHito) {
+  const rows = goPesGetTimelineAvanceRowsBySolicitud_(solicitudId);
   const target = String(codigoHito || '').trim();
 
   for (var i = 0; i < rows.length; i++) {
@@ -747,6 +1072,24 @@ function goPesValidatePuedeRegistrarHito_(organizacionId, hitoCatalogo) {
   if (!previo) return { ok: true };
 
   const existePrevio = goPesFindAvanceHitoByOrgAndCodigo_(organizacionId, previo);
+  if (existePrevio) return { ok: true };
+
+  const previoCat = goPesFindHitoCatalogo_(previo);
+  return {
+    ok: false,
+    message: 'Debes completar primero el hito previo: ' + String((previoCat && previoCat.nombre_hito) || previo)
+  };
+}
+
+function goPesValidatePuedeRegistrarHitoSolicitud_(solicitudId, hitoCatalogo) {
+  if (!hitoCatalogo) {
+    return { ok: false, message: 'No existe el hito en catálogo.' };
+  }
+
+  const previo = String(hitoCatalogo.codigo_hito_previo || '').trim();
+  if (!previo) return { ok: true };
+
+  const existePrevio = goPesFindAvanceHitoBySolicitudAndCodigo_(solicitudId, previo);
   if (existePrevio) return { ok: true };
 
   const previoCat = goPesFindHitoCatalogo_(previo);
@@ -822,6 +1165,65 @@ function goPesBuildBotonesAvanceEstado_(organizacionId, solicitudId) {
   };
 }
 
+function goPesBuildBotonesAvanceGrupoVecinos_(solicitudId) {
+  const hitos = goPesGetCatalogoHitosAvance_().filter(function(h) {
+    return goPesIsTramoPreconstitucion_(h.tramo);
+  });
+  const timeline = goPesGetTimelineAvanceRowsBySolicitud_(solicitudId);
+  const estadoActual = goPesGetEstadoAvanceActualBySolicitud_(solicitudId);
+
+  const cumplidosMap = {};
+  timeline.forEach(function(r) {
+    const key = String(r.codigo_hito || '').trim();
+    if (!cumplidosMap[key]) cumplidosMap[key] = r;
+  });
+
+  const buttons = hitos.map(function(h) {
+    const codigo = String(h.codigo_hito || '');
+    const cumplido = !!cumplidosMap[codigo];
+    const previo = String(h.codigo_hito_previo || '').trim();
+    const previoCumplido = !previo || !!cumplidosMap[previo];
+    const activo = String(estadoActual.estado_avance || 'Activo') === 'Activo';
+
+    let enabled = false;
+    let blockedReason = '';
+
+    if (cumplido) {
+      blockedReason = 'Cumplido';
+    } else if (!activo) {
+      blockedReason = 'El avance está en estado ' + String(estadoActual.estado_avance || '');
+    } else if (!previoCumplido) {
+      const previoCat = goPesFindHitoCatalogo_(previo);
+      blockedReason = 'Requiere ' + String((previoCat && previoCat.nombre_hito) || previo);
+    } else {
+      enabled = true;
+    }
+
+    return {
+      codigo_hito: codigo,
+      tramo: String(h.tramo || ''),
+      orden_hito: Number(h.orden_hito || 0),
+      nombre_hito: String(h.nombre_hito || ''),
+      descripcion: String(h.descripcion || ''),
+      codigo_hito_previo: previo,
+      permite_saltar: goPesBool_(h.permite_saltar),
+      completed_flag: cumplido,
+      enabled_flag: enabled,
+      blocked_reason: blockedReason,
+      fecha_hito: cumplido ? (cumplidosMap[codigo].fecha_hito || '') : '',
+      usuario_registro: cumplido ? String(cumplidosMap[codigo].usuario_registro || '') : ''
+    };
+  });
+
+  return {
+    estado_actual: String(estadoActual.estado_avance || 'Activo'),
+    tramos: [
+      { tramo: 'Preconstitución', items: buttons },
+      { tramo: 'Formalización posterior', items: [] }
+    ]
+  };
+}
+
 function goPesBuildResumenAvance_(org, estadoActual, timeline) {
   const ultimo = timeline[0] || {};
   const totalPre = timeline.filter(function(x) { return String(x.tramo || '') === 'Preconstitución'; }).length;
@@ -839,6 +1241,23 @@ function goPesBuildResumenAvance_(org, estadoActual, timeline) {
     total_hitos_cumplidos: timeline.length,
     total_hitos_tramo_pre: totalPre,
     total_hitos_tramo_for: totalFor
+  };
+}
+
+function goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline) {
+  const ultimo = timeline[0] || {};
+  return {
+    context_type: 'grupo_vecinos',
+    solicitud_id: String(caso.solicitud_id || ''),
+    nombre_organizacion: String(caso.nombre_completo || 'Grupo de vecinos'),
+    estado_avance: String(estadoActual.estado_avance || 'Activo'),
+    ultimo_hito_codigo: String(ultimo.codigo_hito || ''),
+    ultimo_hito_nombre: String(ultimo.nombre_hito || ''),
+    ultimo_hito_fecha: ultimo.fecha_hito || '',
+    usuario_ultimo_hito: String(ultimo.usuario_registro || ''),
+    total_hitos_cumplidos: timeline.length,
+    total_hitos_tramo_pre: timeline.filter(function(x) { return goPesIsTramoPreconstitucion_(x.tramo); }).length,
+    total_hitos_tramo_for: 0
   };
 }
 

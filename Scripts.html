@@ -51,6 +51,8 @@
       currentSearchResults: [],
       currentAvance: null,
       avanceCatalogos: null,
+      avanceGrupos: [],
+      avanceGruposFetchedAt: 0,
       avanceOrganizaciones: [],
       avanceOrganizacionesFetchedAt: 0,
       organizacionesModulo: [],
@@ -693,6 +695,8 @@
       APP.state.currentFicha = null;
       APP.state.currentAvance = null;
       APP.state.avanceCatalogos = null;
+      APP.state.avanceGrupos = [];
+      APP.state.avanceGruposFetchedAt = 0;
       APP.state.avanceOrganizaciones = [];
       APP.state.avanceOrganizacionesFetchedAt = 0;
       APP.state.organizacionesModulo = [];
@@ -858,7 +862,9 @@
     const instrumentos = data.instrumentos || [];
     const requisitos = data.requisitos || [];
     const socios = data.socios || [];
+    const avanceHitos = data.avance_hitos || [];
     const lastAction = trazabilidad[0] || {};
+    const lastAvanceHito = avanceHitos[0] || {};
 
     const hasOrg =
       !!String(s.organizacion_id || '').trim() ||
@@ -881,6 +887,7 @@
 
     const seguimientoBlock = fichaBlock('event_note', 'Seguimiento', [
       ['Última gestión', s.ultima_actualizacion || s.fecha_ingreso],
+      ['Último hito avance', lastAvanceHito.nombre_hito || ''],
       ['Etapa actual', s.etapa_actual],
       ['Próximo hito', s.proximo_hito],
       ['Responsable actual', s.responsable_actual],
@@ -2469,7 +2476,12 @@
     container.innerHTML = `
       <div class="avance-header">
         <div class="field field--grow">
-          <label>Organización</label>
+          <label>Tramo 1 - Grupo de vecinos</label>
+          <select id="avance-grupo-select"></select>
+        </div>
+
+        <div class="field field--grow">
+          <label>Tramo 2 - Organización</label>
           <select id="avance-organizacion-select"></select>
         </div>
 
@@ -2569,6 +2581,7 @@
   }
 
   function initAvanceView_() {
+    const grupoSelect = document.getElementById('avance-grupo-select');
     const select = document.getElementById('avance-organizacion-select');
     const standbyBtn = document.getElementById('avance-standby-btn');
     const detenerBtn = document.getElementById('avance-detener-btn');
@@ -2620,6 +2633,15 @@
 
     loadAvanceCatalogos_().then(() => {
       fillSelect(
+        grupoSelect,
+        APP.state.avanceGrupos.map(x => ({
+          value: x.value,
+          label: x.label
+        })),
+        'Seleccionar Grupo de vecinos'
+      );
+
+      fillSelect(
         select,
         APP.state.avanceOrganizaciones.map(x => ({
           value: x.value,
@@ -2628,10 +2650,24 @@
         'Seleccionar organización'
       );
 
+      if (grupoSelect && !grupoSelect.dataset.bound) {
+        grupoSelect.dataset.bound = 'true';
+        grupoSelect.addEventListener('change', () => {
+          const solicitudId = String(grupoSelect.value || '').trim();
+          if (select) select.value = '';
+          if (!solicitudId) {
+            clearAvanceView_();
+            return;
+          }
+          loadAvanceGrupoVecinos_(solicitudId);
+        });
+      }
+
       if (select && !select.dataset.bound) {
         select.dataset.bound = 'true';
         select.addEventListener('change', () => {
           const orgId = String(select.value || '').trim();
+          if (grupoSelect) grupoSelect.value = '';
           if (!orgId) {
             clearAvanceView_();
             return;
@@ -2674,11 +2710,13 @@
 
   function refreshAvanceViewOnRoute_() {
     const select = document.getElementById('avance-organizacion-select');
-    if (!select) return;
+    const grupoSelect = document.getElementById('avance-grupo-select');
+    if (!select && !grupoSelect) return;
 
     const now = Date.now();
     if (
       APP.state.avanceOrganizaciones.length &&
+      APP.state.avanceGrupos.length &&
       APP.state.avanceOrganizacionesFetchedAt &&
       (now - APP.state.avanceOrganizacionesFetchedAt) < 30000
     ) {
@@ -2686,10 +2724,21 @@
     }
 
     const currentValue = String(select.value || '').trim();
+    const currentGrupoValue = String(grupoSelect?.value || '').trim();
 
-    api('getOrganizacionesAvanceClient').then(data => {
+    Promise.all([
+      api('getGruposVecinosAvanceClient'),
+      api('getOrganizacionesAvanceClient')
+    ]).then(([grupos, data]) => {
+      APP.state.avanceGrupos = (grupos && grupos.gruposList) || [];
+      APP.state.avanceGruposFetchedAt = Date.now();
       APP.state.avanceOrganizaciones = (data && data.organizacionesList) || [];
       APP.state.avanceOrganizacionesFetchedAt = Date.now();
+      fillSelect(
+        grupoSelect,
+        APP.state.avanceGrupos.map(x => ({ value: x.value, label: x.label })),
+        'Seleccionar Grupo de vecinos'
+      );
       fillSelect(
         select,
         APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label })),
@@ -2699,11 +2748,23 @@
       if (currentValue && APP.state.avanceOrganizaciones.some(x => String(x.value) === currentValue)) {
         select.value = currentValue;
       }
+      if (currentGrupoValue && APP.state.avanceGrupos.some(x => String(x.value) === currentGrupoValue)) {
+        grupoSelect.value = currentGrupoValue;
+      }
     }).catch(console.error);
   }
 
   function loadAvanceCatalogos_() {
-    if (APP.state.avanceCatalogos && APP.state.avanceOrganizaciones.length) {
+    const now = Date.now();
+    if (
+      APP.state.avanceCatalogos &&
+      APP.state.avanceOrganizaciones.length &&
+      APP.state.avanceGrupos.length &&
+      APP.state.avanceOrganizacionesFetchedAt &&
+      APP.state.avanceGruposFetchedAt &&
+      (now - APP.state.avanceOrganizacionesFetchedAt) < 30000 &&
+      (now - APP.state.avanceGruposFetchedAt) < 30000
+    ) {
       return Promise.resolve();
     }
 
@@ -2711,9 +2772,12 @@
 
     return Promise.all([
       api('getCatalogosAvanceClient'),
+      api('getGruposVecinosAvanceClient'),
       api('getOrganizacionesAvanceClient')
-    ]).then(([catalogos, organizaciones]) => {
+    ]).then(([catalogos, grupos, organizaciones]) => {
       APP.state.avanceCatalogos = catalogos || {};
+      APP.state.avanceGrupos = (grupos && grupos.gruposList) || [];
+      APP.state.avanceGruposFetchedAt = Date.now();
       APP.state.avanceOrganizaciones = (organizaciones && organizaciones.organizacionesList) || [];
       APP.state.avanceOrganizacionesFetchedAt = Date.now();
     }).finally(() => {
@@ -2731,6 +2795,25 @@
       renderAvanceTimeline_(data.timeline || []);
       lockAvanceActions_(false, data);
       setStatus('Avance cargado correctamente.', true);
+    }).catch(err => {
+      APP.state.currentAvance = null;
+      clearAvanceView_();
+      showError(err);
+    }).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function loadAvanceGrupoVecinos_(solicitudId) {
+    showContentLoading('Cargando avance de Grupo de vecinos...');
+
+    api('getAvanceGrupoVecinos', { solicitud_id: solicitudId }).then(data => {
+      APP.state.currentAvance = data;
+      renderAvanceResumen_(data);
+      renderAvanceBotones_(data);
+      renderAvanceTimeline_(data.timeline || []);
+      lockAvanceActions_(true, data);
+      setStatus('Avance de Grupo de vecinos cargado correctamente.', true);
     }).catch(err => {
       APP.state.currentAvance = null;
       clearAvanceView_();
@@ -2769,6 +2852,7 @@
     const r = (data && data.resumen) || {};
     const estado = (data && data.estado && data.estado.estado_avance) || 'Activo';
     const tramos = (data && data.botones && data.botones.tramos) || [];
+    const isGrupo = String(data && data.context_type || '') === 'grupo_vecinos';
 
     const tramoPreItems = getAvanceTramoItems_(tramos, ['Preconstitucion']);
     const tramoForItems = getAvanceTramoItems_(tramos, ['Formalizacion', 'Formalizacion posterior']);
@@ -2790,7 +2874,7 @@
 
           <div class="avance-resumen-card__grid">
             <div class="avance-resumen-card__item"><strong>Estado</strong><span>${escapeHtml(estado)}</span></div>
-            <div class="avance-resumen-card__item"><strong>Organización</strong><span>${escapeHtml(r.nombre_organizacion || '')}</span></div>
+            <div class="avance-resumen-card__item"><strong>${isGrupo ? 'Grupo de vecinos' : 'Organización'}</strong><span>${escapeHtml(r.nombre_organizacion || '')}</span></div>
             <div class="avance-resumen-card__item"><strong>Solicitud</strong><span>${escapeHtml(r.solicitud_id || '')}</span></div>
             <div class="avance-resumen-card__item"><strong>Último hito</strong><span>${escapeHtml(r.ultimo_hito_nombre || 'Sin registros')}</span></div>
             <div class="avance-resumen-card__item"><strong>Fecha último hito</strong><span>${escapeHtml(r.ultimo_hito_fecha || '')}</span></div>
@@ -2901,11 +2985,13 @@
   }
 
   function registrarHitoAvanceUi_(codigoHito) {
-    const select = document.getElementById('avance-organizacion-select');
-    const organizacionId = String(select?.value || '').trim();
+    const current = APP.state.currentAvance || {};
+    const isGrupo = String(current.context_type || '') === 'grupo_vecinos';
+    const select = document.getElementById(isGrupo ? 'avance-grupo-select' : 'avance-organizacion-select');
+    const selectedId = String(select?.value || '').trim();
 
-    if (!organizacionId) {
-      showError('Debes seleccionar una organización.');
+    if (!selectedId) {
+      showError(isGrupo ? 'Debes seleccionar un Grupo de vecinos.' : 'Debes seleccionar una organización.');
       return;
     }
 
@@ -2958,19 +3044,28 @@
   }
 
   function submitAvanceHitoModal_() {
-    const select = document.getElementById('avance-organizacion-select');
+    const current = APP.state.currentAvance || {};
+    const isGrupo = String(current.context_type || '') === 'grupo_vecinos';
+    const orgSelect = document.getElementById('avance-organizacion-select');
+    const grupoSelect = document.getElementById('avance-grupo-select');
     const codigo = document.getElementById('avance-modal-codigo');
     const fecha = document.getElementById('avance-modal-fecha');
     const obs = document.getElementById('avance-modal-observacion');
     const orgNombre = document.getElementById('avance-modal-org-nombre');
 
-    const organizacionId = String(select?.value || '').trim();
+    const organizacionId = String(orgSelect?.value || '').trim();
+    const solicitudId = String(grupoSelect?.value || '').trim();
     const codigoHito = String(codigo?.value || '').trim();
     const fechaHito = String(fecha?.value || '').trim();
     const observacion = String(obs?.value || '').trim();
     const nombreOrganizacionAsamblea = String(orgNombre?.value || '').trim();
 
-    if (!organizacionId) {
+    if (isGrupo && !solicitudId) {
+      showError('Debes seleccionar un Grupo de vecinos.');
+      return;
+    }
+
+    if (!isGrupo && !organizacionId) {
       showError('Debes seleccionar una organización.');
       return;
     }
@@ -2996,15 +3091,40 @@
     showContentLoading('Registrando hito...');
 
     api('registrarHitoAvance', {
-      organizacion_id: organizacionId,
+      organizacion_id: isGrupo ? '' : organizacionId,
+      solicitud_id: isGrupo ? solicitudId : '',
       codigo_hito: codigoHito,
       fecha_hito: fechaHito,
       observacion: observacion,
       nombre_organizacion_asamblea: nombreOrganizacionAsamblea
-    }).then(() => {
+    }).then(res => {
       closeAvanceHitoModal_();
-      showSuccess('Hito registrado correctamente.');
-      loadAvanceOrganizacion_(organizacionId);
+      showSuccess(res && res.warning_nombre_duplicado
+        ? `Hito registrado correctamente. Advertencia: ${res.warning_nombre_duplicado}`
+        : 'Hito registrado correctamente.');
+      if (isGrupo) {
+        APP.state.avanceOrganizacionesFetchedAt = 0;
+        APP.state.avanceGruposFetchedAt = 0;
+        if (res && res.organizacion_id) {
+          return loadAvanceCatalogos_().then(() => {
+            fillSelect(
+              document.getElementById('avance-organizacion-select'),
+              APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label })),
+              'Seleccionar organización'
+            );
+            fillSelect(
+              document.getElementById('avance-grupo-select'),
+              APP.state.avanceGrupos.map(x => ({ value: x.value, label: x.label })),
+              'Seleccionar Grupo de vecinos'
+            );
+            const orgSelect = document.getElementById('avance-organizacion-select');
+            if (orgSelect) orgSelect.value = res.organizacion_id;
+            return loadAvanceOrganizacion_(res.organizacion_id);
+          });
+        }
+        return loadAvanceGrupoVecinos_(solicitudId);
+      }
+      return loadAvanceOrganizacion_(organizacionId);
     }).catch(showError).finally(() => {
       hideContentLoading();
     });

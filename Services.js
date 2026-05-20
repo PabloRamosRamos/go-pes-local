@@ -202,13 +202,16 @@ function obtenerFicha(payload) {
   if (typeof goPesApplyAvancePhase1Config_ === 'function') {
     goPesApplyAvancePhase1Config_();
   }
-  const avanceHitos = finalOrgId
-    ? getRowsByFieldValuesSelective_(
-        GO_PES_V2.SHEETS.FACT_AVANCE_HITOS,
-        'organizacion_id',
-        [finalOrgId],
-        false
-      )
+  const avanceHitos = (finalOrgId || finalSolicitudId)
+    ? (getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS) || [])
+        .filter(function(row) {
+          return (finalOrgId && String(row.organizacion_id || '').trim() === finalOrgId)
+            || (finalSolicitudId && String(row.solicitud_id || '').trim() === finalSolicitudId);
+        })
+        .sort(function(a, b) {
+          return new Date(b.timestamp_registro || 0) - new Date(a.timestamp_registro || 0);
+        })
+        .slice(0, 25)
     : [];
   const hitoCreacionOrganizacion = getHitoCreacionOrganizacionFromAvance_(avanceHitos);
 

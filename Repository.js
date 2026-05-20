@@ -104,7 +104,7 @@ function buildSheetDefinitions_() {
     [S.VW_INSTR]: ['org_instrumento_id', 'organizacion_id', 'nombre_organizacion', 'instrumento_codigo_catalogo', 'instrumento_tipo', 'origen_instrumento', 'estado_instrumento', 'resultado_instrumento', 'avance_instrumento_pct', 'responsable_instrumento', 'updated_at'],
     [S.VW_TERR]: ['uv', 'sector', 'total_solicitudes', 'total_organizaciones', 'organizaciones_constituidas', 'instrumentos_activos'],
 
-    [S.DIM_USUARIOS]: ['user_id', 'email', 'nombre_visible', 'perfil', 'activo_flag', 'superuser_flag', 'fecha_alta', 'fecha_ultima_actividad'],
+    [S.DIM_USUARIOS]: ['user_id', 'email', 'nombre_visible', 'perfil', 'activo_flag', 'superuser_flag', 'fecha_alta', 'fecha_ultima_actividad', 'modulos_permitidos', 'updated_at', 'updated_by'],
     [S.DIM_TERRITORIO]: ['uv', 'sector', 'macrosector', 'activo_flag'],
     [S.DIM_ESTADOS]: ['tipo_estado', 'codigo_estado', 'descripcion_estado', 'orden_estado', 'activo_flag'],
     [S.DIM_ETAPAS]: ['etapa_constitucion_num', 'etapa_constitucion_codigo', 'etapa_constitucion_txt', 'orden_visual', 'peso_avance', 'activa_flag'],

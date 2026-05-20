@@ -85,6 +85,10 @@
 
   * { box-sizing: border-box; }
 
+  .is-hidden {
+    display: none !important;
+  }
+
   body {
     margin: 0;
     font-family: var(--font-base);
@@ -996,6 +1000,46 @@
     justify-content: center;
     gap: 18px;
     text-align: center;
+  }
+
+  .access-denied {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: var(--space-10);
+    background: linear-gradient(180deg, var(--surface) 0%, var(--bg) 100%);
+  }
+
+  .access-denied__card {
+    max-width: 560px;
+    padding: var(--space-10);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+    text-align: center;
+  }
+
+  .access-denied__card .material-symbols-outlined {
+    color: var(--danger);
+    font-size: 44px;
+  }
+
+  .module-check-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: var(--space-3);
+  }
+
+  .module-check {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-soft);
+    font-weight: var(--font-weight-semibold);
   }
 
   .app-loading__spinner {

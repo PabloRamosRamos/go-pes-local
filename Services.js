@@ -6,7 +6,7 @@ function buscarVecino(query) {
   const diag = goPesDiagStart_('Services.buscarVecino', {
     query_length: String(query || '').trim().length
   });
-  requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('buscar', ['operador', 'coordinador', 'administrador', 'superuser']);
 
   const term = normalizeText_(query || '');
 
@@ -80,6 +80,7 @@ function buscarSolicitud(query) {
 }
 
 function buscarOrganizacion(query) {
+  requireModuleAccess_('buscar', ['operador', 'coordinador', 'administrador', 'superuser']);
   const term = normalizeText_(query || '');
   const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES);
   if (!term) return rows.slice(0, 25);
@@ -88,7 +89,7 @@ function buscarOrganizacion(query) {
 
 function obtenerFicha(payload) {
   const diag = goPesDiagStart_('Services.obtenerFicha', payload || {});
-  requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('ficha', ['operador', 'coordinador', 'administrador', 'superuser']);
 
   const solicitudId = payload && payload.solicitud_id ? String(payload.solicitud_id) : '';
   const organizacionId = payload && payload.organizacion_id ? String(payload.organizacion_id) : '';
@@ -298,7 +299,7 @@ function guardarIngreso(payload) {
   lock.waitLock(30000);
 
   try {
-    const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+    const user = requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'administrador', 'superuser']);
     ensureSheetsSubset_([GO_PES_V2.SHEETS.RAW_INGRESO, GO_PES_V2.SHEETS.MAE_CASOS]);
 
     payload = payload || {};
@@ -409,7 +410,7 @@ function guardarIngreso(payload) {
 }
 
 function guardarSeguimiento(payload) {
-  const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
   validateSeguimientoV2_(payload);
   const now = new Date();
   const hitoId = payload.hito_id || nextId_('hito', 'HIT');
@@ -478,7 +479,7 @@ function guardarSeguimiento(payload) {
 
 function guardarOrganizacion(payload) {
   const diag = goPesDiagStart_('Services.guardarOrganizacion', {});
-  const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('organizacion', ['operador', 'coordinador', 'administrador', 'superuser']);
   validateOrganizacionV2_(payload);
   const now = new Date();
   const organizacionId = payload.organizacion_id || nextId_('organizacion', 'ORG');
@@ -575,7 +576,7 @@ function guardarOrganizacion(payload) {
 }
 
 function guardarInstrumento(payload) {
-  const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
   validateInstrumentoV2_(payload);
   const now = new Date();
   const orgInstrumentoId = payload.org_instrumento_id || nextId_('instrumento', 'OIN');
@@ -663,7 +664,7 @@ function guardarInstrumento(payload) {
 }
 
 function guardarRequisito(payload) {
-  const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('requisito', ['operador', 'coordinador', 'administrador', 'superuser']);
   validateRequisitoV2_(payload);
   const now = new Date();
   const registroId = payload.requisito_registro_id || nextId_('requisito', 'REQ');
@@ -719,7 +720,7 @@ function guardarRequisito(payload) {
 }
 
 function listarHistorial(filters) {
-  requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('historial', ['operador', 'coordinador', 'administrador', 'superuser']);
   let rows = getSheetData_(GO_PES_V2.SHEETS.LOG_ACCIONES)
     .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
   if (filters && filters.entity_id) rows = rows.filter(r => String(r.entity_id || '') === String(filters.entity_id));

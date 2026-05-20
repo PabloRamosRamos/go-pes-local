@@ -2,7 +2,7 @@ function importarSocios(payload) {
   const diag = goPesDiagStart_('ZZ_SociosBackend.importarSocios', {
     rows_input: payload && Array.isArray(payload.rows) ? payload.rows.length : 0
   });
-  const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'administrador', 'superuser']);
   const rows = payload && Array.isArray(payload.rows) ? payload.rows : [];
   const validRows = [];
   const errors = [];
@@ -87,7 +87,7 @@ function importarSocios(payload) {
 }
 
 function actualizarCargoSocioOrganizacion(payload) {
-  const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'administrador', 'superuser']);
   const socioId = String(payload && payload.socio_id || '').trim();
   const organizacionId = String(payload && payload.organizacion_id || '').trim();
   const cargo = String(payload && payload.cargo || '').trim();

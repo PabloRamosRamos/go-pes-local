@@ -76,7 +76,7 @@ const GO_PES_V2 = {
     USERS: 'usuarios'
   },
   ROLES: ['operador', 'coordinador', 'administrador', 'superuser'],
-  TRUSTED_DOMAIN_AUTO_ACTIVE: true,
+  TRUSTED_DOMAIN_AUTO_ACTIVE: false,
   DEFAULT_VIEW: 'inicio'
 };
 
@@ -153,6 +153,11 @@ function goPesSeedSuperUsers_() {
 function buildBootstrapForTemplate_(e) {
   const params = (e && e.parameter) ? e.parameter : {};
   const user = getUsuarioActual();
+  const permissions = buildPermissionMap_(user);
+  const requestedView = params.view || GO_PES_V2.DEFAULT_VIEW;
+  const initialView = user.canAccess && (permissions.modules || {})[requestedView]
+    ? requestedView
+    : GO_PES_V2.DEFAULT_VIEW;
 
   logAccess_('OPEN_APP', params);
 
@@ -162,10 +167,11 @@ function buildBootstrapForTemplate_(e) {
     subtitle: GO_PES_V2.SUBTITLE,
     version: GO_PES_V2.VERSION,
     colors: GO_PES_V2.COLORS,
-    initialView: params.view || GO_PES_V2.DEFAULT_VIEW,
+    initialView: initialView,
     query: params,
     user: user,
-    permissions: buildPermissionMap_(user)
+    permissions: permissions,
+    moduleDefinitions: getModuleDefinitions_()
   };
 }
 
@@ -180,6 +186,7 @@ function getAppBootstrap() {
     user: user,
     permissions: buildPermissionMap_(user),
     views: GO_PES_V2.VIEWS,
+    moduleDefinitions: getModuleDefinitions_(),
     catalogs: {}
   });
 }

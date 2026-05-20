@@ -337,16 +337,17 @@
           </section>
 
           <section class="view" id="view-usuarios">
-            <div class="section-head"><div><p class="eyebrow">Administración</p><h2>Gestión de usuarios</h2></div></div>
+            <div class="section-head"><div><p class="eyebrow">Administración</p><h2>Gestión de usuarios</h2><p class="muted">Administra usuarios registrados, estado de acceso y visibilidad por módulo.</p></div></div>
             <div class="panel admin-form">
               <div class="field field--half"><label>Email</label><input id="user-email" type="email"></div>
               <div class="field field--half"><label>Nombre visible</label><input id="user-name-input" type="text"></div>
               <div class="field field--third"><label>Perfil</label><select id="user-role-input"></select></div>
               <div class="field field--third"><label>Activo</label><select id="user-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>
               <div class="field field--third"><label>Superuser</label><select id="user-super-input"><option value="false">No</option><option value="true">Sí</option></select></div>
+              <div class="field field--full"><label>Módulos visibles</label><div id="user-modules-input" class="module-check-grid"></div></div>
               <div class="actions"><button type="button" class="primary-btn" id="save-user-btn"><span class="material-symbols-outlined">save</span>Guardar usuario</button></div>
             </div>
-            <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Nombre</th><th>Perfil</th><th>Activo</th><th>Superuser</th><th>Última actividad</th><th></th></tr></thead><tbody id="users-results"></tbody></table></div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Nombre</th><th>Perfil</th><th>Activo</th><th>Superuser</th><th>Módulos</th><th>Última actividad</th><th></th></tr></thead><tbody id="users-results"></tbody></table></div>
           </section>
         </section>
       </main>

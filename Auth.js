@@ -13,7 +13,7 @@ function getUsuarioActual() {
   const users = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS);
   let user = users.find(r => normalizeText_(r.email) === normalizeText_(email));
 
-  if (!user && email) {
+  if (!user && email && isConfiguredSuperUserEmail_(email)) {
     user = syncCurrentUser_();
   }
 
@@ -72,8 +72,26 @@ function requireRole_(allowedRoles) {
   throw new Error(`No tienes permisos para ejecutar esta acción. Perfil actual: ${user.perfil || 'sin perfil'}.`);
 }
 
+function requireModuleAccess_(moduleKey, allowedRoles) {
+  const user = requireRole_(allowedRoles || ['operador', 'coordinador', 'administrador', 'superuser']);
+  if (!user.superuser_flag && !userModuleAllowed_(user, moduleKey)) {
+    throw new Error('No tienes permisos para acceder a este módulo.');
+  }
+  return user;
+}
+
+function requireAnyModuleAccess_(moduleKeys, allowedRoles) {
+  const user = requireRole_(allowedRoles || ['operador', 'coordinador', 'administrador', 'superuser']);
+  const keys = Array.isArray(moduleKeys) ? moduleKeys : [moduleKeys];
+  const allowed = user.superuser_flag || keys.some(function(key) {
+    return userModuleAllowed_(user, key);
+  });
+  if (!allowed) throw new Error('No tienes permisos para acceder a este módulo.');
+  return user;
+}
+
 function listUsers() {
-  const user = requireRole_(['administrador', 'superuser']);
+  const user = requireRole_(['superuser']);
 
   const rows = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS)
     .map(decorateUser_)
@@ -93,22 +111,36 @@ function updateUser(payload) {
   const normalizedEmail = normalizeText_(payload.email);
   const existing = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS)
     .find(r => normalizeText_(r.email) === normalizedEmail);
+  const isConfiguredSuper = isConfiguredSuperUserEmail_(payload.email);
+  const activeNext = isConfiguredSuper ? true : toBool_(payload.activo_flag);
+  const superNext = isConfiguredSuper;
+
+  if (existing && toBool_(existing.superuser_flag) && !superNext) {
+    ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail);
+  }
+  if (existing && toBool_(existing.superuser_flag) && !activeNext) {
+    ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail);
+  }
 
   const row = {
     user_id: existing && existing.user_id ? existing.user_id : nextId_('usuario', 'USR'),
     email: payload.email,
     nombre_visible: payload.nombre_visible || payload.email,
     perfil: payload.perfil || (existing && existing.perfil) || 'operador',
-    activo_flag: toBool_(payload.activo_flag),
-    superuser_flag: toBool_(payload.superuser_flag),
+    activo_flag: activeNext,
+    superuser_flag: superNext,
+    modulos_permitidos: superNext ? '*' : normalizeModulePermissionsInput_(payload.modulos_permitidos),
     fecha_alta: existing && existing.fecha_alta ? existing.fecha_alta : new Date(),
-    fecha_ultima_actividad: existing && existing.fecha_ultima_actividad ? existing.fecha_ultima_actividad : ''
+    fecha_ultima_actividad: existing && existing.fecha_ultima_actividad ? existing.fecha_ultima_actividad : '',
+    updated_at: new Date(),
+    updated_by: actor.email
   };
 
-  if (GO_PES_V2.SUPERUSERS.map(normalizeText_).includes(normalizedEmail)) {
+  if (isConfiguredSuper) {
     row.superuser_flag = true;
     row.perfil = 'superuser';
     row.activo_flag = true;
+    row.modulos_permitidos = '*';
   }
 
   upsertByKey_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', row, true);
@@ -128,8 +160,11 @@ function seedSuperUsers_() {
       perfil: 'superuser',
       activo_flag: true,
       superuser_flag: true,
+      modulos_permitidos: '*',
       fecha_alta: new Date(),
-      fecha_ultima_actividad: ''
+      fecha_ultima_actividad: '',
+      updated_at: new Date(),
+      updated_by: 'system'
     }, true);
   });
 }
@@ -138,20 +173,21 @@ function syncCurrentUser_() {
   const email = getCurrentUserEmail_();
   if (!email) return null;
 
-  const isSuper = GO_PES_V2.SUPERUSERS.map(normalizeText_).includes(normalizeText_(email));
-  const trustedDomain = GO_PES_V2.TRUSTED_DOMAINS.some(d => email.toLowerCase().endsWith('@' + d));
-  const active = isSuper || (GO_PES_V2.TRUSTED_DOMAIN_AUTO_ACTIVE && trustedDomain);
-  const profile = isSuper ? 'superuser' : (trustedDomain ? 'operador' : 'operador');
+  const isSuper = isConfiguredSuperUserEmail_(email);
+  if (!isSuper) return null;
 
   const row = {
     user_id: nextIdIfMissing_('usuario', 'USR', GO_PES_V2.SHEETS.DIM_USUARIOS, 'user_id', 'email', email),
     email: email,
     nombre_visible: email,
-    perfil: profile,
-    activo_flag: active,
+    perfil: 'superuser',
+    activo_flag: true,
     superuser_flag: isSuper,
+    modulos_permitidos: '*',
     fecha_alta: new Date(),
-    fecha_ultima_actividad: new Date()
+    fecha_ultima_actividad: new Date(),
+    updated_at: new Date(),
+    updated_by: 'system'
   };
 
   upsertByKey_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', row, true);
@@ -189,8 +225,11 @@ function touchUserLastActivity_(email, forceWrite) {
 
 function decorateUser_(row) {
   const active = toBool_(row.activo_flag);
-  const superFlag = toBool_(row.superuser_flag) || GO_PES_V2.SUPERUSERS.map(normalizeText_).includes(normalizeText_(row.email));
+  const superFlag = toBool_(row.superuser_flag) || isConfiguredSuperUserEmail_(row.email);
   const profile = superFlag ? 'superuser' : (row.perfil || 'operador');
+  const modules = superFlag
+    ? getModuleDefinitions_().map(function(m) { return m.key; })
+    : parseUserModules_(row.modulos_permitidos, profile);
 
   return {
     user_id: row.user_id || '',
@@ -199,8 +238,12 @@ function decorateUser_(row) {
     perfil: profile,
     activo_flag: active,
     superuser_flag: superFlag,
+    modulos_permitidos: superFlag ? '*' : modules.join(','),
+    modules: modules,
     fecha_alta: row.fecha_alta || '',
     fecha_ultima_actividad: row.fecha_ultima_actividad || '',
+    updated_at: row.updated_at || '',
+    updated_by: row.updated_by || '',
     canAccess: active,
     roleLabel: profile
   };
@@ -209,20 +252,109 @@ function decorateUser_(row) {
 function buildPermissionMap_(user) {
   const role = (user && user.perfil) || 'operador';
   const isSuper = !!(user && user.superuser_flag);
+  const canAccess = !!(user && user.canAccess);
+  const can = function(moduleKey) {
+    return canAccess && (isSuper || userModuleAllowed_(user, moduleKey));
+  };
 
   return {
-    canOpenSearch: true,
-    canCreateIngreso: user && user.canAccess,
-    canCreateSeguimiento: user && user.canAccess,
-    canEditOrganizacion: user && user.canAccess,
-    canEditInstrumento: user && user.canAccess,
-    canEditRequisito: user && user.canAccess,
-    canImportSocios: user && user.canAccess,
-    canViewHistorial: user && user.canAccess,
-    canManageUsers: isSuper || role === 'administrador',
+    canOpenSearch: can('buscar'),
+    canCreateIngreso: can('nuevo-ingreso'),
+    canCreateSeguimiento: can('seguimiento'),
+    canEditOrganizacion: can('organizacion'),
+    canEditInstrumento: can('instrumento'),
+    canEditRequisito: can('requisito'),
+    canImportSocios: can('socios'),
+    canViewHistorial: can('historial'),
+    canManageUsers: isSuper,
     canResetData: isSuper,
-    canAdmin: isSuper || role === 'administrador'
+    canAdmin: isSuper || role === 'administrador',
+    modules: buildUserModulePermissionMap_(user)
   };
+}
+
+function getModuleDefinitions_() {
+  return [
+    { key: 'inicio', label: 'Inicio', view: 'inicio' },
+    { key: 'nuevo-ingreso', label: 'Nuevo ingreso', view: 'nuevo-ingreso' },
+    { key: 'buscar', label: 'Buscar vecino', view: 'buscar' },
+    { key: 'ficha', label: 'Ficha', view: 'ficha' },
+    { key: 'seguimiento', label: 'Registrar avance', view: 'seguimiento' },
+    { key: 'organizacion', label: 'Organizaciones', view: 'organizacion' },
+    { key: 'socios', label: 'Socios', view: 'socios' },
+    { key: 'instrumento', label: 'Gestionar instrumentos', view: 'instrumento' },
+    { key: 'requisito', label: 'Registrar requisitos', view: 'requisito' },
+    { key: 'historial', label: 'Historial', view: 'historial' },
+    { key: 'usuarios', label: 'Gestión de usuarios', view: 'usuarios', superOnly: true }
+  ];
+}
+
+function defaultModulesForRole_(role) {
+  const normalized = normalizeText_(role || 'operador');
+  const base = ['inicio', 'buscar', 'ficha'];
+  if (normalized === 'administrador') {
+    return ['inicio', 'nuevo-ingreso', 'buscar', 'ficha', 'seguimiento', 'organizacion', 'socios', 'instrumento', 'requisito', 'historial'];
+  }
+  if (normalized === 'coordinador') {
+    return ['inicio', 'nuevo-ingreso', 'buscar', 'ficha', 'seguimiento', 'organizacion', 'socios', 'instrumento', 'requisito', 'historial'];
+  }
+  return base.concat(['nuevo-ingreso', 'seguimiento', 'organizacion', 'socios', 'instrumento', 'requisito']);
+}
+
+function parseUserModules_(value, role) {
+  const raw = String(value || '').trim();
+  if (!raw) return defaultModulesForRole_(role);
+  if (raw === '*') return getModuleDefinitions_().map(function(m) { return m.key; });
+  const allowedKeys = getModuleDefinitions_().map(function(m) { return m.key; });
+  return uniqueNonBlank_(raw.split(',').map(function(x) { return String(x || '').trim(); }))
+    .filter(function(key) { return allowedKeys.indexOf(key) !== -1; });
+}
+
+function normalizeModulePermissionsInput_(value) {
+  const modules = Array.isArray(value) ? value : String(value || '').split(',');
+  const allowedKeys = getModuleDefinitions_()
+    .filter(function(m) { return !m.superOnly; })
+    .map(function(m) { return m.key; });
+  const normalized = uniqueNonBlank_(modules.map(function(x) { return String(x || '').trim(); }))
+    .filter(function(key) { return allowedKeys.indexOf(key) !== -1; });
+  if (normalized.indexOf('inicio') === -1) normalized.unshift('inicio');
+  if (normalized.indexOf('ficha') === -1) normalized.push('ficha');
+  return normalized.join(',');
+}
+
+function userModuleAllowed_(user, moduleKey) {
+  if (!user || !user.canAccess) return false;
+  if (user.superuser_flag) return true;
+  const key = String(moduleKey || '').trim();
+  if (!key) return false;
+  const modules = Array.isArray(user.modules)
+    ? user.modules
+    : parseUserModules_(user.modulos_permitidos, user.perfil);
+  return modules.indexOf(key) !== -1;
+}
+
+function buildUserModulePermissionMap_(user) {
+  const map = {};
+  getModuleDefinitions_().forEach(function(module) {
+    map[module.key] = userModuleAllowed_(user, module.key);
+  });
+  return map;
+}
+
+function isConfiguredSuperUserEmail_(email) {
+  return GO_PES_V2.SUPERUSERS.map(normalizeText_).indexOf(normalizeText_(email)) !== -1;
+}
+
+function ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail) {
+  const rows = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS);
+  const others = rows.filter(function(row) {
+    return normalizeText_(row.email) !== normalizedEmail &&
+      (toBool_(row.superuser_flag) || isConfiguredSuperUserEmail_(row.email)) &&
+      toBool_(row.activo_flag);
+  });
+  if (!others.length) {
+    throw new Error('No se puede dejar el sistema sin otro SUPERUSER activo.');
+  }
 }
 
 function logAccess_(event, payload) {

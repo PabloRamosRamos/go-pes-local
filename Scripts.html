@@ -46,6 +46,7 @@
       catalogs: {},
       user: BOOTSTRAP.user || {},
       permissions: BOOTSTRAP.permissions || {},
+      moduleDefinitions: BOOTSTRAP.moduleDefinitions || [],
       activeView: BOOTSTRAP.initialView || 'inicio',
       currentFicha: null,
       currentSearchResults: [],
@@ -152,6 +153,13 @@
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
+    if (!APP.state.user || !APP.state.user.canAccess) {
+      showAccessDenied_();
+      hideAppLoading();
+      hideContentLoading();
+      return;
+    }
+
     bindGlobalNav();
     initSidebarCollapse_();
     hydrateStaticUser();
@@ -184,6 +192,23 @@
         hideContentLoading();
       }, 120);
     });
+  }
+
+  function showAccessDenied_() {
+    const app = document.getElementById('app');
+    const email = APP.state.user && APP.state.user.email ? APP.state.user.email : '';
+    if (!app) return;
+    app.innerHTML = `
+      <section class="access-denied">
+        <div class="access-denied__card">
+          <span class="material-symbols-outlined">lock</span>
+          <p class="eyebrow">Acceso denegado</p>
+          <h1>No tienes acceso a esta aplicación</h1>
+          <p>Tu usuario no está registrado o se encuentra inactivo. Contacta al administrador para solicitar acceso.</p>
+          ${email ? `<p class="muted">Usuario detectado: ${escapeHtml(email)}</p>` : ''}
+        </div>
+      </section>
+    `;
   }
 
   function initSidebarCollapse_() {
@@ -370,7 +395,14 @@
 
   function bindGlobalNav() {
     document.querySelectorAll('[data-view]').forEach(btn =>
-      btn.addEventListener('click', () => route(btn.dataset.view))
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        if (!canOpenView_(view)) {
+          showError('No tienes permisos para acceder a este módulo.');
+          return;
+        }
+        route(view);
+      })
     );
 
     const searchBtn = document.getElementById('search-btn');
@@ -405,7 +437,7 @@
       ['inventory_2', 'Registrar requisitos', 'Control documental por instrumento', 'requisito']
     ];
 
-    container.innerHTML = items.map(item => `
+    container.innerHTML = items.filter(item => canOpenView_(item[3])).map(item => `
       <button class="quick-card" data-view="${item[3]}">
         <span class="material-symbols-outlined">${item[0]}</span>
         <h3>${item[1]}</h3>
@@ -431,7 +463,7 @@
       ['Requisitos', 'Registrar o validar documentación.', 'inventory_2', 'requisito']
     ];
 
-    container.innerHTML = tiles.map(([title, text, icon, view]) => `
+    container.innerHTML = tiles.filter(([, , , view]) => canOpenView_(view)).map(([title, text, icon, view]) => `
       <button class="tile" data-view="${view}">
         <span class="material-symbols-outlined">${icon}</span>
         <h3>${title}</h3>
@@ -661,6 +693,13 @@
   }
 
   function applyPermissions() {
+    document.querySelectorAll('[data-view]').forEach(el => {
+      const view = el.dataset.view;
+      const allowed = canOpenView_(view);
+      el.classList.toggle('is-hidden', !allowed);
+      el.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+    });
+
     document.querySelectorAll('.is-admin').forEach(el => {
       if (APP.state.permissions.canManageUsers) el.classList.add('show-admin');
     });
@@ -677,6 +716,29 @@
     }
 
     fillSelect(document.getElementById('user-role-input'), ['operador', 'coordinador', 'administrador', 'superuser']);
+    renderUserModuleOptions_();
+  }
+
+  function canOpenView_(view) {
+    if (!APP.state.user || !APP.state.user.canAccess) return false;
+    if (!view) return false;
+    if (view === 'ficha') return !!((APP.state.permissions.modules || {}).ficha);
+    return !!((APP.state.permissions.modules || {})[view]);
+  }
+
+  function renderUserModuleOptions_(selectedModules) {
+    const root = document.getElementById('user-modules-input');
+    if (!root) return;
+    const selected = Array.isArray(selectedModules)
+      ? selectedModules
+      : String(selectedModules || '').split(',').map(x => x.trim()).filter(Boolean);
+    const defs = (APP.state.moduleDefinitions || []).filter(m => m.key !== 'usuarios' && m.key !== 'ficha');
+    root.innerHTML = defs.map(m => `
+      <label class="module-check">
+        <input type="checkbox" value="${escapeHtml(m.key)}" ${selected.includes(m.key) ? 'checked' : ''}>
+        <span>${escapeHtml(m.label || m.key)}</span>
+      </label>
+    `).join('');
   }
 
   function openAdminResetModal_() {
@@ -753,6 +815,12 @@
   }
 
   function route(view, params = {}) {
+    if (!canOpenView_(view)) {
+      showError('No tienes permisos para acceder a este módulo.');
+      view = 'inicio';
+      if (!canOpenView_(view)) return;
+    }
+
     APP.state.activeView = view;
     const wasRendered = !!APP.state.renderedViews[view];
 
@@ -2191,6 +2259,10 @@
         return;
       }
 
+      const moduleLabel = user => user.superuser_flag
+        ? 'Todos'
+        : moduleLabelsFromKeys_(String(user.modulos_permitidos || '').split(','));
+
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td>${escapeHtml(formatFechaHoraUi_(r.timestamp || ''))}</td>
@@ -2218,8 +2290,9 @@
           <td>${escapeHtml(r.perfil)}</td>
           <td>${r.activo_flag ? 'Sí' : 'No'}</td>
           <td>${r.superuser_flag ? 'Sí' : 'No'}</td>
+          <td>${escapeHtml(moduleLabel(r))}</td>
           <td>${escapeHtml(formatFechaHoraUi_(r.fecha_ultima_actividad || ''))}</td>
-          <td><button class="secondary-btn js-edit-user" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(r.perfil)}" data-active="${r.activo_flag}" data-super="${r.superuser_flag}">Editar</button></td>
+          <td><button class="secondary-btn js-edit-user" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(r.perfil)}" data-active="${r.activo_flag}" data-super="${r.superuser_flag}" data-modules="${escapeHtml(r.modulos_permitidos || '')}">Editar</button></td>
         </tr>
       `).join('');
 
@@ -2230,18 +2303,34 @@
           document.getElementById('user-role-input').value = btn.dataset.role;
           document.getElementById('user-active-input').value = btn.dataset.active;
           document.getElementById('user-super-input').value = btn.dataset.super;
+          renderUserModuleOptions_(btn.dataset.modules || '');
         });
       });
     }).catch(showError);
   }
 
+  function moduleLabelsFromKeys_(keys) {
+    const defs = APP.state.moduleDefinitions || [];
+    const byKey = {};
+    defs.forEach(m => byKey[m.key] = m.label || m.key);
+    return (keys || [])
+      .map(k => String(k || '').trim())
+      .filter(Boolean)
+      .filter(k => k !== 'inicio' && k !== 'ficha')
+      .map(k => byKey[k] || k)
+      .join(', ') || 'Sin módulos';
+  }
+
   function saveUserFromForm() {
+    const modules = Array.from(document.querySelectorAll('#user-modules-input input[type="checkbox"]:checked'))
+      .map(input => input.value);
     const payload = {
       email: document.getElementById('user-email')?.value.trim() || '',
       nombre_visible: document.getElementById('user-name-input')?.value.trim() || '',
       perfil: document.getElementById('user-role-input')?.value || '',
       activo_flag: document.getElementById('user-active-input')?.value === 'true',
-      superuser_flag: document.getElementById('user-super-input')?.value === 'true'
+      superuser_flag: document.getElementById('user-super-input')?.value === 'true',
+      modulos_permitidos: modules
     };
 
     api('updateUser', payload).then(() => {

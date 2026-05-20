@@ -1021,7 +1021,7 @@
         ${cleanItems.map(([k, v]) => `
           <div class="kv">
             <strong>${escapeHtml(k)}</strong>
-            <span>${escapeHtml(v || '')}</span>
+            <span>${escapeHtml(formatUiValue_(v || ''))}</span>
           </div>
         `).join('')}
       </div>
@@ -1068,6 +1068,42 @@
 
     const d = new Date(raw);
     return isNaN(d.getTime()) ? null : d;
+  }
+
+  function formatFechaHoraUi_(value) {
+    if (!value) return '';
+
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      const dd = `${value.getDate()}`.padStart(2, '0');
+      const mm = `${value.getMonth() + 1}`.padStart(2, '0');
+      const yyyy = value.getFullYear();
+      const hh = `${value.getHours()}`.padStart(2, '0');
+      const min = `${value.getMinutes()}`.padStart(2, '0');
+      return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+    }
+
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const isoDateTime = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::\d{2})?/);
+    if (isoDateTime) {
+      return `${isoDateTime[3]}-${isoDateTime[2]}-${isoDateTime[1]} ${isoDateTime[4]}:${isoDateTime[5]}`;
+    }
+
+    const isoDate = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoDate) {
+      return `${isoDate[3]}-${isoDate[2]}-${isoDate[1]}`;
+    }
+
+    return raw.replace('T', ' ');
+  }
+
+  function formatUiValue_(value) {
+    if (value instanceof Date) return formatFechaHoraUi_(value);
+    const raw = String(value == null ? '' : value);
+    return /^\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2})?/.test(raw.trim())
+      ? formatFechaHoraUi_(raw)
+      : raw;
   }
 
   function serializeForm(form) {
@@ -1315,7 +1351,7 @@
       <div class="organizaciones-shell">
         <div class="section-head organizaciones-head">
           <div>
-            <p class="eyebrow">Módulo 4</p>
+            <p class="eyebrow">Organizaciones</p>
             <h2>Organizaciones</h2>
             <p class="muted">Consulta, administra y actualiza la información integral de cada organización.</p>
           </div>
@@ -1598,7 +1634,7 @@
       <section class="organizaciones-block">
         <h4>${escapeHtml(title)}</h4>
         <div class="organizaciones-kv">
-          ${(items || []).map(([k, v]) => `<div><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v || 'Sin dato')}</span></div>`).join('')}
+          ${(items || []).map(([k, v]) => `<div><strong>${escapeHtml(k)}</strong><span>${escapeHtml(formatUiValue_(v || 'Sin dato'))}</span></div>`).join('')}
         </div>
       </section>
     `;
@@ -1613,7 +1649,7 @@
           <table class="data-table">
             <thead><tr>${fields.map(f => `<th>${escapeHtml(f)}</th>`).join('')}</tr></thead>
             <tbody>
-              ${rows.map(row => `<tr>${fields.map(f => `<td>${escapeHtml(row[f] || '')}</td>`).join('')}</tr>`).join('')}
+              ${rows.map(row => `<tr>${fields.map(f => `<td>${escapeHtml(formatUiValue_(row[f] || ''))}</td>`).join('')}</tr>`).join('')}
             </tbody>
           </table>
         </div>
@@ -2157,7 +2193,7 @@
 
       tbody.innerHTML = rows.map(r => `
         <tr>
-          <td>${escapeHtml(r.timestamp || '')}</td>
+          <td>${escapeHtml(formatFechaHoraUi_(r.timestamp || ''))}</td>
           <td>${escapeHtml(r.email || '')}</td>
           <td>${escapeHtml(r.action || '')}</td>
           <td>${escapeHtml(r.entity_type || '')}</td>
@@ -2182,7 +2218,7 @@
           <td>${escapeHtml(r.perfil)}</td>
           <td>${r.activo_flag ? 'Sí' : 'No'}</td>
           <td>${r.superuser_flag ? 'Sí' : 'No'}</td>
-          <td>${escapeHtml(r.fecha_ultima_actividad || '')}</td>
+          <td>${escapeHtml(formatFechaHoraUi_(r.fecha_ultima_actividad || ''))}</td>
           <td><button class="secondary-btn js-edit-user" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(r.perfil)}" data-active="${r.activo_flag}" data-super="${r.superuser_flag}">Editar</button></td>
         </tr>
       `).join('');
@@ -2527,17 +2563,6 @@
           <select id="avance-organizacion-select"></select>
         </div>
 
-        <div class="avance-header__actions">
-          <button type="button" class="secondary-btn" id="avance-standby-btn">
-            <span class="material-symbols-outlined">pause_circle</span>Stand by
-          </button>
-          <button type="button" class="secondary-btn" id="avance-detener-btn">
-            <span class="material-symbols-outlined">stop_circle</span>Detener
-          </button>
-          <button type="button" class="secondary-btn" id="avance-reactivar-btn">
-            <span class="material-symbols-outlined">play_circle</span>Reactivar
-          </button>
-        </div>
       </div>
 
       <div id="avance-resumen" class="avance-resumen empty-state">
@@ -2938,7 +2963,7 @@
             <div class="avance-resumen-card__item"><strong>${isGrupo ? 'Grupo de vecinos' : 'Organización'}</strong><span>${escapeHtml(r.nombre_organizacion || '')}</span></div>
             <div class="avance-resumen-card__item"><strong>Solicitud</strong><span>${escapeHtml(r.solicitud_id || '')}</span></div>
             <div class="avance-resumen-card__item"><strong>Último hito</strong><span>${escapeHtml(r.ultimo_hito_nombre || 'Sin registros')}</span></div>
-            <div class="avance-resumen-card__item"><strong>Fecha último hito</strong><span>${escapeHtml(r.ultimo_hito_fecha || '')}</span></div>
+            <div class="avance-resumen-card__item"><strong>Fecha último hito</strong><span>${escapeHtml(formatFechaHoraUi_(r.ultimo_hito_fecha || ''))}</span></div>
             <div class="avance-resumen-card__item"><strong>Usuario último hito</strong><span>${escapeHtml(r.usuario_ultimo_hito || '')}</span></div>
           </div>
         </aside>
@@ -2993,7 +3018,7 @@
       ? 'Cumplido'
       : (!item.enabled_flag && !item.completed_flag ? 'Bloqueado' : 'Disponible');
     const statusDetail = item.completed_flag
-      ? escapeHtml(item.fecha_hito || 'Registrado')
+      ? escapeHtml(formatFechaHoraUi_(item.fecha_hito || 'Registrado'))
       : item.blocked_reason
         ? escapeHtml(item.blocked_reason)
         : 'Clic para registrar';
@@ -3038,7 +3063,7 @@
       <div class="match-card">
         <h4>${escapeHtml(r.nombre_hito || '')}</h4>
         <p><strong>Tramo:</strong> ${escapeHtml(r.tramo || '')}</p>
-        <p><strong>Fecha:</strong> ${escapeHtml(r.fecha_hito || '')}</p>
+        <p><strong>Fecha:</strong> ${escapeHtml(formatFechaHoraUi_(r.fecha_hito || ''))}</p>
         <p><strong>Usuario:</strong> ${escapeHtml(r.usuario_registro || '')}</p>
         <p><strong>Observación:</strong> ${escapeHtml(r.observacion || '')}</p>
       </div>

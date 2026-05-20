@@ -1364,15 +1364,9 @@
 
   .avance-header {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-6);
     align-items: end;
-  }
-
-  .avance-header__actions {
-    display: flex;
-    gap: var(--space-3);
-    flex-wrap: wrap;
   }
 
   .avance-section {

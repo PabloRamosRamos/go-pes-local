@@ -85,3 +85,57 @@ function importarSocios(payload) {
   });
   return result;
 }
+
+function actualizarCargoSocioOrganizacion(payload) {
+  const user = requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  const socioId = String(payload && payload.socio_id || '').trim();
+  const organizacionId = String(payload && payload.organizacion_id || '').trim();
+  const cargo = String(payload && payload.cargo || '').trim();
+
+  if (!socioId) throw new Error('Falta socio_id.');
+  if (!organizacionId) throw new Error('Falta organizacion_id.');
+  if (!goPesSocioCargoPermitido_(cargo)) throw new Error('Cargo de socio no permitido.');
+
+  const socio = findByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioId, false);
+  if (!socio) throw new Error('No se encontró el socio indicado.');
+  if (String(socio.organizacion_id || '').trim() !== organizacionId) {
+    throw new Error('El socio no pertenece a la organización indicada.');
+  }
+
+  const now = new Date();
+  const nextSocio = Object.assign({}, socio, {
+    cargo: cargo,
+    updated_by: user.email,
+    updated_at: now
+  });
+
+  upsertByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', nextSocio, false);
+
+  logProcessing_('INFO', 'actualizarCargoSocioOrganizacion', 'socio', socioId, user.email, 'OK', {
+    organizacion_id: organizacionId,
+    cargo: cargo
+  });
+  logUserAction_('UPDATE_SOCIO_CARGO', 'socio', socioId, 'OK', {
+    organizacion_id: organizacionId,
+    cargo: cargo
+  });
+
+  return serializeForClient_({
+    ok: true,
+    socio_id: socioId,
+    organizacion_id: organizacionId,
+    cargo: cargo
+  });
+}
+
+function goPesSocioCargoPermitido_(cargo) {
+  return [
+    'Presidente',
+    'Secretario',
+    'Tesorero',
+    'Director',
+    'Comisión de Finanzas',
+    'Comisión Electoral',
+    'Socio'
+  ].indexOf(String(cargo || '').trim()) !== -1;
+}

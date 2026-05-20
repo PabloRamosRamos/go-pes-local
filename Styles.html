@@ -1978,6 +1978,10 @@
     padding: var(--space-7);
   }
 
+  .organizaciones-modal__dialog--sm {
+    width: min(520px, calc(100vw - 32px));
+  }
+
   .organizaciones-modal__head {
     display: flex;
     justify-content: space-between;
@@ -1999,6 +2003,44 @@
 
   .organizaciones-form-grid .field--full {
     grid-column: 1 / -1;
+  }
+
+  .organizacion-socio-cargo-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .table-action-btn {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface);
+    color: var(--brand-blue);
+    cursor: pointer;
+  }
+
+  .table-action-btn .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  .organizacion-socio-modal-summary {
+    display: grid;
+    gap: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-soft);
+    padding: var(--space-4);
+    margin-bottom: var(--space-5);
+  }
+
+  .organizacion-socio-modal-summary span,
+  .organizacion-socio-modal-summary small {
+    color: var(--text-muted);
   }
 
   @media (max-width: 1100px) {

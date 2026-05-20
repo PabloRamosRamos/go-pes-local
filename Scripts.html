@@ -69,6 +69,16 @@
     }
   };
 
+  const ORGANIZACION_SOCIO_CARGOS = [
+    'Presidente',
+    'Secretario',
+    'Tesorero',
+    'Director',
+    'Comisión de Finanzas',
+    'Comisión Electoral',
+    'Socio'
+  ];
+
   const FORM_SCHEMAS = {
     organizacion: [
       { name: 'organizacion_id', label: 'Organización', type: 'select', optionsKey: 'organizacionesList', required: true, span: 2 },
@@ -1284,6 +1294,7 @@
         </div>
 
         ${renderOrganizacionEditModal_()}
+        ${renderOrganizacionSocioCargoModal_()}
       </div>
     `;
 
@@ -1344,6 +1355,47 @@
     `;
   }
 
+  function renderOrganizacionSocioCargoModal_() {
+    return `
+      <div id="org-socio-cargo-modal" class="organizaciones-modal is-hidden">
+        <div class="organizaciones-modal__backdrop" data-org-socio-cargo-close="true"></div>
+        <form id="org-socio-cargo-form" class="organizaciones-modal__dialog organizaciones-modal__dialog--sm">
+          <div class="organizaciones-modal__head">
+            <div>
+              <p class="eyebrow">Socios</p>
+              <h3>Editar cargo</h3>
+            </div>
+            <button type="button" class="secondary-btn" data-org-socio-cargo-close="true">
+              <span class="material-symbols-outlined">close</span>Cerrar
+            </button>
+          </div>
+
+          <input type="hidden" id="org-socio-cargo-id">
+
+          <div class="organizacion-socio-modal-summary">
+            <strong id="org-socio-cargo-nombre">Socio</strong>
+            <span id="org-socio-cargo-run"></span>
+            <small>Cargo actual: <span id="org-socio-cargo-actual">Sin cargo</span></small>
+          </div>
+
+          <div class="field">
+            <label>Nuevo cargo</label>
+            <select id="org-socio-cargo-select" required></select>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="secondary-btn" data-org-socio-cargo-close="true">
+              <span class="material-symbols-outlined">undo</span>Cancelar
+            </button>
+            <button type="submit" class="primary-btn">
+              <span class="material-symbols-outlined">save</span>Guardar
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
   function bindOrganizacionesView_() {
     document.getElementById('organizaciones-select')?.addEventListener('change', ev => {
       const orgId = String(ev.target.value || '').trim();
@@ -1357,9 +1409,15 @@
     document.getElementById('org-suspend-btn')?.addEventListener('click', () => cambiarEstadoOrganizacionUi_('suspenderOrganizacion', 'suspender'));
     document.getElementById('org-delete-btn')?.addEventListener('click', () => cambiarEstadoOrganizacionUi_('eliminarOrganizacion', 'eliminar'));
     document.getElementById('org-edit-form')?.addEventListener('submit', saveOrganizacionDesdeModulo_);
+    document.getElementById('org-socio-cargo-form')?.addEventListener('submit', saveOrganizacionSocioCargo_);
     document.querySelectorAll('[data-org-modal-close]').forEach(btn => {
       btn.addEventListener('click', closeOrganizacionEditModal_);
     });
+    document.querySelectorAll('[data-org-socio-cargo-close]').forEach(btn => {
+      btn.addEventListener('click', closeOrganizacionSocioCargoModal_);
+    });
+
+    fillSelect(document.getElementById('org-socio-cargo-select'), ORGANIZACION_SOCIO_CARGOS, 'Seleccionar cargo');
 
     const form = document.getElementById('org-edit-form');
     if (form) {
@@ -1475,10 +1533,11 @@
       </div>
 
       ${organizacionTableHtml_('Instrumentos asociados', data.instrumentos || [], ['org_instrumento_id', 'instrumento_codigo_catalogo', 'estado_instrumento', 'resultado_instrumento'])}
-      ${organizacionTableHtml_('Requisitos asociados', data.requisitos || [], ['requisito_registro_id', 'instrumento_codigo_catalogo', 'estado_requisito', 'vigente_flag'])}
-      ${organizacionTableHtml_('Últimos socios', data.socios || [], ['socio_id', 'nombre_socio', 'run_socio', 'cargo'])}
+      ${organizacionSociosTableHtml_(data.socios || [])}
       ${organizacionTableHtml_('Historial reciente', data.historial || [], ['timestamp', 'action', 'email', 'result'])}
     `;
+
+    bindOrganizacionSocioCargoButtons_();
   }
 
   function organizacionMetricHtml_(label, value) {
@@ -1513,6 +1572,55 @@
     `;
   }
 
+  function organizacionSociosTableHtml_(rows) {
+    if (!rows || !rows.length) return '';
+
+    return `
+      <section class="organizaciones-block organizaciones-block--wide">
+        <h4>Últimos socios</h4>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>socio_id</th>
+                <th>nombre_socio</th>
+                <th>run_socio</th>
+                <th>cargo</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows.map(row => `
+                <tr>
+                  <td>${escapeHtml(row.socio_id || '')}</td>
+                  <td>${escapeHtml(row.nombre_socio || '')}</td>
+                  <td>${escapeHtml(row.run_socio || '')}</td>
+                  <td>
+                    <span class="organizacion-socio-cargo-cell">
+                      <span>${escapeHtml(row.cargo || 'Sin cargo')}</span>
+                      <button
+                        type="button"
+                        class="table-action-btn js-org-socio-cargo"
+                        data-socio-id="${escapeHtml(row.socio_id || '')}"
+                        aria-label="Editar cargo de ${escapeHtml(row.nombre_socio || 'socio')}">
+                        <span class="material-symbols-outlined">edit</span>
+                      </button>
+                    </span>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  }
+
+  function bindOrganizacionSocioCargoButtons_() {
+    document.querySelectorAll('.js-org-socio-cargo').forEach(btn => {
+      btn.addEventListener('click', () => openOrganizacionSocioCargoModal_(btn.dataset.socioId));
+    });
+  }
+
   function openOrganizacionEditModal_(data = {}) {
     const modal = document.getElementById('org-edit-modal');
     const form = document.getElementById('org-edit-form');
@@ -1540,6 +1648,66 @@
 
   function closeOrganizacionEditModal_() {
     document.getElementById('org-edit-modal')?.classList.add('is-hidden');
+  }
+
+  function openOrganizacionSocioCargoModal_(socioId) {
+    const detalle = APP.state.currentOrganizacionDetalle || {};
+    const socio = (detalle.socios || []).find(row => String(row.socio_id || '') === String(socioId || ''));
+    if (!socio) {
+      showError('No se encontró el socio seleccionado.');
+      return;
+    }
+
+    const modal = document.getElementById('org-socio-cargo-modal');
+    const id = document.getElementById('org-socio-cargo-id');
+    const nombre = document.getElementById('org-socio-cargo-nombre');
+    const run = document.getElementById('org-socio-cargo-run');
+    const actual = document.getElementById('org-socio-cargo-actual');
+    const select = document.getElementById('org-socio-cargo-select');
+    if (!modal || !id || !select) return;
+
+    id.value = socio.socio_id || '';
+    if (nombre) nombre.textContent = socio.nombre_socio || 'Socio';
+    if (run) run.textContent = socio.run_socio || '';
+    if (actual) actual.textContent = socio.cargo || 'Sin cargo';
+    fillSelect(select, ORGANIZACION_SOCIO_CARGOS, 'Seleccionar cargo');
+    select.value = ORGANIZACION_SOCIO_CARGOS.includes(socio.cargo) ? socio.cargo : 'Socio';
+
+    modal.classList.remove('is-hidden');
+  }
+
+  function closeOrganizacionSocioCargoModal_() {
+    document.getElementById('org-socio-cargo-modal')?.classList.add('is-hidden');
+  }
+
+  function saveOrganizacionSocioCargo_(ev) {
+    ev.preventDefault();
+    const org = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.organizacion;
+    const socioId = String(document.getElementById('org-socio-cargo-id')?.value || '').trim();
+    const cargo = String(document.getElementById('org-socio-cargo-select')?.value || '').trim();
+
+    if (!org || !org.organizacion_id || !socioId) {
+      showError('No se encontró el socio u organización seleccionada.');
+      return;
+    }
+
+    if (!ORGANIZACION_SOCIO_CARGOS.includes(cargo)) {
+      showError('Debes seleccionar un cargo válido.');
+      return;
+    }
+
+    showContentLoading('Actualizando cargo...');
+    api('actualizarCargoSocioOrganizacion', {
+      organizacion_id: org.organizacion_id,
+      socio_id: socioId,
+      cargo: cargo
+    }).then(() => {
+      closeOrganizacionSocioCargoModal_();
+      showSuccess('Cargo de socio actualizado.');
+      return loadOrganizacionDetalle_(org.organizacion_id);
+    }).catch(showError).finally(() => {
+      hideContentLoading();
+    });
   }
 
   function saveOrganizacionDesdeModulo_(ev) {

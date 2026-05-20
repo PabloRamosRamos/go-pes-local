@@ -93,7 +93,7 @@ function requireAnyModuleAccess_(moduleKeys, allowedRoles) {
 function listUsers() {
   const user = requireRole_(['superuser']);
 
-  const rows = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS)
+  const rows = (getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS) || [])
     .map(decorateUser_)
     .sort((a, b) => String(a.nombre_visible).localeCompare(String(b.nombre_visible)));
 
@@ -152,7 +152,7 @@ function updateUser(payload) {
 function seedSuperUsers_() {
   ensureSheetsSubset_([GO_PES_V2.SHEETS.DIM_USUARIOS]);
 
-  GO_PES_V2.SUPERUSERS.forEach(email => {
+  getConfiguredSuperUsers_().forEach(email => {
     upsertByKey_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', {
       user_id: nextIdIfMissing_('usuario', 'USR', GO_PES_V2.SHEETS.DIM_USUARIOS, 'user_id', 'email', email),
       email: email,
@@ -224,11 +224,12 @@ function touchUserLastActivity_(email, forceWrite) {
 }
 
 function decorateUser_(row) {
+  row = row || {};
   const active = toBool_(row.activo_flag);
   const superFlag = toBool_(row.superuser_flag) || isConfiguredSuperUserEmail_(row.email);
   const profile = superFlag ? 'superuser' : (row.perfil || 'operador');
   const modules = superFlag
-    ? getModuleDefinitions_().map(function(m) { return m.key; })
+    ? safeModuleDefinitions_().map(function(m) { return m.key; })
     : parseUserModules_(row.modulos_permitidos, profile);
 
   return {
@@ -304,15 +305,15 @@ function defaultModulesForRole_(role) {
 function parseUserModules_(value, role) {
   const raw = String(value || '').trim();
   if (!raw) return defaultModulesForRole_(role);
-  if (raw === '*') return getModuleDefinitions_().map(function(m) { return m.key; });
-  const allowedKeys = getModuleDefinitions_().map(function(m) { return m.key; });
+  if (raw === '*') return safeModuleDefinitions_().map(function(m) { return m.key; });
+  const allowedKeys = safeModuleDefinitions_().map(function(m) { return m.key; });
   return uniqueNonBlank_(raw.split(',').map(function(x) { return String(x || '').trim(); }))
     .filter(function(key) { return allowedKeys.indexOf(key) !== -1; });
 }
 
 function normalizeModulePermissionsInput_(value) {
   const modules = Array.isArray(value) ? value : String(value || '').split(',');
-  const allowedKeys = getModuleDefinitions_()
+  const allowedKeys = safeModuleDefinitions_()
     .filter(function(m) { return !m.superOnly; })
     .map(function(m) { return m.key; });
   const normalized = uniqueNonBlank_(modules.map(function(x) { return String(x || '').trim(); }))
@@ -335,14 +336,23 @@ function userModuleAllowed_(user, moduleKey) {
 
 function buildUserModulePermissionMap_(user) {
   const map = {};
-  getModuleDefinitions_().forEach(function(module) {
+  safeModuleDefinitions_().forEach(function(module) {
     map[module.key] = userModuleAllowed_(user, module.key);
   });
   return map;
 }
 
 function isConfiguredSuperUserEmail_(email) {
-  return GO_PES_V2.SUPERUSERS.map(normalizeText_).indexOf(normalizeText_(email)) !== -1;
+  return getConfiguredSuperUsers_().map(normalizeText_).indexOf(normalizeText_(email)) !== -1;
+}
+
+function getConfiguredSuperUsers_() {
+  return Array.isArray(GO_PES_V2.SUPERUSERS) ? GO_PES_V2.SUPERUSERS : [];
+}
+
+function safeModuleDefinitions_() {
+  const defs = getModuleDefinitions_();
+  return Array.isArray(defs) ? defs : [];
 }
 
 function ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail) {
@@ -395,7 +405,7 @@ function getCurrentUserEmail_() {
 
   try {
     const effective = Session.getEffectiveUser().getEmail();
-    if (effective && GO_PES_V2.SUPERUSERS.map(normalizeText_).includes(normalizeText_(effective))) {
+    if (effective && getConfiguredSuperUsers_().map(normalizeText_).includes(normalizeText_(effective))) {
       return effective;
     }
   } catch (err) {}

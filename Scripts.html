@@ -2259,6 +2259,7 @@
         return;
       }
 
+      rows = Array.isArray(rows) ? rows : [];
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td>${escapeHtml(formatFechaHoraUi_(r.timestamp || ''))}</td>
@@ -2283,6 +2284,7 @@
         ? 'Todos'
         : moduleLabelsFromKeys_(String(user.modulos_permitidos || '').split(','));
 
+      rows = Array.isArray(rows) ? rows : [];
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td>${escapeHtml(r.email)}</td>

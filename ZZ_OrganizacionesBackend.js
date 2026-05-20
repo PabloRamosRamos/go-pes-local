@@ -40,6 +40,18 @@ function getOrganizacionModuloDetalle(payload) {
   const avanceHitos = goPesOrgGetSheetRowsSafe_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'organizacion_id', organizacionId);
   const avanceEstados = goPesOrgGetSheetRowsSafe_(GO_PES_V2.SHEETS.FACT_AVANCE_ESTADO, 'organizacion_id', organizacionId);
   const avanceVista = goPesOrgGetSheetRowsSafe_(GO_PES_V2.SHEETS.VW_AVANCE_ORGANIZACION, 'organizacion_id', organizacionId)[0] || {};
+  const hitoNacimiento = avanceHitos
+    .filter(function(r) {
+      return String(r.codigo_hito || '').trim().toUpperCase() === 'PRE_05';
+    })
+    .sort(function(a, b) {
+      return new Date(a.fecha_hito || a.timestamp_registro || 0) - new Date(b.fecha_hito || b.timestamp_registro || 0);
+    })[0] || null;
+  const fechaAntiguedad = (hitoNacimiento && hitoNacimiento.fecha_hito)
+    || org.fecha_asamblea_constitucion
+    || org.fecha_inicio_acompanamiento
+    || org.updated_at
+    || '';
   const historial = (getSheetData_(GO_PES_V2.SHEETS.LOG_ACCIONES) || [])
     .filter(function(r) {
       return String(r.entity_id || '') === organizacionId || String(r.detail || '').indexOf(organizacionId) !== -1;
@@ -59,7 +71,9 @@ function getOrganizacionModuloDetalle(payload) {
       cantidad_hitos_legacy: hitosLegacy.length,
       cantidad_avance_hitos: avanceHitos.length,
       estado_avance: String((avanceEstados[0] && avanceEstados[0].estado_avance) || avanceVista.estado_avance || ''),
-      ultimo_hito: String((avanceHitos[0] && (avanceHitos[0].nombre_hito || avanceHitos[0].codigo_hito)) || (hitosLegacy[0] && hitosLegacy[0].hito) || '')
+      ultimo_hito: String((avanceHitos[0] && (avanceHitos[0].nombre_hito || avanceHitos[0].codigo_hito)) || (hitosLegacy[0] && hitosLegacy[0].hito) || ''),
+      fecha_antiguedad_organizacion: fechaAntiguedad,
+      fuente_fecha_antiguedad_organizacion: hitoNacimiento ? 'PRE_05' : (fechaAntiguedad ? 'organizacion' : '')
     },
     socios: socios.slice(0, 20),
     instrumentos: instrumentos.slice(0, 20),

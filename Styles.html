@@ -1979,12 +1979,38 @@
     align-items: center;
   }
 
-  .organizaciones-actions,
-  .organizaciones-badges {
+  .organizaciones-actions {
     display: flex;
     gap: var(--space-3);
     flex-wrap: wrap;
     justify-content: flex-end;
+  }
+
+  .organizaciones-age-card {
+    justify-self: end;
+    min-width: 190px;
+    padding: var(--space-4) var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--brand-blue-soft);
+    text-align: right;
+  }
+
+  .organizaciones-age-card span {
+    display: block;
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  .organizaciones-age-card strong {
+    display: block;
+    margin-top: 4px;
+    color: var(--brand-blue-dark);
+    font-size: var(--font-size-xl);
+    line-height: var(--line-tight);
   }
 
   .organizaciones-selector-panel {
@@ -2185,6 +2211,12 @@
     .organizaciones-summary {
       flex-direction: column;
       align-items: flex-start;
+    }
+
+    .organizaciones-age-card {
+      justify-self: stretch;
+      width: 100%;
+      text-align: left;
     }
 
     .organizaciones-actions {

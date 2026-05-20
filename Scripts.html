@@ -1033,17 +1033,16 @@
     if (!date) return 'Sin antigüedad disponible';
 
     const today = new Date();
-    let years = today.getFullYear() - date.getFullYear();
-    let months = today.getMonth() - date.getMonth();
+    const diffMs = today.getTime() - date.getTime();
+    const days = Math.max(0, Math.floor(diffMs / 86400000));
+    const totalMonths = Math.floor(days / 30);
 
-    if (today.getDate() < date.getDate()) months -= 1;
-    if (months < 0) {
-      years -= 1;
-      months += 12;
+    if (totalMonths < 12) {
+      return `${totalMonths} ${totalMonths === 1 ? 'mes' : 'meses'}`;
     }
 
-    years = Math.max(0, years);
-    months = Math.max(0, months);
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
 
     return `${years} ${years === 1 ? 'año' : 'años'} y ${months} ${months === 1 ? 'mes' : 'meses'}`;
   }
@@ -1524,10 +1523,9 @@
           <h3>${escapeHtml(org.nombre_organizacion || 'Sin nombre')}</h3>
           <p class="muted">${escapeHtml(org.organizacion_id || '')}</p>
         </div>
-        <div class="organizaciones-badges">
-          <span class="badge">${escapeHtml(org.estado_general_organizacion || 'Sin estado')}</span>
-          <span class="badge">${escapeHtml(org.estado_constitucion || 'Sin constitución')}</span>
-          ${r.estado_avance ? `<span class="badge">${escapeHtml(r.estado_avance)}</span>` : ''}
+        <div class="organizaciones-age-card">
+          <span>Antigüedad</span>
+          <strong>${escapeHtml(formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}</strong>
         </div>
       </div>
 

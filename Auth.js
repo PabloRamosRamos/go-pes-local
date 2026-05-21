@@ -477,8 +477,8 @@ function buildPermissionMap_(user) {
     canEditRequisito: can('requisito'),
     canImportSocios: can('socios'),
     canViewHistorial: can('historial'),
-    canManageUsers: isSuper,
-    canResetData: isSuper,
+    canManageUsers: canAccess && isSuper,
+    canResetData: canAccess && isSuper,
     canAdmin: isSuper || role === 'administrador',
     modules: buildUserModulePermissionMap_(user)
   };
@@ -599,19 +599,7 @@ function logUserAction_(action, entityType, entityId, result, detail) {
 function getCurrentUserEmail_() {
   try {
     const email = Session.getActiveUser().getEmail();
-    if (email) return email;
-  } catch (err) {}
-
-  try {
-    const devEmail = PropertiesService.getScriptProperties().getProperty('GO_PES_DEV_EMAIL');
-    if (devEmail) return devEmail;
-  } catch (err) {}
-
-  try {
-    const effective = Session.getEffectiveUser().getEmail();
-    if (effective && getConfiguredSuperUsers_().map(normalizeText_).includes(normalizeText_(effective))) {
-      return effective;
-    }
+    if (email) return String(email || '').trim();
   } catch (err) {}
 
   return '';

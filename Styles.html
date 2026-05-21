@@ -452,6 +452,28 @@
     border-color: var(--border-strong);
   }
 
+  .app-version {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    letter-spacing: .04em;
+    text-align: center;
+    opacity: .78;
+    white-space: nowrap;
+  }
+
+  .app-version.is-hidden {
+    display: none;
+  }
+
+  .layout.is-sidebar-collapsed .app-version {
+    font-size: 10px;
+    letter-spacing: 0;
+  }
+
   .content {
     position: relative;
     min-height: 320px;

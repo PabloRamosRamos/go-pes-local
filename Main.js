@@ -6,6 +6,7 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
   VERSION: '2.1.0-modular',
+  ENVIRONMENT: 'DEV',
   SUPERUSERS: [
     'pablo.ramos@providencia.cl'
   ],
@@ -165,6 +166,8 @@ function buildBootstrapForTemplate_(e) {
     programTitle: GO_PES_V2.PROGRAM_TITLE,
     subtitle: GO_PES_V2.SUBTITLE,
     version: GO_PES_V2.VERSION,
+    environment: GO_PES_V2.ENVIRONMENT,
+    versionLabel: getAppVersionLabel_(),
     colors: GO_PES_V2.COLORS,
     initialView: initialView,
     query: params,
@@ -201,6 +204,8 @@ function getAppBootstrap() {
     programTitle: GO_PES_V2.PROGRAM_TITLE,
     subtitle: GO_PES_V2.SUBTITLE,
     version: GO_PES_V2.VERSION,
+    environment: GO_PES_V2.ENVIRONMENT,
+    versionLabel: getAppVersionLabel_(),
     colors: GO_PES_V2.COLORS,
     user: user,
     permissions: buildPermissionMap_(user),
@@ -208,6 +213,12 @@ function getAppBootstrap() {
     moduleDefinitions: getModuleDefinitions_(),
     catalogs: {}
   });
+}
+
+function getAppVersionLabel_() {
+  const version = String(GO_PES_V2.VERSION || '').trim();
+  const environment = String(GO_PES_V2.ENVIRONMENT || '').trim().toUpperCase();
+  return [version ? `v${version}` : '', environment].filter(Boolean).join(' · ');
 }
 
 function fijarSpreadsheetPES_() {

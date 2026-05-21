@@ -163,6 +163,7 @@
     bindGlobalNav();
     initSidebarCollapse_();
     hydrateStaticUser();
+    hydrateAppVersion_();
     hydrateLogo();
     renderQuickActions();
     renderHomeTiles();
@@ -250,6 +251,15 @@
       }
       applyState(collapsed);
     });
+  }
+
+  function hydrateAppVersion_() {
+    const el = document.getElementById('app-version');
+    if (!el) return;
+    const label = BOOTSTRAP.versionLabel || (BOOTSTRAP.version ? `v${BOOTSTRAP.version}` : '');
+    el.textContent = label;
+    el.title = label ? `Versión ${label}` : '';
+    el.classList.toggle('is-hidden', !label);
   }
 
   function api(fn, payload) {

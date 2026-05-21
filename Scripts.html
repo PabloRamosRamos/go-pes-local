@@ -36,9 +36,9 @@
 (() => {
   const root = document.getElementById('app');
   const BOOTSTRAP = root ? JSON.parse(root.dataset.bootstrap || '{}') : {};
-  // Configuracion temporal del mapa My Maps de Socios.
-  const SOCIOS_MY_MAPS_EMBED_URL =
-    (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.sociosMyMapsEmbedUrl) || '';
+  // Configuracion temporal del panel Looker Studio de Socios.
+  const SOCIOS_LOOKER_STUDIO_EMBED_URL =
+    (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.sociosLookerStudioEmbedUrl) || '';
 
   const APP = {
     state: {
@@ -448,7 +448,7 @@
       ['search', 'Buscar vecino', 'Encontrar vecinos, solicitudes u organizaciones', 'buscar'],
       ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'seguimiento'],
       ['groups', 'Organizaciones', 'Consultar y administrar organizaciones', 'organizacion'],
-      ['badge', 'Socios', 'Mapa y carga de socios', 'socios'],
+      ['badge', 'Socios', 'Visualización y carga de socios', 'socios'],
       ['handshake', 'Gestionar instrumentos', 'Beneficios, fondos e instrumentos', 'instrumento'],
       ['inventory_2', 'Registrar requisitos', 'Control documental por instrumento', 'requisito']
     ];
@@ -474,7 +474,7 @@
       ['Nuevo ingreso', 'Registrar la solicitud inicial del vecino.', 'person_add', 'nuevo-ingreso'],
       ['Avance', 'Registrar hitos del proceso de constitución.', 'event_note', 'seguimiento'],
       ['Organizaciones', 'Consultar y administrar organizaciones.', 'groups', 'organizacion'],
-      ['Socios', 'Mapa y carga manual o masiva.', 'badge', 'socios'],
+      ['Socios', 'Visualización y carga manual o masiva.', 'badge', 'socios'],
       ['Instrumentos', 'Gestionar beneficios, fondos y otros apoyos.', 'handshake', 'instrumento'],
       ['Requisitos', 'Registrar o validar documentación.', 'inventory_2', 'requisito']
     ];
@@ -2020,8 +2020,8 @@
         <div class="section-head socios-head">
           <div>
             <p class="eyebrow">Socios</p>
-            <h2>Mapa y carga de socios</h2>
-            <p class="muted">Visualiza el mapa temporal de socios y registra cargas asociadas a un comité existente.</p>
+            <h2>Visualización y carga de socios</h2>
+            <p class="muted">Visualiza el panel de socios y registra cargas asociadas a un comité existente.</p>
           </div>
           <div class="socios-actions">
             <button type="button" class="secondary-btn" id="socios-open-bulk-btn">
@@ -2033,10 +2033,10 @@
           </div>
         </div>
 
-        <div class="socios-map-panel">
-          ${SOCIOS_MY_MAPS_EMBED_URL
-            ? `<iframe class="socios-map" src="${escapeHtml(SOCIOS_MY_MAPS_EMBED_URL)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Mapa de socios"></iframe>`
-            : `<div class="socios-map socios-map--empty"><span class="material-symbols-outlined">map</span><strong>Mapa My Maps pendiente de configuración</strong><span>Define la URL en <code>SOCIOS_MY_MAPS_EMBED_URL</code> para mostrar el mapa embebido.</span></div>`}
+        <div class="socios-embed-panel">
+          ${SOCIOS_LOOKER_STUDIO_EMBED_URL
+            ? `<iframe class="socios-embed" width="600" height="450" src="${escapeHtml(SOCIOS_LOOKER_STUDIO_EMBED_URL)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" title="Panel de socios"></iframe>`
+            : `<div class="socios-embed socios-embed--empty"><span class="material-symbols-outlined">analytics</span><strong>Panel Looker Studio pendiente de configuración</strong><span>Define la URL en <code>SOCIOS_LOOKER_STUDIO_EMBED_URL</code> para mostrar el panel embebido.</span></div>`}
         </div>
 
         <div id="socios-preview" class="socios-preview"></div>

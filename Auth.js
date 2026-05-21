@@ -263,6 +263,10 @@ function normalizeHeaderKey_(value) {
 }
 
 function normalizeUserBoolLike_(value, defaultValue) {
+  if (value === true || value === false) return value;
+  if (value === 1 || value === '1') return true;
+  if (value === 0 || value === '0') return false;
+
   const normalized = normalizeText_(value);
   if (!normalized) return defaultValue;
   if (['si', 'sí', 'true', '1', 'activo', 'activa', 'active'].indexOf(normalized) !== -1) return true;

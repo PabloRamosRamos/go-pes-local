@@ -90,6 +90,7 @@
             <span class="material-symbols-outlined" id="sidebar-toggle-icon">keyboard_double_arrow_left</span>
             <span class="sidebar-toggle__label" id="sidebar-toggle-label">Modulos</span>
           </button>
+          <button class="nav-btn is-hidden" data-view="inicio" title="Inicio"><span class="material-symbols-outlined">home</span><span class="nav-label">Inicio</span></button>
           <button class="nav-btn is-hidden" data-view="nuevo-ingreso" title="Nuevo ingreso"><span class="material-symbols-outlined">person_add</span><span class="nav-label">Nuevo ingreso</span></button>
           <button class="nav-btn is-hidden" data-view="buscar" title="Buscar vecino"><span class="material-symbols-outlined">search</span><span class="nav-label">Buscar vecino</span></button>
           <button class="nav-btn is-hidden" data-view="seguimiento" title="Registrar avance"><span class="material-symbols-outlined">event_note</span><span class="nav-label">Registrar avance</span></button>
@@ -110,14 +111,7 @@
             </div>
           </div>
           <section class="view active" id="view-inicio">
-            <div class="section-head">
-              <div>
-                <p class="eyebrow">Portal operativo</p>
-                <h2>Accesos principales</h2>
-                <p class="muted">Selecciona una acción para continuar. Toda la operación se realiza desde esta interfaz.</p>
-              </div>
-            </div>
-
+            <div id="inicio-root"></div>
           </section>
 
           <section class="view" id="view-buscar">
@@ -419,6 +413,7 @@
     <script>
       window.GO_PES_TEMPLATE = {
         logoDataUri: <?!= JSON.stringify(logoDataUri || '') ?>,
+        homeLookerStudioEmbedUrl: "https://datastudio.google.com/embed/reporting/bc4833f8-43c1-4df8-a96b-4cb794228f7c/page/tYkyF",
         sociosLookerStudioEmbedUrl: "https://datastudio.google.com/embed/reporting/bc4833f8-43c1-4df8-a96b-4cb794228f7c/page/tYkyF"
       };
     </script>

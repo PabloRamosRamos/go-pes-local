@@ -2045,6 +2045,29 @@
     display: none;
   }
 
+  .socios-manual-feedback {
+    margin: var(--space-4) 0 0;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-lg);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .socios-manual-feedback--error {
+    border: 1px solid var(--danger);
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+
+  .socios-manual-feedback--loading {
+    border: 1px solid var(--brand-blue);
+    background: var(--brand-blue-soft);
+    color: var(--brand-blue-dark);
+  }
+
+  .socios-manual-feedback.is-hidden {
+    display: none;
+  }
+
   @media (max-width: 900px) {
     .socios-head {
       align-items: flex-start;

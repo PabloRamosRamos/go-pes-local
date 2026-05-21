@@ -74,11 +74,11 @@
 
   const ORGANIZACION_SOCIO_CARGOS = [
     'Presidente',
-    'Secretario',
     'Tesorero',
+    'Secretario',
     'Director',
-    'Comisión de Finanzas',
-    'Comisión Electoral',
+    'Comisión electoral',
+    'Comision de finanzas',
     'Socio'
   ];
 
@@ -2121,11 +2121,17 @@
             <div class="field field--half"><label>Número registro</label><input id="socios-manual-registro" type="text"></div>
             <div class="field field--full"><label>Nombre socio</label><input id="socios-manual-nombre" type="text"></div>
             <div class="field field--half"><label>Edad</label><input id="socios-manual-edad" type="number"></div>
-            <div class="field field--half"><label>Cargo</label><input id="socios-manual-cargo" type="text"></div>
+            <div class="field field--half">
+              <label>Cargo</label>
+              <select id="socios-manual-cargo">
+                <option value="">Seleccionar cargo</option>
+                ${ORGANIZACION_SOCIO_CARGOS.map(cargo => `<option value="${escapeHtml(cargo)}">${escapeHtml(cargo)}</option>`).join('')}
+              </select>
+            </div>
             <div class="field field--full"><label>Dirección socio</label><input id="socios-manual-direccion" type="text"></div>
-            <div class="field field--full"><label>Ubicación socio</label><input id="socios-manual-ubicacion" type="text"></div>
           </div>
 
+          <div id="socios-manual-feedback" class="socios-manual-feedback is-hidden" aria-live="polite"></div>
           <div id="socios-manual-last-message" class="socios-manual-message is-hidden" aria-live="polite"></div>
 
           <div class="actions">
@@ -2175,6 +2181,7 @@
 
   function openSociosModal_(id) {
     refreshSociosComites_();
+    clearSociosManualFeedback_();
     document.getElementById(id)?.classList.remove('is-hidden');
   }
 
@@ -2214,12 +2221,14 @@
 
   function saveSocioManual_(options = {}) {
     const keepOpen = !!options.keepOpen;
+    clearSociosManualFeedback_();
     const selected = getSelectedSociosOrganizacion_('socios-manual-organizacion');
     if (!selected.organizacionId) {
-      showError('Debes seleccionar un comité.');
+      showSociosManualFeedback_('Debes seleccionar un comité.', 'error');
       return;
     }
 
+    const direccionSocio = document.getElementById('socios-manual-direccion')?.value.trim() || '';
     const row = {
       organizacion_id: selected.organizacionId,
       run_socio: document.getElementById('socios-manual-run')?.value.trim() || '',
@@ -2227,26 +2236,51 @@
       nombre_socio: document.getElementById('socios-manual-nombre')?.value.trim() || '',
       edad: document.getElementById('socios-manual-edad')?.value.trim() || '',
       cargo: document.getElementById('socios-manual-cargo')?.value.trim() || '',
-      direccion_socio: document.getElementById('socios-manual-direccion')?.value.trim() || '',
-      ubicacion_socio: document.getElementById('socios-manual-ubicacion')?.value.trim() || '',
+      direccion_socio: direccionSocio,
+      ubicacion_socio: buildSocioUbicacionFromDireccion_(direccionSocio),
       nombre_comite_origen: selected.nombreComite
     };
 
     if (!row.nombre_socio) {
-      showError('Debes indicar el nombre del socio.');
+      showSociosManualFeedback_('Debes indicar el nombre del socio.', 'error');
+      return;
+    }
+    if (!row.cargo || !ORGANIZACION_SOCIO_CARGOS.includes(row.cargo)) {
+      showSociosManualFeedback_('Debes seleccionar un cargo válido.', 'error');
       return;
     }
 
+    setSociosManualSubmitting_(true);
+    if (keepOpen) {
+      showSociosManualFeedback_('Guardando socio...', 'loading');
+    } else {
+      closeSociosModals_();
+      showContentLoading('Guardando socio...');
+    }
+
     api('importarSocios', { rows: [row] }).then(res => {
-      showSuccess(`Socio guardado: ${res.imported} de ${res.total}`);
-      if (keepOpen) {
-        showSociosManualLastMessage_(row.nombre_socio);
-        clearSociosManualFields_();
-      } else {
-        closeSociosModals_();
+      if (!res || res.ok === false) {
+        const detail = res && Array.isArray(res.errors) && res.errors[0] ? res.errors[0].error : 'No se pudo guardar el socio.';
+        throw new Error(detail);
       }
-      renderSociosManualSavedPreview_(row);
-    }).catch(showError);
+      const saved = (res && Array.isArray(res.importedRows) && res.importedRows[0]) || row;
+      if (keepOpen) {
+        showSociosManualLastMessage_(saved);
+        clearSociosManualFields_();
+        clearSociosManualFeedback_();
+      } else {
+        showSuccess(`Socio guardado: ${res.imported} de ${res.total}`);
+      }
+      renderSociosManualSavedPreview_(saved);
+    }).catch(err => {
+      if (!keepOpen) {
+        document.getElementById('socios-manual-modal')?.classList.remove('is-hidden');
+      }
+      showSociosManualFeedback_(getErrorMessage_(err), 'error');
+    }).finally(() => {
+      setSociosManualSubmitting_(false);
+      if (!keepOpen) hideContentLoading();
+    });
   }
 
   function clearSociosManualFields_() {
@@ -2256,8 +2290,7 @@
       'socios-manual-nombre',
       'socios-manual-edad',
       'socios-manual-cargo',
-      'socios-manual-direccion',
-      'socios-manual-ubicacion'
+      'socios-manual-direccion'
     ].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -2265,11 +2298,41 @@
     document.getElementById('socios-manual-run')?.focus();
   }
 
-  function showSociosManualLastMessage_(nombreSocio) {
+  function buildSocioUbicacionFromDireccion_(direccion) {
+    const value = String(direccion || '').trim();
+    return value ? `${value}, Providencia` : '';
+  }
+
+  function showSociosManualLastMessage_(socio) {
     const el = document.getElementById('socios-manual-last-message');
     if (!el) return;
-    el.textContent = `Último socio agregado: ${nombreSocio}`;
+    const nombre = socio && socio.nombre_socio ? socio.nombre_socio : 'Socio';
+    const numero = socio && (socio.numero_registro || socio.socio_id) ? ` · Socio N° ${socio.numero_registro || socio.socio_id}` : '';
+    el.textContent = `Último socio agregado: ${nombre}${numero}`;
     el.classList.remove('is-hidden');
+  }
+
+  function showSociosManualFeedback_(message, type = 'error') {
+    const el = document.getElementById('socios-manual-feedback');
+    if (!el) return;
+    el.className = `socios-manual-feedback socios-manual-feedback--${type}`;
+    el.textContent = message || '';
+    el.classList.toggle('is-hidden', !message);
+  }
+
+  function clearSociosManualFeedback_() {
+    showSociosManualFeedback_('', 'error');
+  }
+
+  function setSociosManualSubmitting_(isSubmitting) {
+    ['socios-manual-save-btn', 'socios-manual-save-add-btn'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = !!isSubmitting;
+    });
+  }
+
+  function getErrorMessage_(err) {
+    return err && err.message ? err.message : String(err || 'No se pudo completar la operación.');
   }
 
   function renderSociosManualSavedPreview_(row) {

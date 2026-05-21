@@ -77,7 +77,13 @@ function importarSocios(payload) {
   });
   logProcessing_('INFO', 'importarSocios', 'socios', '', user.email, errors.length ? 'PARCIAL' : 'OK', { total: rows.length, validos: validRows.length, errores: errors.length });
   logUserAction_('IMPORT_SOCIOS', 'socios', '', errors.length ? 'PARCIAL' : 'OK', { total: rows.length, errores: errors });
-  const result = { ok: errors.length === 0, total: rows.length, imported: validRows.length, errors: errors };
+  const result = {
+    ok: errors.length === 0,
+    total: rows.length,
+    imported: validRows.length,
+    errors: errors,
+    importedRows: serializeForClient_(factRows)
+  };
   goPesDiagEnd_(diag, {
     ok: result.ok,
     imported: validRows.length,
@@ -131,11 +137,11 @@ function actualizarCargoSocioOrganizacion(payload) {
 function goPesSocioCargoPermitido_(cargo) {
   return [
     'Presidente',
-    'Secretario',
     'Tesorero',
+    'Secretario',
     'Director',
-    'Comisión de Finanzas',
-    'Comisión Electoral',
+    'Comisión electoral',
+    'Comision de finanzas',
     'Socio'
   ].indexOf(String(cargo || '').trim()) !== -1;
 }

@@ -7,55 +7,60 @@ function getUsuarioActual() {
     return Object.assign({}, GO_PES_RUNTIME.currentUser);
   }
 
-  const email = getCurrentUserEmail_();
-  const normalizedEmail = normalizeEmail_(email);
-  const usersResult = readDimUsuariosUsers_();
-  const users = usersResult.users;
-  let user = users.find(r => normalizeEmail_(r.email) === normalizedEmail);
+  return buildUnauthenticatedUser_('Sesion no autenticada con Google Identity Services.');
+}
 
-  if (!user && email && isConfiguredSuperUserEmail_(email)) {
-    user = syncCurrentUser_();
+function buildUnauthenticatedUser_(reason) {
+  return {
+    user_id: '',
+    email: '',
+    detected_email: '',
+    nombre_visible: 'Usuario sin autenticar',
+    perfil: 'operador',
+    activo_flag: false,
+    superuser_flag: false,
+    canAccess: false,
+    authRequired: true,
+    reason: reason || 'Debes autenticarte con Google para ingresar.'
+  };
+}
+
+function authenticateWithGoogle(payload) {
+  const idToken = payload && payload.idToken ? String(payload.idToken) : '';
+  const identity = validateGoogleIdentityToken_(idToken);
+  const user = resolveUserByVerifiedEmail_(identity.email, 'GOOGLE_IDENTITY');
+  const permissions = buildPermissionMap_(user);
+  const initialView = getFirstAllowedView_(permissions);
+
+  return serializeForClient_({
+    ok: !!user.canAccess,
+    user: user,
+    permissions: permissions,
+    initialView: initialView,
+    moduleDefinitions: getModuleDefinitions_(),
+    catalogs: {}
+  });
+}
+
+function apiCall(fnName, payload, idToken) {
+  const identity = validateGoogleIdentityToken_(idToken);
+  const user = resolveUserByVerifiedEmail_(identity.email, 'GOOGLE_IDENTITY_API');
+  if (!user.canAccess) {
+    throw new Error(user.reason || 'Usuario sin acceso al sistema.');
   }
 
-  if (!user) {
-    const anonymous = {
-      user_id: '',
-      email: email || '',
-      nombre_visible: email || 'Usuario sin identificar',
-      perfil: 'operador',
-      activo_flag: false,
-      superuser_flag: false,
-      detected_email: email || '',
-      canAccess: false,
-      reason: email
-        ? 'Usuario no registrado o inactivo en DIM_Usuarios.'
-        : 'No se pudo identificar el correo real del usuario en esta ejecucion.'
-    };
-    GO_PES_RUNTIME.currentUser = anonymous;
-    GO_PES_RUNTIME.currentUserEmail = email || '';
-    logAccess_('ACCESS_DENIED', {
-      resolved_email: email || '',
-      reason: anonymous.reason,
-      dim_usuarios_headers: usersResult.headers || [],
-      dim_usuarios_total_rows: usersResult.totalRows || 0
-    });
-    return Object.assign({}, anonymous);
-  }
+  GO_PES_RUNTIME.currentUser = user;
+  GO_PES_RUNTIME.currentUserEmail = user.email || identity.email || '';
 
-  const decorated = decorateUser_(user);
-  decorated.detected_email = email || decorated.email || '';
-  if (!decorated.canAccess) {
-    decorated.reason = 'Usuario registrado pero inactivo en DIM_Usuarios.';
-    logAccess_('ACCESS_DENIED', {
-      resolved_email: email || decorated.email || '',
-      reason: decorated.reason,
-      dim_usuarios_headers: usersResult.headers || [],
-      dim_usuarios_total_rows: usersResult.totalRows || 0
-    });
+  const allowed = getApiCallWhitelist_();
+  if (allowed.indexOf(String(fnName || '')) === -1) {
+    throw new Error('Funcion no autorizada por el dispatcher.');
   }
-  GO_PES_RUNTIME.currentUser = decorated;
-  GO_PES_RUNTIME.currentUserEmail = email || decorated.email || '';
-  return Object.assign({}, decorated);
+  const fn = globalThis[fnName];
+  if (typeof fn !== 'function') {
+    throw new Error('Funcion no encontrada.');
+  }
+  return fn(payload);
 }
 
 function requireRole_(allowedRoles) {
@@ -533,6 +538,61 @@ function buildPermissionMap_(user) {
   };
 }
 
+function resolveUserByVerifiedEmail_(email, source) {
+  const normalizedEmail = normalizeEmail_(email);
+  const usersResult = readDimUsuariosUsers_();
+  const users = usersResult.users;
+  const user = users.find(function(row) {
+    return normalizeEmail_(row.email) === normalizedEmail;
+  });
+
+  const deny = function(reason) {
+    const denied = buildUnauthenticatedUser_(reason);
+    denied.email = normalizedEmail;
+    denied.detected_email = normalizedEmail;
+    logAccess_('ACCESS_DENIED', {
+      source: source || '',
+      resolved_email: normalizedEmail,
+      reason: reason,
+      dim_usuarios_headers: usersResult.headers || [],
+      dim_usuarios_total_rows: usersResult.totalRows || 0
+    });
+    return denied;
+  };
+
+  if (!normalizedEmail) {
+    return deny('No se pudo verificar el correo de Google.');
+  }
+  if (!isAllowedIdentityEmail_(normalizedEmail)) {
+    return deny('El correo no pertenece al dominio autorizado.');
+  }
+  if (!user) {
+    return deny('Usuario no registrado en DIM_Usuarios.');
+  }
+
+  const decorated = decorateUser_(user);
+  decorated.detected_email = normalizedEmail;
+  if (!decorated.canAccess) {
+    decorated.reason = 'Usuario registrado pero inactivo en DIM_Usuarios.';
+    logAccess_('ACCESS_DENIED', {
+      source: source || '',
+      resolved_email: normalizedEmail,
+      reason: decorated.reason,
+      dim_usuarios_headers: usersResult.headers || [],
+      dim_usuarios_total_rows: usersResult.totalRows || 0
+    });
+  } else {
+    logAccess_('AUTH_OK', { source: source || '', resolved_email: normalizedEmail });
+  }
+  return decorated;
+}
+
+function isAllowedIdentityEmail_(email) {
+  const normalized = normalizeEmail_(email);
+  if (isConfiguredSuperUserEmail_(normalized)) return true;
+  return /@providencia\.cl$/.test(normalized);
+}
+
 function getModuleDefinitions_() {
   return [
     { key: 'inicio', label: 'Inicio', view: 'inicio' },
@@ -615,6 +675,86 @@ function normalizeEmail_(value) {
     .replace(/\s+/g, '');
 }
 
+function getGoogleIdentityClientId_() {
+  try {
+    return PropertiesService.getScriptProperties().getProperty('GO_PES_GOOGLE_CLIENT_ID') || '';
+  } catch (err) {
+    return '';
+  }
+}
+
+function validateGoogleIdentityToken_(idToken) {
+  if (!idToken) {
+    throw new Error('Falta credencial de Google.');
+  }
+
+  const clientId = getGoogleIdentityClientId_();
+  if (!clientId) {
+    throw new Error('Falta configurar GO_PES_GOOGLE_CLIENT_ID.');
+  }
+
+  const res = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken), {
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) {
+    throw new Error('No se pudo validar la credencial de Google.');
+  }
+
+  const info = JSON.parse(res.getContentText() || '{}');
+  if (info.aud !== clientId) {
+    throw new Error('La credencial de Google no corresponde a esta aplicacion.');
+  }
+  if (String(info.email_verified) !== 'true') {
+    throw new Error('Google no verifico el correo de la cuenta.');
+  }
+
+  const email = normalizeEmail_(info.email);
+  if (!email) {
+    throw new Error('La credencial de Google no contiene correo.');
+  }
+
+  return {
+    email: email,
+    name: info.name || '',
+    picture: info.picture || '',
+    subject: info.sub || ''
+  };
+}
+
+function getApiCallWhitelist_() {
+  return [
+    'limpiarDatosPruebaAdmin',
+    'getCatalogosNuevoIngresoClient',
+    'getCatalogosAppClient',
+    'getCatalogosOrganizacionClient',
+    'getOrganizacionClientById',
+    'getOrganizacionesModuloClient',
+    'getOrganizacionesAvanceClient',
+    'getCatalogosAvanceClient',
+    'getGruposVecinosAvanceClient',
+    'buscarVecino',
+    'obtenerFicha',
+    'guardarIngreso',
+    'buscarCoincidenciasIngreso',
+    'guardarOrganizacion',
+    'getOrganizacionModuloDetalle',
+    'actualizarCargoSocioOrganizacion',
+    'suspenderOrganizacion',
+    'eliminarOrganizacion',
+    'guardarInstrumento',
+    'guardarRequisito',
+    'importarSocios',
+    'listarHistorial',
+    'listUsers',
+    'updateUser',
+    'deactivateUser',
+    'getAvanceOrganizacion',
+    'getAvanceGrupoVecinos',
+    'registrarHitoAvance',
+    'cambiarEstadoAvance'
+  ];
+}
+
 function ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail) {
   const rows = readDimUsuariosUsers_().users;
   const others = rows.filter(function(row) {
@@ -628,7 +768,7 @@ function ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail) {
 }
 
 function logAccess_(event, payload) {
-  const email = getCurrentUserEmail_();
+  const email = GO_PES_RUNTIME.currentUserEmail || getCurrentUserEmail_();
 
   appendRowObject_(GO_PES_V2.SHEETS.LOG_ACCESOS, {
     timestamp: new Date(),
@@ -639,7 +779,7 @@ function logAccess_(event, payload) {
 }
 
 function logUserAction_(action, entityType, entityId, result, detail) {
-  const email = getCurrentUserEmail_();
+  const email = GO_PES_RUNTIME.currentUserEmail || getCurrentUserEmail_();
 
   appendRowObject_(GO_PES_V2.SHEETS.LOG_ACCIONES, {
     timestamp: new Date(),

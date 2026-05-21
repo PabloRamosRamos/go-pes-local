@@ -43,6 +43,8 @@
   const APP = {
     state: {
       bootstrap: BOOTSTRAP,
+      idToken: '',
+      originalAppHtml: root ? root.innerHTML : '',
       catalogs: {},
       user: BOOTSTRAP.user || {},
       permissions: BOOTSTRAP.permissions || {},
@@ -212,9 +214,98 @@
           <p>Tu usuario no está registrado o se encuentra inactivo. Contacta al administrador para solicitar acceso.</p>
           <p class="muted"><strong>Correo detectado:</strong> ${escapeHtml(detectedEmail || 'no disponible')}</p>
           <p class="muted"><strong>Motivo:</strong> ${escapeHtml(reason)}</p>
+          <div id="google-signin-container" class="google-signin-container"></div>
+          <p id="access-denied-message" class="muted"></p>
         </div>
       </section>
     `;
+    renderGoogleSignIn_();
+  }
+
+  function renderGoogleSignIn_() {
+    const clientId = BOOTSTRAP.authClientId || '';
+    const mount = document.getElementById('google-signin-container');
+    if (!mount) return;
+    if (!clientId) {
+      mount.innerHTML = '<p class="muted">Autenticacion no configurada. Falta GO_PES_GOOGLE_CLIENT_ID.</p>';
+      return;
+    }
+    const start = () => {
+      if (!window.google || !google.accounts || !google.accounts.id) {
+        setTimeout(start, 120);
+        return;
+      }
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleGoogleCredential_
+      });
+      google.accounts.id.renderButton(mount, {
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'pill'
+      });
+    };
+    start();
+  }
+
+  function handleGoogleCredential_(response) {
+    const credential = response && response.credential ? response.credential : '';
+    if (!credential) {
+      showAccessDeniedMessage_('No se recibio credencial de Google.');
+      return;
+    }
+    showAppLoading('Validando identidad Google...');
+    google.script.run
+      .withSuccessHandler(bootstrap => {
+        APP.state.idToken = credential;
+        applyAuthenticatedBootstrap_(bootstrap || {});
+      })
+      .withFailureHandler(err => {
+        hideAppLoading();
+        showAccessDeniedMessage_(err && err.message ? err.message : String(err || 'No se pudo autenticar.'));
+      })
+      .authenticateWithGoogle({ idToken: credential });
+  }
+
+  function applyAuthenticatedBootstrap_(bootstrap) {
+    if (!bootstrap || !bootstrap.user || !bootstrap.user.canAccess) {
+      APP.state.user = (bootstrap && bootstrap.user) || APP.state.user || {};
+      showAccessDenied_();
+      hideAppLoading();
+      return;
+    }
+    APP.state.user = bootstrap.user;
+    APP.state.permissions = bootstrap.permissions || {};
+    APP.state.moduleDefinitions = bootstrap.moduleDefinitions || APP.state.moduleDefinitions;
+    APP.state.activeView = bootstrap.initialView || APP.state.activeView || 'inicio';
+    mergeCatalogs_(bootstrap.catalogs || {});
+
+    const app = document.getElementById('app');
+    if (app && APP.state.originalAppHtml) {
+      app.innerHTML = APP.state.originalAppHtml;
+    }
+    startAuthorizedApp_();
+  }
+
+  function showAccessDeniedMessage_(message) {
+    const el = document.getElementById('access-denied-message');
+    if (el) el.textContent = message || '';
+  }
+
+  function startAuthorizedApp_() {
+    bindGlobalNav();
+    initSidebarCollapse_();
+    hydrateStaticUser();
+    hydrateLogo();
+    renderQuickActions();
+    renderHomeTiles();
+    toggleTopQuickActions_(APP.state.activeView);
+    applyPermissions();
+    route(APP.state.activeView, BOOTSTRAP.query || {});
+    setStatus('Listo.', null);
+    hideAppLoading();
+    hideContentLoading();
   }
 
   function initSidebarCollapse_() {
@@ -257,7 +348,7 @@
       google.script.run
         .withSuccessHandler(resolve)
         .withFailureHandler(err => reject(err && err.message ? err.message : err))
-        [fn](payload);
+        .apiCall(fn, payload, APP.state.idToken || '');
     });
   }
 

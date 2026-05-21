@@ -7,10 +7,9 @@ const GO_PES_V2 = {
   SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
   VERSION: '2.1.0-modular',
   SUPERUSERS: [
-    'pablo.ramos@providencia.cl',
     'p.e.ramos.ramos@gmail.com'
   ],
-  TRUSTED_DOMAINS: ['providencia.cl', 'gmail.com'],
+  TRUSTED_DOMAINS: ['providencia.cl'],
   COLORS: {
     green: '#007C4A',
     blue: '#214E8A',
@@ -152,7 +151,7 @@ function goPesSeedSuperUsers_() {
 
 function buildBootstrapForTemplate_(e) {
   const params = (e && e.parameter) ? e.parameter : {};
-  const user = getUsuarioActual();
+  const user = buildUnauthenticatedUser_('Debes autenticarte con Google para ingresar.');
   const permissions = buildPermissionMap_(user);
   const requestedView = params.view || GO_PES_V2.DEFAULT_VIEW;
   const initialView = user.canAccess && (permissions.modules || {})[requestedView]
@@ -171,7 +170,8 @@ function buildBootstrapForTemplate_(e) {
     query: params,
     user: user,
     permissions: permissions,
-    moduleDefinitions: getModuleDefinitions_()
+    moduleDefinitions: getModuleDefinitions_(),
+    authClientId: getGoogleIdentityClientId_()
   };
 }
 

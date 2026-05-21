@@ -196,7 +196,12 @@
 
   function showAccessDenied_() {
     const app = document.getElementById('app');
-    const email = APP.state.user && APP.state.user.email ? APP.state.user.email : '';
+    const detectedEmail = APP.state.user && (APP.state.user.detected_email || APP.state.user.email)
+      ? (APP.state.user.detected_email || APP.state.user.email)
+      : '';
+    const reason = APP.state.user && APP.state.user.reason
+      ? APP.state.user.reason
+      : 'Usuario no registrado o inactivo.';
     if (!app) return;
     app.innerHTML = `
       <section class="access-denied">
@@ -205,7 +210,8 @@
           <p class="eyebrow">Acceso denegado</p>
           <h1>No tienes acceso a esta aplicación</h1>
           <p>Tu usuario no está registrado o se encuentra inactivo. Contacta al administrador para solicitar acceso.</p>
-          ${email ? `<p class="muted">Usuario detectado: ${escapeHtml(email)}</p>` : ''}
+          <p class="muted"><strong>Correo detectado:</strong> ${escapeHtml(detectedEmail || 'no disponible')}</p>
+          <p class="muted"><strong>Motivo:</strong> ${escapeHtml(reason)}</p>
         </div>
       </section>
     `;

@@ -8,9 +8,10 @@ function getUsuarioActual() {
   }
 
   const email = getCurrentUserEmail_();
+  const normalizedEmail = normalizeEmail_(email);
   const usersResult = readDimUsuariosUsers_();
   const users = usersResult.users;
-  let user = users.find(r => normalizeText_(r.email) === normalizeText_(email));
+  let user = users.find(r => normalizeEmail_(r.email) === normalizedEmail);
 
   if (!user && email && isConfiguredSuperUserEmail_(email)) {
     user = syncCurrentUser_();
@@ -24,6 +25,7 @@ function getUsuarioActual() {
       perfil: 'operador',
       activo_flag: false,
       superuser_flag: false,
+      detected_email: email || '',
       canAccess: false,
       reason: email
         ? 'Usuario no registrado o inactivo en DIM_Usuarios.'
@@ -41,6 +43,7 @@ function getUsuarioActual() {
   }
 
   const decorated = decorateUser_(user);
+  decorated.detected_email = email || decorated.email || '';
   if (!decorated.canAccess) {
     decorated.reason = 'Usuario registrado pero inactivo en DIM_Usuarios.';
     logAccess_('ACCESS_DENIED', {
@@ -134,9 +137,9 @@ function updateUser(payload) {
     throw new Error('Falta email del usuario a actualizar.');
   }
 
-  const normalizedEmail = normalizeText_(payload.email);
+  const normalizedEmail = normalizeEmail_(payload.email);
   const existing = readDimUsuariosUsers_().users
-    .find(r => normalizeText_(r.email) === normalizedEmail);
+    .find(r => normalizeEmail_(r.email) === normalizedEmail);
   const isConfiguredSuper = isConfiguredSuperUserEmail_(payload.email);
   const activeNext = isConfiguredSuper ? true : toBool_(payload.activo_flag);
   const superNext = isConfiguredSuper;
@@ -213,6 +216,7 @@ function serializeUserForClient_(user) {
   return {
     user_id: user.user_id || '',
     email: user.email || '',
+    detected_email: user.detected_email || user.email || '',
     nombre_visible: user.nombre_visible || '',
     perfil: user.perfil || '',
     activo_flag: !!user.activo_flag,
@@ -261,7 +265,7 @@ function normalizeDimUsuarioRow_(headers, row) {
 
   return {
     user_id: get(['user_id', 'id_usuario', 'usuario_id'], -1) || userIdFallback,
-    email: String(canonicalEmail || '').trim(),
+    email: normalizeEmail_(canonicalEmail),
     nombre_visible: get(['nombre_visible', 'nombre visible', 'nombre', 'name', 'display_name'], nameFallbackIndex),
     perfil: get(['perfil', 'rol', 'role'], 3) || 'operador',
     activo_flag: normalizeUserBoolLike_(get(['activo_flag', 'activo', 'estado', 'active'], 4), true),
@@ -323,14 +327,14 @@ function upsertDimUsuarioByEmail_(row) {
   const sheetName = GO_PES_V2.SHEETS.DIM_USUARIOS;
   const headers = buildSheetDefinitions_()[sheetName];
   const sh = ensureSheetWithHeaders_(sheetName, headers);
-  const normalizedEmail = normalizeText_(row.email);
+  const normalizedEmail = normalizeEmail_(row.email);
   let rowIndex = -1;
 
   if (sh.getLastRow() >= 2) {
     const values = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues();
     for (let i = 0; i < values.length; i++) {
       const hasEmail = values[i].some(function(value) {
-        return normalizeText_(value) === normalizedEmail;
+        return normalizeEmail_(value) === normalizedEmail;
       });
       if (hasEmail) {
         rowIndex = i + 2;
@@ -367,9 +371,9 @@ function deactivateUser(payload) {
 
   goPesValidateAdminResetPin_(payload.pin);
 
-  const normalizedEmail = normalizeText_(payload.email);
+  const normalizedEmail = normalizeEmail_(payload.email);
   const existing = readDimUsuariosUsers_().users
-    .find(function(r) { return normalizeText_(r.email) === normalizedEmail; });
+    .find(function(r) { return normalizeEmail_(r.email) === normalizedEmail; });
 
   if (!existing) {
     throw new Error('Usuario no encontrado.');
@@ -393,7 +397,7 @@ function deactivateUser(payload) {
 
   upsertDimUsuarioByEmail_(row);
   const persisted = readDimUsuariosUsers_().users
-    .find(function(r) { return normalizeText_(r.email) === normalizedEmail; });
+    .find(function(r) { return normalizeEmail_(r.email) === normalizedEmail; });
 
   if (!persisted || toBool_(persisted.activo_flag)) {
     throw new Error('No se pudo confirmar la desactivacion del usuario en DIM_Usuarios.');
@@ -456,7 +460,7 @@ function updateUserLastActivity_(email) {
 function touchUserLastActivity_(email, forceWrite) {
   if (!email) return;
 
-  const normalizedEmail = normalizeText_(email);
+  const normalizedEmail = normalizeEmail_(email);
   if (!forceWrite && GO_PES_RUNTIME.activityTouchedByEmail[normalizedEmail]) return;
 
   const existing = findByField_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', email, true);
@@ -473,7 +477,7 @@ function touchUserLastActivity_(email, forceWrite) {
   upsertByKey_(GO_PES_V2.SHEETS.DIM_USUARIOS, 'email', existing, true);
   GO_PES_RUNTIME.activityTouchedByEmail[normalizedEmail] = true;
 
-  if (GO_PES_RUNTIME.currentUser && normalizeText_(GO_PES_RUNTIME.currentUser.email) === normalizedEmail) {
+  if (GO_PES_RUNTIME.currentUser && normalizeEmail_(GO_PES_RUNTIME.currentUser.email) === normalizedEmail) {
     GO_PES_RUNTIME.currentUser.fecha_ultima_actividad = now;
   }
 }
@@ -592,7 +596,7 @@ function buildUserModulePermissionMap_(user) {
 }
 
 function isConfiguredSuperUserEmail_(email) {
-  return getConfiguredSuperUsers_().map(normalizeText_).indexOf(normalizeText_(email)) !== -1;
+  return getConfiguredSuperUsers_().map(normalizeEmail_).indexOf(normalizeEmail_(email)) !== -1;
 }
 
 function getConfiguredSuperUsers_() {
@@ -604,10 +608,17 @@ function safeModuleDefinitions_() {
   return Array.isArray(defs) ? defs : [];
 }
 
+function normalizeEmail_(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '');
+}
+
 function ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail) {
   const rows = readDimUsuariosUsers_().users;
   const others = rows.filter(function(row) {
-    return normalizeText_(row.email) !== normalizedEmail &&
+    return normalizeEmail_(row.email) !== normalizedEmail &&
       (toBool_(row.superuser_flag) || isConfiguredSuperUserEmail_(row.email)) &&
       toBool_(row.activo_flag);
   });

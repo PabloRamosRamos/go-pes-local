@@ -1925,20 +1925,23 @@
   }
 
   .socios-embed-panel {
+    --socios-embed-height: 443px;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
     box-shadow: var(--shadow-md);
     overflow: hidden;
-    min-height: 575px;
+    height: var(--socios-embed-height);
+    min-height: var(--socios-embed-height);
   }
 
   .socios-embed {
     display: block;
     width: 100%;
-    height: min(68vh, 575px);
-    min-height: 575px;
+    height: var(--socios-embed-height);
+    min-height: var(--socios-embed-height);
     border: 0;
+    overflow: hidden;
   }
 
   .socios-embed--empty {
@@ -2051,9 +2054,8 @@
       justify-content: flex-start;
     }
 
-    .socios-embed-panel,
-    .socios-embed {
-      min-height: 420px;
+    .socios-embed-panel {
+      --socios-embed-height: 443px;
     }
   }
 

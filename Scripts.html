@@ -2290,7 +2290,7 @@
 
       rows = Array.isArray(rows) ? rows : [];
       tbody.innerHTML = rows.map(r => `
-        <tr>
+        <tr class="${normalizeUiBool_(r.activo_flag, false) ? '' : 'is-inactive'}">
           <td>${escapeHtml(formatFechaHoraUi_(r.timestamp || ''))}</td>
           <td>${escapeHtml(r.email || '')}</td>
           <td>${escapeHtml(r.action || '')}</td>
@@ -2303,12 +2303,12 @@
   }
 
   function loadUsers() {
-    if (!APP.state.permissions.canManageUsers) return;
+    if (!APP.state.permissions.canManageUsers) return Promise.resolve([]);
 
     showContentLoading('Cargando usuarios...');
-    api('listUsers').then(rows => {
+    return api('listUsers').then(rows => {
       const tbody = document.getElementById('users-results');
-      if (!tbody) return;
+      if (!tbody) return [];
 
       const moduleLabel = user => user.superuser_flag
         ? 'Todos'
@@ -2317,23 +2317,23 @@
       rows = Array.isArray(rows) ? rows : (Array.isArray(rows?.users) ? rows.users : []);
       if (!rows.length) {
         tbody.innerHTML = '<tr><td colspan="8" class="muted">No hay usuarios registrados para mostrar.</td></tr>';
-        return;
+        return rows;
       }
       tbody.innerHTML = rows.map(r => `
-        <tr>
+        <tr class="${normalizeUiBool_(r.activo_flag, false) ? '' : 'is-inactive'}">
           <td>${escapeHtml(r.email)}</td>
           <td>${escapeHtml(r.nombre_visible)}</td>
           <td>${escapeHtml(r.perfil)}</td>
-          <td>${r.activo_flag ? 'Sí' : 'No'}</td>
-          <td>${r.superuser_flag ? 'Sí' : 'No'}</td>
+          <td>${renderUserActiveLabel_(r.activo_flag)}</td>
+          <td>${renderUserBooleanLabel_(r.superuser_flag)}</td>
           <td>${escapeHtml(moduleLabel(r))}</td>
           <td>${escapeHtml(formatFechaHoraUi_(r.fecha_ultima_actividad || ''))}</td>
           <td>
             <div class="user-row-actions">
-              <button class="table-action-btn js-edit-user" type="button" title="Editar usuario" aria-label="Editar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(r.perfil)}" data-active="${r.activo_flag}" data-super="${r.superuser_flag}" data-modules="${escapeHtml(r.modulos_permitidos || '')}">
+              <button class="table-action-btn js-edit-user" type="button" title="Editar usuario" aria-label="Editar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(r.perfil)}" data-active="${normalizeUiBool_(r.activo_flag, false)}" data-super="${normalizeUiBool_(r.superuser_flag, false)}" data-modules="${escapeHtml(r.modulos_permitidos || '')}">
                 <span class="material-symbols-outlined">edit</span>
               </button>
-              <button class="table-action-btn table-action-btn--danger js-delete-user" type="button" title="Desactivar usuario" aria-label="Desactivar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible || r.email)}">
+              <button class="table-action-btn table-action-btn--danger js-delete-user" type="button" title="Desactivar usuario" aria-label="Desactivar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible || r.email)}" ${normalizeUiBool_(r.activo_flag, false) ? '' : 'disabled'}>
                 <span class="material-symbols-outlined">delete</span>
               </button>
             </div>
@@ -2349,7 +2349,41 @@
       tbody.querySelectorAll('.js-delete-user').forEach(btn => {
         btn.addEventListener('click', () => openUserDeleteModal_(btn));
       });
+      return rows;
     }).catch(showError).finally(hideContentLoading);
+  }
+
+  function normalizeUiBool_(value, defaultValue) {
+    if (value === true || value === false) return value;
+    const normalized = String(value ?? '').trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (!normalized) return defaultValue;
+    if (['si', 'true', '1', 'activo', 'activa', 'active'].includes(normalized)) return true;
+    if (['no', 'false', '0', 'inactivo', 'inactiva', 'inactive'].includes(normalized)) return false;
+    return defaultValue;
+  }
+
+  function renderUserBooleanLabel_(value) {
+    return normalizeUiBool_(value, false) ? 'S\u00ed' : 'No';
+  }
+
+  function renderUserActiveLabel_(value) {
+    const active = normalizeUiBool_(value, false);
+    return `<span class="user-status-pill ${active ? 'is-active' : 'is-inactive'}">${active ? 'S\u00ed' : 'No'}</span>`;
+  }
+
+  function markUserInactiveInTable_(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    document.querySelectorAll('#users-results tr').forEach(row => {
+      const firstCell = row.querySelector('td');
+      if (!firstCell || firstCell.textContent.trim().toLowerCase() !== normalizedEmail) return;
+      row.classList.add('is-inactive');
+      const activeCell = row.children[3];
+      if (activeCell) activeCell.innerHTML = renderUserActiveLabel_(false);
+      row.querySelector('.js-delete-user')?.setAttribute('disabled', 'disabled');
+    });
   }
 
   function moduleLabelsFromKeys_(keys) {
@@ -2473,8 +2507,9 @@
     closeUserDeleteModal_();
     showContentLoading('Desactivando usuario...');
     api('deactivateUser', payload).then(() => {
+      markUserInactiveInTable_(payload.email);
       showSuccess('Usuario desactivado.');
-      loadUsers();
+      return loadUsers();
     }).catch(showError).finally(() => {
       if (btn) btn.disabled = false;
       hideContentLoading();

@@ -2288,6 +2288,32 @@
     gap: var(--space-2);
   }
 
+  .data-table tr.is-inactive {
+    opacity: 0.68;
+    background: var(--surface-soft);
+  }
+
+  .user-status-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 42px;
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .user-status-pill.is-active {
+    color: var(--success);
+    background: var(--success-soft);
+  }
+
+  .user-status-pill.is-inactive {
+    color: var(--text-muted);
+    background: var(--surface-alt);
+  }
+
   .organizacion-socio-modal-summary {
     display: grid;
     gap: 4px;

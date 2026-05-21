@@ -343,9 +343,16 @@ function deactivateUser(payload) {
   });
 
   upsertDimUsuarioByEmail_(row);
+  const persisted = readDimUsuariosUsers_().users
+    .find(function(r) { return normalizeText_(r.email) === normalizedEmail; });
+
+  if (!persisted || toBool_(persisted.activo_flag)) {
+    throw new Error('No se pudo confirmar la desactivacion del usuario en DIM_Usuarios.');
+  }
+
   logUserAction_('DEACTIVATE_USER', 'usuario', existing.email, 'OK', { actor: actor.email });
 
-  return { ok: true, user: serializeUserForClient_(decorateUser_(row)) };
+  return { ok: true, user: serializeUserForClient_(decorateUser_(persisted)) };
 }
 
 function seedSuperUsers_() {

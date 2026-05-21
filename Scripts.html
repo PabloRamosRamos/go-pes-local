@@ -506,115 +506,12 @@
 
   function renderInicioView_() {
     const root = document.getElementById('inicio-root');
-    if (!root) return;
-
-    const alerts = [
-      { status: 'Alta prioridad', title: 'Hito pendiente con fecha cercana', detail: 'Grupo de vecinos en seguimiento requiere actualización de documentación.', tone: 'danger', icon: 'priority_high' },
-      { status: 'Prioridad media', title: 'Comité con plazo próximo a vencer', detail: 'Revisar estado de constitución y validar próxima gestión.', tone: 'warning', icon: 'schedule' },
-      { status: 'Informativa', title: 'Carga de socios pendiente', detail: 'Organización con registro iniciado y nómina aún no actualizada.', tone: 'info', icon: 'groups' }
-    ];
-
-    const reminders = [
-      { title: 'Reunión programada', detail: 'Seguimiento territorial agendado para esta semana.', icon: 'event' },
-      { title: 'Asamblea próxima', detail: 'Preparar antecedentes y confirmar convocatoria.', icon: 'campaign' },
-      { title: 'Invitación en curso', detail: 'Actividad enviada a comité, pendiente de confirmación.', icon: 'outgoing_mail' }
-    ];
-
-    root.innerHTML = `
-      <div class="inicio-shell">
-        <div class="section-head inicio-head">
-          <div>
-            <p class="eyebrow">Módulo 0</p>
-            <h2>Inicio</h2>
-            <p class="muted">Resumen operativo, alertas y visualización ejecutiva del sistema.</p>
-          </div>
-        </div>
-
-        <div class="inicio-layout">
-          <aside class="inicio-alerts-panel">
-            <div class="inicio-summary-grid">
-              ${renderInicioMetric_('Alertas activas', '3', 'warning')}
-              ${renderInicioMetric_('Recordatorios', '3', 'event_available')}
-              ${renderInicioMetric_('Próximas actividades', '2', 'today')}
-            </div>
-
-            <section class="inicio-card">
-              <div class="inicio-card__head">
-                <span class="material-symbols-outlined">notifications_active</span>
-                <div>
-                  <h3>Alertas de plazo</h3>
-                  <p>Maqueta temporal lista para conectar datos reales.</p>
-                </div>
-              </div>
-              <div class="inicio-alert-list">
-                ${alerts.map(renderInicioAlertItem_).join('')}
-              </div>
-            </section>
-
-            <section class="inicio-card">
-              <div class="inicio-card__head">
-                <span class="material-symbols-outlined">task_alt</span>
-                <div>
-                  <h3>Recordatorios y actividades</h3>
-                  <p>Seguimientos, reuniones e invitaciones en ejecución.</p>
-                </div>
-              </div>
-              <div class="inicio-reminder-list">
-                ${reminders.map(renderInicioReminderItem_).join('')}
-              </div>
-            </section>
-          </aside>
-
-          <section class="inicio-dashboard-panel">
-            <div class="inicio-dashboard-head">
-              <div>
-                <p class="eyebrow">Dashboard</p>
-                <h3>Panel ejecutivo Looker Studio</h3>
-              </div>
-              <span class="inicio-dashboard-pill">Embebido</span>
-            </div>
-            ${HOME_LOOKER_STUDIO_EMBED_URL
-              ? `<iframe class="inicio-dashboard-embed" width="600" height="443" src="${escapeHtml(HOME_LOOKER_STUDIO_EMBED_URL)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" scrolling="no" title="Dashboard Inicio"></iframe>`
-              : `<div class="inicio-dashboard-empty"><span class="material-symbols-outlined">insert_chart</span><strong>Dashboard pendiente de configuración</strong><span>Define <code>homeLookerStudioEmbedUrl</code> para mostrar el panel embebido.</span></div>`}
-          </section>
-        </div>
-      </div>
-    `;
-  }
-
-  function renderInicioMetric_(label, value, icon) {
-    return `
-      <div class="inicio-metric">
-        <span class="material-symbols-outlined">${escapeHtml(icon)}</span>
-        <strong>${escapeHtml(value)}</strong>
-        <small>${escapeHtml(label)}</small>
-      </div>
-    `;
-  }
-
-  function renderInicioAlertItem_(item) {
-    return `
-      <article class="inicio-alert-item inicio-alert-item--${escapeHtml(item.tone)}">
-        <span class="material-symbols-outlined">${escapeHtml(item.icon)}</span>
-        <div>
-          <small>${escapeHtml(item.status)}</small>
-          <strong>${escapeHtml(item.title)}</strong>
-          <p>${escapeHtml(item.detail)}</p>
-        </div>
-      </article>
-    `;
-  }
-
-  function renderInicioReminderItem_(item) {
-    return `
-      <article class="inicio-reminder-item">
-        <span class="material-symbols-outlined">${escapeHtml(item.icon)}</span>
-        <div>
-          <strong>${escapeHtml(item.title)}</strong>
-          <p>${escapeHtml(item.detail)}</p>
-        </div>
-      </article>
-    `;
+    if (!root || !window.GO_PES_INICIO) return;
+    window.GO_PES_INICIO.render({
+      root,
+      escapeHtml,
+      homeEmbedUrl: HOME_LOOKER_STUDIO_EMBED_URL
+    });
   }
 
   function ensureViewRendered_(view) {

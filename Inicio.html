@@ -1,0 +1,145 @@
+<script>
+  window.GO_PES_INICIO = (() => {
+    function render(options) {
+      const root = options && options.root;
+      const escapeHtml = options && options.escapeHtml;
+      const homeEmbedUrl = options && options.homeEmbedUrl;
+      if (!root || typeof escapeHtml !== 'function') return;
+
+      const benefitAlerts = [
+        {
+          status: 'Alta prioridad',
+          title: 'Instrumento próximo a cierre',
+          detail: 'Revisar vencimiento de postulación y documentación asociada al beneficio.',
+          tone: 'danger',
+          icon: 'priority_high'
+        },
+        {
+          status: 'Prioridad media',
+          title: 'Beneficio con plazo de rendición',
+          detail: 'Validar fecha límite de entrega de antecedentes del instrumento vigente.',
+          tone: 'warning',
+          icon: 'schedule'
+        },
+        {
+          status: 'Informativa',
+          title: 'Instrumento en seguimiento',
+          detail: 'Monitorear actualización de requisitos antes del próximo corte administrativo.',
+          tone: 'info',
+          icon: 'handshake'
+        }
+      ];
+
+      const assemblies = [
+        {
+          title: 'Asamblea constitutiva pendiente',
+          detail: 'Grupo de vecinos con documentación ingresada, pendiente de coordinación de asamblea.',
+          icon: 'groups'
+        },
+        {
+          title: 'Formalización posterior',
+          detail: 'Organización lista para revisar avance posterior y antecedentes de directiva.',
+          icon: 'event_available'
+        }
+      ];
+
+      root.innerHTML = `
+        <div class="inicio-shell">
+          <div class="section-head inicio-head">
+            <div>
+              <p class="eyebrow">Módulo 0</p>
+              <h2>Inicio</h2>
+              <p class="muted">Resumen operativo, alertas y visualización ejecutiva del sistema.</p>
+            </div>
+          </div>
+
+          <div class="inicio-layout">
+            <aside class="inicio-alerts-panel">
+              <div class="inicio-summary-grid">
+                ${renderMetric_('Alertas de beneficios', '3', 'warning', escapeHtml)}
+                ${renderMetric_('Instrumentos a revisar', '3', 'handshake', escapeHtml)}
+                ${renderMetric_('Próximas Asambleas', '2', 'groups', escapeHtml)}
+              </div>
+
+              <section class="inicio-card">
+                <div class="inicio-card__head">
+                  <span class="material-symbols-outlined">notifications_active</span>
+                  <div>
+                    <h3>Alertas de fechas de beneficios</h3>
+                    <p>Vencimientos y plazos próximos asociados a instrumentos.</p>
+                  </div>
+                </div>
+                <div class="inicio-alert-list">
+                  ${benefitAlerts.map(item => renderAlertItem_(item, escapeHtml)).join('')}
+                </div>
+              </section>
+
+              <section class="inicio-card">
+                <div class="inicio-card__head">
+                  <span class="material-symbols-outlined">groups</span>
+                  <div>
+                    <h3>Próximas Asambleas</h3>
+                    <p>Base temporal para conectar agenda real de asambleas del proceso.</p>
+                  </div>
+                </div>
+                <div class="inicio-reminder-list">
+                  ${assemblies.map(item => renderAssemblyItem_(item, escapeHtml)).join('')}
+                </div>
+              </section>
+            </aside>
+
+            <section class="inicio-dashboard-panel">
+              <div class="inicio-dashboard-head">
+                <div>
+                  <p class="eyebrow">Dashboard</p>
+                  <h3>Panel ejecutivo Looker Studio</h3>
+                </div>
+                <span class="inicio-dashboard-pill">Embebido</span>
+              </div>
+              ${homeEmbedUrl
+                ? `<iframe class="inicio-dashboard-embed" width="600" height="443" src="${escapeHtml(homeEmbedUrl)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" scrolling="no" title="Dashboard Inicio"></iframe>`
+                : `<div class="inicio-dashboard-empty"><span class="material-symbols-outlined">insert_chart</span><strong>Dashboard pendiente de configuración</strong><span>Define <code>homeLookerStudioEmbedUrl</code> para mostrar el panel embebido.</span></div>`}
+            </section>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMetric_(label, value, icon, escapeHtml) {
+      return `
+        <div class="inicio-metric">
+          <span class="material-symbols-outlined">${escapeHtml(icon)}</span>
+          <strong>${escapeHtml(value)}</strong>
+          <small>${escapeHtml(label)}</small>
+        </div>
+      `;
+    }
+
+    function renderAlertItem_(item, escapeHtml) {
+      return `
+        <article class="inicio-alert-item inicio-alert-item--${escapeHtml(item.tone)}">
+          <span class="material-symbols-outlined">${escapeHtml(item.icon)}</span>
+          <div>
+            <small>${escapeHtml(item.status)}</small>
+            <strong>${escapeHtml(item.title)}</strong>
+            <p>${escapeHtml(item.detail)}</p>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderAssemblyItem_(item, escapeHtml) {
+      return `
+        <article class="inicio-reminder-item">
+          <span class="material-symbols-outlined">${escapeHtml(item.icon)}</span>
+          <div>
+            <strong>${escapeHtml(item.title)}</strong>
+            <p>${escapeHtml(item.detail)}</p>
+          </div>
+        </article>
+      `;
+    }
+
+    return { render };
+  })();
+</script>

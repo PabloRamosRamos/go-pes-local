@@ -33,6 +33,8 @@ const GO_PES_V2 = {
     FACT_INSTRUMENTOS: 'FACT_Instrumentos_Organizacion',
     FACT_REQUISITOS: 'FACT_Requisitos_Instrumento',
     FACT_SOCIOS: 'FACT_Socios',
+    FACT_BENEFICIOS_DETALLE: 'FACT_Beneficios_Detalle',
+    FACT_BENEFICIOS_HITOS: 'FACT_Beneficios_Hitos',
 
     MASTER: 'MASTER_DATOS',
     VW_ORGS: 'VW_LS_Organizaciones',

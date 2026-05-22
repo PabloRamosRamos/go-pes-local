@@ -61,6 +61,8 @@
       organizacionesModulo: [],
       organizacionesModuloFetchedAt: 0,
       currentOrganizacionDetalle: null,
+      currentBeneficiosDetalle: null,
+      currentBeneficioCodigo: '',
       sociosOrganizaciones: [],
       sociosOrganizacionesFetchedAt: 0,
       pendingSociosRows: [],
@@ -105,10 +107,10 @@
     ],
     instrumento: [
       { name: 'organizacion_id', label: 'ID de organización', type: 'text', required: true },
-      { name: 'org_instrumento_id', label: 'ID de instrumento', type: 'text' },
-      { name: 'instrumento_codigo_catalogo', label: 'Instrumento', type: 'select', optionsKey: 'instrumentosCodigo', required: true },
+      { name: 'org_instrumento_id', label: 'ID de beneficio', type: 'text' },
+      { name: 'instrumento_codigo_catalogo', label: 'Beneficio', type: 'select', optionsKey: 'instrumentosCodigo', required: true },
       { name: 'instrumento_nombre_otro', label: 'Nombre libre si es OTRO', type: 'text' },
-      { name: 'instrumento_tipo', label: 'Tipo de instrumento', type: 'select', optionsKey: 'instrumentosTipo', required: true },
+      { name: 'instrumento_tipo', label: 'Tipo de beneficio', type: 'select', optionsKey: 'instrumentosTipo', required: true },
       { name: 'origen_instrumento', label: 'Origen', type: 'select', optionsKey: 'instrumentosOrigen', required: true },
       { name: 'anio_convocatoria', label: 'Año convocatoria', type: 'number', required: true },
       { name: 'nombre_convocatoria', label: 'Nombre convocatoria', type: 'text' },
@@ -119,8 +121,8 @@
       { name: 'fecha_habilitacion', label: 'Fecha habilitación', type: 'date' },
       { name: 'fecha_postulacion', label: 'Fecha postulación', type: 'date' },
       { name: 'fecha_resultado', label: 'Fecha resultado', type: 'date' },
-      { name: 'fecha_cierre_instrumento', label: 'Fecha cierre instrumento', type: 'date' },
-      { name: 'estado_instrumento', label: 'Estado instrumento', type: 'select', optionsKey: 'estado_instrumento' },
+      { name: 'fecha_cierre_instrumento', label: 'Fecha cierre beneficio', type: 'date' },
+      { name: 'estado_instrumento', label: 'Estado beneficio', type: 'select', optionsKey: 'estado_instrumento' },
       { name: 'subestado_instrumento', label: 'Subestado', type: 'text' },
       { name: 'avance_instrumento_pct', label: 'Avance %', type: 'number' },
       { name: 'proximo_hito_instrumento', label: 'Próximo hito', type: 'textarea', span: 2 },
@@ -135,9 +137,9 @@
     ],
     requisito: [
       { name: 'organizacion_id', label: 'ID de organización', type: 'text', required: true },
-      { name: 'org_instrumento_id', label: 'ID de instrumento', type: 'text', required: true },
+      { name: 'org_instrumento_id', label: 'ID de beneficio', type: 'text', required: true },
       { name: 'requisito_registro_id', label: 'ID requisito', type: 'text' },
-      { name: 'instrumento_codigo_catalogo', label: 'Instrumento', type: 'select', optionsKey: 'instrumentosCodigo', required: true },
+      { name: 'instrumento_codigo_catalogo', label: 'Beneficio', type: 'select', optionsKey: 'instrumentosCodigo', required: true },
       { name: 'requisito_codigo', label: 'Requisito', type: 'select', optionsKey: 'requisitosDependientes', required: true },
       { name: 'requisito_nombre_libre', label: 'Nombre libre si es otro', type: 'text' },
       { name: 'categoria_requisito', label: 'Categoría', type: 'select', optionsKey: 'requisitoCategorias', required: true },
@@ -383,7 +385,10 @@
         const pending = [ensureAppCatalogs_(), ensureOrganizacionesModuloList_()].filter(Boolean);
         return pending.length ? Promise.all(pending) : null;
       }
-      case 'instrumento':
+      case 'instrumento': {
+        const pending = [ensureAppCatalogs_(), ensureOrganizacionesModuloList_()].filter(Boolean);
+        return pending.length ? Promise.all(pending) : null;
+      }
       case 'requisito': {
         const pending = [ensureAppCatalogs_()].filter(Boolean);
         return pending.length ? Promise.all(pending) : null;
@@ -461,8 +466,8 @@
       ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'seguimiento'],
       ['groups', 'Organizaciones', 'Consultar y administrar organizaciones', 'organizacion'],
       ['badge', 'Socios', 'Visualización y carga de socios', 'socios'],
-      ['handshake', 'Gestionar instrumentos', 'Beneficios, fondos e instrumentos', 'instrumento'],
-      ['inventory_2', 'Registrar requisitos', 'Control documental por instrumento', 'requisito']
+      ['handshake', 'Beneficios', 'Administrar beneficios por organización', 'instrumento'],
+      ['inventory_2', 'Registrar requisitos', 'Control documental por beneficio', 'requisito']
     ];
 
     container.innerHTML = items.filter(item => canOpenView_(item[3])).map(item => `
@@ -487,7 +492,7 @@
       ['Avance', 'Registrar hitos del proceso de constitución.', 'event_note', 'seguimiento'],
       ['Organizaciones', 'Consultar y administrar organizaciones.', 'groups', 'organizacion'],
       ['Socios', 'Visualización y carga manual o masiva.', 'badge', 'socios'],
-      ['Instrumentos', 'Gestionar beneficios, fondos y otros apoyos.', 'handshake', 'instrumento'],
+      ['Beneficios', 'Administrar beneficios, convocatorias y condiciones por organización.', 'handshake', 'instrumento'],
       ['Requisitos', 'Registrar o validar documentación.', 'inventory_2', 'requisito']
     ];
 
@@ -535,7 +540,7 @@
         APP.state.renderedViews[view] = true;
         break;
       case 'instrumento':
-        buildForm('form-instrumento', FORM_SCHEMAS.instrumento, saveInstrumentoFromForm);
+        renderBeneficiosView_();
         APP.state.renderedViews[view] = true;
         break;
       case 'requisito':
@@ -730,7 +735,7 @@
         value: x.requisito_codigo,
         label: `${x.requisito_nombre} (${x.requisito_codigo})`
       })),
-      instrumento ? 'Seleccionar requisito' : 'Selecciona instrumento primero'
+      instrumento ? 'Seleccionar requisito' : 'Selecciona beneficio primero'
     );
   }
 
@@ -843,6 +848,8 @@
       APP.state.avanceOrganizacionesFetchedAt = 0;
       APP.state.organizacionesModulo = [];
       APP.state.organizacionesModuloFetchedAt = 0;
+      APP.state.currentBeneficiosDetalle = null;
+      APP.state.currentBeneficioCodigo = '';
       APP.state.sociosOrganizaciones = [];
       APP.state.sociosOrganizacionesFetchedAt = 0;
       APP.state.renderedViews = {};
@@ -890,6 +897,10 @@
 
       if (view === 'organizacion' && wasRendered) {
         refreshOrganizacionesModuloList_();
+      }
+
+      if (view === 'instrumento' && wasRendered) {
+        refreshBeneficiosModuloView_();
       }
 
       if (view === 'socios' && wasRendered) {
@@ -1057,9 +1068,9 @@
       : '';
 
     const instrumentosBlock = hasOrg && instrumentos.length
-      ? fichaBlock('handshake', 'Instrumentos', [
+      ? fichaBlock('handshake', 'Beneficios', [
           ['Cantidad', instrumentos.length],
-          ['Último instrumento', instrumentos[0]?.instrumento_codigo_catalogo || ''],
+          ['Último beneficio', friendlyBeneficioLabel_(instrumentos[0]?.instrumento_codigo_catalogo || '')],
           ['Último estado', instrumentos[0]?.estado_instrumento || ''],
           ['Resultado', instrumentos[0]?.resultado_instrumento || '']
         ])
@@ -1230,6 +1241,10 @@
   function formatUiValue_(value) {
     if (value instanceof Date) return formatFechaHoraUi_(value);
     const raw = String(value == null ? '' : value);
+    const trimmed = raw.trim();
+    if (trimmed === 'Constituida sin instrumentos') return 'Constituida sin beneficios';
+    const beneficioLabel = friendlyBeneficioLabel_(trimmed);
+    if (beneficioLabel !== trimmed) return beneficioLabel;
     return /^\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2})?/.test(raw.trim())
       ? formatFechaHoraUi_(raw)
       : raw;
@@ -1705,7 +1720,7 @@
       <div class="organizaciones-metrics">
         ${organizacionMetricHtml_('Socios', r.cantidad_socios || 0)}
         ${organizacionMetricHtml_('Casos', r.cantidad_casos || 0)}
-        ${organizacionMetricHtml_('Instrumentos', r.cantidad_instrumentos || 0)}
+        ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
         ${organizacionMetricHtml_('Requisitos', r.cantidad_requisitos || 0)}
         ${organizacionMetricHtml_('Hitos avance', r.cantidad_avance_hitos || 0)}
       </div>
@@ -1746,7 +1761,7 @@
         ])}
       </div>
 
-      ${organizacionTableHtml_('Instrumentos asociados', data.instrumentos || [], ['org_instrumento_id', 'instrumento_codigo_catalogo', 'estado_instrumento', 'resultado_instrumento'])}
+      ${organizacionTableHtml_('Beneficios asociados', data.instrumentos || [], ['org_instrumento_id', 'instrumento_codigo_catalogo', 'estado_instrumento', 'resultado_instrumento'])}
       ${organizacionSociosTableHtml_(data.socios || [])}
       ${organizacionTableHtml_('Historial reciente', data.historial || [], ['timestamp', 'action', 'email', 'result'])}
     `;
@@ -1963,10 +1978,516 @@
     }).catch(showError);
   }
 
+  function renderBeneficiosView_() {
+    const root = document.getElementById('beneficios-root');
+    if (!root) return;
+
+    root.innerHTML = `
+      <div class="beneficios-shell">
+        <div class="section-head beneficios-head">
+          <div>
+            <p class="eyebrow">Beneficios</p>
+            <h2>Administración de beneficios por organización</h2>
+            <p class="muted">Consulta disponibilidad, condiciones y fechas relevantes para Charlas y capacitaciones, Fondese y Cámaras 1414.</p>
+          </div>
+        </div>
+
+        <div class="beneficios-selector-panel panel">
+          <div class="field field--grow">
+            <label for="beneficios-select">Organización</label>
+            <select id="beneficios-select"></select>
+          </div>
+          <div class="beneficios-actions">
+            <button type="button" class="primary-btn" id="beneficios-load-btn">
+              <span class="material-symbols-outlined">search</span>Ver beneficios
+            </button>
+            <button type="button" class="secondary-btn" id="beneficios-reload-btn">
+              <span class="material-symbols-outlined">refresh</span>Recargar
+            </button>
+          </div>
+        </div>
+
+        <div id="beneficios-summary" class="beneficios-summary empty-state">Selecciona una organización para revisar sus beneficios.</div>
+        <div id="beneficios-cards" class="beneficios-cards"></div>
+        <div id="beneficios-detail" class="beneficios-detail empty-state">Selecciona un beneficio para ver su detalle editable.</div>
+      </div>
+    `;
+
+    bindBeneficiosView_();
+    fillBeneficiosOrganizacionesSelect_();
+
+    const currentOrgId = APP.state.currentBeneficiosDetalle && APP.state.currentBeneficiosDetalle.organizacion
+      ? APP.state.currentBeneficiosDetalle.organizacion.organizacion_id
+      : '';
+    const select = document.getElementById('beneficios-select');
+    if (select && currentOrgId) {
+      select.value = currentOrgId;
+      renderBeneficiosDetalle_(APP.state.currentBeneficiosDetalle);
+    }
+  }
+
+  function bindBeneficiosView_() {
+    const select = document.getElementById('beneficios-select');
+    const loadBtn = document.getElementById('beneficios-load-btn');
+    const reloadBtn = document.getElementById('beneficios-reload-btn');
+
+    if (select) {
+      select.addEventListener('change', () => {
+        const orgId = String(select.value || '').trim();
+        if (!orgId) {
+          clearBeneficiosDetail_();
+          return;
+        }
+        loadBeneficiosDetalle_(orgId);
+      });
+    }
+
+    if (loadBtn) {
+      loadBtn.addEventListener('click', () => {
+        const orgId = String(select && select.value || '').trim();
+        if (!orgId) {
+          showError('Debes seleccionar una organización.');
+          return;
+        }
+        loadBeneficiosDetalle_(orgId);
+      });
+    }
+
+    if (reloadBtn) {
+      reloadBtn.addEventListener('click', () => refreshBeneficiosModuloView_());
+    }
+  }
+
+  function fillBeneficiosOrganizacionesSelect_() {
+    const select = document.getElementById('beneficios-select');
+    if (!select) return;
+    fillSelect(select, APP.state.organizacionesModulo || [], 'Seleccionar organización');
+  }
+
+  function refreshBeneficiosModuloView_() {
+    const currentOrgId = APP.state.currentBeneficiosDetalle && APP.state.currentBeneficiosDetalle.organizacion
+      ? APP.state.currentBeneficiosDetalle.organizacion.organizacion_id
+      : '';
+
+    ensureOrganizacionesModuloList_().then(() => {
+      fillBeneficiosOrganizacionesSelect_();
+      const select = document.getElementById('beneficios-select');
+      if (select && currentOrgId) select.value = currentOrgId;
+      if (currentOrgId) {
+        return loadBeneficiosDetalle_(currentOrgId);
+      }
+      clearBeneficiosDetail_();
+      return null;
+    }).catch(showError);
+  }
+
+  function clearBeneficiosDetail_() {
+    APP.state.currentBeneficiosDetalle = null;
+    APP.state.currentBeneficioCodigo = '';
+    const summary = document.getElementById('beneficios-summary');
+    const cards = document.getElementById('beneficios-cards');
+    const detail = document.getElementById('beneficios-detail');
+    if (summary) summary.className = 'beneficios-summary empty-state';
+    if (summary) summary.innerHTML = 'Selecciona una organización para revisar sus beneficios.';
+    if (cards) cards.innerHTML = '';
+    if (detail) detail.className = 'beneficios-detail empty-state';
+    if (detail) detail.innerHTML = 'Selecciona un beneficio para ver su detalle editable.';
+  }
+
+  function loadBeneficiosDetalle_(organizacionId) {
+    showContentLoading('Cargando beneficios...');
+    return api('getBeneficiosModuloDetalle', { organizacion_id: organizacionId }).then(data => {
+      APP.state.currentBeneficiosDetalle = data || {};
+      const beneficios = (data && data.beneficios) || [];
+      if (!beneficios.length) {
+        APP.state.currentBeneficioCodigo = '';
+      } else if (!beneficios.some(item => item.beneficio_codigo === APP.state.currentBeneficioCodigo)) {
+        APP.state.currentBeneficioCodigo = beneficios[0].beneficio_codigo;
+      }
+      renderBeneficiosDetalle_(APP.state.currentBeneficiosDetalle);
+    }).catch(showError).finally(hideContentLoading);
+  }
+
+  function renderBeneficiosDetalle_(data) {
+    const summary = document.getElementById('beneficios-summary');
+    const cards = document.getElementById('beneficios-cards');
+    const detail = document.getElementById('beneficios-detail');
+    if (!summary || !cards || !detail) return;
+
+    const org = data && data.organizacion || {};
+    const resumen = data && data.resumen || {};
+    const beneficios = data && data.beneficios || [];
+
+    if (!org.organizacion_id) {
+      clearBeneficiosDetail_();
+      return;
+    }
+
+    summary.className = 'beneficios-summary';
+    summary.innerHTML = `
+      <div class="beneficios-summary__main">
+        <div>
+          <p class="eyebrow">Organización</p>
+          <h3>${escapeHtml(org.nombre_organizacion || 'Sin nombre')}</h3>
+          <p class="muted">${escapeHtml(org.organizacion_id || '')}</p>
+        </div>
+        <div class="beneficios-summary__badges">
+          <span class="beneficio-chip ${beneficioBadgeClass_(org.certificado_provisorio_flag === 'Sí' ? 'ok' : 'muted')}">Certificado provisorio: ${escapeHtml(org.certificado_provisorio_flag || 'No')}</span>
+          <span class="beneficio-chip ${beneficioBadgeClass_(org.certificado_definitivo_flag === 'Sí' ? 'ok' : 'muted')}">Certificado definitivo: ${escapeHtml(org.certificado_definitivo_flag || 'No')}</span>
+          <span class="beneficio-chip ${beneficioBadgeClass_(resumen.proceso_completado_100_flag ? 'ok' : 'info')}">Proceso: ${escapeHtml(String(resumen.proceso_completado_pct || 0))}%</span>
+        </div>
+      </div>
+      <div class="beneficios-summary__metrics">
+        ${beneficiosMetricHtml_('Beneficios base', beneficios.length)}
+        ${beneficiosMetricHtml_('Disponibles', resumen.beneficios_disponibles || 0)}
+        ${beneficiosMetricHtml_('Hitos alertables', resumen.hitos_alertables || 0)}
+      </div>
+    `;
+
+    cards.innerHTML = beneficios.map(item => renderBeneficioCard_(item, item.beneficio_codigo === APP.state.currentBeneficioCodigo)).join('');
+    cards.querySelectorAll('.js-beneficio-card').forEach(btn => {
+      btn.addEventListener('click', () => {
+        APP.state.currentBeneficioCodigo = btn.dataset.beneficioCodigo || '';
+        renderBeneficiosDetalle_(APP.state.currentBeneficiosDetalle);
+      });
+    });
+
+    const selected = beneficios.find(item => item.beneficio_codigo === APP.state.currentBeneficioCodigo) || beneficios[0] || null;
+    if (!selected) {
+      detail.className = 'beneficios-detail empty-state';
+      detail.innerHTML = 'No hay beneficios para la organización seleccionada.';
+      return;
+    }
+
+    detail.className = 'beneficios-detail';
+    detail.innerHTML = renderBeneficioDetailPanel_(org, selected);
+    const form = document.getElementById('beneficio-detail-form');
+    if (form) form.addEventListener('submit', saveBeneficioModuloFromForm_);
+  }
+
+  function renderBeneficioCard_(item, active) {
+    const nextLabel = item.proximo_hito && item.proximo_hito.label
+      ? item.proximo_hito.label
+      : (item.proximo_hito_instrumento || 'Sin hito próximo definido');
+    const eligibilityValue = item.elegibilidad && item.elegibilidad.valor_actual
+      ? item.elegibilidad.valor_actual
+      : '';
+
+    return `
+      <button type="button" class="beneficio-card js-beneficio-card ${active ? 'is-active' : ''}" data-beneficio-codigo="${escapeHtml(item.beneficio_codigo || '')}">
+        <div class="beneficio-card__head">
+          <div>
+            <h3>${escapeHtml(item.beneficio_nombre || '')}</h3>
+            <p>${escapeHtml(item.descripcion || '')}</p>
+          </div>
+          <span class="beneficio-chip ${beneficioBadgeClass_(item.disponible_flag ? 'ok' : 'warning')}">${escapeHtml(item.disponibilidad_label || '')}</span>
+        </div>
+        <div class="beneficio-card__meta">
+          <div><strong>Regla</strong><span>${escapeHtml(item.elegibilidad?.label || '')}</span></div>
+          <div><strong>Estado</strong><span>${escapeHtml(item.estado_instrumento || '')}</span></div>
+          <div><strong>Condición actual</strong><span>${escapeHtml(eligibilityValue || item.elegibilidad?.detalle || '')}</span></div>
+          <div><strong>Próximo hito</strong><span>${escapeHtml(nextLabel)}</span></div>
+        </div>
+      </button>
+    `;
+  }
+
+  function renderBeneficioDetailPanel_(org, item) {
+    const detalle = item.detalle || {};
+    const estados = APP.state.catalogs.estado_instrumento || [];
+    const resultados = APP.state.catalogs.resultado_instrumento || [];
+    const responsables = APP.state.catalogs.responsables || [];
+
+    return `
+      <form id="beneficio-detail-form" class="beneficios-form" novalidate>
+        <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">
+        <input type="hidden" name="beneficio_codigo" value="${escapeHtml(item.beneficio_codigo || '')}">
+
+        <div class="beneficios-detail__head">
+          <div>
+            <p class="eyebrow">Detalle editable</p>
+            <h3>${escapeHtml(item.beneficio_nombre || '')}</h3>
+            <p class="muted">${escapeHtml(item.elegibilidad?.label || '')} · ${escapeHtml(item.elegibilidad?.detalle || '')}</p>
+          </div>
+          <div class="beneficios-detail__head-badges">
+            <span class="beneficio-chip ${beneficioBadgeClass_(item.disponible_flag ? 'ok' : 'warning')}">${escapeHtml(item.disponibilidad_label || '')}</span>
+            <span class="beneficio-chip ${beneficioBadgeClass_('info')}">Año operativo: ${escapeHtml(String(item.anio_operativo || ''))}</span>
+          </div>
+        </div>
+
+        <div class="beneficios-form__grid">
+          <div class="field">
+            <label>Estado del beneficio</label>
+            <select name="estado_instrumento">${renderSelectOptionsHtml_(estados, item.estado_instrumento, 'Seleccionar estado')}</select>
+          </div>
+          <div class="field">
+            <label>Resultado</label>
+            <select name="resultado_instrumento">${renderSelectOptionsHtml_(resultados, item.resultado_instrumento, 'Seleccionar resultado')}</select>
+          </div>
+          <div class="field">
+            <label>Responsable</label>
+            <select name="responsable_instrumento">${renderSelectOptionsHtml_(responsables, item.responsable_instrumento, 'Seleccionar responsable')}</select>
+          </div>
+          <div class="field">
+            <label>Año operativo</label>
+            <input name="anio_operativo" type="number" value="${escapeHtml(String(item.anio_operativo || ''))}">
+          </div>
+          <div class="field" data-span="2">
+            <label>Próximo hito o foco operativo</label>
+            <input name="proximo_hito_instrumento" type="text" value="${escapeHtml(item.proximo_hito_instrumento || '')}">
+          </div>
+          <div class="field" data-span="2">
+            <label>Observación</label>
+            <textarea name="observacion_instrumento" rows="4">${escapeHtml(item.observacion_instrumento || '')}</textarea>
+          </div>
+        </div>
+
+        ${renderBeneficioSpecificSection_(item, detalle)}
+
+        <div class="beneficios-form__actions">
+          <button type="submit" class="primary-btn">
+            <span class="material-symbols-outlined">save</span>Guardar beneficio
+          </button>
+        </div>
+      </form>
+    `;
+  }
+
+  function renderBeneficioSpecificSection_(item, detalle) {
+    if (detalle.tipo === 'charlas') {
+      return `
+        <section class="beneficios-block">
+          <div class="beneficios-block__head">
+            <div>
+              <p class="eyebrow">Configuración anual</p>
+              <h4>Charlas y capacitaciones</h4>
+            </div>
+            <span class="beneficio-chip ${beneficioBadgeClass_('info')}">Default ${escapeHtml(String(detalle.cantidad_default_capacitaciones || 4))}</span>
+          </div>
+          <div class="beneficios-form__grid">
+            <div class="field">
+              <label>Cantidad anual de capacitaciones</label>
+              <input name="cantidad_anual_capacitaciones" type="number" min="0" value="${escapeHtml(String(detalle.cantidad_anual_capacitaciones || ''))}">
+            </div>
+            <div class="field">
+              <label>Condición de acceso</label>
+              <input type="text" value="Certificado provisorio" readonly>
+            </div>
+          </div>
+        </section>
+      `;
+    }
+
+    if (detalle.tipo === 'camaras') {
+      const visitaRows = (item.hitos || []).filter(row => row.hito_codigo === 'visita_tecnica');
+      return `
+        <section class="beneficios-block">
+          <div class="beneficios-block__head">
+            <div>
+              <p class="eyebrow">Inicio del flujo</p>
+              <h4>Cámaras 1414</h4>
+            </div>
+          </div>
+          <div class="beneficios-form__grid">
+            <div class="field">
+              <label>Estado de visita técnica</label>
+              <select name="visita_tecnica_estado">
+                ${renderSelectOptionsHtml_(['Pendiente de solicitud', 'Solicitada', 'Coordinada', 'Realizada'], detalle.visita_tecnica_estado, 'Seleccionar estado')}
+              </select>
+            </div>
+            <div class="field">
+              <label>Estado de inicio del proceso</label>
+              <input name="flujo_inicio_estado" type="text" value="${escapeHtml(detalle.flujo_inicio_estado || '')}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Observación de visita técnica</label>
+              <textarea name="visita_tecnica_observacion" rows="3">${escapeHtml(detalle.visita_tecnica_observacion || '')}</textarea>
+            </div>
+          </div>
+          <div class="beneficios-hitos">
+            ${visitaRows.map((row, index) => renderBeneficioHitoRow_(row, index)).join('')}
+          </div>
+        </section>
+      `;
+    }
+
+    return `
+      <section class="beneficios-block">
+        <div class="beneficios-block__head">
+          <div>
+            <p class="eyebrow">Calendario</p>
+            <h4>Fondese</h4>
+          </div>
+        </div>
+        <div class="beneficios-convocatorias">
+          ${renderFondeseConvocatorias_(item.hitos || [])}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderFondeseConvocatorias_(rows) {
+    const grouped = {};
+    (rows || []).forEach(row => {
+      const key = row.convocatoria_codigo || 'SIN_CONVOCATORIA';
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(row);
+    });
+
+    return Object.keys(grouped).sort().map(key => `
+      <section class="beneficios-convocatoria">
+        <div class="beneficios-convocatoria__head">
+          <h5>${escapeHtml(grouped[key][0]?.convocatoria_nombre || 'Convocatoria')}</h5>
+        </div>
+        <div class="beneficios-hitos">
+          ${grouped[key].sort((a, b) => Number(a.orden_visual || 0) - Number(b.orden_visual || 0)).map((row, index) => renderBeneficioHitoRow_(row, `${key}-${index}`)).join('')}
+        </div>
+      </section>
+    `).join('');
+  }
+
+  function renderBeneficioHitoRow_(row, index) {
+    const mode = row.modo_fecha || 'fecha';
+    return `
+      <div class="beneficio-hito-row js-beneficio-hito-row" data-index="${escapeHtml(String(index))}">
+        <input type="hidden" name="hito_codigo" value="${escapeHtml(row.hito_codigo || '')}">
+        <input type="hidden" name="hito_nombre" value="${escapeHtml(row.hito_nombre || '')}">
+        <input type="hidden" name="convocatoria_codigo" value="${escapeHtml(row.convocatoria_codigo || '')}">
+        <input type="hidden" name="convocatoria_nombre" value="${escapeHtml(row.convocatoria_nombre || '')}">
+        <input type="hidden" name="modo_fecha" value="${escapeHtml(mode)}">
+        <input type="hidden" name="orden_visual" value="${escapeHtml(String(row.orden_visual || 0))}">
+        <input type="hidden" name="alerta_clave_flag" value="${escapeHtml(String(row.alerta_clave_flag || 'No'))}">
+        <input type="hidden" name="estado_hito" value="${escapeHtml(String(row.estado_hito || 'Pendiente'))}">
+        <div class="beneficio-hito-row__copy">
+          <strong>${escapeHtml(row.hito_nombre || '')}</strong>
+          <span>${escapeHtml(beneficioModoFechaLabel_(mode))}</span>
+        </div>
+        <div class="beneficio-hito-row__inputs">
+          ${mode === 'rango' ? `
+            <div class="field">
+              <label>Inicio</label>
+              <input name="fecha_inicio" type="date" value="${escapeHtml(String(row.fecha_inicio || '').slice(0, 10))}">
+            </div>
+            <div class="field">
+              <label>Fin</label>
+              <input name="fecha_fin" type="date" value="${escapeHtml(String(row.fecha_fin || '').slice(0, 10))}">
+            </div>
+          ` : ''}
+          ${(mode === 'fecha' || mode === 'hasta') ? `
+            <div class="field">
+              <label>${mode === 'hasta' ? 'Fecha límite' : 'Fecha'}</label>
+              <input name="fecha_referencia" type="date" value="${escapeHtml(String(row.fecha_referencia || '').slice(0, 10))}">
+            </div>
+          ` : ''}
+          ${mode === 'texto' ? `
+            <div class="field field--grow">
+              <label>Detalle operativo</label>
+              <input name="descripcion_operativa" type="text" value="${escapeHtml(row.descripcion_operativa || '')}">
+            </div>
+          ` : `
+            <div class="field field--grow">
+              <label>Detalle operativo</label>
+              <input name="descripcion_operativa" type="text" value="${escapeHtml(row.descripcion_operativa || '')}" placeholder="Opcional">
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+  }
+
+  function beneficioModoFechaLabel_(mode) {
+    const map = {
+      rango: 'Rango de fechas',
+      hasta: 'Fecha límite',
+      fecha: 'Fecha única',
+      texto: 'Texto operativo'
+    };
+    return map[mode] || mode;
+  }
+
+  function beneficiosMetricHtml_(label, value) {
+    return `<div class="beneficios-metric"><strong>${escapeHtml(String(value))}</strong><span>${escapeHtml(label)}</span></div>`;
+  }
+
+  function beneficioBadgeClass_(tone) {
+    const map = {
+      ok: 'beneficio-chip--ok',
+      warning: 'beneficio-chip--warning',
+      info: 'beneficio-chip--info',
+      muted: 'beneficio-chip--muted'
+    };
+    return map[tone] || map.muted;
+  }
+
+  function renderSelectOptionsHtml_(options, currentValue, placeholder) {
+    const current = String(currentValue || '').trim();
+    const rows = Array.isArray(options) ? options : [];
+    const items = rows.map(option => {
+      const value = typeof option === 'string' ? option : (option.value || option.codigo || option.instrumento_codigo_catalogo || '');
+      const label = typeof option === 'string' ? option : (option.label || option.descripcion || option.nombre || value);
+      return `<option value="${escapeHtml(value)}" ${String(value) === current ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+    }).join('');
+    return `<option value="">${escapeHtml(placeholder || 'Seleccionar')}</option>${items}`;
+  }
+
+  function collectBeneficioHitosFromForm_(form) {
+    return Array.from(form.querySelectorAll('.js-beneficio-hito-row')).map(row => ({
+      hito_codigo: row.querySelector('input[name="hito_codigo"]')?.value || '',
+      hito_nombre: row.querySelector('input[name="hito_nombre"]')?.value || '',
+      convocatoria_codigo: row.querySelector('input[name="convocatoria_codigo"]')?.value || '',
+      convocatoria_nombre: row.querySelector('input[name="convocatoria_nombre"]')?.value || '',
+      modo_fecha: row.querySelector('input[name="modo_fecha"]')?.value || '',
+      orden_visual: row.querySelector('input[name="orden_visual"]')?.value || '',
+      alerta_clave_flag: row.querySelector('input[name="alerta_clave_flag"]')?.value || 'No',
+      estado_hito: row.querySelector('input[name="estado_hito"]')?.value || 'Pendiente',
+      fecha_inicio: row.querySelector('input[name="fecha_inicio"]')?.value || '',
+      fecha_fin: row.querySelector('input[name="fecha_fin"]')?.value || '',
+      fecha_referencia: row.querySelector('input[name="fecha_referencia"]')?.value || '',
+      descripcion_operativa: row.querySelector('input[name="descripcion_operativa"]')?.value || ''
+    }));
+  }
+
+  function saveBeneficioModuloFromForm_(ev) {
+    ev.preventDefault();
+    const form = ev.target;
+    const payload = serializeForm(form);
+    payload.detalle = {};
+    payload.hitos = collectBeneficioHitosFromForm_(form);
+
+    if (payload.beneficio_codigo === 'CHARLAS_CAPACITACIONES') {
+      payload.detalle.cantidad_anual_capacitaciones = String(form.querySelector('[name="cantidad_anual_capacitaciones"]')?.value || '').trim();
+    }
+
+    if (payload.beneficio_codigo === 'CAMARAS_1414') {
+      payload.detalle.visita_tecnica_estado = String(form.querySelector('[name="visita_tecnica_estado"]')?.value || '').trim();
+      payload.detalle.visita_tecnica_observacion = String(form.querySelector('[name="visita_tecnica_observacion"]')?.value || '').trim();
+      payload.detalle.flujo_inicio_estado = String(form.querySelector('[name="flujo_inicio_estado"]')?.value || '').trim();
+      const visitaHito = payload.hitos.find(row => row.hito_codigo === 'visita_tecnica');
+      payload.detalle.visita_tecnica_fecha_solicitud = visitaHito && visitaHito.fecha_referencia ? visitaHito.fecha_referencia : '';
+    }
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.dataset.originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<span class="material-symbols-outlined">progress_activity</span>Guardando...';
+    }
+
+    api('guardarBeneficioModulo', payload).then(() => {
+      showSuccess(`Beneficio guardado: ${friendlyBeneficioLabel_(payload.beneficio_codigo)}`);
+      return loadBeneficiosDetalle_(payload.organizacion_id);
+    }).catch(showError).finally(() => {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = submitBtn.dataset.originalText || 'Guardar beneficio';
+      }
+    });
+  }
+
   function saveInstrumentoFromForm(ev) {
     ev.preventDefault();
     const payload = serializeForm(ev.target);
-    api('guardarInstrumento', payload).then(res => showSuccess(`Instrumento guardado: ${res.org_instrumento_id}`)).catch(showError);
+    api('guardarInstrumento', payload).then(res => showSuccess(`Beneficio guardado: ${res.org_instrumento_id}`)).catch(showError);
   }
 
   function saveRequisitoFromForm(ev) {
@@ -2637,13 +3158,30 @@
       'nuevo-ingreso': 'nuevo ingreso',
       seguimiento: 'avance',
       organizacion: 'organizaciones',
-      instrumento: 'instrumentos',
+      instrumento: 'beneficios',
       requisito: 'requisitos',
       socios: 'socios',
       historial: 'historial',
       usuarios: 'usuarios'
     };
     return map[view] || view;
+  }
+
+  function friendlyBeneficioLabel_(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const fromCatalog = (APP.state.catalogs.beneficiosBase || []).find(item =>
+      String(item.beneficio_codigo || '').trim() === raw
+    );
+    if (fromCatalog && fromCatalog.beneficio_nombre) return fromCatalog.beneficio_nombre;
+
+    const fallback = {
+      CHARLAS_CAPACITACIONES: 'Charlas y capacitaciones',
+      FONDESE: 'Fondese',
+      CAMARAS_1414: 'Cámaras 1414'
+    };
+    return fallback[raw] || raw;
   }
 
   function buildFullName(name, last) {

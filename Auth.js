@@ -316,7 +316,9 @@ function normalizeUserModuleKeys_(value) {
     organizacion: 'organizacion',
     gestion_organizaciones: 'organizacion',
     gestionar_instrumentos: 'instrumento',
+    gestionar_beneficios: 'instrumento',
     instrumentos: 'instrumento',
+    beneficios: 'instrumento',
     registrar_requisitos: 'requisito',
     requisitos: 'requisito',
     gestion_usuarios: 'usuarios',
@@ -558,7 +560,7 @@ function getModuleDefinitions_() {
     { key: 'seguimiento', label: 'Registrar avance', view: 'seguimiento' },
     { key: 'organizacion', label: 'Organizaciones', view: 'organizacion' },
     { key: 'socios', label: 'Socios', view: 'socios' },
-    { key: 'instrumento', label: 'Gestionar instrumentos', view: 'instrumento' },
+    { key: 'instrumento', label: 'Beneficios', view: 'instrumento' },
     { key: 'requisito', label: 'Registrar requisitos', view: 'requisito' },
     { key: 'historial', label: 'Historial', view: 'historial' },
     { key: 'usuarios', label: 'Gestión de usuarios', view: 'usuarios', superOnly: true }

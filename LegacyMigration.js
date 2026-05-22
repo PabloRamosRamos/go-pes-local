@@ -696,7 +696,7 @@ function mapLegacyGeneralOrgState_(row, hasCam, hasFonde) {
   if (!constituida) return 'En constitución';
   if (hasFonde) return 'Constituida con postulaciones en curso';
   if (hasCam) return 'Constituida con beneficios activos';
-  return 'Constituida sin instrumentos';
+  return 'Constituida sin beneficios';
 }
 
 function mapLegacyCamaraState_(convenio, cam) {

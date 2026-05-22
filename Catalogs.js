@@ -43,7 +43,7 @@ function seedEstados_() {
     ]))
     .concat(buildEstadoRows_('estado_general_organizacion', [
       'En constitución',
-      'Constituida sin instrumentos',
+      'Constituida sin beneficios',
       'Constituida con beneficios activos',
       'Constituida con postulaciones en curso',
       'Constituida con adjudicación',
@@ -186,8 +186,9 @@ function seedOrigen_() {
 
 function seedInstrumentos_() {
   const rows = [
+    ['CHARLAS_CAPACITACIONES', 'Charlas y capacitaciones', 'capacitacion_municipal', 'municipal', true],
     ['CAMARAS_1414', 'Cámaras 1414', 'beneficio_municipal', 'municipal', true],
-    ['FONDESE', 'FONDESE', 'fondo_municipal', 'municipal', true],
+    ['FONDESE', 'Fondese', 'fondo_municipal', 'municipal', true],
     ['FONDO_ESTATAL_SEGURIDAD', 'Fondo estatal de seguridad', 'fondo_estatal', 'estatal', true],
     ['APOYO_TECNICO_POSTULACION', 'Apoyo técnico de postulación', 'asistencia_tecnica', 'municipal', true],
     ['OTRO', 'Otro instrumento', 'subvencion', 'otro', true]
@@ -424,7 +425,8 @@ function buildCatalogosAppClientBundle_() {
     instrumentos: c.instrumentos || [],
     requisitosPorInstrumento: c.requisitosPorInstrumento || {},
     responsables: c.responsables || [],
-    cargosSocios: c.cargosSocios || []
+    cargosSocios: c.cargosSocios || [],
+    beneficiosBase: typeof getBeneficiosBaseDefinitions_ === 'function' ? getBeneficiosBaseDefinitions_() : []
   };
 }
 

@@ -2627,7 +2627,275 @@
     color: var(--text-muted);
   }
 
+  /* Modulo Beneficios */
+  .beneficios-shell {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  .beneficios-head {
+    align-items: center;
+  }
+
+  .beneficios-selector-panel,
+  .beneficios-summary,
+  .beneficio-card,
+  .beneficios-detail,
+  .beneficios-block,
+  .beneficios-convocatoria,
+  .beneficios-metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-md);
+  }
+
+  .beneficios-selector-panel {
+    display: flex;
+    align-items: end;
+    gap: var(--space-4);
+  }
+
+  .beneficios-actions {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .beneficios-summary,
+  .beneficios-detail,
+  .beneficio-card,
+  .beneficios-block,
+  .beneficios-convocatoria,
+  .beneficios-metric {
+    padding: var(--space-6);
+  }
+
+  .beneficios-summary {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .beneficios-summary__main {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    align-items: flex-start;
+  }
+
+  .beneficios-summary__main h3,
+  .beneficios-detail__head h3,
+  .beneficios-block__head h4,
+  .beneficios-convocatoria__head h5,
+  .beneficio-card h3 {
+    margin: 0;
+    color: var(--brand-blue);
+  }
+
+  .beneficios-summary__badges,
+  .beneficios-detail__head-badges {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .beneficio-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: var(--radius-pill);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.03em;
+  }
+
+  .beneficio-chip--ok {
+    background: var(--success-soft);
+    color: var(--success-dark);
+  }
+
+  .beneficio-chip--warning {
+    background: var(--warning-soft);
+    color: var(--warning);
+  }
+
+  .beneficio-chip--info {
+    background: var(--brand-blue-soft);
+    color: var(--brand-blue-dark);
+  }
+
+  .beneficio-chip--muted {
+    background: var(--surface-alt);
+    color: var(--text-muted);
+  }
+
+  .beneficios-summary__metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .beneficios-metric {
+    text-align: center;
+  }
+
+  .beneficios-metric strong {
+    display: block;
+    color: var(--brand-blue);
+    font-size: var(--font-size-2xl);
+  }
+
+  .beneficios-metric span {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .beneficios-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .beneficio-card {
+    text-align: left;
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .beneficio-card:hover,
+  .beneficio-card.is-active {
+    transform: translateY(-1px);
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .beneficio-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+  }
+
+  .beneficio-card__head p {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+  }
+
+  .beneficio-card__meta {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .beneficio-card__meta > div {
+    display: grid;
+    gap: 2px;
+  }
+
+  .beneficio-card__meta strong {
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: .04em;
+  }
+
+  .beneficio-card__meta span {
+    color: var(--text-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  .beneficios-detail {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .beneficios-detail__head,
+  .beneficios-block__head,
+  .beneficios-convocatoria__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--space-4);
+  }
+
+  .beneficios-form,
+  .beneficios-convocatorias,
+  .beneficios-hitos {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .beneficios-form__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .beneficios-form__grid .field[data-span="2"] {
+    grid-column: 1 / -1;
+  }
+
+  .beneficios-form__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .beneficio-hito-row {
+    display: grid;
+    grid-template-columns: minmax(220px, 28%) minmax(0, 1fr);
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface-soft);
+  }
+
+  .beneficio-hito-row__copy {
+    display: grid;
+    gap: 4px;
+    align-content: start;
+  }
+
+  .beneficio-hito-row__copy span {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-bold);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .beneficio-hito-row__inputs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: end;
+  }
+
+  .beneficio-hito-row__inputs .field--grow {
+    grid-column: 1 / -1;
+  }
+
   @media (max-width: 1100px) {
+    .beneficios-cards {
+      grid-template-columns: 1fr;
+    }
+
+    .beneficios-summary__metrics {
+      grid-template-columns: 1fr;
+    }
+
+    .beneficio-hito-row {
+      grid-template-columns: 1fr;
+    }
+
+    .beneficio-hito-row__inputs {
+      grid-template-columns: 1fr;
+    }
+
     .organizaciones-metrics {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
@@ -2638,6 +2906,24 @@
   }
 
   @media (max-width: 720px) {
+    .beneficios-selector-panel,
+    .beneficios-summary__main,
+    .beneficios-detail__head,
+    .beneficios-block__head,
+    .beneficios-convocatoria__head {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .beneficios-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .beneficios-form__grid {
+      grid-template-columns: 1fr;
+    }
+
     .organizaciones-summary {
       flex-direction: column;
       align-items: flex-start;

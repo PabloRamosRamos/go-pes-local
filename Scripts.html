@@ -2954,13 +2954,24 @@
   }
 
   function loadHistorial() {
-    api('listarHistorial', {}).then(rows => {
+    const rangeSelect = document.getElementById('history-range-filter');
+    if (rangeSelect && !rangeSelect.dataset.bound) {
+      rangeSelect.dataset.bound = 'true';
+      rangeSelect.addEventListener('change', loadHistorial);
+    }
+
+    const selectedPeriod = rangeSelect && rangeSelect.value ? rangeSelect.value : 'last_month';
+    const selectedLabel = rangeSelect && rangeSelect.options && rangeSelect.selectedIndex >= 0
+      ? String(rangeSelect.options[rangeSelect.selectedIndex].text || '').trim()
+      : 'este período';
+
+    api('listarHistorial', { periodo: selectedPeriod }).then(rows => {
       const tbody = document.getElementById('history-results');
       if (!tbody) return;
 
       rows = Array.isArray(rows) ? rows : [];
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="muted">No hay registros de trazabilidad disponibles.</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="8" class="muted">No hay registros para ${escapeHtml(selectedLabel.toLowerCase())}.</td></tr>`;
         return;
       }
 

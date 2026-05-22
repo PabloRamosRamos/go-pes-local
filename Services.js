@@ -723,6 +723,7 @@ function listarHistorial(filters) {
   requireModuleAccess_('historial', ['operador', 'coordinador', 'administrador', 'superuser']);
   const config = filters || {};
   let rows = buildHistorialRows_();
+  rows = filterHistorialRowsByPeriod_(rows, config.periodo || '');
 
   if (config.entity_id) {
     const targetEntityId = String(config.entity_id || '').trim();
@@ -739,6 +740,39 @@ function listarHistorial(filters) {
   }
 
   return serializeForClient_(rows.slice(0, 200));
+}
+
+function filterHistorialRowsByPeriod_(rows, periodKey) {
+  const normalizedPeriod = String(periodKey || '').trim().toLowerCase();
+  const cutoff = resolveHistorialCutoffDate_(normalizedPeriod);
+  if (!cutoff) return rows;
+
+  return (rows || []).filter(function(row) {
+    const timestamp = parseHistorialTimestamp_(row && row.timestamp);
+    return timestamp && timestamp.getTime() >= cutoff.getTime();
+  });
+}
+
+function resolveHistorialCutoffDate_(periodKey) {
+  const now = new Date();
+  const cutoff = new Date(now.getTime());
+
+  switch (periodKey) {
+    case 'last_week':
+      cutoff.setDate(cutoff.getDate() - 7);
+      return cutoff;
+    case 'last_month':
+      cutoff.setMonth(cutoff.getMonth() - 1);
+      return cutoff;
+    case 'last_year':
+      cutoff.setFullYear(cutoff.getFullYear() - 1);
+      return cutoff;
+    case 'all':
+    case '':
+      return null;
+    default:
+      return null;
+  }
 }
 
 function buildHistorialRows_() {
@@ -870,6 +904,16 @@ function stringifyHistorialValue_(value) {
   }
   if (typeof value === 'object') return '';
   return String(value);
+}
+
+function parseHistorialTimestamp_(value) {
+  if (!value) return null;
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return isNaN(value.getTime()) ? null : value;
+  }
+
+  const parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? null : parsed;
 }
 
 function goPesRebuildDerivedUnsafe_() {

@@ -326,7 +326,18 @@
           </section>
 
           <section class="view" id="view-historial">
-            <div class="section-head"><div><p class="eyebrow">Trazabilidad</p><h2>Historial de acciones</h2></div></div>
+            <div class="section-head">
+              <div><p class="eyebrow">Trazabilidad</p><h2>Historial de acciones</h2></div>
+              <div class="field field--auto history-filter">
+                <label for="history-range-filter">Periodo</label>
+                <select id="history-range-filter">
+                  <option value="last_week">Última semana</option>
+                  <option value="last_month" selected>Último mes</option>
+                  <option value="last_year">Último año</option>
+                  <option value="all">Todo</option>
+                </select>
+              </div>
+            </div>
             <div class="table-wrap"><table class="data-table"><thead><tr><th>Fecha</th><th>Origen</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Resultado</th><th>Detalle</th></tr></thead><tbody id="history-results"></tbody></table></div>
           </section>
 

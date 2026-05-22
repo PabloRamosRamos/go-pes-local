@@ -12,6 +12,7 @@ function seedGoPesV2Catalogs_() {
   seedEstados_();
   seedEtapas_();
   seedOrigen_();
+  if (typeof seedBeneficios_ === 'function') seedBeneficios_();
   seedInstrumentos_();
   seedRequisitos_();
   seedCargos_();
@@ -185,14 +186,24 @@ function seedOrigen_() {
 }
 
 function seedInstrumentos_() {
-  const rows = [
-    ['CHARLAS_CAPACITACIONES', 'Charlas y capacitaciones', 'capacitacion_municipal', 'municipal', true],
-    ['CAMARAS_1414', 'Cámaras 1414', 'beneficio_municipal', 'municipal', true],
-    ['FONDESE', 'Fondese', 'fondo_municipal', 'municipal', true],
+  const beneficios = sheetExists_(GO_PES_V2.SHEETS.DIM_BENEFICIOS)
+    ? (getSheetData_(GO_PES_V2.SHEETS.DIM_BENEFICIOS) || []).filter(function(r) {
+        return catalogToBool_(r.activo_flag);
+      }).map(function(r) {
+        return [
+          r.beneficio_codigo,
+          r.beneficio_nombre,
+          r.instrumento_tipo,
+          r.origen_instrumento,
+          true
+        ];
+      })
+    : [];
+  const rows = beneficios.concat([
     ['FONDO_ESTATAL_SEGURIDAD', 'Fondo estatal de seguridad', 'fondo_estatal', 'estatal', true],
     ['APOYO_TECNICO_POSTULACION', 'Apoyo técnico de postulación', 'asistencia_tecnica', 'municipal', true],
     ['OTRO', 'Otro instrumento', 'subvencion', 'otro', true]
-  ];
+  ]);
 
   mergeCatalogRows_(
     GO_PES_V2.SHEETS.DIM_INSTRUMENTOS,
@@ -314,6 +325,7 @@ function getCatalogosApp() {
     S.DIM_ORIGEN,
     S.DIM_ESTADOS,
     S.DIM_ETAPAS,
+    S.DIM_BENEFICIOS,
     S.DIM_INSTRUMENTOS,
     S.DIM_REQUISITOS,
     S.DIM_USUARIOS,
@@ -325,6 +337,7 @@ function getCatalogosApp() {
   const origen = sheets[S.DIM_ORIGEN] || [];
   const estados = sheets[S.DIM_ESTADOS] || [];
   const etapas = sheets[S.DIM_ETAPAS] || [];
+  const beneficios = sheets[S.DIM_BENEFICIOS] || [];
   const instrumentos = sheets[S.DIM_INSTRUMENTOS] || [];
   const requisitos = sheets[S.DIM_REQUISITOS] || [];
   const usuarios = (sheets[S.DIM_USUARIOS] || []).filter(function(r) {
@@ -400,6 +413,9 @@ function getCatalogosApp() {
       'cierre_solicitud',
       'convenio_beneficio'
     ],
+    beneficiosCatalog: beneficios.filter(function(r) {
+      return catalogToBool_(r.activo_flag);
+    }),
     estadosPorTipo: estadosPorTipo,
     etapasConstitucion: etapas,
     instrumentos: instrumentos,
@@ -426,7 +442,7 @@ function buildCatalogosAppClientBundle_() {
     requisitosPorInstrumento: c.requisitosPorInstrumento || {},
     responsables: c.responsables || [],
     cargosSocios: c.cargosSocios || [],
-    beneficiosBase: typeof getBeneficiosBaseDefinitions_ === 'function' ? getBeneficiosBaseDefinitions_() : []
+    beneficiosBase: c.beneficiosCatalog || []
   };
 }
 

@@ -1,473 +1,702 @@
-function getBeneficiosBaseDefinitions_() {
+function getSystemBenefitSeeds_() {
   return [
     {
       beneficio_codigo: 'CHARLAS_CAPACITACIONES',
       beneficio_nombre: 'Charlas y capacitaciones',
+      descripcion_beneficio: 'Plan anual editable de capacitaciones para organizaciones con certificado provisorio.',
       instrumento_tipo: 'capacitacion_municipal',
       origen_instrumento: 'municipal',
-      anio_operativo_default: new Date().getFullYear(),
-      estado_instrumento_default: 'Identificado',
-      resultado_instrumento_default: 'No aplica',
-      proximo_hito_default: 'Definir plan anual de capacitaciones',
       elegibilidad_tipo: 'certificado_provisorio',
       elegibilidad_label: 'Requiere certificado provisorio',
-      descripcion: 'Plan anual editable de capacitaciones para organizaciones con certificado provisorio.',
-      cantidad_anual_default: 4
+      requiere_certificado_provisorio_flag: 'Sí',
+      requiere_certificado_definitivo_flag: 'No',
+      requiere_proceso_100_flag: 'No',
+      cantidad_anual_capacitaciones: 4,
+      cantidad_default_capacitaciones: 4,
+      llamados_por_anio: '',
+      visita_tecnica_requerida_flag: 'No',
+      flujo_inicio_default: 'Definir plan anual de capacitaciones',
+      activo_flag: 'Sí',
+      system_flag: 'Sí'
     },
     {
       beneficio_codigo: 'FONDESE',
       beneficio_nombre: 'Fondese',
+      descripcion_beneficio: 'Dos convocatorias anuales con hitos y fechas editables para seguimiento y alertas.',
       instrumento_tipo: 'fondo_municipal',
       origen_instrumento: 'municipal',
-      anio_operativo_default: 2026,
-      estado_instrumento_default: 'Identificado',
-      resultado_instrumento_default: 'Pendiente',
-      proximo_hito_default: 'Revisar calendario de convocatorias FONDESE',
       elegibilidad_tipo: 'proceso_100',
       elegibilidad_label: 'Requiere proceso completado al 100%',
-      descripcion: 'Dos convocatorias anuales con hitos y fechas editables para seguimiento y alertas.'
+      requiere_certificado_provisorio_flag: 'No',
+      requiere_certificado_definitivo_flag: 'No',
+      requiere_proceso_100_flag: 'Sí',
+      cantidad_anual_capacitaciones: '',
+      cantidad_default_capacitaciones: '',
+      llamados_por_anio: 2,
+      visita_tecnica_requerida_flag: 'No',
+      flujo_inicio_default: 'Revisar calendario de convocatorias FONDESE',
+      activo_flag: 'Sí',
+      system_flag: 'Sí'
     },
     {
       beneficio_codigo: 'CAMARAS_1414',
       beneficio_nombre: 'Cámaras 1414',
+      descripcion_beneficio: 'Beneficio que inicia con visita técnica una vez obtenido el certificado definitivo.',
       instrumento_tipo: 'beneficio_municipal',
       origen_instrumento: 'municipal',
-      anio_operativo_default: new Date().getFullYear(),
-      estado_instrumento_default: 'Identificado',
-      resultado_instrumento_default: 'No aplica',
-      proximo_hito_default: 'Solicitar visita técnica tras certificado definitivo',
       elegibilidad_tipo: 'certificado_definitivo',
       elegibilidad_label: 'Requiere certificado definitivo',
-      descripcion: 'Activa el flujo de visita técnica como hito preparatorio para alertas futuras.'
+      requiere_certificado_provisorio_flag: 'No',
+      requiere_certificado_definitivo_flag: 'Sí',
+      requiere_proceso_100_flag: 'No',
+      cantidad_anual_capacitaciones: '',
+      cantidad_default_capacitaciones: '',
+      llamados_por_anio: '',
+      visita_tecnica_requerida_flag: 'Sí',
+      flujo_inicio_default: 'Solicitar visita técnica tras certificado definitivo',
+      activo_flag: 'Sí',
+      system_flag: 'Sí'
     }
   ];
 }
 
-function getBeneficiosModuloDetalle(payload) {
-  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
-  const organizacionId = String(payload && payload.organizacion_id || '').trim();
-  if (!organizacionId) throw new Error('Falta organizacion_id.');
+function getSystemBenefitTemplateHitos_(beneficioCodigo) {
+  const code = String(beneficioCodigo || '').trim().toUpperCase();
+  if (code === 'FONDESE') {
+    return [
+      buildBenefitBaseHitoSeed_('FONDESE', 'PRIMERA_2026', 'Primera Convocatoria', 'postulacion_proyectos', 'Postulación de Proyectos Primera Convocatoria', 'rango', '2026-01-29', '2026-03-27', '', '', 'Sí', 'Pendiente', 10),
+      buildBenefitBaseHitoSeed_('FONDESE', 'PRIMERA_2026', 'Primera Convocatoria', 'revision_admisibilidad', 'Revisión de Admisibilidad Primera Convocatoria', 'hasta', '', '', '2026-03-30', '', 'Sí', 'Pendiente', 20),
+      buildBenefitBaseHitoSeed_('FONDESE', 'PRIMERA_2026', 'Primera Convocatoria', 'evaluacion_proyectos', 'Evaluación de los Proyectos Primera Convocatoria', 'hasta', '', '', '2026-04-06', '', 'Sí', 'Pendiente', 30),
+      buildBenefitBaseHitoSeed_('FONDESE', 'PRIMERA_2026', 'Primera Convocatoria', 'firma_convenio_entrega_fondos', 'Firma de convenio y entrega de Fondos Primera Convocatoria', 'fecha', '', '', '2026-04-17', '', 'Sí', 'Pendiente', 40),
+      buildBenefitBaseHitoSeed_('FONDESE', 'PRIMERA_2026', 'Primera Convocatoria', 'ejecucion_proyectos', 'Ejecución de proyectos Primera Convocatoria', 'texto', '', '', '', 'Desde la recepción de Fondos', 'No', 'Pendiente', 50),
+      buildBenefitBaseHitoSeed_('FONDESE', 'PRIMERA_2026', 'Primera Convocatoria', 'rendicion_recursos', 'Rendición de recursos Primera Convocatoria', 'hasta', '', '', '2026-06-30', '', 'Sí', 'Pendiente', 60),
+      buildBenefitBaseHitoSeed_('FONDESE', 'SEGUNDA_2026', 'Segunda Convocatoria', 'postulacion_proyectos', 'Postulación de Proyectos Segunda Convocatoria', 'rango', '2026-07-01', '2026-08-03', '', '', 'Sí', 'Pendiente', 110),
+      buildBenefitBaseHitoSeed_('FONDESE', 'SEGUNDA_2026', 'Segunda Convocatoria', 'revision_admisibilidad', 'Revisión de Admisibilidad Segunda Convocatoria', 'hasta', '', '', '2026-08-14', '', 'Sí', 'Pendiente', 120),
+      buildBenefitBaseHitoSeed_('FONDESE', 'SEGUNDA_2026', 'Segunda Convocatoria', 'evaluacion_proyectos', 'Evaluación de los Proyectos Segunda Convocatoria', 'hasta', '', '', '2026-08-21', '', 'Sí', 'Pendiente', 130),
+      buildBenefitBaseHitoSeed_('FONDESE', 'SEGUNDA_2026', 'Segunda Convocatoria', 'firma_convenio_entrega_fondos', 'Firma de convenio y entrega de Fondos Segunda Convocatoria', 'fecha', '', '', '2026-08-28', '', 'Sí', 'Pendiente', 140),
+      buildBenefitBaseHitoSeed_('FONDESE', 'SEGUNDA_2026', 'Segunda Convocatoria', 'ejecucion_proyectos', 'Ejecución de proyectos Segunda Convocatoria', 'texto', '', '', '', 'Desde la recepción de Fondos', 'No', 'Pendiente', 150),
+      buildBenefitBaseHitoSeed_('FONDESE', 'SEGUNDA_2026', 'Segunda Convocatoria', 'rendicion_recursos', 'Rendición de recursos Segunda Convocatoria', 'hasta', '', '', '2026-11-30', '', 'Sí', 'Pendiente', 160)
+    ];
+  }
 
+  if (code === 'CAMARAS_1414') {
+    return [
+      buildBenefitBaseHitoSeed_('CAMARAS_1414', '', '', 'visita_tecnica_solicitada', 'Visita técnica solicitada', 'fecha', '', '', '', 'Se solicita cuando exista certificado definitivo.', 'Sí', 'Pendiente', 10),
+      buildBenefitBaseHitoSeed_('CAMARAS_1414', '', '', 'visita_tecnica_realizada', 'Visita técnica realizada', 'fecha', '', '', '', '', 'Sí', 'Pendiente', 20),
+      buildBenefitBaseHitoSeed_('CAMARAS_1414', '', '', 'proceso_en_ejecucion', 'Proceso en ejecución', 'texto', '', '', '', 'Seguimiento operativo posterior a la visita técnica.', 'No', 'Pendiente', 30)
+    ];
+  }
+
+  if (code === 'CHARLAS_CAPACITACIONES') {
+    return [
+      buildBenefitBaseHitoSeed_('CHARLAS_CAPACITACIONES', '', '', 'plan_anual_definido', 'Plan anual definido', 'texto', '', '', '', 'Cantidad anual editable con valor base 4.', 'No', 'Pendiente', 10),
+      buildBenefitBaseHitoSeed_('CHARLAS_CAPACITACIONES', '', '', 'programacion_vigente', 'Programación vigente', 'texto', '', '', '', 'Programación o uso efectivo del beneficio por organización.', 'No', 'Pendiente', 20)
+    ];
+  }
+
+  return [];
+}
+
+function buildBenefitBaseHitoSeed_(beneficioCodigo, convocatoriaCodigo, convocatoriaNombre, hitoCodigo, hitoNombre, modoFecha, fechaInicio, fechaFin, fechaReferencia, descripcionOperativa, alertaClaveFlag, estadoDefault, ordenVisual) {
+  return {
+    beneficio_hito_base_id: deterministicId_('BHB', [beneficioCodigo, convocatoriaCodigo, hitoCodigo]),
+    beneficio_codigo: beneficioCodigo,
+    convocatoria_codigo: convocatoriaCodigo || '',
+    convocatoria_nombre: convocatoriaNombre || '',
+    hito_codigo: hitoCodigo,
+    hito_nombre: hitoNombre,
+    modo_fecha: modoFecha || 'fecha',
+    fecha_inicio: fechaInicio || '',
+    fecha_fin: fechaFin || '',
+    fecha_referencia: fechaReferencia || '',
+    descripcion_operativa: descripcionOperativa || '',
+    alerta_clave_flag: alertaClaveFlag || 'No',
+    estado_hito_default: estadoDefault || 'Pendiente',
+    orden_visual: ordenVisual || 0,
+    activo_flag: 'Sí'
+  };
+}
+
+function seedBeneficios_() {
   ensureSheetsSubset_([
+    GO_PES_V2.SHEETS.DIM_BENEFICIOS,
     GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE,
-    GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS
+    GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS,
+    GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG,
+    GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG_HITOS
   ]);
 
-  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
-  if (!org) throw new Error('No se encontró la organización indicada.');
+  const now = new Date();
+  const actor = 'system';
+  const seeds = getSystemBenefitSeeds_();
 
-  const defs = getBeneficiosBaseDefinitions_();
-  const codes = defs.map(function(def) { return def.beneficio_codigo; });
-  const instrumentos = filterByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'organizacion_id', organizacionId, false)
-    .filter(function(row) {
-      return codes.indexOf(String(row.instrumento_codigo_catalogo || '').trim()) !== -1;
-    });
-  const detalles = filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE, 'organizacion_id', organizacionId, false) || [];
-  const hitos = filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS, 'organizacion_id', organizacionId, false) || [];
-
-  goPesEnsureBeneficioSupportRowsForExistingRecords_(org, instrumentos, detalles, hitos, user);
-
-  const detallesRefrescados = filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE, 'organizacion_id', organizacionId, false) || [];
-  const hitosRefrescados = filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS, 'organizacion_id', organizacionId, false) || [];
-  const contexto = goPesBuildBeneficiosContext_(org);
-
-  const instrumentosByCode = {};
-  instrumentos.forEach(function(row) {
-    instrumentosByCode[String(row.instrumento_codigo_catalogo || '').trim()] = row;
-  });
-
-  const detalleByCode = {};
-  detallesRefrescados.forEach(function(row) {
-    detalleByCode[String(row.beneficio_codigo || '').trim()] = row;
-  });
-
-  const hitosByCode = {};
-  hitosRefrescados.forEach(function(row) {
-    const code = String(row.beneficio_codigo || '').trim();
-    if (!hitosByCode[code]) hitosByCode[code] = [];
-    hitosByCode[code].push(row);
-  });
-
-  const beneficios = defs.map(function(def) {
-    const code = def.beneficio_codigo;
-    const instrumento = instrumentosByCode[code] || null;
-    const detalle = detalleByCode[code] || null;
-    const elegibilidad = goPesBuildBeneficioElegibilidad_(def, org, contexto);
-    const beneficioHitos = goPesBuildBeneficioHitosForClient_(def, organizacionId, instrumento, hitosByCode[code] || []);
-    const proximoHito = goPesFindNextBeneficioHito_(beneficioHitos);
-    const estadoInstrumento = instrumento && instrumento.estado_instrumento
-      ? String(instrumento.estado_instrumento)
-      : def.estado_instrumento_default;
-    const detalleEspecifico = goPesBuildBeneficioDetalleForClient_(def, detalle, beneficioHitos);
-
+  upsertRowsByKey_(GO_PES_V2.SHEETS.DIM_BENEFICIOS, 'beneficio_codigo', seeds.map(function(seed) {
     return {
-      beneficio_codigo: code,
-      beneficio_nombre: def.beneficio_nombre,
-      descripcion: def.descripcion,
-      org_instrumento_id: instrumento && instrumento.org_instrumento_id || '',
-      persisted_flag: !!(instrumento && instrumento.org_instrumento_id),
-      disponible_flag: elegibilidad.cumple_flag,
-      disponibilidad_label: elegibilidad.cumple_flag ? 'Disponible' : 'No disponible',
-      elegibilidad: elegibilidad,
-      estado_instrumento: estadoInstrumento,
-      resultado_instrumento: instrumento && instrumento.resultado_instrumento || def.resultado_instrumento_default,
-      responsable_instrumento: instrumento && instrumento.responsable_instrumento || org.responsable_actual || '',
-      proximo_hito_instrumento: instrumento && instrumento.proximo_hito_instrumento || proximoHito.label || def.proximo_hito_default,
-      observacion_instrumento: instrumento && instrumento.observacion_instrumento || '',
-      anio_operativo: instrumento && instrumento.anio_convocatoria || def.anio_operativo_default,
-      detalle: detalleEspecifico,
-      hitos: beneficioHitos,
-      proximo_hito: proximoHito,
-      alertas_preparadas: beneficioHitos.filter(function(row) { return toBool_(row.alerta_clave_flag); }).length
+      beneficio_codigo: seed.beneficio_codigo,
+      beneficio_nombre: seed.beneficio_nombre,
+      descripcion_beneficio: seed.descripcion_beneficio,
+      instrumento_tipo: seed.instrumento_tipo,
+      origen_instrumento: seed.origen_instrumento,
+      elegibilidad_tipo: seed.elegibilidad_tipo,
+      elegibilidad_label: seed.elegibilidad_label,
+      activo_flag: seed.activo_flag,
+      system_flag: seed.system_flag,
+      updated_by: actor,
+      updated_at: now
     };
-  });
+  }), false);
 
-  return serializeForClient_({
-    organizacion: {
-      organizacion_id: org.organizacion_id || '',
-      solicitud_id: org.solicitud_id || '',
-      nombre_organizacion: org.nombre_organizacion || '',
-      estado_constitucion: org.estado_constitucion || '',
-      estado_general_organizacion: goPesMapVisibleEstadoGeneral_(org.estado_general_organizacion || ''),
-      certificado_provisorio_flag: org.certificado_provisorio_flag || '',
-      certificado_definitivo_flag: org.certificado_definitivo_flag || '',
-      responsable_actual: org.responsable_actual || '',
-      updated_at: org.updated_at || ''
-    },
-    resumen: {
-      proceso_completado_pct: contexto.proceso_completado_pct,
-      proceso_completado_100_flag: contexto.proceso_completado_100_flag,
-      fuente_proceso: contexto.fuente_proceso,
-      beneficios_totales: beneficios.length,
-      beneficios_disponibles: beneficios.filter(function(row) { return row.disponible_flag; }).length,
-      hitos_alertables: beneficios.reduce(function(acc, row) {
-        return acc + Number(row.alertas_preparadas || 0);
-      }, 0)
-    },
-    beneficios: beneficios
+  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE, 'beneficio_detalle_id', seeds.map(function(seed) {
+    return Object.assign({}, seed, {
+      beneficio_detalle_id: deterministicId_('BDC', [seed.beneficio_codigo]),
+      nombre_beneficio: seed.beneficio_nombre,
+      alerta_origen_modulo: 'Módulo 0',
+      updated_by: actor,
+      updated_at: now
+    });
+  }), false);
+
+  seeds.forEach(function(seed) {
+    const existing = (filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS, 'beneficio_codigo', seed.beneficio_codigo, false) || []).length;
+    if (!existing) {
+      replaceBenefitBaseHitos_(seed.beneficio_codigo, normalizeBenefitBaseHitosForStorage_(seed.beneficio_codigo, getSystemBenefitTemplateHitos_(seed.beneficio_codigo), actor, now));
+    }
   });
 }
 
-function guardarBeneficioModulo(payload) {
-  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+function getBeneficiosModuloPanel(payload) {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
   payload = payload || {};
+  ensureBenefitsModuleReady_();
 
-  const organizacionId = String(payload.organizacion_id || '').trim();
+  const selectedCode = String(payload.beneficio_codigo || '').trim().toUpperCase();
+  const selectedOrgId = String(payload.organizacion_id || '').trim();
+  const benefits = getBenefitDefinitions_(true);
+  const allBenefits = getBenefitDefinitions_(false);
+
+  if (!selectedCode && benefits.length) {
+    return serializeForClient_(buildBeneficiosPanelPayload_(benefits[0].beneficio_codigo, selectedOrgId, benefits, allBenefits));
+  }
+
+  return serializeForClient_(buildBeneficiosPanelPayload_(selectedCode, selectedOrgId, benefits, allBenefits));
+}
+
+function getBeneficioOrganizacionDetalle(payload) {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  payload = payload || {};
+  ensureBenefitsModuleReady_();
+
   const beneficioCodigo = String(payload.beneficio_codigo || '').trim().toUpperCase();
-  if (!organizacionId) throw new Error('Falta organizacion_id.');
+  const organizacionId = String(payload.organizacion_id || '').trim();
   if (!beneficioCodigo) throw new Error('Falta beneficio_codigo.');
+  if (!organizacionId) throw new Error('Falta organizacion_id.');
 
-  const def = getBeneficioDefinitionByCode_(beneficioCodigo);
-  if (!def) throw new Error('El beneficio indicado no está soportado por el módulo.');
+  ensureBenefitOrgRowsFromLegacy_(beneficioCodigo);
 
-  ensureSheetsSubset_([
-    GO_PES_V2.SHEETS.RAW_INSTRUMENTOS,
-    GO_PES_V2.SHEETS.FACT_INSTRUMENTOS,
-    GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE,
-    GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS
-  ]);
-
+  const benefit = getBenefitByCode_(beneficioCodigo);
   const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
-  if (!org) throw new Error('No se encontró la organización indicada.');
+  if (!benefit || !org) throw new Error('No se encontró la definición solicitada.');
+
+  const eligibility = evaluateBenefitEligibility_(benefit, org);
+  const assignment = findBenefitOrgRow_(beneficioCodigo, organizacionId);
+  const baseHitos = getBenefitBaseHitos_(beneficioCodigo);
+  const orgHitos = assignment ? getBenefitOrgHitos_(assignment.beneficio_org_id) : [];
+  const mergedHitos = mergeOrgHitosWithBase_(beneficioCodigo, organizacionId, assignment && assignment.beneficio_org_id || '', baseHitos, orgHitos);
+
+  const assignmentClient = assignment
+    ? normalizeBenefitOrgClient_(assignment, mergedHitos)
+    : buildDraftBenefitOrgClient_(benefit, org, eligibility, mergedHitos);
+
+  return serializeForClient_({
+    beneficio: benefit,
+    organizacion: pickBenefitOrgClientFields_(org),
+    elegibilidad: eligibility,
+    asignacion: assignmentClient,
+    hitos: mergedHitos
+  });
+}
+
+function guardarBeneficioDefinicion(payload) {
+  const user = requireModuleAccess_('instrumento', ['coordinador', 'administrador', 'superuser']);
+  payload = payload || {};
+  ensureBenefitsModuleReady_();
+
+  const isNew = !String(payload.beneficio_codigo || '').trim();
+  const beneficioCodigo = isNew
+    ? slugify_(payload.beneficio_nombre || '').toUpperCase()
+    : String(payload.beneficio_codigo || '').trim().toUpperCase();
+  if (!beneficioCodigo) throw new Error('Debes indicar un nombre o código para el beneficio.');
+  if (!String(payload.beneficio_nombre || '').trim()) throw new Error('Falta nombre del beneficio.');
+  if (!String(payload.elegibilidad_tipo || '').trim()) throw new Error('Falta elegibilidad_tipo.');
 
   const now = new Date();
-  const existingInstrumento = goPesFindBeneficioInstrumento_(organizacionId, beneficioCodigo);
-  const orgInstrumentoId = existingInstrumento && existingInstrumento.org_instrumento_id
-    ? existingInstrumento.org_instrumento_id
-    : nextId_('instrumento', 'OIN');
+  const existingDim = getBenefitByCode_(beneficioCodigo, false);
+  const systemFlag = existingDim ? existingDim.system_flag : 'No';
+  const activeFlag = toSiNo_(payload.activo_flag === undefined ? true : payload.activo_flag);
 
-  const hitosInput = Array.isArray(payload.hitos) ? payload.hitos : [];
-  const hitos = goPesNormalizePersistedBeneficioHitos_(def, organizacionId, orgInstrumentoId, hitosInput, now, user.email);
-  const proximoHito = goPesFindNextBeneficioHito_(hitos);
-  const detallePayload = payload.detalle || {};
-
-  const estadoInstrumento = String(payload.estado_instrumento || existingInstrumento && existingInstrumento.estado_instrumento || def.estado_instrumento_default).trim();
-  const resultadoInstrumento = String(payload.resultado_instrumento || existingInstrumento && existingInstrumento.resultado_instrumento || def.resultado_instrumento_default).trim();
-  const responsable = String(payload.responsable_instrumento || existingInstrumento && existingInstrumento.responsable_instrumento || org.responsable_actual || user.nombre_visible || user.email || '').trim();
-  const observacion = String(payload.observacion_instrumento || existingInstrumento && existingInstrumento.observacion_instrumento || '').trim();
-  const anioOperativo = Number(payload.anio_operativo || existingInstrumento && existingInstrumento.anio_convocatoria || def.anio_operativo_default) || def.anio_operativo_default;
-
-  appendRowObject_(GO_PES_V2.SHEETS.RAW_INSTRUMENTOS, {
-    created_at: now,
-    source: 'WEB_APP_BENEFICIOS',
-    user_email: user.email,
-    organizacion_id: organizacionId,
-    org_instrumento_id: orgInstrumentoId,
-    instrumento_codigo_catalogo: beneficioCodigo,
-    instrumento_nombre_otro: '',
-    instrumento_tipo: def.instrumento_tipo,
-    origen_instrumento: def.origen_instrumento,
-    anio_convocatoria: anioOperativo,
-    nombre_convocatoria: payload.nombre_convocatoria || def.beneficio_nombre,
-    numero_llamado: payload.numero_llamado || '',
-    fecha_inicio_gestion: asDateOrBlank_(payload.fecha_inicio_gestion) || now,
-    fecha_apertura: asDateOrBlank_(payload.fecha_apertura),
-    fecha_cierre: asDateOrBlank_(payload.fecha_cierre),
-    fecha_habilitacion: asDateOrBlank_(payload.fecha_habilitacion),
-    fecha_postulacion: asDateOrBlank_(payload.fecha_postulacion),
-    fecha_resultado: asDateOrBlank_(payload.fecha_resultado),
-    fecha_cierre_instrumento: asDateOrBlank_(payload.fecha_cierre_instrumento),
-    estado_instrumento: estadoInstrumento,
-    subestado_instrumento: String(payload.subestado_instrumento || '').trim(),
-    avance_instrumento_pct: asNumberOrBlank_(payload.avance_instrumento_pct),
-    proximo_hito_instrumento: String(payload.proximo_hito_instrumento || proximoHito.label || def.proximo_hito_default).trim(),
-    resultado_instrumento: resultadoInstrumento,
-    monto_solicitado: asNumberOrBlank_(payload.monto_solicitado),
-    monto_adjudicado: asNumberOrBlank_(payload.monto_adjudicado),
-    monto_ejecutado: asNumberOrBlank_(payload.monto_ejecutado),
-    responsable_instrumento: responsable,
-    contraparte: String(payload.contraparte || '').trim(),
-    observacion_instrumento: observacion,
-    documento_respaldo_url: String(payload.documento_respaldo_url || '').trim(),
-    legacy_source: '',
-    legacy_key: ''
-  });
-
-  upsertByKey_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'org_instrumento_id', {
-    org_instrumento_id: orgInstrumentoId,
-    organizacion_id: organizacionId,
-    instrumento_codigo_catalogo: beneficioCodigo,
-    instrumento_nombre_otro: '',
-    instrumento_tipo: def.instrumento_tipo,
-    origen_instrumento: def.origen_instrumento,
-    anio_convocatoria: anioOperativo,
-    nombre_convocatoria: payload.nombre_convocatoria || def.beneficio_nombre,
-    numero_llamado: payload.numero_llamado || '',
-    fecha_inicio_gestion: asDateOrBlank_(payload.fecha_inicio_gestion) || now,
-    fecha_apertura: asDateOrBlank_(payload.fecha_apertura),
-    fecha_cierre: asDateOrBlank_(payload.fecha_cierre),
-    fecha_habilitacion: asDateOrBlank_(payload.fecha_habilitacion),
-    fecha_postulacion: asDateOrBlank_(payload.fecha_postulacion),
-    fecha_resultado: asDateOrBlank_(payload.fecha_resultado),
-    fecha_cierre_instrumento: asDateOrBlank_(payload.fecha_cierre_instrumento),
-    estado_instrumento: estadoInstrumento,
-    subestado_instrumento: String(payload.subestado_instrumento || '').trim(),
-    avance_instrumento_pct: asNumberOrBlank_(payload.avance_instrumento_pct),
-    proximo_hito_instrumento: String(payload.proximo_hito_instrumento || proximoHito.label || def.proximo_hito_default).trim(),
-    resultado_instrumento: resultadoInstrumento,
-    monto_solicitado: asNumberOrBlank_(payload.monto_solicitado),
-    monto_adjudicado: asNumberOrBlank_(payload.monto_adjudicado),
-    monto_ejecutado: asNumberOrBlank_(payload.monto_ejecutado),
-    responsable_instrumento: responsable,
-    contraparte: String(payload.contraparte || '').trim(),
-    observacion_instrumento: observacion,
-    documento_respaldo_url: String(payload.documento_respaldo_url || '').trim(),
+  upsertByKey_(GO_PES_V2.SHEETS.DIM_BENEFICIOS, 'beneficio_codigo', {
+    beneficio_codigo: beneficioCodigo,
+    beneficio_nombre: String(payload.beneficio_nombre || '').trim(),
+    descripcion_beneficio: String(payload.descripcion_beneficio || '').trim(),
+    instrumento_tipo: String(payload.instrumento_tipo || 'beneficio_municipal').trim(),
+    origen_instrumento: String(payload.origen_instrumento || 'municipal').trim(),
+    elegibilidad_tipo: String(payload.elegibilidad_tipo || '').trim(),
+    elegibilidad_label: String(payload.elegibilidad_label || buildEligibilityLabel_(payload.elegibilidad_tipo)).trim(),
+    activo_flag: activeFlag,
+    system_flag: systemFlag || 'No',
     updated_by: user.email,
     updated_at: now
-  });
+  }, false);
 
-  goPesUpsertBeneficioDetalleRow_(def, organizacionId, orgInstrumentoId, detallePayload, now, user.email);
-  goPesReplaceBeneficioHitos_(organizacionId, beneficioCodigo, hitos);
+  upsertByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE, 'beneficio_detalle_id', {
+    beneficio_detalle_id: existingDim ? deterministicId_('BDC', [beneficioCodigo]) : deterministicId_('BDC', [beneficioCodigo]),
+    beneficio_codigo: beneficioCodigo,
+    nombre_beneficio: String(payload.beneficio_nombre || '').trim(),
+    descripcion_beneficio: String(payload.descripcion_beneficio || '').trim(),
+    instrumento_tipo: String(payload.instrumento_tipo || 'beneficio_municipal').trim(),
+    origen_instrumento: String(payload.origen_instrumento || 'municipal').trim(),
+    elegibilidad_tipo: String(payload.elegibilidad_tipo || '').trim(),
+    elegibilidad_label: String(payload.elegibilidad_label || buildEligibilityLabel_(payload.elegibilidad_tipo)).trim(),
+    requiere_certificado_provisorio_flag: toSiNo_(String(payload.elegibilidad_tipo || '').trim() === 'certificado_provisorio'),
+    requiere_certificado_definitivo_flag: toSiNo_(String(payload.elegibilidad_tipo || '').trim() === 'certificado_definitivo'),
+    requiere_proceso_100_flag: toSiNo_(String(payload.elegibilidad_tipo || '').trim() === 'proceso_100'),
+    cantidad_anual_capacitaciones: asNumberOrBlank_(payload.cantidad_anual_capacitaciones),
+    cantidad_default_capacitaciones: asNumberOrBlank_(payload.cantidad_default_capacitaciones),
+    llamados_por_anio: asNumberOrBlank_(payload.llamados_por_anio),
+    visita_tecnica_requerida_flag: toSiNo_(payload.visita_tecnica_requerida_flag),
+    flujo_inicio_default: String(payload.flujo_inicio_default || '').trim(),
+    alerta_origen_modulo: 'Módulo 0',
+    activo_flag: activeFlag,
+    system_flag: systemFlag || 'No',
+    updated_by: user.email,
+    updated_at: now
+  }, false);
 
-  refreshPartialArtifacts_({
-    masterSolicitudIds: [org.solicitud_id || ''],
-    vistaOrganizacionIds: [organizacionId],
-    vistaInstrumentoIds: [orgInstrumentoId],
-    vistaTerritorialPairs: [{
-      uv: org.uv || '',
-      sector: org.sector || ''
-    }]
-  });
+  const hitos = normalizeBenefitBaseHitosForStorage_(beneficioCodigo, Array.isArray(payload.hitos) ? payload.hitos : [], user.email, now);
+  replaceBenefitBaseHitos_(beneficioCodigo, hitos);
+  syncBenefitInstrumentCatalog_(beneficioCodigo);
 
-  logProcessing_('INFO', 'guardarBeneficioModulo', 'beneficio', orgInstrumentoId, user.email, 'OK', {
+  logUserAction_('UPSERT_BENEFICIO_DEF', 'beneficio', beneficioCodigo, 'OK', { activo_flag: activeFlag });
+  return serializeForClient_({ ok: true, beneficio_codigo: beneficioCodigo });
+}
+
+function desactivarBeneficio(payload) {
+  const user = requireModuleAccess_('instrumento', ['coordinador', 'administrador', 'superuser']);
+  payload = payload || {};
+  ensureBenefitsModuleReady_();
+
+  const beneficioCodigo = String(payload.beneficio_codigo || '').trim().toUpperCase();
+  if (!beneficioCodigo) throw new Error('Falta beneficio_codigo.');
+
+  const dim = getBenefitByCode_(beneficioCodigo, false);
+  const config = findBenefitConfig_(beneficioCodigo, false);
+  if (!dim || !config) throw new Error('No se encontró el beneficio indicado.');
+  const now = new Date();
+
+  upsertByKey_(GO_PES_V2.SHEETS.DIM_BENEFICIOS, 'beneficio_codigo', Object.assign({}, dim, {
+    activo_flag: 'No',
+    updated_by: user.email,
+    updated_at: now
+  }), false);
+
+  upsertByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE, 'beneficio_detalle_id', Object.assign({}, config, {
+    activo_flag: 'No',
+    updated_by: user.email,
+    updated_at: now
+  }), false);
+
+  syncBenefitInstrumentCatalog_(beneficioCodigo);
+  logUserAction_('DEACTIVATE_BENEFICIO', 'beneficio', beneficioCodigo, 'OK', {});
+  return serializeForClient_({ ok: true, beneficio_codigo: beneficioCodigo, activo_flag: 'No' });
+}
+
+function guardarBeneficioOrganizacion(payload) {
+  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  payload = payload || {};
+  ensureBenefitsModuleReady_();
+
+  const beneficioCodigo = String(payload.beneficio_codigo || '').trim().toUpperCase();
+  const organizacionId = String(payload.organizacion_id || '').trim();
+  if (!beneficioCodigo) throw new Error('Falta beneficio_codigo.');
+  if (!organizacionId) throw new Error('Falta organizacion_id.');
+
+  const benefit = getBenefitByCode_(beneficioCodigo, false);
+  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (!benefit || !org) throw new Error('No se encontró el beneficio u organización indicada.');
+
+  const eligibility = evaluateBenefitEligibility_(benefit, org);
+  const existing = findBenefitOrgRow_(beneficioCodigo, organizacionId);
+  if (!existing && !eligibility.cumple_flag) {
+    throw new Error('La organización no cumple la elegibilidad actual para incorporarse al beneficio.');
+  }
+
+  const now = new Date();
+  const beneficioOrgId = existing && existing.beneficio_org_id
+    ? existing.beneficio_org_id
+    : nextId_('beneficio_org', 'BOR');
+  const orgInstrumentoId = existing && existing.org_instrumento_id
+    ? existing.org_instrumento_id
+    : (findBenefitInstrumentMirror_(beneficioCodigo, organizacionId)?.org_instrumento_id || nextId_('instrumento', 'OIN'));
+
+  const baseHitos = getBenefitBaseHitos_(beneficioCodigo);
+  const normalizedHitos = normalizeBenefitOrgHitosForStorage_(
+    beneficioCodigo,
+    organizacionId,
+    beneficioOrgId,
+    Array.isArray(payload.hitos) ? payload.hitos : [],
+    baseHitos,
+    user.email,
+    now
+  );
+  const progress = calculateBenefitProgress_(normalizedHitos);
+
+  const row = {
+    beneficio_org_id: beneficioOrgId,
+    beneficio_codigo: beneficioCodigo,
     organizacion_id: organizacionId,
-    beneficio_codigo: beneficioCodigo
-  });
-  logUserAction_('UPSERT_BENEFICIO', 'beneficio', orgInstrumentoId, 'OK', {
-    organizacion_id: organizacionId,
-    beneficio_codigo: beneficioCodigo
+    org_instrumento_id: orgInstrumentoId,
+    elegible_flag: toSiNo_(eligibility.cumple_flag),
+    criterio_elegibilidad: eligibility.label,
+    motivo_no_elegibilidad: eligibility.cumple_flag ? '' : eligibility.detalle,
+    activo_flag: toSiNo_(payload.activo_flag === undefined ? true : payload.activo_flag),
+    estado_beneficio: String(payload.estado_beneficio || existing && existing.estado_beneficio || 'Activo en beneficio').trim(),
+    avance_beneficio_pct: progress,
+    proximo_hito_beneficio: String(payload.proximo_hito_beneficio || findNextPendingOrgHitoLabel_(normalizedHitos) || '').trim(),
+    fecha_inicio_beneficio: asDateOrBlank_(payload.fecha_inicio_beneficio || existing && existing.fecha_inicio_beneficio || new Date()),
+    fecha_termino_beneficio: asDateOrBlank_(payload.fecha_termino_beneficio || ''),
+    resultado_beneficio: String(payload.resultado_beneficio || existing && existing.resultado_beneficio || '').trim(),
+    responsable_beneficio: String(payload.responsable_beneficio || existing && existing.responsable_beneficio || org.responsable_actual || user.nombre_visible || '').trim(),
+    observacion_beneficio: String(payload.observacion_beneficio || existing && existing.observacion_beneficio || '').trim(),
+    updated_by: user.email,
+    updated_at: now
+  };
+
+  upsertByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_org_id', row, false);
+  replaceBenefitOrgHitos_(beneficioOrgId, normalizedHitos);
+  syncInstrumentoMirrorFromBenefitOrg_(benefit, org, row);
+
+  logUserAction_('UPSERT_BENEFICIO_ORG', 'beneficio_org', beneficioOrgId, 'OK', {
+    beneficio_codigo: beneficioCodigo,
+    organizacion_id: organizacionId
   });
 
   return serializeForClient_({
     ok: true,
-    organizacion_id: organizacionId,
-    org_instrumento_id: orgInstrumentoId,
-    beneficio_codigo: beneficioCodigo
+    beneficio_org_id: beneficioOrgId,
+    beneficio_codigo: beneficioCodigo,
+    organizacion_id: organizacionId
   });
 }
 
-function getBeneficioDefinitionByCode_(codigo) {
-  const key = String(codigo || '').trim().toUpperCase();
-  return getBeneficiosBaseDefinitions_().find(function(def) {
-    return String(def.beneficio_codigo || '').trim().toUpperCase() === key;
-  }) || null;
+function desactivarBeneficioOrganizacion(payload) {
+  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  payload = payload || {};
+  ensureBenefitsModuleReady_();
+
+  const beneficioCodigo = String(payload.beneficio_codigo || '').trim().toUpperCase();
+  const organizacionId = String(payload.organizacion_id || '').trim();
+  const row = findBenefitOrgRow_(beneficioCodigo, organizacionId);
+  if (!row) throw new Error('No se encontró la asignación del beneficio para la organización.');
+
+  upsertByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_org_id', Object.assign({}, row, {
+    activo_flag: 'No',
+    estado_beneficio: 'Inactivo',
+    updated_by: user.email,
+    updated_at: new Date()
+  }), false);
+
+  const benefit = getBenefitByCode_(beneficioCodigo, false);
+  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (benefit && org) {
+    syncInstrumentoMirrorFromBenefitOrg_(benefit, org, Object.assign({}, row, {
+      activo_flag: 'No',
+      estado_beneficio: 'Inactivo',
+      resultado_beneficio: 'No aplica'
+    }));
+  }
+
+  return serializeForClient_({ ok: true, beneficio_codigo: beneficioCodigo, organizacion_id: organizacionId, activo_flag: 'No' });
 }
 
-function goPesBuildBeneficiosContext_(org) {
+function ensureBenefitsModuleReady_() {
+  ensureSheetsSubset_([
+    GO_PES_V2.SHEETS.DIM_BENEFICIOS,
+    GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE,
+    GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS,
+    GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG,
+    GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG_HITOS,
+    GO_PES_V2.SHEETS.DIM_INSTRUMENTOS,
+    GO_PES_V2.SHEETS.RAW_INSTRUMENTOS,
+    GO_PES_V2.SHEETS.FACT_INSTRUMENTOS
+  ]);
+  seedBeneficios_();
+  getBenefitDefinitions_(false).forEach(function(benefit) {
+    syncBenefitInstrumentCatalog_(benefit.beneficio_codigo);
+    ensureBenefitOrgRowsFromLegacy_(benefit.beneficio_codigo);
+  });
+}
+
+function buildBeneficiosPanelPayload_(selectedCode, selectedOrgId, activeBenefits, allBenefits) {
+  const targetCode = selectedCode || (activeBenefits[0] && activeBenefits[0].beneficio_codigo) || '';
+  const selectedBenefit = getBenefitByCode_(targetCode, false);
+  const organizationsPanel = selectedBenefit ? buildBenefitOrganizationsPanel_(selectedBenefit) : {
+    activas: [],
+    elegibles: [],
+    no_elegibles: []
+  };
+  const selectedOrgDetail = (selectedBenefit && selectedOrgId)
+    ? getBeneficioOrganizacionDetalle({ beneficio_codigo: selectedBenefit.beneficio_codigo, organizacion_id: selectedOrgId })
+    : '';
+
+  const benefitCards = allBenefits.map(function(benefit) {
+    const panel = buildBenefitOrganizationsPanel_(benefit);
+    return {
+      beneficio_codigo: benefit.beneficio_codigo,
+      beneficio_nombre: benefit.beneficio_nombre,
+      descripcion_beneficio: benefit.descripcion_beneficio,
+      activo_flag: benefit.activo_flag,
+      system_flag: benefit.system_flag,
+      elegibilidad_label: benefit.elegibilidad_label,
+      total_activas: panel.activas.length,
+      total_elegibles: panel.elegibles.length,
+      total_no_elegibles: panel.no_elegibles.length
+    };
+  });
+
+  return {
+    beneficios: benefitCards,
+    selected_beneficio: selectedBenefit || '',
+    selected_beneficio_hitos: selectedBenefit ? getBenefitBaseHitos_(selectedBenefit.beneficio_codigo) : [],
+    organizaciones_panel: organizationsPanel,
+    selected_org_detail: selectedOrgDetail
+  };
+}
+
+function buildBenefitOrganizationsPanel_(benefit) {
+  const orgs = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).filter(function(row) {
+    return String(row.organizacion_id || '').trim() && String(row.nombre_organizacion || '').trim();
+  });
+  const assignments = filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_codigo', benefit.beneficio_codigo, false) || [];
+  const activeByOrg = {};
+  assignments.forEach(function(row) {
+    if (toBool_(row.activo_flag)) activeByOrg[String(row.organizacion_id || '').trim()] = row;
+  });
+
+  const activas = [];
+  const elegibles = [];
+  const noElegibles = [];
+
+  orgs.forEach(function(org) {
+    const eligibility = evaluateBenefitEligibility_(benefit, org);
+    const active = activeByOrg[String(org.organizacion_id || '').trim()] || null;
+
+    if (active) {
+      const hitos = getBenefitOrgHitos_(active.beneficio_org_id);
+      activas.push(Object.assign(
+        pickBenefitOrgClientFields_(org),
+        normalizeBenefitOrgClient_(active, hitos),
+        { elegibilidad_detalle: eligibility.detalle }
+      ));
+      return;
+    }
+
+    const base = Object.assign(pickBenefitOrgClientFields_(org), {
+      criterio_elegibilidad: eligibility.label,
+      detalle_elegibilidad: eligibility.detalle
+    });
+    if (eligibility.cumple_flag) {
+      elegibles.push(base);
+    } else {
+      noElegibles.push(base);
+    }
+  });
+
+  const sorter = function(a, b) {
+    return String(a.nombre_organizacion || '').localeCompare(String(b.nombre_organizacion || ''), 'es');
+  };
+  activas.sort(sorter);
+  elegibles.sort(sorter);
+  noElegibles.sort(sorter);
+
+  return {
+    activas: activas,
+    elegibles: elegibles,
+    no_elegibles: noElegibles
+  };
+}
+
+function evaluateBenefitEligibility_(benefit, org) {
+  const tipo = String(benefit.elegibilidad_tipo || '').trim();
+  const contexto = buildOrgProcessContext_(org);
+
+  if (tipo === 'certificado_provisorio') {
+    const ok = toBool_(org.certificado_provisorio_flag);
+    return {
+      cumple_flag: ok,
+      label: benefit.elegibilidad_label || 'Requiere certificado provisorio',
+      detalle: ok ? 'La organización ya cuenta con certificado provisorio.' : 'La organización aún no registra certificado provisorio.',
+      valor_actual: ok ? 'Sí' : 'No'
+    };
+  }
+
+  if (tipo === 'certificado_definitivo') {
+    const ok = toBool_(org.certificado_definitivo_flag);
+    return {
+      cumple_flag: ok,
+      label: benefit.elegibilidad_label || 'Requiere certificado definitivo',
+      detalle: ok ? 'La organización ya cuenta con certificado definitivo.' : 'La organización aún no registra certificado definitivo.',
+      valor_actual: ok ? 'Sí' : 'No'
+    };
+  }
+
+  const ok = !!contexto.proceso_completado_100_flag;
+  return {
+    cumple_flag: ok,
+    label: benefit.elegibilidad_label || 'Requiere proceso completado al 100%',
+    detalle: ok ? 'La organización cumple el proceso al 100%.' : 'La organización aún no completa el 100% del proceso.',
+    valor_actual: String(contexto.proceso_completado_pct || 0) + '%'
+  };
+}
+
+function buildOrgProcessContext_(org) {
   if (typeof goPesApplyAvancePhase1Config_ === 'function') {
     try {
       goPesApplyAvancePhase1Config_();
     } catch (err) {}
   }
 
-  const orgId = String(org && org.organizacion_id || '').trim();
-  const defaultContext = {
-    proceso_completado_pct: 0,
-    proceso_completado_100_flag: false,
-    fuente_proceso: 'organizacion'
-  };
-  if (!orgId) return defaultContext;
-
   const viewSheet = GO_PES_V2.SHEETS.VW_AVANCE_ORGANIZACION;
   const avance = viewSheet && sheetExists_(viewSheet)
-    ? findByField_(viewSheet, 'organizacion_id', orgId, false)
+    ? findByField_(viewSheet, 'organizacion_id', org.organizacion_id, false)
     : null;
-
-  const totalHitos = Number(avance && avance.total_hitos_tramo_pre || 0) + Number(avance && avance.total_hitos_tramo_for || 0);
-  const cumplidos = Number(avance && avance.total_hitos_cumplidos || 0);
-  if (totalHitos > 0) {
-    const pct = Math.max(0, Math.min(100, Math.round((cumplidos / totalHitos) * 100)));
-    return {
-      proceso_completado_pct: pct,
-      proceso_completado_100_flag: cumplidos >= totalHitos,
-      fuente_proceso: 'avance'
-    };
+  const total = Number(avance && avance.total_hitos_tramo_pre || 0) + Number(avance && avance.total_hitos_tramo_for || 0);
+  const done = Number(avance && avance.total_hitos_cumplidos || 0);
+  if (total > 0) {
+    const pct = Math.max(0, Math.min(100, Math.round((done / total) * 100)));
+    return { proceso_completado_pct: pct, proceso_completado_100_flag: done >= total };
   }
 
-  const fallbackComplete = toBool_(org.certificado_definitivo_flag) ||
-    toBool_(org.organizacion_constituida_flag) ||
-    normalizeText_(org.estado_constitucion) === 'constituida';
-
-  return {
-    proceso_completado_pct: fallbackComplete ? 100 : 0,
-    proceso_completado_100_flag: fallbackComplete,
-    fuente_proceso: 'organizacion'
-  };
+  const fallback = toBool_(org.certificado_definitivo_flag) || toBool_(org.organizacion_constituida_flag) || normalizeText_(org.estado_constitucion) === 'constituida';
+  return { proceso_completado_pct: fallback ? 100 : 0, proceso_completado_100_flag: fallback };
 }
 
-function goPesBuildBeneficioElegibilidad_(def, org, contexto) {
-  const provisorio = toBool_(org.certificado_provisorio_flag);
-  const definitivo = toBool_(org.certificado_definitivo_flag);
-  const proceso100 = !!(contexto && contexto.proceso_completado_100_flag);
-
-  if (def.elegibilidad_tipo === 'certificado_provisorio') {
-    return {
-      tipo: def.elegibilidad_tipo,
-      label: def.elegibilidad_label,
-      cumple_flag: provisorio,
-      valor_actual: provisorio ? 'Sí' : 'No',
-      detalle: provisorio ? 'La organización ya cuenta con certificado provisorio.' : 'Aún no registra certificado provisorio.'
-    };
-  }
-
-  if (def.elegibilidad_tipo === 'certificado_definitivo') {
-    return {
-      tipo: def.elegibilidad_tipo,
-      label: def.elegibilidad_label,
-      cumple_flag: definitivo,
-      valor_actual: definitivo ? 'Sí' : 'No',
-      detalle: definitivo ? 'La organización ya cuenta con certificado definitivo.' : 'Aún no registra certificado definitivo.'
-    };
-  }
-
-  return {
-    tipo: def.elegibilidad_tipo,
-    label: def.elegibilidad_label,
-    cumple_flag: proceso100,
-    valor_actual: String((contexto && contexto.proceso_completado_pct) || 0) + '%',
-    detalle: proceso100
-      ? 'La organización cumple el proceso al 100%.'
-      : 'La organización aún no completa el 100% del proceso.'
-  };
-}
-
-function goPesBuildBeneficioDetalleForClient_(def, detalle, hitos) {
-  if (def.beneficio_codigo === 'CHARLAS_CAPACITACIONES') {
-    const cantidad = asNumberOrBlank_(detalle && detalle.cantidad_anual_capacitaciones);
-    return {
-      tipo: 'charlas',
-      cantidad_anual_capacitaciones: cantidad === '' ? def.cantidad_anual_default : cantidad,
-      cantidad_default_capacitaciones: def.cantidad_anual_default
-    };
-  }
-
-  if (def.beneficio_codigo === 'CAMARAS_1414') {
-    const visita = (hitos || []).find(function(row) {
-      return String(row.hito_codigo || '') === 'visita_tecnica';
-    }) || {};
-    return {
-      tipo: 'camaras',
-      visita_tecnica_estado: detalle && detalle.visita_tecnica_estado || 'Pendiente de solicitud',
-      visita_tecnica_fecha_solicitud: visita.fecha_referencia || '',
-      visita_tecnica_observacion: detalle && detalle.visita_tecnica_observacion || '',
-      flujo_inicio_estado: detalle && detalle.flujo_inicio_estado || 'A la espera de certificado definitivo'
-    };
-  }
-
-  return {
-    tipo: 'fondese',
-    convocatorias: groupBy_(hitos || [], 'convocatoria_codigo')
-  };
-}
-
-function goPesBuildBeneficioHitosForClient_(def, organizacionId, instrumento, savedRows) {
-  const orgInstrumentoId = instrumento && instrumento.org_instrumento_id || '';
-  const defaults = def.beneficio_codigo === 'FONDESE'
-    ? goPesBuildFondeseBaseHitos_(organizacionId, orgInstrumentoId)
-    : (def.beneficio_codigo === 'CAMARAS_1414'
-      ? goPesBuildCamarasBaseHitos_(organizacionId, orgInstrumentoId)
-      : []);
-
-  return goPesMergeBeneficioHitos_(defaults, savedRows || []);
-}
-
-function goPesBuildFondeseBaseHitos_(organizacionId, orgInstrumentoId) {
-  return [
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'PRIMERA_2026', 'Primera Convocatoria', 'postulacion_proyectos', 'Postulación de Proyectos Primera Convocatoria', 'rango', '2026-01-29', '2026-03-27', '', '', true, 'Pendiente', 10),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'PRIMERA_2026', 'Primera Convocatoria', 'revision_admisibilidad', 'Revisión de Admisibilidad Primera Convocatoria', 'hasta', '', '', '2026-03-30', '', true, 'Pendiente', 20),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'PRIMERA_2026', 'Primera Convocatoria', 'evaluacion_proyectos', 'Evaluación de los Proyectos Primera Convocatoria', 'hasta', '', '', '2026-04-06', '', true, 'Pendiente', 30),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'PRIMERA_2026', 'Primera Convocatoria', 'firma_convenio_entrega_fondos', 'Firma de convenio y entrega de Fondos Primera Convocatoria', 'fecha', '', '', '2026-04-17', '', true, 'Pendiente', 40),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'PRIMERA_2026', 'Primera Convocatoria', 'ejecucion_proyectos', 'Ejecución de proyectos Primera Convocatoria', 'texto', '', '', '', 'Desde la recepción de Fondos', false, 'Pendiente', 50),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'PRIMERA_2026', 'Primera Convocatoria', 'rendicion_recursos', 'Rendición de recursos Primera Convocatoria', 'hasta', '', '', '2026-06-30', '', true, 'Pendiente', 60),
-
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'SEGUNDA_2026', 'Segunda Convocatoria', 'postulacion_proyectos', 'Postulación de Proyectos Segunda Convocatoria', 'rango', '2026-07-01', '2026-08-03', '', '', true, 'Pendiente', 110),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'SEGUNDA_2026', 'Segunda Convocatoria', 'revision_admisibilidad', 'Revisión de Admisibilidad Segunda Convocatoria', 'hasta', '', '', '2026-08-14', '', true, 'Pendiente', 120),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'SEGUNDA_2026', 'Segunda Convocatoria', 'evaluacion_proyectos', 'Evaluación de los Proyectos Segunda Convocatoria', 'hasta', '', '', '2026-08-21', '', true, 'Pendiente', 130),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'SEGUNDA_2026', 'Segunda Convocatoria', 'firma_convenio_entrega_fondos', 'Firma de convenio y entrega de Fondos Segunda Convocatoria', 'fecha', '', '', '2026-08-28', '', true, 'Pendiente', 140),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'SEGUNDA_2026', 'Segunda Convocatoria', 'ejecucion_proyectos', 'Ejecución de proyectos Segunda Convocatoria', 'texto', '', '', '', 'Desde la recepción de Fondos', false, 'Pendiente', 150),
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'FONDESE', 'Fondese', 'SEGUNDA_2026', 'Segunda Convocatoria', 'rendicion_recursos', 'Rendición de recursos Segunda Convocatoria', 'hasta', '', '', '2026-11-30', '', true, 'Pendiente', 160)
-  ];
-}
-
-function goPesBuildCamarasBaseHitos_(organizacionId, orgInstrumentoId) {
-  return [
-    goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, 'CAMARAS_1414', 'Cámaras 1414', '', '', 'visita_tecnica', 'Solicitud de visita técnica', 'fecha', '', '', '', 'Se solicita una vez obtenido el certificado definitivo.', true, 'Pendiente', 10)
-  ];
-}
-
-function goPesCreateBeneficioHitoDefault_(organizacionId, orgInstrumentoId, beneficioCodigo, beneficioNombre, convocatoriaCodigo, convocatoriaNombre, hitoCodigo, hitoNombre, modoFecha, fechaInicio, fechaFin, fechaReferencia, descripcionOperativa, alertaClaveFlag, estadoHito, ordenVisual) {
-  return {
-    beneficio_hito_id: deterministicId_('BHI', [organizacionId, beneficioCodigo, convocatoriaCodigo, hitoCodigo]),
-    organizacion_id: organizacionId || '',
-    org_instrumento_id: orgInstrumentoId || '',
-    beneficio_codigo: beneficioCodigo || '',
-    beneficio_nombre: beneficioNombre || '',
-    convocatoria_codigo: convocatoriaCodigo || '',
-    convocatoria_nombre: convocatoriaNombre || '',
-    hito_codigo: hitoCodigo || '',
-    hito_nombre: hitoNombre || '',
-    modo_fecha: modoFecha || 'fecha',
-    fecha_inicio: fechaInicio || '',
-    fecha_fin: fechaFin || '',
-    fecha_referencia: fechaReferencia || '',
-    descripcion_operativa: descripcionOperativa || '',
-    alerta_clave_flag: alertaClaveFlag ? 'Sí' : 'No',
-    estado_hito: estadoHito || 'Pendiente',
-    orden_visual: ordenVisual || 0,
-    updated_by: '',
-    updated_at: ''
-  };
-}
-
-function goPesMergeBeneficioHitos_(defaults, savedRows) {
-  const index = {};
-  (defaults || []).forEach(function(row) {
-    index[goPesBeneficioHitoKey_(row)] = Object.assign({}, row);
+function getBenefitDefinitions_(onlyActive) {
+  const rows = getSheetData_(GO_PES_V2.SHEETS.DIM_BENEFICIOS) || [];
+  const configs = getSheetData_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE) || [];
+  const configByCode = {};
+  configs.forEach(function(row) {
+    configByCode[String(row.beneficio_codigo || '').trim()] = row;
   });
 
-  (savedRows || []).forEach(function(row) {
-    const key = goPesBeneficioHitoKey_(row);
-    index[key] = Object.assign({}, index[key] || {}, row);
+  return rows.filter(function(row) {
+    if (!String(row.beneficio_codigo || '').trim()) return false;
+    return onlyActive ? toBool_(row.activo_flag) : true;
+  }).map(function(row) {
+    return Object.assign({}, row, configByCode[String(row.beneficio_codigo || '').trim()] || {});
+  }).sort(function(a, b) {
+    return String(a.beneficio_nombre || '').localeCompare(String(b.beneficio_nombre || ''), 'es');
+  });
+}
+
+function getBenefitByCode_(beneficioCodigo, onlyActive) {
+  const key = String(beneficioCodigo || '').trim().toUpperCase();
+  return getBenefitDefinitions_(onlyActive !== false).find(function(row) {
+    return String(row.beneficio_codigo || '').trim().toUpperCase() === key;
+  }) || (onlyActive === false ? getBenefitDefinitions_(false).find(function(row) {
+    return String(row.beneficio_codigo || '').trim().toUpperCase() === key;
+  }) || null : null);
+}
+
+function findBenefitConfig_(beneficioCodigo, onlyActive) {
+  const key = String(beneficioCodigo || '').trim().toUpperCase();
+  return (getSheetData_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE) || []).find(function(row) {
+    if (String(row.beneficio_codigo || '').trim().toUpperCase() !== key) return false;
+    return onlyActive === false ? true : toBool_(row.activo_flag);
+  }) || null;
+}
+
+function getBenefitBaseHitos_(beneficioCodigo) {
+  return (filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS, 'beneficio_codigo', beneficioCodigo, false) || [])
+    .filter(function(row) { return toBool_(row.activo_flag); })
+    .sort(function(a, b) { return Number(a.orden_visual || 0) - Number(b.orden_visual || 0); });
+}
+
+function normalizeBenefitBaseHitosForStorage_(beneficioCodigo, hitos, userEmail, now) {
+  return (hitos || []).map(function(row, index) {
+    const convocatoriaCodigo = String(row.convocatoria_codigo || '').trim();
+    const hitoCodigo = String(row.hito_codigo || '').trim() || slugify_(row.hito_nombre || ('hito_' + index));
+    return {
+      beneficio_hito_base_id: row.beneficio_hito_base_id || deterministicId_('BHB', [beneficioCodigo, convocatoriaCodigo, hitoCodigo]),
+      beneficio_codigo: beneficioCodigo,
+      convocatoria_codigo: convocatoriaCodigo,
+      convocatoria_nombre: String(row.convocatoria_nombre || '').trim(),
+      hito_codigo: hitoCodigo,
+      hito_nombre: String(row.hito_nombre || '').trim(),
+      modo_fecha: String(row.modo_fecha || 'fecha').trim(),
+      fecha_inicio: asDateOrBlank_(row.fecha_inicio),
+      fecha_fin: asDateOrBlank_(row.fecha_fin),
+      fecha_referencia: asDateOrBlank_(row.fecha_referencia),
+      descripcion_operativa: String(row.descripcion_operativa || '').trim(),
+      alerta_clave_flag: toSiNo_(row.alerta_clave_flag),
+      estado_hito_default: String(row.estado_hito_default || row.estado_hito || 'Pendiente').trim(),
+      orden_visual: Number(row.orden_visual || (index + 1) * 10),
+      activo_flag: toSiNo_(row.activo_flag === undefined ? true : row.activo_flag),
+      updated_by: userEmail || '',
+      updated_at: now || new Date()
+    };
+  }).filter(function(row) {
+    return row.hito_codigo && row.hito_nombre;
+  });
+}
+
+function replaceBenefitBaseHitos_(beneficioCodigo, rows) {
+  const sheetName = GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS;
+  const headers = buildSheetDefinitions_()[sheetName];
+  const otherRows = getSheetData_(sheetName).filter(function(row) {
+    return String(row.beneficio_codigo || '').trim() !== String(beneficioCodigo || '').trim();
+  });
+  replaceSheetData_(sheetName, headers, otherRows.concat(rows || []));
+}
+
+function findBenefitOrgRow_(beneficioCodigo, organizacionId) {
+  return (filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_codigo', beneficioCodigo, false) || []).find(function(row) {
+    return String(row.organizacion_id || '').trim() === String(organizacionId || '').trim();
+  }) || null;
+}
+
+function getBenefitOrgHitos_(beneficioOrgId) {
+  return (filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG_HITOS, 'beneficio_org_id', beneficioOrgId, false) || [])
+    .sort(function(a, b) { return Number(a.orden_visual || 0) - Number(b.orden_visual || 0); });
+}
+
+function mergeOrgHitosWithBase_(beneficioCodigo, organizacionId, beneficioOrgId, baseRows, orgRows) {
+  const index = {};
+  (baseRows || []).forEach(function(base) {
+    const key = buildBenefitHitoKey_(base);
+    index[key] = {
+      beneficio_org_hito_id: deterministicId_('BOH', [beneficioOrgId || organizacionId, beneficioCodigo, key]),
+      beneficio_org_id: beneficioOrgId || '',
+      beneficio_codigo: beneficioCodigo,
+      organizacion_id: organizacionId,
+      convocatoria_codigo: base.convocatoria_codigo || '',
+      convocatoria_nombre: base.convocatoria_nombre || '',
+      hito_codigo: base.hito_codigo || '',
+      hito_nombre: base.hito_nombre || '',
+      modo_fecha: base.modo_fecha || 'fecha',
+      fecha_inicio: base.fecha_inicio || '',
+      fecha_fin: base.fecha_fin || '',
+      fecha_referencia: base.fecha_referencia || '',
+      descripcion_operativa: base.descripcion_operativa || '',
+      estado_hito: base.estado_hito_default || 'Pendiente',
+      alerta_clave_flag: base.alerta_clave_flag || 'No',
+      orden_visual: Number(base.orden_visual || 0),
+      updated_by: '',
+      updated_at: ''
+    };
+  });
+
+  (orgRows || []).forEach(function(row) {
+    index[buildBenefitHitoKey_(row)] = Object.assign({}, index[buildBenefitHitoKey_(row)] || {}, row);
   });
 
   return Object.keys(index).map(function(key) {
@@ -477,173 +706,224 @@ function goPesMergeBeneficioHitos_(defaults, savedRows) {
   });
 }
 
-function goPesBeneficioHitoKey_(row) {
+function normalizeBenefitOrgHitosForStorage_(beneficioCodigo, organizacionId, beneficioOrgId, inputRows, baseRows, userEmail, now) {
+  const merged = mergeOrgHitosWithBase_(beneficioCodigo, organizacionId, beneficioOrgId, baseRows, inputRows);
+  return merged.map(function(row, index) {
+    const key = buildBenefitHitoKey_(row);
+    return {
+      beneficio_org_hito_id: row.beneficio_org_hito_id || deterministicId_('BOH', [beneficioOrgId, beneficioCodigo, key]),
+      beneficio_org_id: beneficioOrgId,
+      beneficio_codigo: beneficioCodigo,
+      organizacion_id: organizacionId,
+      convocatoria_codigo: String(row.convocatoria_codigo || '').trim(),
+      convocatoria_nombre: String(row.convocatoria_nombre || '').trim(),
+      hito_codigo: String(row.hito_codigo || '').trim(),
+      hito_nombre: String(row.hito_nombre || '').trim(),
+      modo_fecha: String(row.modo_fecha || 'fecha').trim(),
+      fecha_inicio: asDateOrBlank_(row.fecha_inicio),
+      fecha_fin: asDateOrBlank_(row.fecha_fin),
+      fecha_referencia: asDateOrBlank_(row.fecha_referencia),
+      descripcion_operativa: String(row.descripcion_operativa || '').trim(),
+      estado_hito: String(row.estado_hito || 'Pendiente').trim(),
+      alerta_clave_flag: toSiNo_(row.alerta_clave_flag),
+      orden_visual: Number(row.orden_visual || (index + 1) * 10),
+      updated_by: userEmail || '',
+      updated_at: now || new Date()
+    };
+  });
+}
+
+function replaceBenefitOrgHitos_(beneficioOrgId, rows) {
+  const sheetName = GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG_HITOS;
+  const headers = buildSheetDefinitions_()[sheetName];
+  const otherRows = getSheetData_(sheetName).filter(function(row) {
+    return String(row.beneficio_org_id || '').trim() !== String(beneficioOrgId || '').trim();
+  });
+  replaceSheetData_(sheetName, headers, otherRows.concat(rows || []));
+}
+
+function buildBenefitHitoKey_(row) {
   return [
-    String(row.beneficio_codigo || '').trim(),
     String(row.convocatoria_codigo || '').trim(),
     String(row.hito_codigo || '').trim()
   ].join('||');
 }
 
-function goPesFindNextBeneficioHito_(rows) {
-  const today = new Date();
-  const dated = (rows || []).map(function(row) {
-    const source = row.modo_fecha === 'rango'
-      ? row.fecha_inicio
-      : row.fecha_referencia;
-    const date = asDateOrBlank_(source);
-    return {
-      row: row,
-      date: date
-    };
-  }).filter(function(item) {
-    return item.date && item.date.getTime() >= new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
-  }).sort(function(a, b) {
-    return a.date.getTime() - b.date.getTime();
-  });
-
-  if (dated.length) {
-    return {
-      label: dated[0].row.hito_nombre || '',
-      fecha: dated[0].row.modo_fecha === 'rango' ? dated[0].row.fecha_inicio : dated[0].row.fecha_referencia
-    };
-  }
-
-  const textOnly = (rows || []).find(function(row) {
-    return String(row.modo_fecha || '') === 'texto' && String(row.descripcion_operativa || '').trim();
-  });
-  if (textOnly) {
-    return {
-      label: textOnly.hito_nombre || '',
-      fecha: '',
-      detalle: textOnly.descripcion_operativa || ''
-    };
-  }
-
-  return { label: '', fecha: '', detalle: '' };
+function calculateBenefitProgress_(rows) {
+  const total = (rows || []).length;
+  if (!total) return 0;
+  const completed = (rows || []).filter(function(row) {
+    return normalizeText_(row.estado_hito) === 'cumplido';
+  }).length;
+  return Math.round((completed / total) * 100);
 }
 
-function goPesNormalizePersistedBeneficioHitos_(def, organizacionId, orgInstrumentoId, hitosInput, now, userEmail) {
-  const defaults = def.beneficio_codigo === 'FONDESE'
-    ? goPesBuildFondeseBaseHitos_(organizacionId, orgInstrumentoId)
-    : (def.beneficio_codigo === 'CAMARAS_1414'
-      ? goPesBuildCamarasBaseHitos_(organizacionId, orgInstrumentoId)
-      : []);
-  const merged = goPesMergeBeneficioHitos_(defaults, hitosInput || []);
-
-  return merged.map(function(row) {
-    return {
-      beneficio_hito_id: row.beneficio_hito_id || deterministicId_('BHI', [organizacionId, def.beneficio_codigo, row.convocatoria_codigo, row.hito_codigo]),
-      organizacion_id: organizacionId,
-      org_instrumento_id: orgInstrumentoId,
-      beneficio_codigo: def.beneficio_codigo,
-      beneficio_nombre: def.beneficio_nombre,
-      convocatoria_codigo: row.convocatoria_codigo || '',
-      convocatoria_nombre: row.convocatoria_nombre || '',
-      hito_codigo: row.hito_codigo || '',
-      hito_nombre: row.hito_nombre || '',
-      modo_fecha: row.modo_fecha || 'fecha',
-      fecha_inicio: asDateOrBlank_(row.fecha_inicio),
-      fecha_fin: asDateOrBlank_(row.fecha_fin),
-      fecha_referencia: asDateOrBlank_(row.fecha_referencia),
-      descripcion_operativa: String(row.descripcion_operativa || '').trim(),
-      alerta_clave_flag: toSiNo_(row.alerta_clave_flag),
-      estado_hito: String(row.estado_hito || 'Pendiente').trim(),
-      orden_visual: Number(row.orden_visual || 0),
-      updated_by: userEmail || '',
-      updated_at: now
-    };
+function findNextPendingOrgHitoLabel_(rows) {
+  const pending = (rows || []).find(function(row) {
+    return normalizeText_(row.estado_hito) !== 'cumplido';
   });
+  return pending ? pending.hito_nombre : '';
 }
 
-function goPesReplaceBeneficioHitos_(organizacionId, beneficioCodigo, hitos) {
-  const sheetName = GO_PES_V2.SHEETS.FACT_BENEFICIOS_HITOS;
-  const headers = buildSheetDefinitions_()[sheetName];
-  const existing = getSheetData_(sheetName).filter(function(row) {
-    return !(
-      String(row.organizacion_id || '').trim() === String(organizacionId || '').trim() &&
-      String(row.beneficio_codigo || '').trim() === String(beneficioCodigo || '').trim()
-    );
-  });
-  const nextRows = existing.concat(hitos || []).sort(function(a, b) {
-    const orgA = String(a.organizacion_id || '');
-    const orgB = String(b.organizacion_id || '');
-    if (orgA !== orgB) return orgA.localeCompare(orgB, 'es');
-    const benA = String(a.beneficio_codigo || '');
-    const benB = String(b.beneficio_codigo || '');
-    if (benA !== benB) return benA.localeCompare(benB, 'es');
-    return Number(a.orden_visual || 0) - Number(b.orden_visual || 0);
-  });
-  replaceSheetData_(sheetName, headers, nextRows);
+function normalizeBenefitOrgClient_(row, hitos) {
+  return {
+    beneficio_org_id: row.beneficio_org_id || '',
+    org_instrumento_id: row.org_instrumento_id || '',
+    activo_flag: row.activo_flag || '',
+    estado_beneficio: row.estado_beneficio || '',
+    avance_beneficio_pct: row.avance_beneficio_pct === '' ? calculateBenefitProgress_(hitos || []) : row.avance_beneficio_pct,
+    proximo_hito_beneficio: row.proximo_hito_beneficio || findNextPendingOrgHitoLabel_(hitos || []),
+    fecha_inicio_beneficio: row.fecha_inicio_beneficio || '',
+    fecha_termino_beneficio: row.fecha_termino_beneficio || '',
+    resultado_beneficio: row.resultado_beneficio || '',
+    responsable_beneficio: row.responsable_beneficio || '',
+    observacion_beneficio: row.observacion_beneficio || ''
+  };
 }
 
-function goPesUpsertBeneficioDetalleRow_(def, organizacionId, orgInstrumentoId, detallePayload, now, userEmail) {
-  detallePayload = detallePayload || {};
-  const existing = (filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE, 'organizacion_id', organizacionId, false) || []).find(function(row) {
-    return String(row.beneficio_codigo || '').trim() === String(def.beneficio_codigo || '').trim();
-  }) || null;
-  const detalleId = existing && String(existing.organizacion_id || '').trim() === String(organizacionId || '').trim()
-    ? existing.beneficio_detalle_id
-    : deterministicId_('BDE', [organizacionId, def.beneficio_codigo]);
-  const visitaTecnicaHito = (def.beneficio_codigo === 'CAMARAS_1414' ? goPesBuildCamarasBaseHitos_(organizacionId, orgInstrumentoId)[0] : null) || {};
-
-  upsertByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_DETALLE, 'beneficio_detalle_id', {
-    beneficio_detalle_id: detalleId,
-    organizacion_id: organizacionId,
-    org_instrumento_id: orgInstrumentoId,
-    beneficio_codigo: def.beneficio_codigo,
-    cantidad_anual_capacitaciones: def.beneficio_codigo === 'CHARLAS_CAPACITACIONES'
-      ? (asNumberOrBlank_(detallePayload.cantidad_anual_capacitaciones) === '' ? def.cantidad_anual_default : asNumberOrBlank_(detallePayload.cantidad_anual_capacitaciones))
-      : '',
-    cantidad_default_capacitaciones: def.beneficio_codigo === 'CHARLAS_CAPACITACIONES' ? def.cantidad_anual_default : '',
-    visita_tecnica_estado: def.beneficio_codigo === 'CAMARAS_1414' ? String(detallePayload.visita_tecnica_estado || 'Pendiente de solicitud').trim() : '',
-    visita_tecnica_fecha_solicitud: def.beneficio_codigo === 'CAMARAS_1414' ? asDateOrBlank_(detallePayload.visita_tecnica_fecha_solicitud || visitaTecnicaHito.fecha_referencia) : '',
-    visita_tecnica_observacion: def.beneficio_codigo === 'CAMARAS_1414' ? String(detallePayload.visita_tecnica_observacion || '').trim() : '',
-    flujo_inicio_estado: def.beneficio_codigo === 'CAMARAS_1414' ? String(detallePayload.flujo_inicio_estado || 'A la espera de certificado definitivo').trim() : '',
-    alerta_origen_modulo: 'Beneficios',
-    updated_by: userEmail || '',
-    updated_at: now
-  });
+function buildDraftBenefitOrgClient_(benefit, org, eligibility, hitos) {
+  return {
+    beneficio_org_id: '',
+    org_instrumento_id: '',
+    activo_flag: 'Sí',
+    estado_beneficio: 'Activo en beneficio',
+    avance_beneficio_pct: calculateBenefitProgress_(hitos || []),
+    proximo_hito_beneficio: findNextPendingOrgHitoLabel_(hitos || []) || benefit.flujo_inicio_default || '',
+    fecha_inicio_beneficio: new Date(),
+    fecha_termino_beneficio: '',
+    resultado_beneficio: '',
+    responsable_beneficio: org.responsable_actual || '',
+    observacion_beneficio: '',
+    criterio_elegibilidad: eligibility.label,
+    motivo_no_elegibilidad: eligibility.cumple_flag ? '' : eligibility.detalle
+  };
 }
 
-function goPesFindBeneficioInstrumento_(organizacionId, beneficioCodigo) {
+function pickBenefitOrgClientFields_(org) {
+  return {
+    organizacion_id: org.organizacion_id || '',
+    nombre_organizacion: org.nombre_organizacion || '',
+    estado_constitucion: org.estado_constitucion || '',
+    estado_general_organizacion: org.estado_general_organizacion || '',
+    certificado_provisorio_flag: org.certificado_provisorio_flag || '',
+    certificado_definitivo_flag: org.certificado_definitivo_flag || '',
+    responsable_actual: org.responsable_actual || ''
+  };
+}
+
+function buildEligibilityLabel_(tipo) {
+  const key = String(tipo || '').trim();
+  if (key === 'certificado_provisorio') return 'Requiere certificado provisorio';
+  if (key === 'certificado_definitivo') return 'Requiere certificado definitivo';
+  if (key === 'proceso_100') return 'Requiere proceso completado al 100%';
+  return 'Regla de elegibilidad';
+}
+
+function syncBenefitInstrumentCatalog_(beneficioCodigo) {
+  const benefit = getBenefitByCode_(beneficioCodigo, false);
+  if (!benefit) return;
+  upsertByKey_(GO_PES_V2.SHEETS.DIM_INSTRUMENTOS, 'instrumento_codigo_catalogo', {
+    instrumento_codigo_catalogo: benefit.beneficio_codigo,
+    instrumento_nombre: benefit.beneficio_nombre,
+    instrumento_tipo: benefit.instrumento_tipo || 'beneficio_municipal',
+    origen_instrumento: benefit.origen_instrumento || 'municipal',
+    activo_flag: toBool_(benefit.activo_flag)
+  }, false);
+}
+
+function findBenefitInstrumentMirror_(beneficioCodigo, organizacionId) {
   return (filterByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'organizacion_id', organizacionId, false) || []).find(function(row) {
     return String(row.instrumento_codigo_catalogo || '').trim() === String(beneficioCodigo || '').trim();
   }) || null;
 }
 
-function goPesEnsureBeneficioSupportRowsForExistingRecords_(org, instrumentos, detalles, hitos, user) {
-  const detailsByCode = {};
-  (detalles || []).forEach(function(row) {
-    detailsByCode[String(row.beneficio_codigo || '').trim()] = row;
-  });
-  const hitosByCode = {};
-  (hitos || []).forEach(function(row) {
-    const code = String(row.beneficio_codigo || '').trim();
-    if (!hitosByCode[code]) hitosByCode[code] = [];
-    hitosByCode[code].push(row);
-  });
+function syncInstrumentoMirrorFromBenefitOrg_(benefit, org, row) {
+  const now = new Date();
+  const status = toBool_(row.activo_flag) ? (row.estado_beneficio || 'Activo en beneficio') : 'Inactivo';
+  const mirror = {
+    org_instrumento_id: row.org_instrumento_id || nextId_('instrumento', 'OIN'),
+    organizacion_id: org.organizacion_id,
+    instrumento_codigo_catalogo: benefit.beneficio_codigo,
+    instrumento_nombre_otro: '',
+    instrumento_tipo: benefit.instrumento_tipo || 'beneficio_municipal',
+    origen_instrumento: benefit.origen_instrumento || 'municipal',
+    anio_convocatoria: new Date().getFullYear(),
+    nombre_convocatoria: benefit.beneficio_nombre,
+    numero_llamado: '',
+    fecha_inicio_gestion: asDateOrBlank_(row.fecha_inicio_beneficio) || now,
+    fecha_apertura: '',
+    fecha_cierre: '',
+    fecha_habilitacion: '',
+    fecha_postulacion: '',
+    fecha_resultado: '',
+    fecha_cierre_instrumento: asDateOrBlank_(row.fecha_termino_beneficio),
+    estado_instrumento: status,
+    subestado_instrumento: '',
+    avance_instrumento_pct: asNumberOrBlank_(row.avance_beneficio_pct),
+    proximo_hito_instrumento: row.proximo_hito_beneficio || '',
+    resultado_instrumento: row.resultado_beneficio || '',
+    monto_solicitado: '',
+    monto_adjudicado: '',
+    monto_ejecutado: '',
+    responsable_instrumento: row.responsable_beneficio || org.responsable_actual || '',
+    contraparte: '',
+    observacion_instrumento: row.observacion_beneficio || '',
+    documento_respaldo_url: '',
+    updated_by: row.updated_by || '',
+    updated_at: now
+  };
 
-  (instrumentos || []).forEach(function(inst) {
-    const def = getBeneficioDefinitionByCode_(inst.instrumento_codigo_catalogo);
-    if (!def) return;
-
-    if (!detailsByCode[def.beneficio_codigo]) {
-      goPesUpsertBeneficioDetalleRow_(def, org.organizacion_id, inst.org_instrumento_id || '', {}, new Date(), user.email || 'system');
-    }
-
-    if ((def.beneficio_codigo === 'FONDESE' || def.beneficio_codigo === 'CAMARAS_1414') && !(hitosByCode[def.beneficio_codigo] || []).length) {
-      const base = def.beneficio_codigo === 'FONDESE'
-        ? goPesBuildFondeseBaseHitos_(org.organizacion_id, inst.org_instrumento_id || '')
-        : goPesBuildCamarasBaseHitos_(org.organizacion_id, inst.org_instrumento_id || '');
-      goPesReplaceBeneficioHitos_(org.organizacion_id, def.beneficio_codigo, goPesNormalizePersistedBeneficioHitos_(def, org.organizacion_id, inst.org_instrumento_id || '', base, new Date(), user.email || 'system'));
-    }
-  });
+  upsertByKey_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'org_instrumento_id', mirror, false);
+  appendRowObject_(GO_PES_V2.SHEETS.RAW_INSTRUMENTOS, Object.assign({}, mirror, {
+    created_at: now,
+    source: 'WEB_APP_BENEFICIOS',
+    user_email: row.updated_by || '',
+    legacy_source: '',
+    legacy_key: ''
+  }));
 }
 
-function goPesMapVisibleEstadoGeneral_(value) {
-  if (normalizeText_(value) === 'constituida sin instrumentos') {
-    return 'Constituida sin beneficios';
-  }
-  return value || '';
+function ensureBenefitOrgRowsFromLegacy_(beneficioCodigo) {
+  const benefit = getBenefitByCode_(beneficioCodigo, false);
+  if (!benefit) return;
+
+  const instruments = filterByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'instrumento_codigo_catalogo', beneficioCodigo, false) || [];
+  const now = new Date();
+  const baseHitos = getBenefitBaseHitos_(beneficioCodigo);
+
+  instruments.forEach(function(inst) {
+    const orgId = String(inst.organizacion_id || '').trim();
+    if (!orgId) return;
+    const existing = findBenefitOrgRow_(beneficioCodigo, orgId);
+    if (existing) return;
+
+    const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', orgId, false);
+    if (!org) return;
+    const eligibility = evaluateBenefitEligibility_(benefit, org);
+    const beneficioOrgId = nextId_('beneficio_org', 'BOR');
+    const hitos = normalizeBenefitOrgHitosForStorage_(beneficioCodigo, orgId, beneficioOrgId, [], baseHitos, 'system', now);
+    const progress = inst.avance_instrumento_pct !== '' ? asNumberOrBlank_(inst.avance_instrumento_pct) : calculateBenefitProgress_(hitos);
+
+    upsertByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_org_id', {
+      beneficio_org_id: beneficioOrgId,
+      beneficio_codigo: beneficioCodigo,
+      organizacion_id: orgId,
+      org_instrumento_id: inst.org_instrumento_id || nextId_('instrumento', 'OIN'),
+      elegible_flag: toSiNo_(eligibility.cumple_flag),
+      criterio_elegibilidad: eligibility.label,
+      motivo_no_elegibilidad: eligibility.cumple_flag ? '' : eligibility.detalle,
+      activo_flag: toSiNo_(normalizeText_(inst.estado_instrumento) !== 'cerrado' && normalizeText_(inst.estado_instrumento) !== 'desistido'),
+      estado_beneficio: inst.estado_instrumento || 'Activo en beneficio',
+      avance_beneficio_pct: progress,
+      proximo_hito_beneficio: inst.proximo_hito_instrumento || findNextPendingOrgHitoLabel_(hitos),
+      fecha_inicio_beneficio: asDateOrBlank_(inst.fecha_inicio_gestion) || now,
+      fecha_termino_beneficio: asDateOrBlank_(inst.fecha_cierre_instrumento),
+      resultado_beneficio: inst.resultado_instrumento || '',
+      responsable_beneficio: inst.responsable_instrumento || org.responsable_actual || '',
+      observacion_beneficio: inst.observacion_instrumento || '',
+      updated_by: 'system',
+      updated_at: now
+    }, false);
+    replaceBenefitOrgHitos_(beneficioOrgId, hitos);
+  });
 }

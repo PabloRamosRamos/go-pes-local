@@ -35,6 +35,8 @@ const GO_PES_V2 = {
     FACT_SOCIOS: 'FACT_Socios',
     FACT_BENEFICIOS_DETALLE: 'FACT_Beneficios_Detalle',
     FACT_BENEFICIOS_HITOS: 'FACT_Beneficios_Hitos',
+    FACT_BENEFICIOS_ORG: 'FACT_Beneficios_Organizacion',
+    FACT_BENEFICIOS_ORG_HITOS: 'FACT_Beneficios_Organizacion_Hitos',
 
     MASTER: 'MASTER_DATOS',
     VW_ORGS: 'VW_LS_Organizaciones',
@@ -46,6 +48,7 @@ const GO_PES_V2 = {
     DIM_ESTADOS: 'DIM_Estados',
     DIM_ETAPAS: 'DIM_Etapas_Constitucion',
     DIM_ORIGEN: 'DIM_Origen_Canal',
+    DIM_BENEFICIOS: 'DIM_Beneficios',
     DIM_INSTRUMENTOS: 'DIM_Instrumentos',
     DIM_REQUISITOS: 'DIM_Requisitos_Instrumento',
     DIM_RESPONSABLES: 'DIM_Responsables',

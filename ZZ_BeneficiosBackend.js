@@ -655,7 +655,12 @@ function replaceBenefitBaseHitos_(beneficioCodigo, rows) {
   const otherRows = getSheetData_(sheetName).filter(function(row) {
     return String(row.beneficio_codigo || '').trim() !== String(beneficioCodigo || '').trim();
   });
-  replaceSheetData_(sheetName, headers, otherRows.concat(rows || []));
+  const mergedRows = otherRows.concat(rows || []).map(function(row) {
+    return headers.map(function(header) {
+      return row && row[header] !== undefined ? row[header] : '';
+    });
+  });
+  replaceSheetData_(sheetName, headers, mergedRows);
 }
 
 function findBenefitOrgRow_(beneficioCodigo, organizacionId) {
@@ -739,7 +744,12 @@ function replaceBenefitOrgHitos_(beneficioOrgId, rows) {
   const otherRows = getSheetData_(sheetName).filter(function(row) {
     return String(row.beneficio_org_id || '').trim() !== String(beneficioOrgId || '').trim();
   });
-  replaceSheetData_(sheetName, headers, otherRows.concat(rows || []));
+  const mergedRows = otherRows.concat(rows || []).map(function(row) {
+    return headers.map(function(header) {
+      return row && row[header] !== undefined ? row[header] : '';
+    });
+  });
+  replaceSheetData_(sheetName, headers, mergedRows);
 }
 
 function buildBenefitHitoKey_(row) {

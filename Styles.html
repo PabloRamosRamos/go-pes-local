@@ -2638,23 +2638,15 @@
     align-items: center;
   }
 
-  .beneficios-selector-panel,
   .beneficios-summary,
   .beneficio-card,
   .beneficios-detail,
   .beneficios-block,
-  .beneficios-convocatoria,
   .beneficios-metric {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
     box-shadow: var(--shadow-md);
-  }
-
-  .beneficios-selector-panel {
-    display: flex;
-    align-items: end;
-    gap: var(--space-4);
   }
 
   .beneficios-actions {
@@ -2668,7 +2660,6 @@
   .beneficios-detail,
   .beneficio-card,
   .beneficios-block,
-  .beneficios-convocatoria,
   .beneficios-metric {
     padding: var(--space-6);
   }
@@ -2688,7 +2679,6 @@
   .beneficios-summary__main h3,
   .beneficios-detail__head h3,
   .beneficios-block__head h4,
-  .beneficios-convocatoria__head h5,
   .beneficio-card h3 {
     margin: 0;
     color: var(--brand-blue);
@@ -2839,8 +2829,7 @@
   }
 
   .beneficios-detail__head,
-  .beneficios-block__head,
-  .beneficios-convocatoria__head {
+  .beneficios-block__head {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -2848,8 +2837,7 @@
   }
 
   .beneficios-form,
-  .beneficios-convocatorias,
-  .beneficios-hitos {
+  .beneficios-schedule {
     display: grid;
     gap: var(--space-4);
   }
@@ -2891,7 +2879,7 @@
     background: var(--surface-soft);
   }
 
-  .beneficio-hito-row {
+  .beneficio-schedule-row {
     display: grid;
     grid-template-columns: minmax(220px, 28%) minmax(0, 1fr);
     gap: var(--space-4);
@@ -2901,13 +2889,13 @@
     background: var(--surface-soft);
   }
 
-  .beneficio-hito-row__copy {
+  .beneficio-schedule-row__copy {
     display: grid;
     gap: 4px;
     align-content: start;
   }
 
-  .beneficio-hito-row__copy span {
+  .beneficio-schedule-row__copy span {
     color: var(--text-muted);
     font-size: var(--font-size-xs);
     font-weight: var(--font-weight-bold);
@@ -2915,14 +2903,14 @@
     letter-spacing: .04em;
   }
 
-  .beneficio-hito-row__inputs {
+  .beneficio-schedule-row__inputs {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-4);
     align-items: end;
   }
 
-  .beneficio-hito-row__inputs .field--grow {
+  .beneficio-schedule-row__inputs .field--grow {
     grid-column: 1 / -1;
   }
 
@@ -2939,11 +2927,11 @@
       grid-template-columns: 1fr;
     }
 
-    .beneficio-hito-row {
+    .beneficio-schedule-row {
       grid-template-columns: 1fr;
     }
 
-    .beneficio-hito-row__inputs {
+    .beneficio-schedule-row__inputs {
       grid-template-columns: 1fr;
     }
 
@@ -2957,11 +2945,9 @@
   }
 
   @media (max-width: 720px) {
-    .beneficios-selector-panel,
     .beneficios-summary__main,
     .beneficios-detail__head,
-    .beneficios-block__head,
-    .beneficios-convocatoria__head {
+    .beneficios-block__head {
       flex-direction: column;
       align-items: flex-start;
     }

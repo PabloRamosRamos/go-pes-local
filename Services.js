@@ -1,6 +1,6 @@
-/**
- * Servicios de aplicación y operaciones del dominio GO-PES.
- * Esta capa orquesta validación, persistencia y refresco de vistas derivadas.
+﻿/**
+ * Servicios de aplicaciÃ³n y operaciones del dominio GO-PES.
+ * Esta capa orquesta validaciÃ³n, persistencia y refresco de vistas derivadas.
  */
 function buscarVecino(query) {
   const diag = goPesDiagStart_('Services.buscarVecino', {
@@ -119,7 +119,7 @@ function obtenerFicha(payload) {
     orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', caseRow.organizacion_id, false);
   }
   if (!caseRow && !orgRow) {
-    throw new Error('No se encontrÃ³ la ficha solicitada.');
+    throw new Error('No se encontrÃƒÂ³ la ficha solicitada.');
   }
   const finalSolicitudId = String(
     (caseRow && caseRow.solicitud_id) ||
@@ -148,7 +148,7 @@ function obtenerFicha(payload) {
   const finalOrgId = orgIdFromBase || orgIdFromCase || organizacionId || '';
 
   if (!base && !caseRow) {
-    throw new Error('No se encontró la ficha solicitada.');
+    throw new Error('No se encontrÃ³ la ficha solicitada.');
   
 
   const orgRow = finalOrgId
@@ -238,11 +238,11 @@ function obtenerFicha(payload) {
       (orgRow && orgRow.updated_at) ||
       '',
     fuente_fecha_antiguedad_organizacion: hitoCreacionOrganizacion
-      ? 'Hito 5: Ingreso de documentación'
+      ? 'Hito 5: Ingreso de documentaciÃ³n'
       : (
-          (orgRow && orgRow.fecha_asamblea_constitucion && 'Fecha asamblea constitución') ||
-          (orgRow && orgRow.fecha_inicio_acompanamiento && 'Fecha inicio acompañamiento') ||
-          (orgRow && orgRow.updated_at && 'Última actualización') ||
+          (orgRow && orgRow.fecha_asamblea_constitucion && 'Fecha asamblea constituciÃ³n') ||
+          (orgRow && orgRow.fecha_inicio_acompanamiento && 'Fecha inicio acompaÃ±amiento') ||
+          (orgRow && orgRow.updated_at && 'Ãšltima actualizaciÃ³n') ||
           ''
         ),
     responsable_actual: String(
@@ -542,7 +542,7 @@ function guardarOrganizacion(payload) {
   if (payload.solicitud_id) {
     patchCaseSummary_(payload.solicitud_id, {
       organizacion_id: organizacionId,
-      estado_actual: payload.estado_general_organizacion || 'Avanza a organización',
+      estado_actual: payload.estado_general_organizacion || 'Avanza a organizaciÃ³n',
       etapa_actual: payload.estado_constitucion || '',
       responsable_actual: payload.responsable_actual || user.nombre_visible,
       observacion_resumen: payload.observacion_resumen || ''
@@ -721,11 +721,155 @@ function guardarRequisito(payload) {
 
 function listarHistorial(filters) {
   requireModuleAccess_('historial', ['operador', 'coordinador', 'administrador', 'superuser']);
-  let rows = getSheetData_(GO_PES_V2.SHEETS.LOG_ACCIONES)
-    .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
-  if (filters && filters.entity_id) rows = rows.filter(r => String(r.entity_id || '') === String(filters.entity_id));
-  if (filters && filters.email) rows = rows.filter(r => normalizeText_(r.email) === normalizeText_(filters.email));
-  return rows.slice(0, 200);
+  const config = filters || {};
+  let rows = buildHistorialRows_();
+
+  if (config.entity_id) {
+    const targetEntityId = String(config.entity_id || '').trim();
+    rows = rows.filter(function(row) {
+      return String(row.entity_id || '').trim() === targetEntityId;
+    });
+  }
+
+  if (config.email) {
+    const targetEmail = normalizeText_(config.email || '');
+    rows = rows.filter(function(row) {
+      return normalizeText_(row.email || '') === targetEmail;
+    });
+  }
+
+  return serializeForClient_(rows.slice(0, 200));
+}
+
+function buildHistorialRows_() {
+  const rows = []
+    .concat((getSheetData_(GO_PES_V2.SHEETS.LOG_ACCIONES) || []).map(mapHistorialAccionRow_))
+    .concat((getSheetData_(GO_PES_V2.SHEETS.LOG_PROC) || []).map(mapHistorialProcesamientoRow_))
+    .concat((getSheetData_(GO_PES_V2.SHEETS.LOG_ACCESOS) || []).map(mapHistorialAccesoRow_));
+
+  return rows
+    .filter(function(row) {
+      return row && row.timestamp && row.action;
+    })
+    .sort(function(a, b) {
+      return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+    });
+}
+
+function mapHistorialAccionRow_(row) {
+  return {
+    timestamp: row.timestamp || '',
+    source_key: 'accion_usuario',
+    source_label: 'Accion usuario',
+    email: String(row.email || ''),
+    action: String(row.action || ''),
+    entity_type: String(row.entity_type || ''),
+    entity_id: String(row.entity_id || ''),
+    result: String(row.result || ''),
+    detail_text: buildHistorialDetailText_(row.detail_json),
+    detail_json: String(row.detail_json || '')
+  };
+}
+
+function mapHistorialProcesamientoRow_(row) {
+  return {
+    timestamp: row.timestamp || '',
+    source_key: 'procesamiento',
+    source_label: 'Procesamiento',
+    email: String(row.usuario || ''),
+    action: String(row.accion || ''),
+    entity_type: String(row.entidad || ''),
+    entity_id: String(row.entidad_id || ''),
+    result: String(row.resultado || ''),
+    detail_text: buildHistorialDetailText_(row.detalle_json),
+    detail_json: String(row.detalle_json || '')
+  };
+}
+
+function mapHistorialAccesoRow_(row) {
+  return {
+    timestamp: row.timestamp || '',
+    source_key: 'acceso',
+    source_label: 'Acceso',
+    email: String(row.email || ''),
+    action: String(row.event || ''),
+    entity_type: 'sesion',
+    entity_id: '',
+    result: 'OK',
+    detail_text: buildHistorialDetailText_(row.payload_json),
+    detail_json: String(row.payload_json || '')
+  };
+}
+
+function buildHistorialDetailText_(rawValue) {
+  const parsed = parseHistorialJsonSafe_(rawValue);
+  if (!parsed) return String(rawValue || '').trim();
+
+  if (Array.isArray(parsed)) {
+    return parsed.slice(0, 4).map(function(item) {
+      return stringifyHistorialValue_(item);
+    }).filter(Boolean).join(' | ');
+  }
+
+  const preferredKeys = [
+    'nombre_organizacion',
+    'nombre_comite_origen',
+    'estado',
+    'motivo',
+    'observacion',
+    'responsable_actual',
+    'event',
+    'total',
+    'validos',
+    'errores'
+  ];
+  const skippedKeys = {
+    actor: true,
+    payload: true,
+    rows: true,
+    data: true,
+    timestamp: true,
+    updated_at: true,
+    created_at: true,
+    entity_id: true,
+    organizacion_id: true,
+    solicitud_id: true
+  };
+  const entries = [];
+
+  preferredKeys.forEach(function(key) {
+    if (parsed[key] === undefined || parsed[key] === null || parsed[key] === '') return;
+    entries.push(key + ': ' + stringifyHistorialValue_(parsed[key]));
+  });
+
+  Object.keys(parsed).forEach(function(key) {
+    if (entries.length >= 4 || skippedKeys[key]) return;
+    if (preferredKeys.indexOf(key) !== -1) return;
+    const value = parsed[key];
+    if (value === undefined || value === null || value === '' || typeof value === 'object') return;
+    entries.push(key + ': ' + stringifyHistorialValue_(value));
+  });
+
+  return entries.join(' | ');
+}
+
+function parseHistorialJsonSafe_(rawValue) {
+  if (!rawValue) return null;
+  if (typeof rawValue === 'object') return rawValue;
+  try {
+    return JSON.parse(String(rawValue || ''));
+  } catch (err) {
+    return null;
+  }
+}
+
+function stringifyHistorialValue_(value) {
+  if (value === undefined || value === null) return '';
+  if (Object.prototype.toString.call(value) === '[object Date]') {
+    return Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm');
+  }
+  if (typeof value === 'object') return '';
+  return String(value);
 }
 
 function goPesRebuildDerivedUnsafe_() {
@@ -784,3 +928,4 @@ function maybeCallMaker_(fnName, payload) {
 function toClientSafe_(value) {
   return serializeForClient_(value);
 }
+

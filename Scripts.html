@@ -2181,7 +2181,7 @@
         <input type="hidden" name="orden_visual" value="${escapeHtml(String(row.orden_visual || ((index + 1) * 10)))}">
         <div class="beneficio-schedule-row__copy">
           <strong>${escapeHtml(row.hito_nombre || '')}</strong>
-          <span>${escapeHtml((row.convocatoria_nombre || '') + (row.convocatoria_nombre ? ' · ' : '') + beneficioModoFechaLabel_(mode))}</span>
+          <span>${escapeHtml((row.convocatoria_nombre || '') + (row.convocatoria_nombre ? ' ï¿½ ' : '') + beneficioModoFechaLabel_(mode))}</span>
         </div>
         <div class="beneficio-schedule-row__inputs">
           ${mode === 'rango' ? `
@@ -2309,7 +2309,7 @@
           <div>
             <p class="eyebrow">Seguimiento por organizacion</p>
             <h3>${escapeHtml(org.nombre_organizacion || '')}</h3>
-            <p class="muted">${escapeHtml(eligibility.label || '')} · ${escapeHtml(eligibility.detalle || '')}</p>
+            <p class="muted">${escapeHtml(eligibility.label || '')} ï¿½ ${escapeHtml(eligibility.detalle || '')}</p>
           </div>
           <div class="beneficios-detail__head-badges">
             <span class="beneficio-chip ${beneficioBadgeClass_(eligibility.cumple_flag ? 'ok' : 'warning')}">${escapeHtml(eligibility.cumple_flag ? 'Elegible' : 'No elegible')}</span>
@@ -2495,7 +2495,7 @@
   function deactivateBenefitOrg_(organizacionId) {
     const orgId = String(organizacionId || '').trim();
     if (!orgId || !APP.state.currentBeneficioCodigo) return;
-    const ok = window.confirm('Se retirara esta organizacion del beneficio y se conservara su historial. ¿Continuar?');
+    const ok = window.confirm('Se retirara esta organizacion del beneficio y se conservara su historial. ï¿½Continuar?');
     if (!ok) return;
     api('desactivarBeneficioOrganizacion', {
       beneficio_codigo: APP.state.currentBeneficioCodigo,
@@ -2958,25 +2958,26 @@
       const tbody = document.getElementById('history-results');
       if (!tbody) return;
 
-      if (!rows || !rows.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="muted">No hay acciones registradas.</td></tr>';
+      rows = Array.isArray(rows) ? rows : [];
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="muted">No hay registros de trazabilidad disponibles.</td></tr>';
         return;
       }
 
-      rows = Array.isArray(rows) ? rows : [];
       tbody.innerHTML = rows.map(r => `
-        <tr class="${normalizeUiBool_(r.activo_flag, false) ? '' : 'is-inactive'}">
+        <tr>
           <td>${escapeHtml(formatFechaHoraUi_(r.timestamp || ''))}</td>
+          <td><span class="badge">${escapeHtml(r.source_label || '')}</span></td>
           <td>${escapeHtml(r.email || '')}</td>
           <td>${escapeHtml(r.action || '')}</td>
           <td>${escapeHtml(r.entity_type || '')}</td>
           <td>${escapeHtml(r.entity_id || '')}</td>
           <td>${escapeHtml(r.result || '')}</td>
+          <td class="history-detail-cell">${escapeHtml(r.detail_text || 'Sin detalle')}</td>
         </tr>
       `).join('');
     }).catch(showError);
   }
-
   function loadUsers() {
     if (!APP.state.permissions.canManageUsers) return Promise.resolve([]);
 

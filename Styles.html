@@ -507,48 +507,10 @@
     justify-content: center;
     overflow: hidden;
     isolation: isolate;
-    background:
-      radial-gradient(circle at top left, rgba(61, 150, 180, 0.14), transparent 32%),
-      radial-gradient(circle at bottom right, rgba(140, 198, 63, 0.14), transparent 36%),
-      linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(247, 250, 252, 0.98));
+    background: linear-gradient(180deg, #f7fafc 0%, #eef4f8 100%);
     opacity: 1;
     visibility: visible;
     transition: opacity 0.22s ease, visibility 0.22s ease;
-  }
-
-  .content-loading::before,
-  .content-loading::after,
-  .app-loading::before,
-  .app-loading::after {
-    content: '';
-    position: absolute;
-    inset: -18%;
-    pointer-events: none;
-  }
-
-  .content-loading::before,
-  .app-loading::before {
-    background:
-      radial-gradient(circle at 18% 28%, rgba(61, 150, 180, 0.2), transparent 22%),
-      radial-gradient(circle at 82% 70%, rgba(140, 198, 63, 0.2), transparent 24%),
-      linear-gradient(120deg, transparent 35%, rgba(255, 255, 255, 0.68) 50%, transparent 65%);
-    opacity: 0.9;
-    transform: translate3d(-3%, -1%, 0) scale(1.04);
-    animation: loadingAmbientFloat 9s ease-in-out infinite alternate;
-  }
-
-  .content-loading::after,
-  .app-loading::after {
-    inset: 0;
-    background:
-      repeating-linear-gradient(
-        135deg,
-        rgba(61, 150, 180, 0.055) 0 18px,
-        rgba(255, 255, 255, 0) 18px 36px
-      );
-    opacity: 0.45;
-    mix-blend-mode: multiply;
-    animation: loadingSurfaceSweep 14s linear infinite;
   }
 
   .content-loading.is-hidden {
@@ -574,12 +536,10 @@
     padding: 28px 28px 24px;
     border-radius: 28px;
     border: 1px solid rgba(191, 217, 231, 0.85);
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(250, 252, 255, 0.76));
+    background: #ffffff;
     box-shadow:
       0 20px 60px rgba(36, 54, 75, 0.14),
       inset 0 1px 0 rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(12px);
   }
 
   .loading-shell {
@@ -727,16 +687,6 @@
     animation-duration: 1.2s;
   }
 
-  @keyframes loadingAmbientFloat {
-    0% { transform: translate3d(-5%, -1%, 0) scale(1.02); }
-    100% { transform: translate3d(4%, 3%, 0) scale(1.08); }
-  }
-
-  @keyframes loadingSurfaceSweep {
-    from { transform: translate3d(-3%, 0, 0); }
-    to { transform: translate3d(3%, 0, 0); }
-  }
-
   @keyframes loadingPanelGlow {
     0%, 100% { transform: translateX(-120%); opacity: 0; }
     25%, 70% { opacity: 1; }
@@ -766,10 +716,6 @@
     .splash-screen__logo-ring,
     .splash-screen__logo-core::after,
     .splash-screen__progress-bar::after,
-    .content-loading::before,
-    .content-loading::after,
-    .app-loading::before,
-    .app-loading::after,
     .loading-shell::before,
     .loading-shell__halo,
     .loading-shell__ring,

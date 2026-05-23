@@ -1,0 +1,235 @@
+<div id="app-loading" class="app-loading" aria-live="polite" aria-busy="true">
+  <div class="splash-screen" role="status" aria-label="Pantalla de inicio de la aplicación">
+    <div class="splash-screen__ambient" aria-hidden="true">
+      <span class="splash-screen__ambient-orb splash-screen__ambient-orb--one"></span>
+      <span class="splash-screen__ambient-orb splash-screen__ambient-orb--two"></span>
+      <span class="splash-screen__ambient-grid"></span>
+    </div>
+
+    <div class="splash-screen__content">
+      <div class="splash-screen__brand">
+        <div class="splash-screen__logo-wrap" aria-hidden="true">
+          <span class="splash-screen__logo-ring splash-screen__logo-ring--outer"></span>
+          <span class="splash-screen__logo-ring splash-screen__logo-ring--inner"></span>
+          <span class="splash-screen__logo-sheen"></span>
+          <div class="splash-screen__logo-core">
+            <img id="splash-logo" class="splash-screen__logo" alt="Municipalidad de Providencia" />
+          </div>
+        </div>
+
+        <div class="splash-screen__copy">
+          <p class="splash-screen__eyebrow" id="splash-program-name">Programa Estamos Seguros</p>
+          <h1 class="splash-screen__title" id="splash-app-title">Gestor Operativo PES</h1>
+          <div class="splash-screen__meta">
+            <span class="splash-screen__version" id="splash-version">v0 · build 00000000</span>
+            <span class="splash-screen__divider" aria-hidden="true"></span>
+            <span class="splash-screen__institution">Municipalidad de Providencia</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="splash-screen__progress-block">
+        <div class="splash-screen__progress-head">
+          <div>
+            <p class="splash-screen__progress-label">Cargando sistema</p>
+            <p class="app-loading__text">Iniciando Gestor Operativo</p>
+          </div>
+          <div class="splash-screen__percent" id="splash-progress-percent">0%</div>
+        </div>
+
+        <div class="splash-screen__progress-track" aria-hidden="true">
+          <span class="splash-screen__progress-bar" id="splash-progress-bar"></span>
+        </div>
+
+        <div class="splash-screen__progress-footer">
+          <p class="splash-screen__status" id="splash-status-text">Preparando entorno operativo.</p>
+          <p class="splash-screen__powered">POWERED BY PABLO RAMOS</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const APP_SPLASH_MIN_DURATION_MS = 5000;
+
+  const APP_SPLASH_STATE = {
+    visible: true,
+    hideRequested: false,
+    startedAt: 0,
+    progress: 0,
+    message: 'Iniciando Gestor Operativo',
+    rafId: 0,
+    hideTimerId: 0
+  };
+
+  function getSplashElements_() {
+    const root = document.getElementById('app-loading');
+    if (!root) return null;
+    return {
+      root,
+      logo: document.getElementById('splash-logo'),
+      title: document.getElementById('splash-app-title'),
+      program: document.getElementById('splash-program-name'),
+      version: document.getElementById('splash-version'),
+      percent: document.getElementById('splash-progress-percent'),
+      bar: document.getElementById('splash-progress-bar'),
+      text: root.querySelector('.app-loading__text'),
+      status: document.getElementById('splash-status-text')
+    };
+  }
+
+  function readSplashBootstrap_() {
+    const app = document.getElementById('app');
+    if (!app) return {};
+    try {
+      return JSON.parse(app.dataset.bootstrap || '{}');
+    } catch (err) {
+      return {};
+    }
+  }
+
+  function extractSplashProgramName_(subtitle) {
+    const value = String(subtitle || '').trim();
+    if (!value) return 'Programa Estamos Seguros';
+    return value.split('·')[0].trim() || value;
+  }
+
+  function updateSplashBranding_() {
+    const els = getSplashElements_();
+    if (!els) return;
+
+    const bootstrap = readSplashBootstrap_();
+    const buildInfo = bootstrap.buildInfo || {};
+    const version = buildInfo.baseVersion || bootstrap.version || '';
+    const buildHash = buildInfo.buildHash ? `build ${buildInfo.buildHash}` : '';
+    const versionLabel = [version ? `v${version}` : '', buildHash].filter(Boolean).join(' · ');
+    const logo =
+      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) ||
+      document.getElementById('appLogo')?.getAttribute('src') ||
+      '';
+
+    if (els.logo && logo) els.logo.src = logo;
+    if (els.title) els.title.textContent = bootstrap.programTitle || 'Gestor Operativo PES';
+    if (els.program) els.program.textContent = extractSplashProgramName_(bootstrap.subtitle);
+    if (els.version) els.version.textContent = versionLabel || 'Versión disponible al iniciar';
+  }
+
+  function getSplashStatusCopy_(progress, hideRequested) {
+    if (hideRequested && progress >= 96) return 'Finalizando la carga inicial.';
+    if (progress >= 84) return 'Validando módulos y permisos.';
+    if (progress >= 60) return 'Sincronizando estructura operativa.';
+    if (progress >= 34) return 'Cargando configuración institucional.';
+    return 'Preparando entorno operativo.';
+  }
+
+  function renderSplashProgress_() {
+    const els = getSplashElements_();
+    if (!els) return;
+    const progressValue = Math.max(0, Math.min(100, APP_SPLASH_STATE.progress));
+    const rounded = Math.round(progressValue);
+
+    if (els.bar) {
+      els.bar.style.width = `${progressValue}%`;
+      els.bar.setAttribute('aria-valuenow', String(rounded));
+    }
+    if (els.percent) els.percent.textContent = `${rounded}%`;
+    if (els.status) els.status.textContent = getSplashStatusCopy_(progressValue, APP_SPLASH_STATE.hideRequested);
+    if (els.text) els.text.textContent = APP_SPLASH_STATE.message || 'Iniciando Gestor Operativo';
+  }
+
+  function finalizeSplashHide_() {
+    const els = getSplashElements_();
+    if (!els) return;
+
+    APP_SPLASH_STATE.visible = false;
+    APP_SPLASH_STATE.hideRequested = false;
+    APP_SPLASH_STATE.progress = 100;
+    renderSplashProgress_();
+
+    els.root.setAttribute('aria-busy', 'false');
+    els.root.classList.add('is-hidden');
+
+    window.clearTimeout(APP_SPLASH_STATE.hideTimerId);
+    APP_SPLASH_STATE.hideTimerId = window.setTimeout(() => {
+      els.root.style.display = 'none';
+    }, 260);
+  }
+
+  function tickSplashProgress_(now) {
+    const els = getSplashElements_();
+    if (!els || !APP_SPLASH_STATE.visible) {
+      APP_SPLASH_STATE.rafId = 0;
+      return;
+    }
+
+    const elapsed = now - APP_SPLASH_STATE.startedAt;
+    let target = Math.min(91, 9 + (elapsed / APP_SPLASH_MIN_DURATION_MS) * 82);
+
+    if (APP_SPLASH_STATE.hideRequested) {
+      target = elapsed >= APP_SPLASH_MIN_DURATION_MS ? 100 : Math.max(target, 94);
+    }
+
+    const easing = APP_SPLASH_STATE.hideRequested && elapsed >= APP_SPLASH_MIN_DURATION_MS ? 0.18 : 0.075;
+    APP_SPLASH_STATE.progress += (target - APP_SPLASH_STATE.progress) * easing;
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= APP_SPLASH_MIN_DURATION_MS && (100 - APP_SPLASH_STATE.progress) < 0.4) {
+      APP_SPLASH_STATE.progress = 100;
+    }
+
+    renderSplashProgress_();
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= APP_SPLASH_MIN_DURATION_MS && APP_SPLASH_STATE.progress >= 100) {
+      finalizeSplashHide_();
+      APP_SPLASH_STATE.rafId = 0;
+      return;
+    }
+
+    APP_SPLASH_STATE.rafId = window.requestAnimationFrame(tickSplashProgress_);
+  }
+
+  function ensureSplashLoop_() {
+    if (APP_SPLASH_STATE.rafId) return;
+    APP_SPLASH_STATE.rafId = window.requestAnimationFrame(tickSplashProgress_);
+  }
+
+  function showAppLoading(message) {
+    const els = getSplashElements_();
+    if (!els) return;
+
+    updateSplashBranding_();
+
+    window.clearTimeout(APP_SPLASH_STATE.hideTimerId);
+    APP_SPLASH_STATE.message = message || APP_SPLASH_STATE.message || 'Iniciando Gestor Operativo';
+
+    if (!APP_SPLASH_STATE.visible) {
+      APP_SPLASH_STATE.startedAt = performance.now();
+      APP_SPLASH_STATE.progress = 0;
+      APP_SPLASH_STATE.hideRequested = false;
+      APP_SPLASH_STATE.visible = true;
+      els.root.classList.remove('is-hidden');
+      els.root.style.display = 'grid';
+    }
+
+    els.root.setAttribute('aria-busy', 'true');
+    renderSplashProgress_();
+    ensureSplashLoop_();
+  }
+
+  function hideAppLoading() {
+    const els = getSplashElements_();
+    if (!els || !APP_SPLASH_STATE.visible) return;
+
+    APP_SPLASH_STATE.message = APP_SPLASH_STATE.message || 'Iniciando Gestor Operativo';
+    APP_SPLASH_STATE.hideRequested = true;
+    renderSplashProgress_();
+    ensureSplashLoop_();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    APP_SPLASH_STATE.startedAt = performance.now();
+    updateSplashBranding_();
+    renderSplashProgress_();
+    ensureSplashLoop_();
+  });
+</script>

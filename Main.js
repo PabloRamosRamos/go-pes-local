@@ -75,7 +75,6 @@ const GO_PES_V2 = {
     SEGUIMIENTO: 'seguimiento',
     ORGANIZACION: 'organizacion',
     INSTRUMENTO: 'instrumento',
-    REQUISITO: 'requisito',
     SOCIOS: 'socios',
     HISTORIAL: 'historial',
     USERS: 'usuarios'
@@ -192,7 +191,6 @@ function getFirstAllowedView_(permissions) {
     GO_PES_V2.VIEWS.ORGANIZACION,
     GO_PES_V2.VIEWS.SOCIOS,
     GO_PES_V2.VIEWS.INSTRUMENTO,
-    GO_PES_V2.VIEWS.REQUISITO,
     GO_PES_V2.VIEWS.HISTORIAL,
     GO_PES_V2.VIEWS.USERS
   ];

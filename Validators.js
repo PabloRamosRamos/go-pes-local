@@ -31,12 +31,6 @@ function validateInstrumentoV2_(p) {
   }
 }
 
-function validateRequisitoV2_(p) {
-  ['organizacion_id', 'org_instrumento_id', 'instrumento_codigo_catalogo', 'requisito_codigo', 'categoria_requisito', 'estado_requisito'].forEach(f => {
-    if (!String(p[f] || '').trim()) throw new Error(`Falta el campo obligatorio: ${f}`);
-  });
-}
-
 function validateSocioRowV2_(row) {
   if (!String(row.organizacion_id || '').trim()) return { ok: false, error: 'Falta organización asociada.' };
   if (!String(row.nombre_socio || '').trim()) return { ok: false, error: 'Nombre de socio vacío.' };

@@ -319,8 +319,6 @@ function normalizeUserModuleKeys_(value) {
     gestionar_beneficios: 'instrumento',
     instrumentos: 'instrumento',
     beneficios: 'instrumento',
-    registrar_requisitos: 'requisito',
-    requisitos: 'requisito',
     gestion_usuarios: 'usuarios',
     usuarios: 'usuarios',
     nuevo_ingreso: 'nuevo-ingreso',
@@ -535,7 +533,6 @@ function buildPermissionMap_(user) {
     canCreateSeguimiento: can('seguimiento'),
     canEditOrganizacion: can('organizacion'),
     canEditInstrumento: can('instrumento'),
-    canEditRequisito: can('requisito'),
     canImportSocios: can('socios'),
     canViewHistorial: can('historial'),
     canManageUsers: canAccess && isSuper,
@@ -561,7 +558,6 @@ function getModuleDefinitions_() {
     { key: 'organizacion', label: 'Organizaciones', view: 'organizacion' },
     { key: 'socios', label: 'Socios', view: 'socios' },
     { key: 'instrumento', label: 'Beneficios', view: 'instrumento' },
-    { key: 'requisito', label: 'Registrar requisitos', view: 'requisito' },
     { key: 'historial', label: 'Historial', view: 'historial' },
     { key: 'usuarios', label: 'Gestión de usuarios', view: 'usuarios', superOnly: true }
   ];

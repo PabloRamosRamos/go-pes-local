@@ -64,6 +64,7 @@
       currentBeneficiosDetalle: null,
       currentBeneficioCodigo: '',
       currentBeneficioOrganizacionId: '',
+      historialRequestSeq: 0,
       sociosOrganizaciones: [],
       sociosOrganizacionesFetchedAt: 0,
       pendingSociosRows: [],
@@ -136,23 +137,6 @@
       { name: 'observacion_instrumento', label: 'Observación', type: 'textarea', span: 2 },
       { name: 'documento_respaldo_url', label: 'URL respaldo', type: 'text', span: 2 }
     ],
-    requisito: [
-      { name: 'organizacion_id', label: 'ID de organización', type: 'text', required: true },
-      { name: 'org_instrumento_id', label: 'ID de beneficio', type: 'text', required: true },
-      { name: 'requisito_registro_id', label: 'ID requisito', type: 'text' },
-      { name: 'instrumento_codigo_catalogo', label: 'Beneficio', type: 'select', optionsKey: 'instrumentosCodigo', required: true },
-      { name: 'requisito_codigo', label: 'Requisito', type: 'select', optionsKey: 'requisitosDependientes', required: true },
-      { name: 'requisito_nombre_libre', label: 'Nombre libre si es otro', type: 'text' },
-      { name: 'categoria_requisito', label: 'Categoría', type: 'select', optionsKey: 'requisitoCategorias', required: true },
-      { name: 'estado_requisito', label: 'Estado', type: 'select', optionsKey: 'estado_requisito', required: true },
-      { name: 'fecha_solicitud', label: 'Fecha solicitud', type: 'date' },
-      { name: 'fecha_cumplimiento', label: 'Fecha cumplimiento', type: 'date' },
-      { name: 'fecha_vencimiento', label: 'Fecha vencimiento', type: 'date' },
-      { name: 'responsable_requisito', label: 'Responsable', type: 'select', optionsKey: 'responsables' },
-      { name: 'documento_respaldo_url', label: 'URL respaldo', type: 'text', span: 2 },
-      { name: 'observacion_requisito', label: 'Observación', type: 'textarea', span: 2 },
-      { name: 'vigente_flag', label: 'Vigente', type: 'select', options: ['Sí', 'No'] }
-    ]
   };
 
   document.addEventListener('DOMContentLoaded', init);
@@ -303,8 +287,7 @@
       estado_vecino: (c.estadosPorTipo || {}).estado_vecino || [],
       instrumentosCodigo: (c.instrumentos || []).map(i => i.instrumento_codigo_catalogo),
       instrumentosTipo: [...new Set((c.instrumentos || []).map(i => i.instrumento_tipo).filter(Boolean))],
-      instrumentosOrigen: [...new Set((c.instrumentos || []).map(i => i.origen_instrumento).filter(Boolean))],
-      requisitoCategorias: ['legal', 'administrativo', 'financiero', 'documental', 'tecnico', 'otro']
+      instrumentosOrigen: [...new Set((c.instrumentos || []).map(i => i.origen_instrumento).filter(Boolean))]
     };
   }
 
@@ -390,10 +373,6 @@
         const pending = [ensureAppCatalogs_(), ensureOrganizacionesModuloList_()].filter(Boolean);
         return pending.length ? Promise.all(pending) : null;
       }
-      case 'requisito': {
-        const pending = [ensureAppCatalogs_()].filter(Boolean);
-        return pending.length ? Promise.all(pending) : null;
-      }
       case 'socios':
         return ensureSociosCatalogs_();
       default:
@@ -467,8 +446,7 @@
       ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'seguimiento'],
       ['groups', 'Organizaciones', 'Consultar y administrar organizaciones', 'organizacion'],
       ['badge', 'Socios', 'Visualización y carga de socios', 'socios'],
-      ['handshake', 'Beneficios', 'Administrar beneficios por organización', 'instrumento'],
-      ['inventory_2', 'Registrar requisitos', 'Control documental por beneficio', 'requisito']
+      ['handshake', 'Beneficios', 'Administrar beneficios por organización', 'instrumento']
     ];
 
     container.innerHTML = items.filter(item => canOpenView_(item[3])).map(item => `
@@ -493,8 +471,7 @@
       ['Avance', 'Registrar hitos del proceso de constitución.', 'event_note', 'seguimiento'],
       ['Organizaciones', 'Consultar y administrar organizaciones.', 'groups', 'organizacion'],
       ['Socios', 'Visualización y carga manual o masiva.', 'badge', 'socios'],
-      ['Beneficios', 'Administrar beneficios, convocatorias y condiciones por organización.', 'handshake', 'instrumento'],
-      ['Requisitos', 'Registrar o validar documentación.', 'inventory_2', 'requisito']
+      ['Beneficios', 'Administrar beneficios, convocatorias y condiciones por organización.', 'handshake', 'instrumento']
     ];
 
     container.innerHTML = tiles.filter(([, , , view]) => canOpenView_(view)).map(([title, text, icon, view]) => `
@@ -542,10 +519,6 @@
         break;
       case 'instrumento':
         renderBeneficiosView_();
-        APP.state.renderedViews[view] = true;
-        break;
-      case 'requisito':
-        buildForm('form-requisito', FORM_SCHEMAS.requisito, saveRequisitoFromForm);
         APP.state.renderedViews[view] = true;
         break;
       case 'socios':
@@ -624,7 +597,6 @@
     populateSelectsInForm_(form);
 
     form.querySelectorAll('select[data-options-key="sectorByUv"]').forEach(select => syncSectorOptions(select));
-    form.querySelectorAll('select[data-options-key="requisitosDependientes"]').forEach(select => syncRequisitoOptions(select));
 
     form.querySelectorAll('select[name="uv"]').forEach(select =>
       select.addEventListener('change', () => {
@@ -632,19 +604,12 @@
         if (sectorSelect) syncSectorOptions(sectorSelect, select.value);
       })
     );
-
-    form.querySelectorAll('select[name="instrumento_codigo_catalogo"]').forEach(select =>
-      select.addEventListener('change', () => {
-        const reqSelect = form.querySelector('select[name="requisito_codigo"]');
-        if (reqSelect) syncRequisitoOptions(reqSelect, select.value);
-      })
-    );
   }
 
   function populateSelectsInForm_(form) {
     form.querySelectorAll('select').forEach(select => {
       const key = select.dataset.optionsKey;
-      if (key === 'sectorByUv' || key === 'requisitosDependientes') return;
+      if (key === 'sectorByUv') return;
 
       let options = [];
       if (key && APP.state.catalogs[key]) {
@@ -725,19 +690,6 @@
     const uv = uvSelect ? uvSelect.value : '';
     const sectors = uv ? (APP.state.catalogs.sectorByUv?.[uv] || []) : [];
     fillSelect(document.getElementById('ing-sector'), sectors, uv ? 'Seleccionar sector' : 'Selecciona UV primero');
-  }
-
-  function syncRequisitoOptions(select, instrumentoValue) {
-    const instrumento = instrumentoValue || select.form.querySelector('select[name="instrumento_codigo_catalogo"]')?.value || '';
-    const list = instrumento ? (APP.state.catalogs.requisitosPorInstrumento?.[instrumento] || []) : [];
-    fillSelect(
-      select,
-      list.map(x => ({
-        value: x.requisito_codigo,
-        label: `${x.requisito_nombre} (${x.requisito_codigo})`
-      })),
-      instrumento ? 'Seleccionar requisito' : 'Selecciona beneficio primero'
-    );
   }
 
   function applyPermissions() {
@@ -1163,7 +1115,6 @@
       'organizacion',
       'socios',
       'instrumento',
-      'requisito',
       'historial',
       'usuarios'
     ];
@@ -2549,12 +2500,6 @@
     api('guardarInstrumento', payload).then(res => showSuccess(`Beneficio guardado: ${res.org_instrumento_id}`)).catch(showError);
   }
 
-  function saveRequisitoFromForm(ev) {
-    ev.preventDefault();
-    const payload = serializeForm(ev.target);
-    api('guardarRequisito', payload).then(res => showSuccess(`Requisito guardado: ${res.requisito_registro_id}`)).catch(showError);
-  }
-
   function parseSociosBulk(text, organizacionId, nombreComite) {
     const lines = text.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
     return lines.map(line => {
@@ -2955,6 +2900,7 @@
 
   function loadHistorial() {
     const rangeSelect = document.getElementById('history-range-filter');
+    const tbody = document.getElementById('history-results');
     if (rangeSelect && !rangeSelect.dataset.bound) {
       rangeSelect.dataset.bound = 'true';
       rangeSelect.addEventListener('change', loadHistorial);
@@ -2964,14 +2910,22 @@
     const selectedLabel = rangeSelect && rangeSelect.options && rangeSelect.selectedIndex >= 0
       ? String(rangeSelect.options[rangeSelect.selectedIndex].text || '').trim()
       : 'este período';
+    const requestSeq = (APP.state.historialRequestSeq || 0) + 1;
+    APP.state.historialRequestSeq = requestSeq;
+
+    if (rangeSelect) rangeSelect.disabled = true;
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="8" class="muted">Cargando historial para ${escapeHtml(selectedLabel.toLowerCase())}...</td></tr>`;
+    }
+    showContentLoading('Cargando historial...');
 
     api('listarHistorial', { periodo: selectedPeriod }).then(rows => {
-      const tbody = document.getElementById('history-results');
-      if (!tbody) return;
+      if (requestSeq !== APP.state.historialRequestSeq || !tbody) return;
 
       rows = Array.isArray(rows) ? rows : [];
       if (!rows.length) {
         tbody.innerHTML = `<tr><td colspan="8" class="muted">No hay registros para ${escapeHtml(selectedLabel.toLowerCase())}.</td></tr>`;
+        setStatus(`Historial cargado: 0 registros para ${selectedLabel.toLowerCase()}.`, true);
         return;
       }
 
@@ -2987,7 +2941,17 @@
           <td class="history-detail-cell">${escapeHtml(r.detail_text || 'Sin detalle')}</td>
         </tr>
       `).join('');
-    }).catch(showError);
+      setStatus(`Historial cargado: ${rows.length} registros para ${selectedLabel.toLowerCase()}.`, true);
+    }).catch(err => {
+      if (requestSeq === APP.state.historialRequestSeq && tbody) {
+        tbody.innerHTML = `<tr><td colspan="8" class="muted">No fue posible cargar el historial para ${escapeHtml(selectedLabel.toLowerCase())}.</td></tr>`;
+      }
+      showError(err);
+    }).finally(() => {
+      if (requestSeq !== APP.state.historialRequestSeq) return;
+      if (rangeSelect) rangeSelect.disabled = false;
+      hideContentLoading();
+    });
   }
   function loadUsers() {
     if (!APP.state.permissions.canManageUsers) return Promise.resolve([]);
@@ -3230,7 +3194,6 @@
       seguimiento: 'avance',
       organizacion: 'organizaciones',
       instrumento: 'beneficios',
-      requisito: 'requisitos',
       socios: 'socios',
       historial: 'historial',
       usuarios: 'usuarios'

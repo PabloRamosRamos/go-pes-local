@@ -663,62 +663,6 @@ function guardarInstrumento(payload) {
   return { ok: true, org_instrumento_id: orgInstrumentoId };
 }
 
-function guardarRequisito(payload) {
-  const user = requireModuleAccess_('requisito', ['operador', 'coordinador', 'administrador', 'superuser']);
-  validateRequisitoV2_(payload);
-  const now = new Date();
-  const registroId = payload.requisito_registro_id || nextId_('requisito', 'REQ');
-  const orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', payload.organizacion_id, false);
-
-  appendRowObject_(GO_PES_V2.SHEETS.RAW_REQUISITOS, {
-    created_at: now,
-    source: 'WEB_APP',
-    user_email: user.email,
-    organizacion_id: payload.organizacion_id,
-    org_instrumento_id: payload.org_instrumento_id,
-    requisito_registro_id: registroId,
-    instrumento_codigo_catalogo: payload.instrumento_codigo_catalogo,
-    requisito_codigo: payload.requisito_codigo,
-    requisito_nombre_libre: payload.requisito_nombre_libre || '',
-    categoria_requisito: payload.categoria_requisito,
-    estado_requisito: payload.estado_requisito,
-    fecha_solicitud: asDateOrBlank_(payload.fecha_solicitud),
-    fecha_cumplimiento: asDateOrBlank_(payload.fecha_cumplimiento),
-    fecha_vencimiento: asDateOrBlank_(payload.fecha_vencimiento),
-    responsable_requisito: payload.responsable_requisito || user.nombre_visible,
-    documento_respaldo_url: payload.documento_respaldo_url || '',
-    observacion_requisito: payload.observacion_requisito || '',
-    vigente_flag: toSiNo_(payload.vigente_flag)
-  });
-
-  upsertByKey_(GO_PES_V2.SHEETS.FACT_REQUISITOS, 'requisito_registro_id', {
-    requisito_registro_id: registroId,
-    organizacion_id: payload.organizacion_id,
-    org_instrumento_id: payload.org_instrumento_id,
-    instrumento_codigo_catalogo: payload.instrumento_codigo_catalogo,
-    requisito_codigo: payload.requisito_codigo,
-    requisito_nombre_libre: payload.requisito_nombre_libre || '',
-    categoria_requisito: payload.categoria_requisito,
-    estado_requisito: payload.estado_requisito,
-    fecha_solicitud: asDateOrBlank_(payload.fecha_solicitud),
-    fecha_cumplimiento: asDateOrBlank_(payload.fecha_cumplimiento),
-    fecha_vencimiento: asDateOrBlank_(payload.fecha_vencimiento),
-    responsable_requisito: payload.responsable_requisito || user.nombre_visible,
-    documento_respaldo_url: payload.documento_respaldo_url || '',
-    observacion_requisito: payload.observacion_requisito || '',
-    vigente_flag: toSiNo_(payload.vigente_flag),
-    updated_by: user.email,
-    updated_at: now
-  });
-
-  refreshPartialArtifacts_({
-    masterSolicitudIds: [orgRow && orgRow.solicitud_id || '']
-  });
-  logProcessing_('INFO', 'guardarRequisito', 'requisito', registroId, user.email, 'OK', payload);
-  logUserAction_('UPSERT_REQUISITO', 'requisito', registroId, 'OK', payload);
-  return { ok: true, requisito_registro_id: registroId };
-}
-
 function listarHistorial(filters) {
   requireModuleAccess_('historial', ['operador', 'coordinador', 'administrador', 'superuser']);
   const config = filters || {};

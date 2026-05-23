@@ -79,7 +79,8 @@
     --shadow-lg: 0 18px 40px rgba(36, 54, 75, 0.14);
     --container-max: 1440px;
     --sidebar-width: 280px;
-    --sidebar-width-collapsed: 88px;
+    --sidebar-width-collapsed: 96px;
+    --sidebar-compact-button-size: 48px;
 
   }
 
@@ -380,6 +381,7 @@
     gap: var(--space-3);
     width: 100%;
     min-width: 0;
+    min-height: 48px;
     border: 1px solid var(--border);
     background: var(--surface-alt);
     color: var(--brand-blue-dark);
@@ -416,6 +418,8 @@
     border: 1px solid var(--border);
     background: transparent;
     color: var(--text);
+    width: 100%;
+    min-height: 48px;
     padding: var(--space-4) var(--space-5);
     border-radius: var(--radius-lg);
     cursor: pointer;
@@ -431,19 +435,34 @@
 
   .layout.is-sidebar-collapsed .sidebar {
     padding: var(--space-4);
+    align-items: center;
   }
 
   .layout.is-sidebar-collapsed .nav-btn,
   .layout.is-sidebar-collapsed .sidebar-toggle {
+    width: var(--sidebar-compact-button-size);
+    min-width: var(--sidebar-compact-button-size);
+    height: var(--sidebar-compact-button-size);
+    min-height: var(--sidebar-compact-button-size);
+    place-self: center;
     justify-content: center;
-    padding-left: var(--space-3);
-    padding-right: var(--space-3);
+    padding: 0;
     gap: 0;
+    overflow: hidden;
   }
 
   .layout.is-sidebar-collapsed .nav-label,
   .layout.is-sidebar-collapsed .sidebar-toggle__label {
-    width: 0;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
     opacity: 0;
   }
 
@@ -471,8 +490,7 @@
   }
 
   .layout.is-sidebar-collapsed .app-version {
-    font-size: 10px;
-    letter-spacing: 0;
+    display: none;
   }
 
   .content {
@@ -1643,10 +1661,16 @@
 
     .layout.is-sidebar-collapsed .sidebar {
       padding: var(--space-6);
+      align-items: stretch;
     }
 
     .layout.is-sidebar-collapsed .nav-btn,
     .layout.is-sidebar-collapsed .sidebar-toggle {
+      width: 100%;
+      min-width: 0;
+      height: auto;
+      min-height: 48px;
+      place-self: stretch;
       justify-content: flex-start;
       padding: var(--space-4) var(--space-5);
       gap: var(--space-3);
@@ -1654,8 +1678,23 @@
 
     .layout.is-sidebar-collapsed .nav-label,
     .layout.is-sidebar-collapsed .sidebar-toggle__label {
+      position: static;
       width: auto;
+      height: auto;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      clip: auto;
+      clip-path: none;
+      white-space: nowrap;
+      border: 0;
       opacity: 1;
+    }
+
+    .layout.is-sidebar-collapsed .app-version {
+      display: block;
+      font-size: var(--font-size-xs);
+      letter-spacing: .04em;
     }
 
     .inicio-layout {

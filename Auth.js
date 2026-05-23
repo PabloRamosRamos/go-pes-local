@@ -151,6 +151,9 @@ function updateUser(payload) {
   const existing = readDimUsuariosUsers_().users
     .find(r => normalizeEmail_(r.email) === normalizedEmail);
   const isConfiguredSuper = isConfiguredSuperUserEmail_(payload.email);
+  if (!existing && !isConfiguredSuper && !/@providencia\.cl$/.test(normalizedEmail)) {
+    throw new Error('Solo se permiten usuarios con correo @providencia.cl.');
+  }
   const activeNext = isConfiguredSuper ? true : toBool_(payload.activo_flag);
   const superNext = isConfiguredSuper;
 
@@ -550,16 +553,16 @@ function isAllowedNativeIdentityEmail_(email) {
 
 function getModuleDefinitions_() {
   return [
-    { key: 'inicio', label: 'Inicio', view: 'inicio' },
+    { key: 'inicio', label: 'Inicio', view: 'inicio', required: true },
     { key: 'nuevo-ingreso', label: 'Nuevo ingreso', view: 'nuevo-ingreso' },
     { key: 'buscar', label: 'Buscar vecino', view: 'buscar' },
-    { key: 'ficha', label: 'Ficha', view: 'ficha' },
+    { key: 'ficha', label: 'Ficha', view: 'ficha', assignable: false },
     { key: 'seguimiento', label: 'Registrar avance', view: 'seguimiento' },
     { key: 'organizacion', label: 'Organizaciones', view: 'organizacion' },
     { key: 'socios', label: 'Socios', view: 'socios' },
     { key: 'instrumento', label: 'Beneficios', view: 'instrumento' },
     { key: 'historial', label: 'Historial', view: 'historial' },
-    { key: 'usuarios', label: 'Gestión de usuarios', view: 'usuarios', superOnly: true }
+    { key: 'usuarios', label: 'Gestión de usuarios', view: 'usuarios', superOnly: true, assignable: false }
   ];
 }
 
@@ -578,12 +581,18 @@ function parseUserModules_(value, role) {
 
 function normalizeModulePermissionsInput_(value) {
   const modules = Array.isArray(value) ? value : String(value || '').split(',');
-  const allowedKeys = safeModuleDefinitions_()
-    .filter(function(m) { return !m.superOnly; })
+  const defs = safeModuleDefinitions_();
+  const allowedKeys = defs
+    .filter(function(m) { return !m.superOnly && m.assignable !== false; })
+    .map(function(m) { return m.key; });
+  const requiredKeys = defs
+    .filter(function(m) { return m.required; })
     .map(function(m) { return m.key; });
   const normalized = uniqueNonBlank_(modules.map(function(x) { return String(x || '').trim(); }))
     .filter(function(key) { return allowedKeys.indexOf(key) !== -1; });
-  if (normalized.indexOf('inicio') === -1) normalized.unshift('inicio');
+  requiredKeys.slice().reverse().forEach(function(key) {
+    if (normalized.indexOf(key) === -1) normalized.unshift(key);
+  });
   if (normalized.indexOf('ficha') === -1) normalized.push('ficha');
   return normalized.join(',');
 }

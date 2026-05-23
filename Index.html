@@ -328,8 +328,18 @@
           <section class="view" id="view-usuarios">
             <div class="section-head"><div><p class="eyebrow">Administración</p><h2>Gestión de usuarios</h2><p class="muted">Administra usuarios registrados, estado de acceso y visibilidad por módulo.</p></div></div>
             <div class="panel admin-form">
-              Nuevo usuario
-              <div class="field field--half"><label>Email</label><input id="user-email" type="email"></div>
+              <div class="admin-form__head">
+                <h3 class="admin-form__title">Nuevo usuario</h3>
+                <p class="muted">Crea usuarios internos y define visibilidad por módulo desde una sola fuente central.</p>
+              </div>
+              <div class="field field--half user-email-field">
+                <label for="user-email-local">Email</label>
+                <div class="email-input-group">
+                  <input id="user-email-local" type="text" inputmode="email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="nombre.usuario" aria-describedby="user-email-help">
+                  <span class="email-input-group__suffix">@providencia.cl</span>
+                </div>
+                <small id="user-email-help" class="field-help">Ingresa solo la parte anterior al dominio.</small>
+              </div>
               <div class="field field--half"><label>Nombre visible</label><input id="user-name-input" type="text"></div>
               <div class="field field--third"><label>Perfil</label><select id="user-role-input"></select></div>
               <div class="field field--third"><label>Activo</label><select id="user-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>

@@ -705,7 +705,12 @@
 
     fillSelect(document.getElementById('user-role-input'), ['operador', 'coordinador', 'administrador', 'superuser']);
     fillSelect(document.getElementById('user-edit-role-input'), ['operador', 'coordinador', 'administrador', 'superuser']);
+    initUserEmailField_();
     renderUserModuleOptions_();
+  }
+
+  function getAssignableModuleDefinitions_() {
+    return (APP.state.moduleDefinitions || []).filter(module => !module.superOnly && module.assignable !== false);
   }
 
   function canOpenView_(view) {
@@ -716,17 +721,76 @@
     return !!((APP.state.permissions.modules || {})[view]);
   }
 
+  function initUserEmailField_() {
+    const input = document.getElementById('user-email-local');
+    if (!input || input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+
+    const normalizeLocal = () => {
+      const raw = String(input.value || '').trim().toLowerCase().replace(/\s+/g, '');
+      if (!raw) {
+        input.value = '';
+        return;
+      }
+
+      const parts = raw.split('@').filter(Boolean);
+      if (parts.length === 1) {
+        input.value = parts[0];
+        return;
+      }
+
+      if (parts.length === 2 && parts[1] === 'providencia.cl') {
+        input.value = parts[0];
+        return;
+      }
+    };
+
+    input.addEventListener('blur', normalizeLocal);
+    input.addEventListener('paste', () => setTimeout(normalizeLocal, 0));
+  }
+
+  function buildProvidenciaEmailFromInput_() {
+    const input = document.getElementById('user-email-local');
+    const raw = String(input?.value || '').trim().toLowerCase().replace(/\s+/g, '');
+    if (!raw) throw new Error('Debes ingresar el email del usuario.');
+
+    let localPart = raw;
+    if (raw.includes('@')) {
+      const parts = raw.split('@').filter(Boolean);
+      if (parts.length !== 2 || parts[1] !== 'providencia.cl') {
+        throw new Error('Solo se permiten usuarios con correo @providencia.cl.');
+      }
+      localPart = parts[0];
+    }
+
+    if (!/^[a-z0-9._-]+$/.test(localPart)) {
+      throw new Error('El correo solo puede contener letras, números, puntos, guiones y guion bajo.');
+    }
+
+    if (input) input.value = localPart;
+    return `${localPart}@providencia.cl`;
+  }
+
   function renderUserModuleOptions_(selectedModules, targetId) {
     const root = document.getElementById(targetId || 'user-modules-input');
     if (!root) return;
     const selected = Array.isArray(selectedModules)
       ? selectedModules
       : String(selectedModules || '').split(',').map(x => x.trim()).filter(Boolean);
-    const defs = (APP.state.moduleDefinitions || []).filter(m => m.key !== 'usuarios' && m.key !== 'ficha');
+    const allowAll = selected.includes('*');
+    const defs = getAssignableModuleDefinitions_();
     root.innerHTML = defs.map(m => `
       <label class="module-check">
-        <input type="checkbox" value="${escapeHtml(m.key)}" ${selected.includes(m.key) ? 'checked' : ''}>
-        <span>${escapeHtml(m.label || m.key)}</span>
+        <input
+          class="module-check__input"
+          type="checkbox"
+          value="${escapeHtml(m.key)}"
+          ${allowAll || selected.includes(m.key) || m.required ? 'checked' : ''}
+          ${m.required ? 'disabled' : ''}>
+        <span class="module-check__box">
+          <span class="module-check__title">${escapeHtml(m.label || m.key)}</span>
+          <span class="module-check__meta">${escapeHtml(m.required ? 'Siempre visible' : 'Visible en menú')}</span>
+        </span>
       </label>
     `).join('');
   }
@@ -3132,33 +3196,46 @@
   }
 
   function moduleLabelsFromKeys_(keys) {
-    const defs = APP.state.moduleDefinitions || [];
+    const defs = getAssignableModuleDefinitions_();
     const byKey = {};
+    const hiddenKeys = new Set((APP.state.moduleDefinitions || [])
+      .filter(module => module.assignable === false)
+      .map(module => module.key));
     defs.forEach(m => byKey[m.key] = m.label || m.key);
     return (keys || [])
       .map(k => String(k || '').trim())
       .filter(Boolean)
-      .filter(k => k !== 'inicio' && k !== 'ficha')
+      .filter(k => !hiddenKeys.has(k))
       .map(k => byKey[k] || k)
       .join(', ') || 'Sin módulos';
   }
 
   function saveUserFromForm() {
     const btn = document.getElementById('save-user-btn');
-    const modules = collectUserModules_('user-modules-input');
-    const payload = {
-      email: document.getElementById('user-email')?.value.trim() || '',
-      nombre_visible: document.getElementById('user-name-input')?.value.trim() || '',
-      perfil: document.getElementById('user-role-input')?.value || '',
-      activo_flag: document.getElementById('user-active-input')?.value === 'true',
-      superuser_flag: document.getElementById('user-super-input')?.value === 'true',
-      modulos_permitidos: modules
-    };
+    let payload;
+    try {
+      payload = {
+        email: buildProvidenciaEmailFromInput_(),
+        nombre_visible: document.getElementById('user-name-input')?.value.trim() || '',
+        perfil: document.getElementById('user-role-input')?.value || '',
+        activo_flag: document.getElementById('user-active-input')?.value === 'true',
+        superuser_flag: document.getElementById('user-super-input')?.value === 'true',
+        modulos_permitidos: collectUserModules_('user-modules-input')
+      };
+    } catch (err) {
+      showError(err);
+      return;
+    }
 
     if (btn) btn.disabled = true;
     showContentLoading('Guardando usuario...');
     api('updateUser', payload).then(() => {
       showSuccess('Usuario actualizado.');
+      const emailInput = document.getElementById('user-email-local');
+      const nameInput = document.getElementById('user-name-input');
+      if (emailInput) emailInput.value = '';
+      if (nameInput) nameInput.value = '';
+      renderUserModuleOptions_();
       loadUsers();
     }).catch(showError).finally(() => {
       if (btn) btn.disabled = false;
@@ -3167,8 +3244,14 @@
   }
 
   function collectUserModules_(targetId) {
-    return Array.from(document.querySelectorAll(`#${targetId} input[type="checkbox"]:checked`))
+    const selected = Array.from(document.querySelectorAll(`#${targetId} input[type="checkbox"]:checked`))
       .map(input => input.value);
+    getAssignableModuleDefinitions_()
+      .filter(module => module.required)
+      .forEach(module => {
+        if (!selected.includes(module.key)) selected.unshift(module.key);
+      });
+    return selected;
   }
 
   function openUserEditModal_(btn) {

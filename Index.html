@@ -12,9 +12,24 @@
   </head>
   <body>
     <div id="app-loading" class="app-loading" aria-live="polite" aria-busy="true">
-      <div class="app-loading__box">
-        <div class="app-loading__spinner"></div>
+      <div class="app-loading__box loading-shell" role="status">
+        <div class="app-loading__spinner loading-shell__visual" aria-hidden="true">
+          <span class="loading-shell__halo"></span>
+          <span class="loading-shell__ring"></span>
+          <span class="loading-shell__ring loading-shell__ring--reverse"></span>
+          <span class="loading-shell__pulse"></span>
+          <span class="loading-shell__beam"></span>
+          <span class="loading-shell__dot loading-shell__dot--one"></span>
+          <span class="loading-shell__dot loading-shell__dot--two"></span>
+          <span class="loading-shell__dot loading-shell__dot--three"></span>
+        </div>
         <div class="app-loading__text">Iniciando Gestor Operativo</div>
+        <div class="loading-shell__subtext">Preparando el entorno operativo y sincronizando la vista.</div>
+        <div class="loading-shell__track" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
       </div>
     </div>
     <div id="app" data-bootstrap='<?= bootstrap ?>'>
@@ -104,9 +119,24 @@
 
         <section class="content">
           <div id="content-loading" class="content-loading is-hidden" aria-live="polite" aria-busy="true">
-            <div class="content-loading__box">
-              <div class="content-loading__spinner"></div>
+            <div class="content-loading__box loading-shell" role="status">
+              <div class="content-loading__spinner loading-shell__visual" aria-hidden="true">
+                <span class="loading-shell__halo"></span>
+                <span class="loading-shell__ring"></span>
+                <span class="loading-shell__ring loading-shell__ring--reverse"></span>
+                <span class="loading-shell__pulse"></span>
+                <span class="loading-shell__beam"></span>
+                <span class="loading-shell__dot loading-shell__dot--one"></span>
+                <span class="loading-shell__dot loading-shell__dot--two"></span>
+                <span class="loading-shell__dot loading-shell__dot--three"></span>
+              </div>
               <div class="content-loading__text">Iniciando Gestor Operativo</div>
+              <div class="loading-shell__subtext">Actualizando la información visible del módulo.</div>
+              <div class="loading-shell__track" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
             </div>
           </div>
           <section class="view active" id="view-inicio">

@@ -5,6 +5,7 @@
     if (!overlay) return;
 
     if (text && message) text.textContent = message;
+    overlay.setAttribute('aria-busy', 'true');
     overlay.classList.remove('is-hidden');
     overlay.style.display = 'flex';
   }
@@ -12,6 +13,7 @@
   function hideAppLoading() {
     const overlay = document.getElementById('app-loading');
     if (!overlay) return;
+    overlay.setAttribute('aria-busy', 'false');
     overlay.classList.add('is-hidden');
     overlay.style.display = 'none';
   }
@@ -22,6 +24,11 @@
     if (!overlay) return;
 
     if (text && message) text.textContent = message;
+    overlay.setAttribute('aria-busy', 'true');
+    overlay.classList.toggle(
+      'content-loading--modal',
+      !!document.querySelector('.admin-reset-modal:not(.is-hidden), .user-modal:not(.is-hidden), .avance-modal:not(.is-hidden)')
+    );
     overlay.classList.remove('is-hidden');
     overlay.style.display = 'flex';
   }
@@ -29,6 +36,8 @@
   function hideContentLoading() {
     const overlay = document.getElementById('content-loading');
     if (!overlay) return;
+    overlay.setAttribute('aria-busy', 'false');
+    overlay.classList.remove('content-loading--modal');
     overlay.classList.add('is-hidden');
     overlay.style.display = 'none';
   }

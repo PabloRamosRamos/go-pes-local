@@ -1,0 +1,104 @@
+<div id="app-loading" class="app-loading" aria-live="polite" aria-busy="true">
+  <div class="app-loading__box loading-shell" role="status">
+    <div class="app-loading__spinner loading-shell__visual" aria-hidden="true">
+      <span class="loading-shell__halo"></span>
+      <span class="loading-shell__ring"></span>
+      <span class="loading-shell__ring loading-shell__ring--reverse"></span>
+      <span class="loading-shell__pulse"></span>
+      <span class="loading-shell__beam"></span>
+      <span class="loading-shell__dot loading-shell__dot--one"></span>
+      <span class="loading-shell__dot loading-shell__dot--two"></span>
+      <span class="loading-shell__dot loading-shell__dot--three"></span>
+    </div>
+    <div class="app-loading__text">Iniciando Gestor Operativo</div>
+    <div class="loading-shell__subtext">Preparando el entorno operativo y sincronizando la vista.</div>
+    <div class="loading-shell__track" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+</div>
+
+<template id="content-loading-template">
+  <div id="content-loading" class="content-loading is-hidden" aria-live="polite" aria-busy="false">
+    <div class="content-loading__box loading-shell" role="status">
+      <div class="content-loading__spinner loading-shell__visual" aria-hidden="true">
+        <span class="loading-shell__halo"></span>
+        <span class="loading-shell__ring"></span>
+        <span class="loading-shell__ring loading-shell__ring--reverse"></span>
+        <span class="loading-shell__pulse"></span>
+        <span class="loading-shell__beam"></span>
+        <span class="loading-shell__dot loading-shell__dot--one"></span>
+        <span class="loading-shell__dot loading-shell__dot--two"></span>
+        <span class="loading-shell__dot loading-shell__dot--three"></span>
+      </div>
+      <div class="content-loading__text">Iniciando Gestor Operativo</div>
+      <div class="loading-shell__subtext">Actualizando la información visible del módulo.</div>
+      <div class="loading-shell__track" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  function ensureContentLoadingMounted_() {
+    if (document.getElementById('content-loading')) return document.getElementById('content-loading');
+
+    const host = document.querySelector('.content');
+    const template = document.getElementById('content-loading-template');
+    if (!host || !template) return null;
+
+    const fragment = template.content.cloneNode(true);
+    host.insertBefore(fragment, host.firstChild);
+    return document.getElementById('content-loading');
+  }
+
+  document.addEventListener('DOMContentLoaded', ensureContentLoadingMounted_);
+
+  function showAppLoading(message) {
+    const overlay = document.getElementById('app-loading');
+    const text = overlay ? overlay.querySelector('.app-loading__text') : null;
+    if (!overlay) return;
+
+    if (text && message) text.textContent = message;
+    overlay.setAttribute('aria-busy', 'true');
+    overlay.classList.remove('is-hidden');
+    overlay.style.display = 'flex';
+  }
+
+  function hideAppLoading() {
+    const overlay = document.getElementById('app-loading');
+    if (!overlay) return;
+    overlay.setAttribute('aria-busy', 'false');
+    overlay.classList.add('is-hidden');
+    overlay.style.display = 'none';
+  }
+
+  function showContentLoading(message) {
+    const overlay = ensureContentLoadingMounted_();
+    const text = overlay ? overlay.querySelector('.content-loading__text') : null;
+    if (!overlay) return;
+
+    if (text && message) text.textContent = message;
+    overlay.setAttribute('aria-busy', 'true');
+    overlay.classList.toggle(
+      'content-loading--modal',
+      !!document.querySelector('.admin-reset-modal:not(.is-hidden), .user-modal:not(.is-hidden), .avance-modal:not(.is-hidden)')
+    );
+    overlay.classList.remove('is-hidden');
+    overlay.style.display = 'flex';
+  }
+
+  function hideContentLoading() {
+    const overlay = document.getElementById('content-loading');
+    if (!overlay) return;
+    overlay.setAttribute('aria-busy', 'false');
+    overlay.classList.remove('content-loading--modal');
+    overlay.classList.add('is-hidden');
+    overlay.style.display = 'none';
+  }
+</script>

@@ -44,6 +44,18 @@
     }
   };
 
+  const USER_ROLE_OPTIONS = [
+    { value: 'visor', label: 'Visor' },
+    { value: 'operador', label: 'Operador' },
+    { value: 'coordinador', label: 'Coordinador' }
+  ];
+
+  const USER_ROLE_LABELS = {
+    visor: 'Visor',
+    operador: 'Operador',
+    coordinador: 'Coordinador'
+  };
+
   const ORGANIZACION_SOCIO_CARGOS = [
     'Presidente',
     'Tesorero',
@@ -704,14 +716,74 @@
       usersView.innerHTML = '<div class="empty-state">No tienes permisos para administrar usuarios.</div>';
     }
 
-    fillSelect(document.getElementById('user-role-input'), ['operador', 'coordinador', 'administrador', 'superuser']);
-    fillSelect(document.getElementById('user-edit-role-input'), ['operador', 'coordinador', 'administrador', 'superuser']);
+    fillSelect(document.getElementById('user-role-input'), USER_ROLE_OPTIONS, 'Seleccionar perfil');
+    fillSelect(document.getElementById('user-edit-role-input'), USER_ROLE_OPTIONS, 'Seleccionar perfil');
     initUserEmailField_();
+    bindUserRoleVisibility_('user-role-input', 'user-modules-field', 'user-modules-input');
+    bindUserRoleVisibility_('user-edit-role-input', 'user-edit-modules-panel', 'user-edit-modules-input');
+    const createRoleSelect = document.getElementById('user-role-input');
+    if (createRoleSelect && !createRoleSelect.value) {
+      createRoleSelect.value = 'operador';
+    }
     renderUserModuleOptions_();
+    syncUserModulesVisibility_('user-role-input', 'user-modules-field', 'user-modules-input');
   }
 
   function getAssignableModuleDefinitions_() {
     return (APP.state.moduleDefinitions || []).filter(module => !module.superOnly && module.assignable !== false);
+  }
+
+  function normalizeEditableUserProfile_(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'visor') return 'visor';
+    if (normalized === 'coordinador' || normalized === 'administrador' || normalized === 'superuser') return 'coordinador';
+    return 'operador';
+  }
+
+  function getUserRoleLabel_(value) {
+    return USER_ROLE_LABELS[normalizeEditableUserProfile_(value)] || 'Operador';
+  }
+
+  function roleAllowsManualModules_(value) {
+    return normalizeEditableUserProfile_(value) !== 'visor';
+  }
+
+  function getCheckedUserModules_(targetId) {
+    return Array.from(document.querySelectorAll(`#${targetId} input[type="checkbox"]:checked`))
+      .map(input => input.value)
+      .filter(Boolean);
+  }
+
+  function bindUserRoleVisibility_(selectId, containerId, targetId) {
+    const select = document.getElementById(selectId);
+    if (!select || select.dataset.boundRoleVisibility === '1') return;
+    select.dataset.boundRoleVisibility = '1';
+    select.addEventListener('change', () => syncUserModulesVisibility_(selectId, containerId, targetId));
+  }
+
+  function syncUserModulesVisibility_(selectId, containerId, targetId) {
+    const select = document.getElementById(selectId);
+    const container = document.getElementById(containerId);
+    const target = targetId || 'user-modules-input';
+    const role = normalizeEditableUserProfile_(select?.value || '');
+    const allowManual = roleAllowsManualModules_(role);
+    const previousSelection = container?.dataset.manualModules || '';
+    const layout = container?.closest('.user-edit-layout');
+
+    if (container) container.classList.toggle('is-hidden', !allowManual);
+    if (layout && target === 'user-edit-modules-input') {
+      layout.classList.toggle('is-single-column', !allowManual);
+    }
+    if (!allowManual) {
+      if (container) {
+        container.dataset.manualModules = getCheckedUserModules_(target).join(',');
+      }
+      renderUserModuleOptions_(['inicio'], target);
+      return;
+    }
+
+    const selectionToRender = previousSelection || getCheckedUserModules_(target).join(',');
+    renderUserModuleOptions_(selectionToRender, target);
   }
 
   function canOpenView_(view) {
@@ -3137,21 +3209,20 @@
 
       rows = Array.isArray(rows) ? rows : (Array.isArray(rows?.users) ? rows.users : []);
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="muted">No hay usuarios registrados para mostrar.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="muted">No hay usuarios registrados para mostrar.</td></tr>';
         return rows;
       }
       tbody.innerHTML = rows.map(r => `
         <tr class="${normalizeUiBool_(r.activo_flag, false) ? '' : 'is-inactive'}">
           <td>${escapeHtml(r.email)}</td>
           <td>${escapeHtml(r.nombre_visible)}</td>
-          <td>${escapeHtml(r.perfil)}</td>
+          <td>${escapeHtml(getUserRoleLabel_(r.perfil))}</td>
           <td>${renderUserActiveLabel_(r.activo_flag)}</td>
-          <td>${renderUserBooleanLabel_(r.superuser_flag)}</td>
           <td>${escapeHtml(moduleLabel(r))}</td>
           <td>${escapeHtml(formatFechaHoraUi_(r.fecha_ultima_actividad || ''))}</td>
           <td>
             <div class="user-row-actions">
-              <button class="table-action-btn js-edit-user" type="button" title="Editar usuario" aria-label="Editar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(r.perfil)}" data-active="${normalizeUiBool_(r.activo_flag, false)}" data-super="${normalizeUiBool_(r.superuser_flag, false)}" data-modules="${escapeHtml(r.modulos_permitidos || '')}">
+              <button class="table-action-btn js-edit-user" type="button" title="Editar usuario" aria-label="Editar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(normalizeEditableUserProfile_(r.perfil))}" data-active="${normalizeUiBool_(r.activo_flag, false)}" data-modules="${escapeHtml(r.modulos_permitidos || '')}">
                 <span class="material-symbols-outlined">edit</span>
               </button>
               <button class="table-action-btn table-action-btn--danger js-delete-user" type="button" title="Desactivar usuario" aria-label="Desactivar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible || r.email)}" ${normalizeUiBool_(r.activo_flag, false) ? '' : 'disabled'}>
@@ -3226,13 +3297,14 @@
     const btn = document.getElementById('save-user-btn');
     let payload;
     try {
+      const profile = normalizeEditableUserProfile_(document.getElementById('user-role-input')?.value || '');
       payload = {
         email: buildProvidenciaEmailFromInput_(),
         nombre_visible: document.getElementById('user-name-input')?.value.trim() || '',
-        perfil: document.getElementById('user-role-input')?.value || '',
+        perfil: profile,
         activo_flag: document.getElementById('user-active-input')?.value === 'true',
-        superuser_flag: document.getElementById('user-super-input')?.value === 'true',
-        modulos_permitidos: collectUserModules_('user-modules-input')
+        superuser_flag: false,
+        modulos_permitidos: collectUserModules_('user-modules-input', profile)
       };
     } catch (err) {
       showError(err);
@@ -3245,9 +3317,12 @@
       showSuccess('Usuario actualizado.');
       const emailInput = document.getElementById('user-email-local');
       const nameInput = document.getElementById('user-name-input');
+      const roleInput = document.getElementById('user-role-input');
       if (emailInput) emailInput.value = '';
       if (nameInput) nameInput.value = '';
+      if (roleInput) roleInput.value = 'operador';
       renderUserModuleOptions_();
+      syncUserModulesVisibility_('user-role-input', 'user-modules-field', 'user-modules-input');
       loadUsers();
     }).catch(showError).finally(() => {
       if (btn) btn.disabled = false;
@@ -3255,9 +3330,12 @@
     });
   }
 
-  function collectUserModules_(targetId) {
-    const selected = Array.from(document.querySelectorAll(`#${targetId} input[type="checkbox"]:checked`))
-      .map(input => input.value);
+  function collectUserModules_(targetId, roleValue) {
+    const role = normalizeEditableUserProfile_(roleValue || document.getElementById(targetId === 'user-edit-modules-input' ? 'user-edit-role-input' : 'user-role-input')?.value || '');
+    if (!roleAllowsManualModules_(role)) {
+      return ['inicio'];
+    }
+    const selected = getCheckedUserModules_(targetId);
     getAssignableModuleDefinitions_()
       .filter(module => module.required)
       .forEach(module => {
@@ -3272,10 +3350,10 @@
 
     document.getElementById('user-edit-email').value = btn.dataset.email || '';
     document.getElementById('user-edit-name-input').value = btn.dataset.name || '';
-    document.getElementById('user-edit-role-input').value = btn.dataset.role || '';
+    document.getElementById('user-edit-role-input').value = normalizeEditableUserProfile_(btn.dataset.role || '');
     document.getElementById('user-edit-active-input').value = btn.dataset.active || 'true';
-    document.getElementById('user-edit-super-input').value = btn.dataset.super || 'false';
     renderUserModuleOptions_(btn.dataset.modules || '', 'user-edit-modules-input');
+    syncUserModulesVisibility_('user-edit-role-input', 'user-edit-modules-panel', 'user-edit-modules-input');
 
     modal.classList.remove('is-hidden');
     modal.setAttribute('aria-hidden', 'false');
@@ -3291,13 +3369,14 @@
   function saveUserEditModal_(ev) {
     ev.preventDefault();
     const btn = document.getElementById('user-edit-save-btn');
+    const profile = normalizeEditableUserProfile_(document.getElementById('user-edit-role-input')?.value || '');
     const payload = {
       email: document.getElementById('user-edit-email')?.value.trim() || '',
       nombre_visible: document.getElementById('user-edit-name-input')?.value.trim() || '',
-      perfil: document.getElementById('user-edit-role-input')?.value || '',
+      perfil: profile,
       activo_flag: document.getElementById('user-edit-active-input')?.value === 'true',
-      superuser_flag: document.getElementById('user-edit-super-input')?.value === 'true',
-      modulos_permitidos: collectUserModules_('user-edit-modules-input')
+      superuser_flag: false,
+      modulos_permitidos: collectUserModules_('user-edit-modules-input', profile)
     };
 
     if (btn) btn.disabled = true;

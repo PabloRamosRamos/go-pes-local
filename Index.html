@@ -343,11 +343,10 @@
               <div class="field field--half"><label>Nombre visible</label><input id="user-name-input" type="text"></div>
               <div class="field field--third"><label>Perfil</label><select id="user-role-input"></select></div>
               <div class="field field--third"><label>Activo</label><select id="user-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>
-              <div class="field field--third"><label>Superuser</label><select id="user-super-input"><option value="false">No</option><option value="true">Sí</option></select></div>
-              <div class="field field--full"><label>Módulos visibles</label><div id="user-modules-input" class="module-check-grid"></div></div>
+              <div class="field field--full" id="user-modules-field"><label>Módulos visibles</label><div id="user-modules-input" class="module-check-grid"></div></div>
               <div class="actions"><button type="button" class="primary-btn" id="save-user-btn"><span class="material-symbols-outlined">save</span>Guardar usuario</button></div>
             </div>
-            <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Nombre</th><th>Perfil</th><th>Activo</th><th>Superuser</th><th>Módulos</th><th>Última actividad</th><th>Acciones</th></tr></thead><tbody id="users-results"></tbody></table></div>
+            <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Nombre</th><th>Perfil</th><th>Activo</th><th>Módulos</th><th>Última actividad</th><th>Acciones</th></tr></thead><tbody id="users-results"></tbody></table></div>
           </section>
             <div id="user-edit-modal" class="user-modal is-hidden" aria-hidden="true">
               <div class="user-modal__backdrop" data-user-edit-close="true"></div>
@@ -368,7 +367,6 @@
                       <div class="field field--full"><label>Nombre visible</label><input id="user-edit-name-input" type="text"></div>
                       <div class="field field--full"><label>Perfil</label><select id="user-edit-role-input"></select></div>
                       <div class="field field--full"><label>Activo</label><select id="user-edit-active-input"><option value="true">Si</option><option value="false">No</option></select></div>
-                      <div class="field field--full"><label>Superuser</label><select id="user-edit-super-input"><option value="false">No</option><option value="true">Si</option></select></div>
                     </div>
                     <div class="actions user-edit-layout__actions">
                       <button type="button" class="secondary-btn" data-user-edit-close="true">
@@ -380,10 +378,9 @@
                     </div>
                   </div>
 
-                  <div class="user-edit-layout__modules">
+                  <div class="user-edit-layout__modules" id="user-edit-modules-panel">
                     <div class="user-edit-layout__modules-head">
                       <label>Modulos visibles</label>
-                      <p class="muted">Distribuidos en columnas para reducir alto y mejorar lectura.</p>
                     </div>
                     <div id="user-edit-modules-input" class="module-check-grid user-edit-layout__modules-grid"></div>
                   </div>

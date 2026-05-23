@@ -164,14 +164,16 @@ function updateUser(payload) {
     ensureAtLeastOneOtherActiveSuperUser_(normalizedEmail);
   }
 
+  const normalizedProfile = normalizeManagedUserProfile_(payload.perfil || (existing && existing.perfil) || 'operador');
+
   const row = {
     user_id: existing && existing.user_id ? existing.user_id : nextId_('usuario', 'USR'),
     email: payload.email,
     nombre_visible: payload.nombre_visible || payload.email,
-    perfil: payload.perfil || (existing && existing.perfil) || 'operador',
+    perfil: normalizedProfile,
     activo_flag: activeNext,
     superuser_flag: superNext,
-    modulos_permitidos: superNext ? '*' : normalizeModulePermissionsInput_(payload.modulos_permitidos),
+    modulos_permitidos: superNext ? '*' : normalizeModulePermissionsInput_(payload.modulos_permitidos, normalizedProfile),
     fecha_alta: existing && existing.fecha_alta ? existing.fecha_alta : new Date(),
     fecha_ultima_actividad: existing && existing.fecha_ultima_actividad ? existing.fecha_ultima_actividad : '',
     updated_at: new Date(),
@@ -241,7 +243,7 @@ function serializeUserForClient_(user) {
     updated_at: serializeDateForClient_(user.updated_at),
     updated_by: user.updated_by || '',
     canAccess: !!user.canAccess,
-    roleLabel: user.roleLabel || user.perfil || ''
+    roleLabel: user.roleLabel || getUserRoleLabel_(user.perfil) || user.perfil || ''
   };
 }
 
@@ -293,6 +295,20 @@ function normalizeDimUsuarioRow_(headers, row) {
 
 function normalizeHeaderKey_(value) {
   return normalizeText_(value).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+}
+
+function normalizeManagedUserProfile_(value) {
+  const normalized = normalizeText_(value || 'operador');
+  if (normalized === 'visor') return 'visor';
+  if (normalized === 'coordinador' || normalized === 'administrador' || normalized === 'superuser') return 'coordinador';
+  return 'operador';
+}
+
+function getUserRoleLabel_(value) {
+  const normalized = normalizeManagedUserProfile_(value);
+  if (normalized === 'visor') return 'Visor';
+  if (normalized === 'coordinador') return 'Coordinador';
+  return 'Operador';
 }
 
 function normalizeUserBoolLike_(value, defaultValue) {
@@ -499,7 +515,7 @@ function decorateUser_(row) {
   row = row || {};
   const active = toBool_(row.activo_flag);
   const superFlag = active && isConfiguredSuperUserEmail_(row.email);
-  const profile = superFlag ? 'superuser' : (row.perfil || 'operador');
+  const profile = superFlag ? 'superuser' : normalizeManagedUserProfile_(row.perfil || 'operador');
   const modules = superFlag
     ? safeModuleDefinitions_().map(function(m) { return m.key; })
     : parseUserModules_(row.modulos_permitidos, profile);
@@ -518,7 +534,7 @@ function decorateUser_(row) {
     updated_at: row.updated_at || '',
     updated_by: row.updated_by || '',
     canAccess: active,
-    roleLabel: profile
+    roleLabel: superFlag ? 'Coordinador' : getUserRoleLabel_(profile)
   };
 }
 
@@ -567,10 +583,12 @@ function getModuleDefinitions_() {
 }
 
 function defaultModulesForRole_(role) {
+  if (normalizeManagedUserProfile_(role) === 'visor') return ['inicio'];
   return ['inicio'];
 }
 
 function parseUserModules_(value, role) {
+  if (normalizeManagedUserProfile_(role) === 'visor') return ['inicio'];
   const raw = String(value || '').trim();
   if (!raw) return defaultModulesForRole_(role);
   if (raw === '*') return safeModuleDefinitions_().map(function(m) { return m.key; });
@@ -579,7 +597,9 @@ function parseUserModules_(value, role) {
     .filter(function(key) { return allowedKeys.indexOf(key) !== -1; });
 }
 
-function normalizeModulePermissionsInput_(value) {
+function normalizeModulePermissionsInput_(value, role) {
+  const normalizedRole = normalizeManagedUserProfile_(role);
+  if (normalizedRole === 'visor') return 'inicio';
   const modules = Array.isArray(value) ? value : String(value || '').split(',');
   const defs = safeModuleDefinitions_();
   const allowedKeys = defs
@@ -593,7 +613,7 @@ function normalizeModulePermissionsInput_(value) {
   requiredKeys.slice().reverse().forEach(function(key) {
     if (normalized.indexOf(key) === -1) normalized.unshift(key);
   });
-  if (normalized.indexOf('ficha') === -1) normalized.push('ficha');
+  if (normalizedRole !== 'visor' && normalized.indexOf('ficha') === -1) normalized.push('ficha');
   return normalized.join(',');
 }
 

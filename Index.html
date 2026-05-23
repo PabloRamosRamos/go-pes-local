@@ -351,7 +351,7 @@
           </section>
             <div id="user-edit-modal" class="user-modal is-hidden" aria-hidden="true">
               <div class="user-modal__backdrop" data-user-edit-close="true"></div>
-              <form id="user-edit-form" class="user-modal__dialog">
+              <form id="user-edit-form" class="user-modal__dialog user-modal__dialog--user-edit">
                 <div class="user-modal__head">
                   <div>
                     <p class="eyebrow">Usuario registrado</p>
@@ -361,21 +361,32 @@
                     <span class="material-symbols-outlined">close</span>Cerrar
                   </button>
                 </div>
-                <div class="form-grid">
-                  <div class="field field--half"><label>Email</label><input id="user-edit-email" type="email" readonly></div>
-                  <div class="field field--half"><label>Nombre visible</label><input id="user-edit-name-input" type="text"></div>
-                  <div class="field field--third"><label>Perfil</label><select id="user-edit-role-input"></select></div>
-                  <div class="field field--third"><label>Activo</label><select id="user-edit-active-input"><option value="true">Si</option><option value="false">No</option></select></div>
-                  <div class="field field--third"><label>Superuser</label><select id="user-edit-super-input"><option value="false">No</option><option value="true">Si</option></select></div>
-                  <div class="field field--full"><label>Modulos visibles</label><div id="user-edit-modules-input" class="module-check-grid"></div></div>
-                </div>
-                <div class="actions">
-                  <button type="button" class="secondary-btn" data-user-edit-close="true">
-                    <span class="material-symbols-outlined">undo</span>Cancelar
-                  </button>
-                  <button type="submit" class="primary-btn" id="user-edit-save-btn">
-                    <span class="material-symbols-outlined">save</span>Guardar cambios
-                  </button>
+                <div class="user-edit-layout">
+                  <div class="user-edit-layout__main">
+                    <div class="user-edit-layout__main-fields">
+                      <div class="field field--full"><label>Email</label><input id="user-edit-email" type="email" readonly></div>
+                      <div class="field field--full"><label>Nombre visible</label><input id="user-edit-name-input" type="text"></div>
+                      <div class="field field--full"><label>Perfil</label><select id="user-edit-role-input"></select></div>
+                      <div class="field field--full"><label>Activo</label><select id="user-edit-active-input"><option value="true">Si</option><option value="false">No</option></select></div>
+                      <div class="field field--full"><label>Superuser</label><select id="user-edit-super-input"><option value="false">No</option><option value="true">Si</option></select></div>
+                    </div>
+                    <div class="actions user-edit-layout__actions">
+                      <button type="button" class="secondary-btn" data-user-edit-close="true">
+                        <span class="material-symbols-outlined">undo</span>Cancelar
+                      </button>
+                      <button type="submit" class="primary-btn" id="user-edit-save-btn">
+                        <span class="material-symbols-outlined">save</span>Guardar cambios
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="user-edit-layout__modules">
+                    <div class="user-edit-layout__modules-head">
+                      <label>Modulos visibles</label>
+                      <p class="muted">Distribuidos en columnas para reducir alto y mejorar lectura.</p>
+                    </div>
+                    <div id="user-edit-modules-input" class="module-check-grid user-edit-layout__modules-grid"></div>
+                  </div>
                 </div>
               </form>
             </div>

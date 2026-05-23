@@ -2102,6 +2102,10 @@
     width: min(520px, calc(100vw - 32px));
   }
 
+  .user-modal__dialog--user-edit {
+    width: min(1180px, calc(100vw - 32px));
+  }
+
   .user-modal__head {
     display: flex;
     justify-content: space-between;
@@ -2113,6 +2117,58 @@
   .user-modal__head h3 {
     margin: 0;
     color: var(--brand-blue);
+  }
+
+  .user-edit-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .user-edit-layout__main,
+  .user-edit-layout__modules {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+    padding: var(--space-6);
+  }
+
+  .user-edit-layout__main {
+    display: grid;
+    gap: var(--space-5);
+  }
+
+  .user-edit-layout__main-fields {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .user-edit-layout__main-fields .field {
+    width: 100%;
+  }
+
+  .user-edit-layout__modules {
+    display: grid;
+    gap: var(--space-5);
+    align-content: start;
+  }
+
+  .user-edit-layout__modules-head {
+    display: grid;
+    gap: 4px;
+  }
+
+  .user-edit-layout__modules-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .user-edit-layout__actions {
+    margin-top: 0;
+    justify-content: flex-start;
   }
 
   .user-delete-warning {
@@ -2403,6 +2459,35 @@
     .kv {
       grid-template-columns: 1fr;
       gap: 2px;
+    }
+
+    .user-modal__dialog--user-edit {
+      width: min(960px, calc(100vw - 24px));
+    }
+
+    .user-edit-layout {
+      grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+    }
+  }
+
+  @media (max-width: 840px) {
+    .user-edit-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .user-edit-layout__modules-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .user-modal__dialog--user-edit {
+      width: min(100vw - 16px, 100%);
+      padding: var(--space-5);
+    }
+
+    .user-edit-layout__modules-grid {
+      grid-template-columns: 1fr;
     }
   }
 

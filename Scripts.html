@@ -18,6 +18,7 @@
       activeView: BOOTSTRAP.initialView || 'inicio',
       currentFicha: null,
       currentSearchResults: [],
+      searchRequestSeq: 0,
       currentAvance: null,
       avanceCatalogos: null,
       avanceGrupos: [],
@@ -934,12 +935,18 @@
   function runSearch() {
     const query = document.getElementById('search-query')?.value.trim() || '';
     const tbody = document.getElementById('search-results');
+    const btn = document.getElementById('search-btn');
+    const requestSeq = (APP.state.searchRequestSeq || 0) + 1;
+    APP.state.searchRequestSeq = requestSeq;
 
     if (tbody) {
       tbody.innerHTML = '<tr><td colspan="6" class="muted">Buscando...</td></tr>';
     }
+    if (btn) btn.disabled = true;
+    showContentLoading('Buscando vecino...');
 
     api('buscarVecino', query).then(rows => {
+      if (requestSeq !== APP.state.searchRequestSeq) return;
       APP.state.currentSearchResults = Array.isArray(rows) ? rows : [];
 
       setStatus(`Resultados búsqueda: ${APP.state.currentSearchResults.length}`, true);
@@ -975,10 +982,15 @@
         }))
       );
     }).catch(err => {
+      if (requestSeq !== APP.state.searchRequestSeq) return;
       if (tbody) {
         tbody.innerHTML = '<tr><td colspan="6" class="muted">Error al buscar.</td></tr>';
       }
       showError(err);
+    }).finally(() => {
+      if (requestSeq !== APP.state.searchRequestSeq) return;
+      if (btn) btn.disabled = false;
+      hideContentLoading();
     });
   }
 

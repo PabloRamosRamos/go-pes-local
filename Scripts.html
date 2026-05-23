@@ -29,7 +29,6 @@
       currentOrganizacionDetalle: null,
       currentBeneficiosDetalle: null,
       currentBeneficioCodigo: '',
-      currentBeneficioOrganizacionId: '',
       historialRequestSeq: 0,
       sociosOrganizaciones: [],
       sociosOrganizacionesFetchedAt: 0,
@@ -209,6 +208,29 @@
   }
 
   function hydrateAppVersion_() {
+    const el = document.getElementById('app-version');
+    if (!el) return;
+    const buildInfo = BOOTSTRAP.buildInfo || {};
+    const path = String(window.location.pathname || '').toLowerCase();
+    const channel = path.endsWith('/dev')
+      ? 'DEV'
+      : path.endsWith('/exec')
+        ? 'EXEC'
+        : String(BOOTSTRAP.environment || '').trim().toUpperCase();
+    const label = [
+      buildInfo.baseVersion || BOOTSTRAP.version ? `v${buildInfo.baseVersion || BOOTSTRAP.version}` : '',
+      channel,
+      buildInfo.buildHash ? `build ${buildInfo.buildHash}` : '',
+      buildInfo.updatedAtLabel || ''
+    ].filter(Boolean).join(' · ') || BOOTSTRAP.versionLabel || '';
+    el.textContent = label;
+    el.title = buildInfo.updatedAtIso
+      ? `Versión ${label} · actualizado ${buildInfo.updatedAtIso}`
+      : (label ? `Versión ${label}` : '');
+    el.classList.toggle('is-hidden', !label);
+  }
+
+  function hydrateAppVersionLegacy_() {
     const el = document.getElementById('app-version');
     if (!el) return;
     const label = BOOTSTRAP.versionLabel || (BOOTSTRAP.version ? `v${BOOTSTRAP.version}` : '');
@@ -412,7 +434,7 @@
       ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'seguimiento'],
       ['groups', 'Organizaciones', 'Consultar y administrar organizaciones', 'organizacion'],
       ['badge', 'Socios', 'Visualización y carga de socios', 'socios'],
-      ['handshake', 'Beneficios', 'Administrar beneficios por organización', 'instrumento']
+      ['handshake', 'Beneficios', 'Revisar la base minima de beneficios por etapas', 'instrumento']
     ];
 
     container.innerHTML = items.filter(item => canOpenView_(item[3])).map(item => `
@@ -437,7 +459,7 @@
       ['Avance', 'Registrar hitos del proceso de constitución.', 'event_note', 'seguimiento'],
       ['Organizaciones', 'Consultar y administrar organizaciones.', 'groups', 'organizacion'],
       ['Socios', 'Visualización y carga manual o masiva.', 'badge', 'socios'],
-      ['Beneficios', 'Administrar beneficios, convocatorias y condiciones por organización.', 'handshake', 'instrumento']
+      ['Beneficios', 'Revisar la base minima del modulo y sus pestanas operativas.', 'handshake', 'instrumento']
     ];
 
     container.innerHTML = tiles.filter(([, , , view]) => canOpenView_(view)).map(([title, text, icon, view]) => `
@@ -769,7 +791,6 @@
       APP.state.organizacionesModuloFetchedAt = 0;
       APP.state.currentBeneficiosDetalle = null;
       APP.state.currentBeneficioCodigo = '';
-      APP.state.currentBeneficioOrganizacionId = '';
       APP.state.sociosOrganizaciones = [];
       APP.state.sociosOrganizacionesFetchedAt = 0;
       APP.state.renderedViews = {};
@@ -1898,6 +1919,113 @@
   }
 
   function renderBeneficiosView_() {
+    const root = document.getElementById('beneficios-root');
+    if (!root) return;
+
+    root.innerHTML = `
+      <div class="beneficios-shell">
+        <div class="section-head beneficios-head">
+          <div>
+            <p class="eyebrow">Beneficios</p>
+            <h2>Base operativa mínima</h2>
+            <p class="muted">Módulo reducido a una estructura estable para continuar su desarrollo por etapas.</p>
+          </div>
+          <div class="beneficios-actions">
+            <button type="button" class="secondary-btn" id="beneficios-reload-btn"><span class="material-symbols-outlined">refresh</span>Recargar</button>
+          </div>
+        </div>
+        <div id="beneficios-content" class="beneficios-workspace empty-state">Cargando beneficios...</div>
+      </div>
+    `;
+
+    document.getElementById('beneficios-reload-btn')?.addEventListener('click', () => refreshBeneficiosModuloMinimo_());
+    refreshBeneficiosModuloMinimo_();
+  }
+
+  function refreshBeneficiosModuloMinimo_() {
+    showContentLoading('Cargando beneficios...');
+    return api('getBeneficiosModuloPanel', {
+      beneficio_codigo: APP.state.currentBeneficioCodigo || ''
+    }).then(data => {
+      APP.state.currentBeneficiosDetalle = data || {};
+      const tabs = (data && data.tabs) || [];
+      if (!APP.state.currentBeneficioCodigo && tabs.length) {
+        APP.state.currentBeneficioCodigo = tabs[0].codigo;
+      }
+      renderBeneficiosPanelMinimo_(APP.state.currentBeneficiosDetalle);
+    }).catch(showError).finally(hideContentLoading);
+  }
+
+  function renderBeneficiosPanelMinimo_(data) {
+    const host = document.getElementById('beneficios-content');
+    if (!host) return;
+
+    const tabs = (data && data.tabs) || [];
+    const selectedCode = data && data.selected_tab_codigo
+      ? data.selected_tab_codigo
+      : APP.state.currentBeneficioCodigo;
+    const activeTab = tabs.find(tab => tab.codigo === selectedCode) || tabs[0] || null;
+
+    if (!tabs.length || !activeTab) {
+      host.className = 'beneficios-workspace empty-state';
+      host.innerHTML = 'No hay beneficios configurados para este módulo.';
+      return;
+    }
+
+    APP.state.currentBeneficioCodigo = activeTab.codigo;
+    host.className = 'beneficios-workspace';
+    host.innerHTML = `
+      <section class="beneficios-intro">
+        <p class="eyebrow">Etapa actual</p>
+        <h3>Beneficios listos para construcción gradual</h3>
+        <p class="muted">Se conserva el módulo, su navegación y su loading, pero la operación compleja se desmontó para reiniciar este frente con una base limpia.</p>
+      </section>
+      <section class="beneficios-tabs-shell">
+        <div class="beneficios-tabs" role="tablist" aria-label="Pestañas del módulo Beneficios">
+          ${tabs.map(tab => `
+            <button
+              type="button"
+              class="beneficios-tab js-beneficio-tab ${tab.codigo === activeTab.codigo ? 'is-active' : ''}"
+              data-beneficio-codigo="${escapeHtml(tab.codigo || '')}"
+              role="tab"
+              aria-selected="${tab.codigo === activeTab.codigo ? 'true' : 'false'}">
+              <span class="beneficios-tab__eyebrow">Beneficio</span>
+              <strong class="beneficios-tab__title">${escapeHtml(tab.titulo || '')}</strong>
+              <span class="beneficios-tab__desc">${escapeHtml(tab.descripcion_corta || '')}</span>
+            </button>
+          `).join('')}
+        </div>
+        <article class="beneficios-panel" role="tabpanel">
+          <div class="beneficios-panel__head">
+            <div>
+              <p class="eyebrow">Pestaña activa</p>
+              <h3>${escapeHtml(activeTab.titulo || '')}</h3>
+            </div>
+            <span class="beneficios-panel__status">${escapeHtml(activeTab.estado || 'Base mínima')}</span>
+          </div>
+          <p class="muted">${escapeHtml(activeTab.descripcion || '')}</p>
+          <ul class="beneficios-placeholder-list">
+            ${(activeTab.items || []).map(item => `<li>${escapeHtml(item || '')}</li>`).join('')}
+          </ul>
+          <div class="beneficios-panel__note">
+            <span class="material-symbols-outlined" aria-hidden="true">construction</span>
+            <p>${escapeHtml(activeTab.nota || '')}</p>
+          </div>
+        </article>
+      </section>
+    `;
+
+    host.querySelectorAll('.js-beneficio-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nextCode = btn.dataset.beneficioCodigo || '';
+        if (!nextCode || nextCode === APP.state.currentBeneficioCodigo) return;
+        APP.state.currentBeneficioCodigo = nextCode;
+        refreshBeneficiosModuloMinimo_();
+      });
+    });
+  }
+
+  function renderBeneficiosViewLegacy_() {
     const root = document.getElementById('beneficios-root');
     if (!root) return;
 
@@ -3177,8 +3305,8 @@
     if (fromCatalog && fromCatalog.beneficio_nombre) return fromCatalog.beneficio_nombre;
 
     const fallback = {
-      CHARLAS_CAPACITACIONES: 'Charlas y capacitaciones',
-      FONDESE: 'Fondese',
+      CHARLAS_CAPACITACIONES: 'CAPACITACIONES',
+      FONDESE: 'FONDESE',
       CAMARAS_1414: 'Cámaras 1414'
     };
     return fallback[raw] || raw;

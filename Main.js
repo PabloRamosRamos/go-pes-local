@@ -6,7 +6,7 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
   VERSION: '2.1.0-modular',
-  ENVIRONMENT: 'DEV',
+  ENVIRONMENT: '',
   SUPERUSERS: [
     'pablo.ramos@providencia.cl'
   ],
@@ -158,6 +158,7 @@ function buildBootstrapForTemplate_(e) {
   const params = (e && e.parameter) ? e.parameter : {};
   const user = getUsuarioActual();
   const permissions = buildPermissionMap_(user);
+  const buildInfo = getAppBuildInfo_();
   const requestedView = params.view || GO_PES_V2.DEFAULT_VIEW;
   const initialView = user.canAccess && (permissions.modules || {})[requestedView]
     ? requestedView
@@ -169,9 +170,10 @@ function buildBootstrapForTemplate_(e) {
     appName: GO_PES_V2.APP_NAME,
     programTitle: GO_PES_V2.PROGRAM_TITLE,
     subtitle: GO_PES_V2.SUBTITLE,
-    version: GO_PES_V2.VERSION,
+    version: buildInfo.baseVersion,
     environment: GO_PES_V2.ENVIRONMENT,
-    versionLabel: getAppVersionLabel_(),
+    buildInfo: buildInfo,
+    versionLabel: getAppVersionLabel_(buildInfo),
     colors: GO_PES_V2.COLORS,
     initialView: initialView,
     query: params,
@@ -202,13 +204,15 @@ function getFirstAllowedView_(permissions) {
 
 function getAppBootstrap() {
   const user = getUsuarioActual();
+  const buildInfo = getAppBuildInfo_();
   return serializeForClient_({
     appName: GO_PES_V2.APP_NAME,
     programTitle: GO_PES_V2.PROGRAM_TITLE,
     subtitle: GO_PES_V2.SUBTITLE,
-    version: GO_PES_V2.VERSION,
+    version: buildInfo.baseVersion,
     environment: GO_PES_V2.ENVIRONMENT,
-    versionLabel: getAppVersionLabel_(),
+    buildInfo: buildInfo,
+    versionLabel: getAppVersionLabel_(buildInfo),
     colors: GO_PES_V2.COLORS,
     user: user,
     permissions: buildPermissionMap_(user),
@@ -218,7 +222,93 @@ function getAppBootstrap() {
   });
 }
 
-function getAppVersionLabel_() {
+function getAppVersionLabel_(buildInfo) {
+  const info = buildInfo || getAppBuildInfo_();
+  return [
+    info.baseVersion ? `v${info.baseVersion}` : '',
+    info.buildHash ? `build ${info.buildHash}` : '',
+    info.updatedAtLabel || ''
+  ].filter(Boolean).join(' · ');
+}
+
+function getAppBuildInfo_() {
+  const updatedAt = getProjectLastUpdated_();
+  return {
+    baseVersion: String(GO_PES_V2.VERSION || '').trim(),
+    buildHash: buildProjectFingerprint_(),
+    updatedAtIso: updatedAt ? updatedAt.toISOString() : '',
+    updatedAtLabel: updatedAt ? formatBuildTimestamp_(updatedAt) : ''
+  };
+}
+
+function getProjectLastUpdated_() {
+  try {
+    const scriptId = ScriptApp.getScriptId();
+    if (!scriptId) return null;
+    return DriveApp.getFileById(scriptId).getLastUpdated();
+  } catch (err) {
+    return null;
+  }
+}
+
+function buildProjectFingerprint_() {
+  const payload = [
+    JSON.stringify(GO_PES_V2),
+    getProjectHtmlFingerprintSources_(),
+    getProjectServerFingerprintSources_()
+  ].join('\n---\n');
+  return computeBuildHash_(payload);
+}
+
+function getProjectHtmlFingerprintSources_() {
+  const partials = ['Index', 'Styles', 'Loading', 'Inicio', 'Scripts'];
+  return partials.map(function(name) {
+    try {
+      return `## ${name}\n${HtmlService.createHtmlOutputFromFile(name).getContent()}`;
+    } catch (err) {
+      return `## ${name}\n`;
+    }
+  }).join('\n');
+}
+
+function getProjectServerFingerprintSources_() {
+  const scope = getProjectGlobalScope_();
+  return Object.keys(scope || {})
+    .filter(function(name) {
+      return isProjectFunctionForBuild_(name, scope[name]);
+    })
+    .sort()
+    .map(function(name) {
+      return `## ${name}\n${String(scope[name])}`;
+    })
+    .join('\n');
+}
+
+function getProjectGlobalScope_() {
+  return Function('return this;')();
+}
+
+function isProjectFunctionForBuild_(name, fn) {
+  if (typeof fn !== 'function') return false;
+  if (!/^[A-Za-z0-9_]+$/.test(String(name || ''))) return false;
+  const source = String(fn);
+  return !!source && !/\[native code\]/.test(source);
+}
+
+function computeBuildHash_(value) {
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(value || ''), Utilities.Charset.UTF_8);
+  return digest.map(function(byte) {
+    const normalized = byte < 0 ? byte + 256 : byte;
+    return normalized.toString(16).padStart(2, '0');
+  }).join('').slice(0, 8);
+}
+
+function formatBuildTimestamp_(date) {
+  const tz = Session.getScriptTimeZone() || 'America/Santiago';
+  return Utilities.formatDate(date, tz, 'yyyyMMdd-HHmm');
+}
+
+function getAppVersionLabelLegacy_() {
   const version = String(GO_PES_V2.VERSION || '').trim();
   const environment = String(GO_PES_V2.ENVIRONMENT || '').trim().toUpperCase();
   return [version ? `v${version}` : '', environment].filter(Boolean).join(' · ');

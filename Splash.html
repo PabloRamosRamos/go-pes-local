@@ -51,14 +51,13 @@
 </div>
 
 <script>
-  const APP_SPLASH_MIN_DURATION_MS = getSplashMinDurationMs_();
-
   const APP_SPLASH_STATE = {
     visible: true,
     hideRequested: false,
     startedAt: 0,
     progress: 0,
-    message: getSplashLoadingText_(),
+    message: '',
+    minDurationMs: 5000,
     rafId: 0,
     hideTimerId: 0
   };
@@ -89,47 +88,41 @@
     }
   }
 
-  function getSplashLoadingText_() {
+  function getSplashSystemConfig_() {
     const bootstrap = readSplashBootstrap_();
-    return (((bootstrap.systemConfig || {}).general || {}).loadingText) || 'Iniciando Gestor Operativo';
+    return (bootstrap && bootstrap.systemConfig) || {};
+  }
+
+  function getSplashLoadingText_() {
+    const general = (getSplashSystemConfig_().general || {});
+    return general.loadingText || 'Iniciando Gestor Operativo';
   }
 
   function getSplashMinDurationMs_() {
-    const bootstrap = readSplashBootstrap_();
-    const value = Number((((bootstrap.systemConfig || {}).general || {}).splashMinDurationMs) || 5000);
+    const general = (getSplashSystemConfig_().general || {});
+    const value = Number((general.splashMinDurationMs) || 5000);
     return Number.isFinite(value) && value >= 500 ? value : 5000;
   }
 
   function extractSplashProgramName_(subtitle) {
     const value = String(subtitle || '').trim();
     if (!value) return 'Programa Estamos Seguros';
-    return value.split('·')[0].trim() || value;
+    return value.split('·')[0].trim() || value.split('Â·')[0].trim() || value;
   }
 
-  function updateSplashBranding_() {
-    const els = getSplashElements_();
-    if (!els) return;
-
-    const bootstrap = readSplashBootstrap_();
-    const buildInfo = bootstrap.buildInfo || {};
-    const general = ((bootstrap.systemConfig || {}).general || {});
-    const version = buildInfo.baseVersion || bootstrap.version || '';
-    const buildHash = buildInfo.buildHash ? `build ${buildInfo.buildHash}` : '';
-    const versionLabel = [version ? `v${version}` : '', buildHash].filter(Boolean).join(' · ');
-    const logo =
-      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDarkDataUri) ||
-      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) ||
-      document.getElementById('appLogo')?.getAttribute('src') ||
-      '';
-
-    if (els.logo && logo) els.logo.src = logo;
-    if (els.title) els.title.textContent = bootstrap.programTitle || general.appName || 'Gestor Operativo PES';
-    if (els.program) els.program.textContent = general.programName || extractSplashProgramName_(bootstrap.subtitle);
-    if (els.version && general.showVisibleVersion === false) {
-      els.version.textContent = '';
-      els.version.style.display = 'none';
-    }
-    if (els.version) els.version.textContent = versionLabel || 'Versión disponible al iniciar';
+  function applySplashRuntimeTheme_() {
+    const branding = (getSplashSystemConfig_().branding || {});
+    const rootStyle = document.documentElement && document.documentElement.style;
+    if (!rootStyle) return;
+    const tokens = {
+      '--runtime-brand-primary': String(branding.primaryColor || '#214E8A').trim(),
+      '--runtime-brand-secondary': String(branding.secondaryColor || '#007C4A').trim(),
+      '--runtime-brand-accent': String(branding.accentColor || '#03C2AE').trim(),
+      '--runtime-brand-progress': String(branding.loadingProgressColor || '#8CC63F').trim(),
+      '--runtime-brand-light': String(branding.lightBackground || '#F7FAFC').trim(),
+      '--runtime-brand-dark': String(branding.darkBackground || '#0D2940').trim()
+    };
+    Object.keys(tokens).forEach(key => rootStyle.setProperty(key, tokens[key]));
   }
 
   function getSplashStatusCopy_(progress, hideRequested) {
@@ -180,23 +173,24 @@
       return;
     }
 
+    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
     const elapsed = now - APP_SPLASH_STATE.startedAt;
-    let target = Math.min(91, 9 + (elapsed / APP_SPLASH_MIN_DURATION_MS) * 82);
+    let target = Math.min(91, 9 + (elapsed / minDurationMs) * 82);
 
     if (APP_SPLASH_STATE.hideRequested) {
-      target = elapsed >= APP_SPLASH_MIN_DURATION_MS ? 100 : Math.max(target, 94);
+      target = elapsed >= minDurationMs ? 100 : Math.max(target, 94);
     }
 
-    const easing = APP_SPLASH_STATE.hideRequested && elapsed >= APP_SPLASH_MIN_DURATION_MS ? 0.18 : 0.075;
+    const easing = APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs ? 0.18 : 0.075;
     APP_SPLASH_STATE.progress += (target - APP_SPLASH_STATE.progress) * easing;
 
-    if (APP_SPLASH_STATE.hideRequested && elapsed >= APP_SPLASH_MIN_DURATION_MS && (100 - APP_SPLASH_STATE.progress) < 0.4) {
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && (100 - APP_SPLASH_STATE.progress) < 0.4) {
       APP_SPLASH_STATE.progress = 100;
     }
 
     renderSplashProgress_();
 
-    if (APP_SPLASH_STATE.hideRequested && elapsed >= APP_SPLASH_MIN_DURATION_MS && APP_SPLASH_STATE.progress >= 100) {
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && APP_SPLASH_STATE.progress >= 100) {
       finalizeSplashHide_();
       APP_SPLASH_STATE.rafId = 0;
       return;
@@ -214,9 +208,8 @@
     const els = getSplashElements_();
     if (!els) return;
 
-    updateSplashBranding_();
-
     window.clearTimeout(APP_SPLASH_STATE.hideTimerId);
+    APP_SPLASH_STATE.minDurationMs = getSplashMinDurationMs_();
     APP_SPLASH_STATE.message = message || APP_SPLASH_STATE.message || getSplashLoadingText_();
 
     if (!APP_SPLASH_STATE.visible) {
@@ -228,6 +221,7 @@
       els.root.style.display = 'grid';
     }
 
+    updateSplashBranding_();
     els.root.setAttribute('aria-busy', 'true');
     renderSplashProgress_();
     ensureSplashLoop_();
@@ -259,9 +253,10 @@
       document.getElementById('appLogo')?.getAttribute('src') ||
       '';
 
+    applySplashRuntimeTheme_();
     if (els.logo && logo) els.logo.src = logo;
-    if (els.title) els.title.textContent = bootstrap.programTitle || general.appName || 'Gestor Operativo PES';
-    if (els.program) els.program.textContent = general.programName || extractSplashProgramName_(bootstrap.subtitle);
+    if (els.title) els.title.textContent = bootstrap.appName || general.appName || 'Gestor Operativo PES';
+    if (els.program) els.program.textContent = bootstrap.programName || general.programName || extractSplashProgramName_(bootstrap.subtitle);
     if (els.version) {
       const showVersion = general.showVisibleVersion !== false;
       els.version.textContent = showVersion ? (versionLabel || 'Versión disponible al iniciar') : '';
@@ -271,6 +266,8 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     APP_SPLASH_STATE.startedAt = performance.now();
+    APP_SPLASH_STATE.minDurationMs = getSplashMinDurationMs_();
+    APP_SPLASH_STATE.message = getSplashLoadingText_();
     updateSplashBranding_();
     renderSplashProgress_();
     ensureSplashLoop_();

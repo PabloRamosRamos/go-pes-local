@@ -2,12 +2,8 @@
 (() => {
   const root = document.getElementById('app');
   const BOOTSTRAP = root ? JSON.parse(root.dataset.bootstrap || '{}') : {};
-  const TEMPLATE_RUNTIME_CONFIG =
-    (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.runtimeConfig) || {};
-  let SOCIOS_LOOKER_STUDIO_EMBED_URL =
-    (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.sociosLookerStudioEmbedUrl) || '';
-  let HOME_LOOKER_STUDIO_EMBED_URL =
-    (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.homeLookerStudioEmbedUrl) || '';
+  const TEMPLATE_SYSTEM_CONFIG =
+    (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.systemConfig) || {};
   const THEME_STORAGE_KEY = 'goPesTheme';
 
   const APP = {
@@ -17,7 +13,7 @@
       user: BOOTSTRAP.user || {},
       theme: document.documentElement.dataset.theme || 'light',
       permissions: BOOTSTRAP.permissions || {},
-      systemConfig: BOOTSTRAP.systemConfig || TEMPLATE_RUNTIME_CONFIG || {},
+      systemConfig: BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {},
       moduleDefinitions: BOOTSTRAP.moduleDefinitions || [],
       activeView: BOOTSTRAP.initialView || 'inicio',
       currentFicha: null,
@@ -3144,7 +3140,7 @@
             <div class="socios-embed-panel">
           ${dashboardUrl
             ? `<iframe class="socios-embed" width="600" height="${escapeHtml(String(dashboardHeight || 443))}" src="${escapeHtml(dashboardUrl)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" scrolling="no" title="Panel de socios"></iframe>`
-            : `<div class="socios-embed socios-embed--empty"><span class="material-symbols-outlined">analytics</span><strong>Panel Looker Studio pendiente de configuración</strong><span>Define la URL en <code>SOCIOS_LOOKER_STUDIO_EMBED_URL</code> para mostrar el panel embebido.</span></div>`}
+            : `<div class="socios-embed socios-embed--empty"><span class="material-symbols-outlined">analytics</span><strong>Panel Looker Studio pendiente de configuración</strong><span>Define la URL en <code>sociosDashboardUrl</code> para mostrar el panel embebido.</span></div>`}
             </div>
           </section>
         </div>
@@ -4880,7 +4876,7 @@
   }
 
   function getSystemConfig_() {
-    return APP.state.systemConfig || BOOTSTRAP.systemConfig || TEMPLATE_RUNTIME_CONFIG || {};
+    return APP.state.systemConfig || BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {};
   }
 
   function getSystemGeneralConfig_() {
@@ -4961,11 +4957,11 @@
   }
 
   function getHomeDashboardUrl_() {
-    return (((getSystemConfig_().integrations || {}).homeDashboardUrl) || HOME_LOOKER_STUDIO_EMBED_URL || '').trim();
+    return String((((getSystemConfig_().integrations || {}).homeDashboardUrl) || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.homeDashboardUrl) || '')).trim();
   }
 
   function getSociosDashboardUrl_() {
-    return (((getSystemConfig_().integrations || {}).sociosDashboardUrl) || SOCIOS_LOOKER_STUDIO_EMBED_URL || '').trim();
+    return String((((getSystemConfig_().integrations || {}).sociosDashboardUrl) || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.sociosDashboardUrl) || '')).trim();
   }
 
   function getSociosDashboardHeight_() {
@@ -4976,6 +4972,21 @@
   function getSocioCargoOptions_() {
     const configured = (((getSystemConfig_().socios || {}).allowedRoles) || []).filter(Boolean);
     return configured.length ? configured : ORGANIZACION_SOCIO_CARGOS.slice();
+  }
+
+  function applyBrandingRuntimeTheme_() {
+    const branding = getSystemBrandingConfig_();
+    const rootStyle = document.documentElement && document.documentElement.style;
+    if (!rootStyle) return;
+    const tokens = {
+      '--runtime-brand-primary': normalizeHexColor_(branding.primaryColor) || '#214E8A',
+      '--runtime-brand-secondary': normalizeHexColor_(branding.secondaryColor) || '#007C4A',
+      '--runtime-brand-accent': normalizeHexColor_(branding.accentColor) || '#03C2AE',
+      '--runtime-brand-progress': normalizeHexColor_(branding.loadingProgressColor) || '#8CC63F',
+      '--runtime-brand-light': normalizeHexColor_(branding.lightBackground) || '#F7FAFC',
+      '--runtime-brand-dark': normalizeHexColor_(branding.darkBackground) || '#0D2940'
+    };
+    Object.keys(tokens).forEach(key => rootStyle.setProperty(key, tokens[key]));
   }
 
   function getViewDefinition_(view) {
@@ -5004,9 +5015,7 @@
     if (splashText) splashText.textContent = getLoadingText_();
     if (contentText) contentText.textContent = getLoadingText_();
     if (emailSuffix) emailSuffix.textContent = '@' + getAllowedUserDomain_();
-
-    HOME_LOOKER_STUDIO_EMBED_URL = getHomeDashboardUrl_();
-    SOCIOS_LOOKER_STUDIO_EMBED_URL = getSociosDashboardUrl_();
+    applyBrandingRuntimeTheme_();
   }
 
   function applyModuleDefinitionsUi_() {
@@ -5212,7 +5221,6 @@
           allowedRoles: splitLines_(read('allowedRoles')),
           requiredManualFields: splitLines_(read('requiredManualFields')),
           bulkColumnMap: parseKeyValueText_(read('bulkColumnMap')),
-          dashboardEmbedUrl: read('dashboardEmbedUrl'),
           dashboardHeight: Number(read('dashboardHeight') || 443)
         };
       case 'beneficios':
@@ -5767,7 +5775,6 @@
           <div class="config-grid">
             ${configInput_('addressSuffix', 'Sufijo automático de dirección', section.addressSuffix || '', 'text')}
             ${configInput_('dashboardHeight', 'Altura dashboard', section.dashboardHeight || 443, 'number')}
-            ${configInput_('dashboardEmbedUrl', 'URL dashboard embebido', section.dashboardEmbedUrl || '', 'url', 'field--full')}
             ${configTextarea_('allowedRoles', 'Cargos permitidos (uno por línea)', joinLines_(section.allowedRoles), '', 6)}
             ${configTextarea_('requiredManualFields', 'Campos obligatorios manuales (uno por línea)', joinLines_(section.requiredManualFields), '', 6)}
             ${configTextarea_('bulkColumnMap', 'Mapeo carga masiva (clave=columna)', joinKeyValueLines_(section.bulkColumnMap), 'field--full', 6)}

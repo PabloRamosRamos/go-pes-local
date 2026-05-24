@@ -24,8 +24,8 @@
           </div>
           <div>
             <p class="eyebrow">Municipalidad de Providencia</p>
-            <h1 class="hero__title"><?!= (JSON.parse(runtimeConfig || '{}').general || {}).appName || 'Gestor Operativo PES' ?></h1>
-            <p class="hero__subtitle">Programa Estamos Seguros · Gestión de vecinos, seguimiento y organizaciones</p>
+            <h1 class="hero__title"><?!= (JSON.parse(systemConfigJson || '{}').general || {}).appName || 'Gestor Operativo PES' ?></h1>
+            <p class="hero__subtitle"><?!= [((JSON.parse(systemConfigJson || '{}').general || {}).programName || 'Programa Estamos Seguros'), ((JSON.parse(systemConfigJson || '{}').general || {}).appSubtitle || 'Gestión de vecinos, seguimiento y organizaciones')].filter(Boolean).join(' · ') ?></p>
           </div>
         </div>
         <div class="hero__user">
@@ -447,9 +447,9 @@
       window.GO_PES_TEMPLATE = {
         logoDataUri: <?!= JSON.stringify(logoDataUri || '') ?>,
         logoDarkDataUri: <?!= JSON.stringify(logoDarkDataUri || '') ?>,
-        runtimeConfig: <?!= runtimeConfig ?>,
-        homeLookerStudioEmbedUrl: <?!= JSON.stringify((JSON.parse(runtimeConfig || '{}').integrations || {}).homeDashboardUrl || '') ?>,
-        sociosLookerStudioEmbedUrl: <?!= JSON.stringify((JSON.parse(runtimeConfig || '{}').integrations || {}).sociosDashboardUrl || '') ?>
+        systemConfig: <?!= systemConfigJson ?>,
+        homeDashboardUrl: <?!= JSON.stringify((JSON.parse(systemConfigJson || '{}').integrations || {}).homeDashboardUrl || '') ?>,
+        sociosDashboardUrl: <?!= JSON.stringify((JSON.parse(systemConfigJson || '{}').integrations || {}).sociosDashboardUrl || '') ?>
       };
     </script>
 

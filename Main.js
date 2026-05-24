@@ -87,12 +87,12 @@ const GO_PES_V2 = {
 };
 
 function doGet(e) {
-  const runtimeConfig = getRuntimeClientSystemConfig_();
+  const clientConfig = getRuntimeClientSystemConfig_();
   const template = HtmlService.createTemplateFromFile('Index');
   template.bootstrap = JSON.stringify(buildBootstrapForTemplate_(e));
   template.logoDataUri = getConfiguredLogoDataUri_('light');
   template.logoDarkDataUri = getConfiguredLogoDataUri_('dark');
-  template.runtimeConfig = JSON.stringify(runtimeConfig);
+  template.systemConfigJson = JSON.stringify(clientConfig);
 
   return template.evaluate()
     .setTitle(getConfiguredAppTitle_())
@@ -174,8 +174,11 @@ function buildBootstrapForTemplate_(e) {
 
   return {
     appName: config.general.appName || GO_PES_V2.APP_NAME,
-    programTitle: config.general.appName || GO_PES_V2.PROGRAM_TITLE,
+    programTitle: config.general.programName || GO_PES_V2.PROGRAM_TITLE,
+    programName: config.general.programName || GO_PES_V2.PROGRAM_TITLE,
     subtitle: getConfiguredAppSubtitle_(),
+    loadingText: getConfiguredLoadingText_(),
+    splashMinDurationMs: getConfiguredSplashMinDurationMs_(),
     version: buildInfo.baseVersion,
     environment: getConfiguredEnvironmentLabel_(),
     buildInfo: buildInfo,
@@ -213,8 +216,11 @@ function getAppBootstrap() {
   const buildInfo = getAppBuildInfo_();
   return serializeForClient_({
     appName: config.general.appName || GO_PES_V2.APP_NAME,
-    programTitle: config.general.appName || GO_PES_V2.PROGRAM_TITLE,
+    programTitle: config.general.programName || GO_PES_V2.PROGRAM_TITLE,
+    programName: config.general.programName || GO_PES_V2.PROGRAM_TITLE,
     subtitle: getConfiguredAppSubtitle_(),
+    loadingText: getConfiguredLoadingText_(),
+    splashMinDurationMs: getConfiguredSplashMinDurationMs_(),
     version: buildInfo.baseVersion,
     environment: getConfiguredEnvironmentLabel_(),
     buildInfo: buildInfo,

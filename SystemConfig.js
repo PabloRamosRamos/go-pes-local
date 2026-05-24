@@ -186,7 +186,6 @@ function getDefaultSystemConfig_() {
         direccion_socio: 'Direccion',
         ubicacion_socio: 'Ubicacion'
       },
-      dashboardEmbedUrl: 'https://datastudio.google.com/embed/reporting/bc4833f8-43c1-4df8-a96b-4cb794228f7c/page/tYkyF',
       dashboardHeight: 443
     },
     beneficios: {
@@ -261,6 +260,7 @@ function getRuntimeSystemConfig_() {
     getDefaultSystemConfig_(),
     readPersistedSystemConfig_()
   );
+  migrateLegacySharedConfig_(merged);
   const normalized = normalizeSystemConfig_(merged);
   GO_PES_RUNTIME.systemConfig = cloneSystemConfig_(normalized);
   return cloneSystemConfig_(normalized);
@@ -282,7 +282,6 @@ function getRuntimeClientSystemConfig_() {
       allowedRoles: config.socios.allowedRoles,
       requiredManualFields: config.socios.requiredManualFields,
       bulkColumnMap: config.socios.bulkColumnMap,
-      dashboardEmbedUrl: config.socios.dashboardEmbedUrl,
       dashboardHeight: config.socios.dashboardHeight
     },
     beneficios: config.beneficios,
@@ -305,6 +304,25 @@ function getSystemConfigClient() {
     moduleDefinitions: getModuleDefinitions_(),
     clientConfig: getRuntimeClientSystemConfig_()
   });
+}
+
+function migrateLegacySharedConfig_(config) {
+  if (!config || typeof config !== 'object') return;
+  const socios = config.socios || {};
+  const integrations = config.integrations || {};
+  const legacySociosDashboard = sanitizeUrlValue_(socios.dashboardEmbedUrl, '');
+  const canonicalSociosDashboard = sanitizeUrlValue_(integrations.sociosDashboardUrl, '');
+
+  if (!canonicalSociosDashboard && legacySociosDashboard) {
+    integrations.sociosDashboardUrl = legacySociosDashboard;
+  }
+
+  if (socios && Object.prototype.hasOwnProperty.call(socios, 'dashboardEmbedUrl')) {
+    delete socios.dashboardEmbedUrl;
+  }
+
+  config.socios = socios;
+  config.integrations = integrations;
 }
 
 function saveSystemConfigSection(payload) {
@@ -432,7 +450,6 @@ function normalizeConfigSectionByName_(section, value, current) {
         allowedRoles: sanitizeStringList_(input.allowedRoles, previous.allowedRoles),
         requiredManualFields: sanitizeStringList_(input.requiredManualFields, previous.requiredManualFields),
         bulkColumnMap: sanitizeObjectValue_(input.bulkColumnMap, previous.bulkColumnMap),
-        dashboardEmbedUrl: sanitizeUrlValue_(input.dashboardEmbedUrl, previous.dashboardEmbedUrl),
         dashboardHeight: sanitizeConfigNumber_(input.dashboardHeight, previous.dashboardHeight, 280, 2000)
       };
     case 'beneficios':

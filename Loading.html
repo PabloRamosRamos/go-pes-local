@@ -18,6 +18,17 @@
 </template>
 
 <script>
+  function getLoadingSystemConfig_() {
+    const app = document.getElementById('app');
+    if (!app) return {};
+    try {
+      const bootstrap = JSON.parse(app.dataset.bootstrap || '{}');
+      return (bootstrap && bootstrap.systemConfig) || {};
+    } catch (err) {
+      return {};
+    }
+  }
+
   function ensureContentLoadingMounted_() {
     if (document.getElementById('content-loading')) return document.getElementById('content-loading');
 
@@ -29,8 +40,7 @@
     host.insertBefore(fragment, host.firstChild);
     const overlay = document.getElementById('content-loading');
     const text = overlay ? overlay.querySelector('.content-loading__text') : null;
-    const runtimeConfig = (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.runtimeConfig) || {};
-    const loadingText = (((runtimeConfig || {}).general || {}).loadingText) || '';
+    const loadingText = (((getLoadingSystemConfig_() || {}).general || {}).loadingText) || '';
     if (text && loadingText) text.textContent = loadingText;
     return overlay;
   }

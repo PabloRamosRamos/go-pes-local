@@ -1140,7 +1140,7 @@
       }
 
       if (view === 'instrumento' && wasRendered) {
-        refreshBeneficiosModuloView_();
+        refreshBeneficiosModuloMinimo_();
       }
 
       if (view === 'socios' && wasRendered) {
@@ -2324,48 +2324,15 @@
   }
 
   function renderBeneficiosViewLegacy_() {
-    const root = document.getElementById('beneficios-root');
-    if (!root) return;
-
-    root.innerHTML = `
-      <div class="beneficios-shell">
-        <div class="section-head beneficios-head">
-          <div>
-            <p class="eyebrow">Beneficios</p>
-            <h2>Modulo operativo de beneficios</h2>
-            <p class="muted">Selecciona un beneficio, revisa su configuracion y opera organizaciones por flujo real.</p>
-          </div>
-          <div class="beneficios-actions">
-            <button type="button" class="secondary-btn" id="beneficios-reload-btn"><span class="material-symbols-outlined">refresh</span>Recargar</button>
-          </div>
-        </div>
-        <div id="beneficios-summary" class="beneficios-summary empty-state">Cargando beneficios...</div>
-        <div id="beneficios-cards" class="beneficios-cards"></div>
-        <div id="beneficios-workspace" class="beneficios-workspace empty-state">Selecciona un beneficio para administrarlo.</div>
-      </div>
-    `;
-
-    bindBeneficiosShellActions_();
-    refreshBeneficiosModuloView_();
+    return renderBeneficiosView_();
   }
 
   function bindBeneficiosShellActions_() {
-    document.getElementById('beneficios-reload-btn')?.addEventListener('click', () => refreshBeneficiosModuloView_());
+    document.getElementById('beneficios-reload-btn')?.addEventListener('click', () => refreshBeneficiosModuloMinimo_());
   }
 
   function refreshBeneficiosModuloView_() {
-    showContentLoading('Cargando beneficios...');
-    return api('getBeneficiosModuloPanel', {
-      beneficio_codigo: APP.state.currentBeneficioCodigo || '',
-      organizacion_id: APP.state.currentBeneficioOrganizacionId || ''
-    }).then(data => {
-      APP.state.currentBeneficiosDetalle = data || {};
-      const benefits = (data && data.beneficios) || [];
-      if (!APP.state.currentBeneficioCodigo && benefits.length) {
-        APP.state.currentBeneficioCodigo = benefits[0].beneficio_codigo;
-      }
-      renderBeneficiosPanel_(APP.state.currentBeneficiosDetalle);
-    }).catch(showError).finally(hideContentLoading);
+    return refreshBeneficiosModuloMinimo_();
   }
 
   function renderBeneficiosPanel_(data) {
@@ -2886,12 +2853,6 @@
     }).join('');
     return `<option value="">${escapeHtml(placeholder || 'Seleccionar')}</option>${items}`;
   }
-  function saveInstrumentoFromForm(ev) {
-    ev.preventDefault();
-    const payload = serializeForm(ev.target);
-    api('guardarInstrumento', payload).then(res => showSuccess(`Beneficio guardado: ${res.org_instrumento_id}`)).catch(showError);
-  }
-
   function parseSociosBulk(text, organizacionId, nombreComite) {
     const lines = text.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
     return lines.map(line => {

@@ -6,6 +6,35 @@
     (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.systemConfig) || {};
   const THEME_STORAGE_KEY = 'goPesTheme';
 
+  function normalizeModuleLookupKeyClient_(value) {
+    return String(value == null ? '' : value)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  function getClientModuleAliasMap_() {
+    const aliasMap = Object.assign({}, (BOOTSTRAP && BOOTSTRAP.moduleAliasMap) || {});
+    (BOOTSTRAP.moduleDefinitions || []).forEach(module => {
+      const keyLookup = normalizeModuleLookupKeyClient_(module && module.key);
+      const viewLookup = normalizeModuleLookupKeyClient_((module && (module.view || module.key)) || '');
+      if (keyLookup) aliasMap[keyLookup] = module.key;
+      if (viewLookup) aliasMap[viewLookup] = module.key;
+    });
+    return aliasMap;
+  }
+
+  const CLIENT_MODULE_ALIAS_MAP = getClientModuleAliasMap_();
+
+  function normalizeModuleKey_(value) {
+    const lookup = normalizeModuleLookupKeyClient_(value);
+    if (!lookup) return '';
+    return CLIENT_MODULE_ALIAS_MAP[lookup] || '';
+  }
+
   const APP = {
     state: {
       bootstrap: BOOTSTRAP,

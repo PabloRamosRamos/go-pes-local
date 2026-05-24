@@ -40,6 +40,7 @@
       pendingSociosRows: [],
       ingresoMatches: [],
       configSectionOrder: [],
+      activeConfigSection: '',
       configLoadedAt: 0,
       renderedViews: {},
       catalogStatus: {
@@ -4755,13 +4756,11 @@
   function applySystemConfigUi_() {
     const config = getSystemConfig_();
     const general = config.general || {};
-    const branding = config.branding || {};
     const heroTitle = document.querySelector('.hero__title');
     const heroSubtitle = document.querySelector('.hero__subtitle');
     const splashText = document.querySelector('#app-loading .app-loading__text');
     const contentText = document.querySelector('#content-loading .content-loading__text');
     const emailSuffix = document.querySelector('.email-input-group__suffix');
-    const rootEl = document.documentElement;
 
     if (heroTitle) heroTitle.textContent = general.appName || 'Gestor Operativo PES';
     if (heroSubtitle) heroSubtitle.textContent = [
@@ -4771,13 +4770,6 @@
     if (splashText) splashText.textContent = getLoadingText_();
     if (contentText) contentText.textContent = getLoadingText_();
     if (emailSuffix) emailSuffix.textContent = '@' + getAllowedUserDomain_();
-
-    if (rootEl) {
-      if (branding.primaryColor) rootEl.style.setProperty('--brand-blue', branding.primaryColor);
-      if (branding.secondaryColor) rootEl.style.setProperty('--brand-green', branding.secondaryColor);
-      if (branding.accentColor) rootEl.style.setProperty('--brand-teal', branding.accentColor);
-      if (branding.lightBackground) rootEl.style.setProperty('--bg', branding.lightBackground);
-    }
 
     HOME_LOOKER_STUDIO_EMBED_URL = getHomeDashboardUrl_();
     SOCIOS_LOOKER_STUDIO_EMBED_URL = getSociosDashboardUrl_();
@@ -4847,6 +4839,7 @@
       APP.state.moduleDefinitions = (data && data.moduleDefinitions) || APP.state.moduleDefinitions || [];
       APP.state.configSectionOrder = (data && data.sectionOrder) || CONFIG_SECTIONS.map(section => section.key);
       APP.state.configLoadedAt = Date.now();
+      APP.state.activeConfigSection = getActiveConfigSectionKey_();
       applySystemConfigUi_();
       applyModuleDefinitionsUi_();
       renderConfiguracionSections_();
@@ -4863,25 +4856,18 @@
     const nav = document.getElementById('config-nav');
     const content = document.getElementById('config-content');
     const config = getSystemConfig_();
+    const sections = getOrderedConfigSections_();
+    const activeSection = getActiveConfigSectionKey_();
     if (!nav || !content) return;
 
-    nav.innerHTML = CONFIG_SECTIONS.map(section => `
-      <button type="button" class="config-nav__item" data-config-anchor="${escapeHtml(section.key)}">
+    nav.innerHTML = sections.map(section => `
+      <button type="button" class="config-nav__item ${section.key === activeSection ? 'is-active' : ''}" data-config-anchor="${escapeHtml(section.key)}" aria-pressed="${section.key === activeSection ? 'true' : 'false'}">
         <span class="material-symbols-outlined">${escapeHtml(section.icon)}</span>
         <span>${escapeHtml(section.label)}</span>
       </button>
     `).join('');
 
-    content.innerHTML = `
-      ${renderConfigGeneralSection_(config.general || {})}
-      ${renderConfigBrandingSection_(config.branding || {})}
-      ${renderConfigAccessSection_(config.accessModules || {})}
-      ${renderConfigSociosSection_(config.socios || {})}
-      ${renderConfigBeneficiosSection_(config.beneficios || {})}
-      ${renderConfigAlertsInicioSection_(config.alertsInicio || {})}
-      ${renderConfigIntegrationsSection_(config.integrations || {})}
-      ${renderConfigTechnicalSection_(config.technical || {})}
-    `;
+    content.innerHTML = renderConfiguracionSectionByKey_(activeSection, config);
 
     bindConfiguracionView_();
   }
@@ -4889,7 +4875,10 @@
   function bindConfiguracionView_() {
     document.querySelectorAll('[data-config-anchor]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.getElementById(`config-section-${btn.dataset.configAnchor}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const nextSection = String(btn.dataset.configAnchor || '').trim();
+        if (!nextSection || nextSection === APP.state.activeConfigSection) return;
+        APP.state.activeConfigSection = nextSection;
+        renderConfiguracionSections_();
       });
     });
 
@@ -4917,6 +4906,7 @@
       APP.state.systemConfig = (res && res.config) || APP.state.systemConfig || {};
       APP.state.moduleDefinitions = (res && res.moduleDefinitions) || APP.state.moduleDefinitions || [];
       BOOTSTRAP.systemConfig = (res && res.clientConfig) || BOOTSTRAP.systemConfig || {};
+      APP.state.activeConfigSection = section;
       applySystemConfigUi_();
       applyModuleDefinitionsUi_();
       renderConfiguracionSections_();
@@ -5242,6 +5232,49 @@
         </form>
       </section>
     `;
+  }
+
+  function getOrderedConfigSections_() {
+    const available = new Map(CONFIG_SECTIONS.map(section => [section.key, section]));
+    const orderedKeys = (APP.state.configSectionOrder || []).filter(key => available.has(key));
+    const fallbackKeys = CONFIG_SECTIONS
+      .map(section => section.key)
+      .filter(key => orderedKeys.indexOf(key) === -1);
+
+    return orderedKeys
+      .concat(fallbackKeys)
+      .map(key => available.get(key))
+      .filter(Boolean);
+  }
+
+  function getActiveConfigSectionKey_() {
+    const current = String(APP.state.activeConfigSection || '').trim();
+    const sections = getOrderedConfigSections_();
+    if (current && sections.some(section => section.key === current)) return current;
+    return sections[0] ? sections[0].key : 'general';
+  }
+
+  function renderConfiguracionSectionByKey_(sectionKey, config) {
+    switch (String(sectionKey || '').trim()) {
+      case 'general':
+        return renderConfigGeneralSection_(config.general || {});
+      case 'branding':
+        return renderConfigBrandingSection_(config.branding || {});
+      case 'accessModules':
+        return renderConfigAccessSection_(config.accessModules || {});
+      case 'socios':
+        return renderConfigSociosSection_(config.socios || {});
+      case 'beneficios':
+        return renderConfigBeneficiosSection_(config.beneficios || {});
+      case 'alertsInicio':
+        return renderConfigAlertsInicioSection_(config.alertsInicio || {});
+      case 'integrations':
+        return renderConfigIntegrationsSection_(config.integrations || {});
+      case 'technical':
+        return renderConfigTechnicalSection_(config.technical || {});
+      default:
+        return renderConfigGeneralSection_(config.general || {});
+    }
   }
 
   function configInput_(name, label, value, type, extraClass) {

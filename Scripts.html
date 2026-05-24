@@ -45,6 +45,8 @@
       systemConfig: BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {},
       moduleDefinitions: BOOTSTRAP.moduleDefinitions || [],
       activeView: normalizeModuleKey_(BOOTSTRAP.initialView || 'inicio') || 'inicio',
+      inicioPanelData: null,
+      inicioPanelFetchedAt: 0,
       currentFicha: null,
       currentSearchResults: [],
       searchRequestSeq: 0,
@@ -510,6 +512,8 @@
 
   function ensureCatalogsForView_(view) {
     switch (view) {
+      case 'inicio':
+        return ensureInicioPanelData_();
       case 'nuevo-ingreso':
         return ensureIngresoCatalogs_();
       case 'organizacion': {
@@ -640,7 +644,25 @@
     window.GO_PES_INICIO.render({
       root,
       escapeHtml,
-      homeEmbedUrl: getHomeDashboardUrl_()
+      homeEmbedUrl: getHomeDashboardUrl_(),
+      panelData: APP.state.inicioPanelData || {}
+    });
+  }
+
+  function ensureInicioPanelData_(force) {
+    const now = Date.now();
+    if (
+      !force &&
+      APP.state.inicioPanelData &&
+      APP.state.inicioPanelFetchedAt &&
+      (now - APP.state.inicioPanelFetchedAt) < 30000
+    ) {
+      return null;
+    }
+
+    return api('getInicioPanelData').then(data => {
+      APP.state.inicioPanelData = data || {};
+      APP.state.inicioPanelFetchedAt = Date.now();
     });
   }
 
@@ -1141,6 +1163,10 @@
 
       if (view === 'instrumento' && wasRendered) {
         refreshBeneficiosModuloMinimo_();
+      }
+
+      if (view === 'inicio') {
+        renderInicioView_();
       }
 
       if (view === 'socios' && wasRendered) {

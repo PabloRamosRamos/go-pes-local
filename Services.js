@@ -87,6 +87,253 @@ function buscarOrganizacion(query) {
   return rows.filter(r => [r.organizacion_id, r.nombre_organizacion, r.uv, r.sector].map(normalizeText_).join(' | ').includes(term)).slice(0, 50);
 }
 
+function getInicioPanelData() {
+  requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'administrador', 'superuser']);
+
+  const systemConfig = getRuntimeSystemConfig_();
+  const inicioConfig = (systemConfig && systemConfig.alertsInicio) || {};
+  const highDays = Math.max(0, Number(inicioConfig.alertHighDays || 7));
+  const mediumDays = Math.max(highDays, Number(inicioConfig.alertMediumDays || 15));
+  const maxVisibleAlerts = Math.max(1, Number(inicioConfig.maxVisibleAlerts || 6));
+  const maxUpcomingAssemblies = Math.max(1, Number(inicioConfig.maxUpcomingAssemblies || 5));
+
+  const organizaciones = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES) || [];
+  const instrumentos = getSheetData_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS) || [];
+  const organizacionesById = {};
+
+  organizaciones.forEach(function(row) {
+    const key = String(row.organizacion_id || '').trim();
+    if (key && !organizacionesById[key]) organizacionesById[key] = row;
+  });
+
+  const alerts = buildInicioBeneficioAlerts_(instrumentos, organizacionesById, {
+    highDays: highDays,
+    mediumDays: mediumDays,
+    limit: maxVisibleAlerts
+  });
+
+  const reminders = buildInicioReminderItems_(organizaciones, {
+    limit: maxUpcomingAssemblies
+  });
+
+  return serializeForClient_({
+    summary: {
+      activeAlertsCount: alerts.length,
+      benefitsToReviewCount: alerts.filter(function(item) {
+        return String(item.category || '') === 'beneficio';
+      }).length,
+      upcomingAssembliesCount: reminders.length
+    },
+    alerts: alerts,
+    reminders: reminders,
+    meta: {
+      alertsState: alerts.length ? 'derived' : 'empty',
+      remindersState: reminders.some(function(item) {
+        return String(item.source || '') === 'real';
+      }) ? 'real' : (reminders.length ? 'derived' : 'empty'),
+      alertsDescription: alerts.length
+        ? 'Fechas proximas derivadas desde beneficios con registro vigente.'
+        : 'Sin alertas operativas de beneficios con fechas registradas en el sistema.',
+      remindersDescription: reminders.length
+        ? 'Agenda derivada desde organizaciones y fechas registradas en el sistema.'
+        : 'Sin asambleas ni recordatorios con fecha registrada en esta etapa.',
+      alertsEmptyMessage: 'No hay beneficios con vencimientos proximos o atrasados dentro del rango configurado.',
+      remindersEmptyMessage: 'No hay asambleas programadas ni pendientes con base suficiente para mostrar recordatorios.'
+    }
+  });
+}
+
+function buildInicioBeneficioAlerts_(rows, organizacionesById, options) {
+  const config = Object.assign({
+    highDays: 7,
+    mediumDays: 15,
+    limit: 6
+  }, options || {});
+  const today = getInicioTodayStart_();
+  const items = [];
+
+  (rows || []).forEach(function(row) {
+    if (isClosedInicioInstrumentState_(row && row.estado_instrumento)) return;
+
+    const candidates = getInicioInstrumentDateCandidates_(row).map(function(candidate) {
+      const date = parseInicioDate_(candidate && candidate.value);
+      if (!date) return null;
+
+      const daysUntil = diffInicioDays_(today, date);
+      if (daysUntil < -config.mediumDays || daysUntil > config.mediumDays) return null;
+
+      return {
+        label: candidate.label,
+        date: date,
+        daysUntil: daysUntil
+      };
+    }).filter(Boolean).sort(function(a, b) {
+      return a.daysUntil - b.daysUntil;
+    });
+
+    if (!candidates.length) return;
+
+    const nextDate = candidates[0];
+    const organizacion = organizacionesById[String(row.organizacion_id || '').trim()] || {};
+    const beneficio = getInicioInstrumentDisplayName_(row);
+    const orgLabel = String(
+      organizacion.nombre_organizacion ||
+      row.nombre_organizacion ||
+      row.organizacion_id ||
+      'Organizacion sin nombre'
+    ).trim();
+    const tone = resolveInicioAlertTone_(nextDate.daysUntil, config.highDays);
+    const status = buildInicioAlertStatus_(nextDate.daysUntil, config.highDays);
+    const dateLabel = formatInicioDate_(nextDate.date);
+
+    items.push({
+      status: status,
+      title: beneficio,
+      detail: orgLabel,
+      note: nextDate.label + ': ' + dateLabel,
+      tone: tone,
+      icon: tone === 'danger' ? 'priority_high' : 'schedule',
+      category: 'beneficio',
+      source: 'derived',
+      dateIso: nextDate.date,
+      daysUntil: nextDate.daysUntil
+    });
+  });
+
+  return items.sort(function(a, b) {
+    return Number(a.daysUntil || 0) - Number(b.daysUntil || 0);
+  }).slice(0, config.limit);
+}
+
+function buildInicioReminderItems_(rows, options) {
+  const config = Object.assign({
+    limit: 5
+  }, options || {});
+  const today = getInicioTodayStart_();
+  const items = [];
+
+  (rows || []).forEach(function(row) {
+    const nombre = String(row.nombre_organizacion || row.organizacion_id || 'Organizacion').trim();
+    const ubicacion = [row.uv ? 'UV ' + row.uv : '', row.sector || ''].filter(Boolean).join(' · ');
+    const fechaConstitucion = parseInicioDate_(row.fecha_asamblea_constitucion);
+    const fechaRatificacion = parseInicioDate_(row.fecha_ratificacion);
+    const estadoConstitucion = normalizeText_(row.estado_constitucion || '');
+
+    if (fechaConstitucion && diffInicioDays_(today, fechaConstitucion) >= 0) {
+      items.push({
+        title: nombre,
+        detail: 'Asamblea constitutiva programada para ' + formatInicioDate_(fechaConstitucion),
+        note: ubicacion,
+        icon: 'groups',
+        source: 'real',
+        dateIso: fechaConstitucion,
+        daysUntil: diffInicioDays_(today, fechaConstitucion)
+      });
+    }
+
+    if (fechaRatificacion && diffInicioDays_(today, fechaRatificacion) >= 0) {
+      items.push({
+        title: nombre,
+        detail: 'Ratificacion programada para ' + formatInicioDate_(fechaRatificacion),
+        note: ubicacion,
+        icon: 'event_available',
+        source: 'real',
+        dateIso: fechaRatificacion,
+        daysUntil: diffInicioDays_(today, fechaRatificacion)
+      });
+    }
+
+    if (!fechaConstitucion && estadoConstitucion && estadoConstitucion !== 'constituida') {
+      items.push({
+        title: nombre,
+        detail: 'Asamblea constitutiva pendiente de agendamiento.',
+        note: ubicacion || 'Sin ubicacion registrada',
+        icon: 'event_busy',
+        source: 'derived',
+        dateIso: '',
+        daysUntil: 999999
+      });
+    }
+  });
+
+  return items.sort(function(a, b) {
+    return Number(a.daysUntil || 0) - Number(b.daysUntil || 0);
+  }).slice(0, config.limit);
+}
+
+function getInicioInstrumentDateCandidates_(row) {
+  return [
+    { label: 'Cierre de postulacion', value: row && row.fecha_cierre },
+    { label: 'Postulacion', value: row && row.fecha_postulacion },
+    { label: 'Resultados', value: row && row.fecha_resultado },
+    { label: 'Habilitacion', value: row && row.fecha_habilitacion },
+    { label: 'Cierre del beneficio', value: row && row.fecha_cierre_instrumento }
+  ];
+}
+
+function getInicioInstrumentDisplayName_(row) {
+  return String(
+    (row && row.instrumento_codigo_catalogo) ||
+    (row && row.nombre_convocatoria) ||
+    (row && row.instrumento_nombre_otro) ||
+    (row && row.instrumento_tipo) ||
+    'Beneficio'
+  ).trim() || 'Beneficio';
+}
+
+function isClosedInicioInstrumentState_(value) {
+  const state = normalizeText_(value || '');
+  return [
+    'cerrado',
+    'cerrada',
+    'finalizado',
+    'finalizada',
+    'cancelado',
+    'cancelada',
+    'desistido',
+    'desistida',
+    'rendido',
+    'rendida'
+  ].indexOf(state) !== -1;
+}
+
+function resolveInicioAlertTone_(daysUntil, highDays) {
+  return daysUntil <= highDays ? 'danger' : 'warning';
+}
+
+function buildInicioAlertStatus_(daysUntil, highDays) {
+  if (daysUntil < 0) {
+    return 'Vencido hace ' + Math.abs(daysUntil) + ' dias';
+  }
+  if (daysUntil === 0) return 'Vence hoy';
+  if (daysUntil <= highDays) return 'Alta prioridad';
+  return 'Prioridad media';
+}
+
+function getInicioTodayStart_() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+function parseInicioDate_(value) {
+  const date = asDateOrBlank_(value);
+  if (!date || isNaN(date.getTime())) return null;
+  const normalized = new Date(date.getTime());
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+}
+
+function diffInicioDays_(fromDate, toDate) {
+  return Math.round((toDate.getTime() - fromDate.getTime()) / 86400000);
+}
+
+function formatInicioDate_(value) {
+  const date = parseInicioDate_(value);
+  if (!date) return '';
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd-MM-yyyy');
+}
+
 function obtenerFicha(payload) {
   const diag = goPesDiagStart_('Services.obtenerFicha', payload || {});
   requireModuleAccess_('ficha', ['operador', 'coordinador', 'administrador', 'superuser']);

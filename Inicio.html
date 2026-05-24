@@ -4,61 +4,30 @@
       const root = options && options.root;
       const escapeHtml = options && options.escapeHtml;
       const homeEmbedUrl = options && options.homeEmbedUrl;
+      const panelData = (options && options.panelData) || {};
+      const summary = panelData.summary || {};
+      const meta = panelData.meta || {};
+      const benefitAlerts = Array.isArray(panelData.alerts) ? panelData.alerts : [];
+      const assemblies = Array.isArray(panelData.reminders) ? panelData.reminders : [];
+
       if (!root || typeof escapeHtml !== 'function') return;
-
-      const benefitAlerts = [
-        {
-          status: 'Alta prioridad',
-          title: 'Beneficio próximo a cierre',
-          detail: 'Revisar vencimiento de postulación y documentación asociada al beneficio.',
-          tone: 'danger',
-          icon: 'priority_high'
-        },
-        {
-          status: 'Prioridad media',
-          title: 'Beneficio con plazo de rendición',
-          detail: 'Validar fecha límite de entrega de antecedentes del beneficio vigente.',
-          tone: 'warning',
-          icon: 'schedule'
-        },
-        {
-          status: 'Informativa',
-          title: 'Beneficio en seguimiento',
-          detail: 'Monitorear actualización de requisitos antes del próximo corte administrativo.',
-          tone: 'info',
-          icon: 'handshake'
-        }
-      ];
-
-      const assemblies = [
-        {
-          title: 'Asamblea constitutiva pendiente',
-          detail: 'Grupo de vecinos con documentación ingresada, pendiente de coordinación de asamblea.',
-          icon: 'groups'
-        },
-        {
-          title: 'Formalización posterior',
-          detail: 'Organización lista para revisar avance posterior y antecedentes de directiva.',
-          icon: 'event_available'
-        }
-      ];
 
       root.innerHTML = `
         <div class="inicio-shell">
           <div class="section-head inicio-head">
             <div>
-              <p class="eyebrow">Módulo 0</p>
+              <p class="eyebrow">Modulo 0</p>
               <h2>Inicio</h2>
-              <p class="muted">Resumen operativo, alertas y visualización ejecutiva del sistema.</p>
+              <p class="muted">Resumen operativo, alertas reales o derivadas y visualizacion ejecutiva del sistema.</p>
             </div>
           </div>
 
           <div class="inicio-layout">
             <aside class="inicio-alerts-panel">
               <div class="inicio-summary-grid">
-                ${renderMetric_('Alertas de beneficios', '3', 'warning', escapeHtml)}
-                ${renderMetric_('Beneficios a revisar', '3', 'handshake', escapeHtml)}
-                ${renderMetric_('Próximas Asambleas', '2', 'groups', escapeHtml)}
+                ${renderMetric_('Alertas activas', summary.activeAlertsCount || 0, 'warning', escapeHtml)}
+                ${renderMetric_('Beneficios a revisar', summary.benefitsToReviewCount || 0, 'handshake', escapeHtml)}
+                ${renderMetric_('Proximas asambleas', summary.upcomingAssembliesCount || 0, 'groups', escapeHtml)}
               </div>
 
               <section class="inicio-card">
@@ -66,11 +35,13 @@
                   <span class="material-symbols-outlined">notifications_active</span>
                   <div>
                     <h3>Alertas de fechas de beneficios</h3>
-                    <p>Vencimientos y plazos próximos asociados a beneficios.</p>
+                    <p>${escapeHtml(meta.alertsDescription || 'Sin alertas operativas conectadas aun.')}</p>
                   </div>
                 </div>
                 <div class="inicio-alert-list">
-                  ${benefitAlerts.map(item => renderAlertItem_(item, escapeHtml)).join('')}
+                  ${benefitAlerts.length
+                    ? benefitAlerts.map(item => renderAlertItem_(item, escapeHtml)).join('')
+                    : renderEmptyAlertState_(meta.alertsEmptyMessage, escapeHtml)}
                 </div>
               </section>
 
@@ -78,12 +49,14 @@
                 <div class="inicio-card__head">
                   <span class="material-symbols-outlined">groups</span>
                   <div>
-                    <h3>Próximas Asambleas</h3>
-                    <p>Base temporal para conectar agenda real de asambleas del proceso.</p>
+                    <h3>Proximas Asambleas</h3>
+                    <p>${escapeHtml(meta.remindersDescription || 'Sin agenda conectada aun.')}</p>
                   </div>
                 </div>
                 <div class="inicio-reminder-list">
-                  ${assemblies.map(item => renderAssemblyItem_(item, escapeHtml)).join('')}
+                  ${assemblies.length
+                    ? assemblies.map(item => renderAssemblyItem_(item, escapeHtml)).join('')
+                    : renderEmptyReminderState_(meta.remindersEmptyMessage, escapeHtml)}
                 </div>
               </section>
             </aside>
@@ -98,7 +71,7 @@
               </div>
               ${homeEmbedUrl
                 ? `<iframe class="inicio-dashboard-embed" width="600" height="443" src="${escapeHtml(homeEmbedUrl)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" scrolling="no" title="Dashboard Inicio"></iframe>`
-                : `<div class="inicio-dashboard-empty"><span class="material-symbols-outlined">insert_chart</span><strong>Dashboard pendiente de configuración</strong><span>Define <code>homeDashboardUrl</code> para mostrar el panel embebido.</span></div>`}
+                : `<div class="inicio-dashboard-empty"><span class="material-symbols-outlined">insert_chart</span><strong>Dashboard pendiente de configuracion</strong><span>Define <code>homeDashboardUrl</code> para mostrar el panel embebido.</span></div>`}
             </section>
           </div>
         </div>
@@ -109,7 +82,7 @@
       return `
         <div class="inicio-metric">
           <span class="material-symbols-outlined">${escapeHtml(icon)}</span>
-          <strong>${escapeHtml(value)}</strong>
+          <strong>${escapeHtml(String(value))}</strong>
           <small>${escapeHtml(label)}</small>
         </div>
       `;
@@ -117,12 +90,12 @@
 
     function renderAlertItem_(item, escapeHtml) {
       return `
-        <article class="inicio-alert-item inicio-alert-item--${escapeHtml(item.tone)}">
-          <span class="material-symbols-outlined">${escapeHtml(item.icon)}</span>
+        <article class="inicio-alert-item inicio-alert-item--${escapeHtml(item.tone || 'info')}">
+          <span class="material-symbols-outlined">${escapeHtml(item.icon || 'notifications')}</span>
           <div>
-            <small>${escapeHtml(item.status)}</small>
-            <strong>${escapeHtml(item.title)}</strong>
-            <p>${escapeHtml(item.detail)}</p>
+            <small>${escapeHtml(item.status || 'Alerta')}</small>
+            <strong>${escapeHtml(item.title || 'Beneficio')}</strong>
+            <p>${escapeHtml(buildItemDetail_(item))}</p>
           </div>
         </article>
       `;
@@ -131,13 +104,43 @@
     function renderAssemblyItem_(item, escapeHtml) {
       return `
         <article class="inicio-reminder-item">
-          <span class="material-symbols-outlined">${escapeHtml(item.icon)}</span>
+          <span class="material-symbols-outlined">${escapeHtml(item.icon || 'event')}</span>
           <div>
-            <strong>${escapeHtml(item.title)}</strong>
-            <p>${escapeHtml(item.detail)}</p>
+            ${item.status ? `<small>${escapeHtml(item.status)}</small>` : ''}
+            <strong>${escapeHtml(item.title || 'Recordatorio')}</strong>
+            <p>${escapeHtml(buildItemDetail_(item))}</p>
           </div>
         </article>
       `;
+    }
+
+    function renderEmptyAlertState_(message, escapeHtml) {
+      return `
+        <article class="inicio-alert-item inicio-alert-item--info">
+          <span class="material-symbols-outlined">info</span>
+          <div>
+            <small>Sin datos operativos</small>
+            <strong>Alertas aun no activadas</strong>
+            <p>${escapeHtml(message || 'No existen vencimientos con base suficiente para mostrar alertas reales en este momento.')}</p>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderEmptyReminderState_(message, escapeHtml) {
+      return `
+        <article class="inicio-reminder-item">
+          <span class="material-symbols-outlined">event_busy</span>
+          <div>
+            <strong>Sin recordatorios activos</strong>
+            <p>${escapeHtml(message || 'No existen asambleas ni recordatorios con soporte suficiente para mostrar agenda real.')}</p>
+          </div>
+        </article>
+      `;
+    }
+
+    function buildItemDetail_(item) {
+      return [item && item.detail, item && item.note].filter(Boolean).join(' - ');
     }
 
     return { render };

@@ -534,7 +534,7 @@ function decorateUser_(row) {
     updated_at: row.updated_at || '',
     updated_by: row.updated_by || '',
     canAccess: active,
-    roleLabel: superFlag ? 'Coordinador' : getUserRoleLabel_(profile)
+    roleLabel: superFlag ? 'superuser' : getUserRoleLabel_(profile)
   };
 }
 
@@ -719,10 +719,14 @@ function userModuleAllowed_(user, moduleKey) {
 }
 
 function getConfiguredSuperUsers_() {
-  return uniqueNonBlank_([]
-    .concat(Array.isArray(GO_PES_V2.SUPERUSERS) ? GO_PES_V2.SUPERUSERS : [])
-    .concat(getConfiguredPrimarySuperuserEmail_ ? [getConfiguredPrimarySuperuserEmail_()] : [])
-    .map(normalizeEmail_));
+  const fixedPrimary = normalizeEmail_(
+    Array.isArray(GO_PES_V2.SUPERUSERS) ? (GO_PES_V2.SUPERUSERS[0] || '') : ''
+  );
+  const configuredPrimary = normalizeEmail_(
+    getConfiguredPrimarySuperuserEmail_ ? getConfiguredPrimarySuperuserEmail_() : ''
+  );
+  const canonical = fixedPrimary || configuredPrimary;
+  return canonical ? [canonical] : [];
 }
 
 function safeModuleDefinitions_() {

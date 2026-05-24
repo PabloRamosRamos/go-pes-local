@@ -410,7 +410,7 @@ function guardarIngreso(payload) {
 }
 
 function guardarSeguimiento(payload) {
-  const user = requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
   validateSeguimientoV2_(payload);
   const now = new Date();
   const hitoId = payload.hito_id || nextId_('hito', 'HIT');
@@ -472,8 +472,8 @@ function guardarSeguimiento(payload) {
     masterSolicitudIds: [payload.solicitud_id],
     sugerenciaSolicitudIds: [payload.solicitud_id]
   });
-  logProcessing_('INFO', 'guardarSeguimiento', 'seguimiento', hitoId, user.email, 'OK', payload);
-  logUserAction_('CREATE_SEGUIMIENTO', 'seguimiento', hitoId, 'OK', payload);
+  logProcessing_('INFO', 'guardarSeguimiento', 'avance', hitoId, user.email, 'OK', payload);
+  logUserAction_('CREATE_AVANCE', 'avance', hitoId, 'OK', payload);
   return { ok: true, hito_id: hitoId };
 }
 

@@ -15,7 +15,7 @@
       permissions: BOOTSTRAP.permissions || {},
       systemConfig: BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {},
       moduleDefinitions: BOOTSTRAP.moduleDefinitions || [],
-      activeView: BOOTSTRAP.initialView || 'inicio',
+      activeView: normalizeModuleKey_(BOOTSTRAP.initialView || 'inicio') || 'inicio',
       currentFicha: null,
       currentSearchResults: [],
       searchRequestSeq: 0,
@@ -561,7 +561,7 @@
     const items = [
       ['person_add', 'Nuevo ingreso', 'Registrar un nuevo vecino o solicitud', 'nuevo-ingreso'],
       ['search', 'Buscar vecino', 'Encontrar vecinos, solicitudes u organizaciones', 'buscar'],
-      ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'seguimiento'],
+      ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'avance'],
       ['groups', 'Organizaciones', 'Consultar y administrar organizaciones', 'organizacion'],
       ['badge', 'Socios', 'Visualización y carga de socios', 'socios'],
       ['handshake', 'Beneficios', 'Revisar la base minima de beneficios por etapas', 'instrumento']
@@ -586,7 +586,7 @@
 
     const tiles = [
       ['Nuevo ingreso', 'Registrar la solicitud inicial del vecino.', 'person_add', 'nuevo-ingreso'],
-      ['Avance', 'Registrar hitos del proceso de constitución.', 'event_note', 'seguimiento'],
+      ['Avance', 'Registrar hitos del proceso de constitución.', 'event_note', 'avance'],
       ['Organizaciones', 'Consultar y administrar organizaciones.', 'groups', 'organizacion'],
       ['Socios', 'Visualización y carga manual o masiva.', 'badge', 'socios'],
       ['Beneficios', 'Revisar la base minima del modulo y sus pestanas operativas.', 'handshake', 'instrumento']
@@ -627,7 +627,7 @@
         renderIngresoForm();
         APP.state.renderedViews[view] = true;
         break;
-      case 'seguimiento':
+      case 'avance':
         renderAvanceView_();
         APP.state.renderedViews[view] = true;
         break;
@@ -918,11 +918,12 @@
 
   function canOpenView_(view) {
     if (!APP.state.user || !APP.state.user.canAccess) return false;
-    if (!view) return false;
-    if (view === 'usuarios') return !!APP.state.permissions.canManageUsers;
-    if (view === 'configuracion') return !!APP.state.permissions.canManageConfig;
-    if (view === 'ficha') return !!((APP.state.permissions.modules || {}).ficha);
-    return !!((APP.state.permissions.modules || {})[view]);
+    const normalizedView = normalizeModuleKey_(view);
+    if (!normalizedView) return false;
+    if (normalizedView === 'usuarios') return !!APP.state.permissions.canManageUsers;
+    if (normalizedView === 'configuracion') return !!APP.state.permissions.canManageConfig;
+    if (normalizedView === 'ficha') return !!((APP.state.permissions.modules || {}).ficha);
+    return !!((APP.state.permissions.modules || {})[normalizedView]);
   }
 
   function initUserEmailField_() {
@@ -1075,6 +1076,7 @@
   }
 
   function route(view, params = {}) {
+    view = normalizeModuleKey_(view) || view;
     if (!canOpenView_(view)) {
       showError('No tienes permisos para acceder a este módulo.');
       view = getFirstAllowedViewClient_();
@@ -1100,7 +1102,7 @@
         renderFicha(APP.state.currentFicha);
       }
 
-      if (view === 'seguimiento' && wasRendered) {
+      if (view === 'avance' && wasRendered) {
         refreshAvanceViewOnRoute_();
       }
 
@@ -1266,7 +1268,7 @@
       ['Estado actual', s.estado_actual]
     ]);
 
-    const seguimientoBlock = fichaBlock('event_note', 'Seguimiento', [
+    const avanceBlock = fichaBlock('event_note', 'Avance', [
       ['Última gestión', s.ultima_actualizacion || s.fecha_ingreso],
       ['Último hito avance', lastAvanceHito.nombre_hito || ''],
       ['Etapa actual', s.etapa_actual],
@@ -1322,7 +1324,7 @@
         </div>
         <div class="ficha-grid ficha-grid--main">
           ${vecinoBlock}
-          ${seguimientoBlock}
+          ${avanceBlock}
           ${trazabilidadBlock}
         </div>
       </section>
@@ -1679,11 +1681,6 @@
         <p><strong>Estado actual:</strong> ${escapeHtml(r.estado_actual || '')}</p>
       </div>
     `).join('')}</div>`;
-  }
-
-  function saveSeguimientoFromForm(ev) {
-    ev.preventDefault();
-    showError('El módulo Seguimiento fue reemplazado por Avance.');
   }
 
   function saveOrganizacionFromForm(ev) {
@@ -3816,22 +3813,6 @@
     el.style.color = ok === false ? '#A12A2A' : ok === true ? '#0C6844' : '';
   }
 
-  function friendlyViewName_(view) {
-    const map = {
-      inicio: 'inicio',
-      buscar: 'buscar ficha',
-      ficha: 'ficha',
-      'nuevo-ingreso': 'nuevo ingreso',
-      seguimiento: 'avance',
-      organizacion: 'organizaciones',
-      instrumento: 'beneficios',
-      socios: 'socios',
-      historial: 'historial',
-      usuarios: 'usuarios'
-    };
-    return map[view] || view;
-  }
-
   function friendlyBeneficioLabel_(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
@@ -4114,7 +4095,7 @@
   }
 
   function renderAvanceView_() {
-    const container = document.getElementById('form-seguimiento');
+    const container = document.getElementById('form-avance');
     if (!container) return;
 
     container.className = 'avance-shell';
@@ -4990,7 +4971,8 @@
   }
 
   function getViewDefinition_(view) {
-    return (APP.state.moduleDefinitions || []).find(module => module.view === view || module.key === view) || null;
+    const normalizedView = normalizeModuleKey_(view) || view;
+    return (APP.state.moduleDefinitions || []).find(module => module.view === normalizedView || module.key === normalizedView) || null;
   }
 
   function getViewLabel_(view, fallback) {
@@ -6030,7 +6012,7 @@
       buscar: 'Buscar vecino',
       ficha: 'Ficha',
       'nuevo-ingreso': 'Nuevo ingreso',
-      seguimiento: 'Registrar avance',
+      avance: 'Avance',
       organizacion: 'Organizaciones',
       instrumento: 'Beneficios',
       socios: 'Socios',

@@ -73,7 +73,7 @@ const GO_PES_V2 = {
     SEARCH: 'buscar',
     PROFILE: 'ficha',
     NEW_INGRESO: 'nuevo-ingreso',
-    SEGUIMIENTO: 'seguimiento',
+    AVANCE: 'avance',
     ORGANIZACION: 'organizacion',
     INSTRUMENTO: 'instrumento',
     SOCIOS: 'socios',

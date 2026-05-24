@@ -539,7 +539,7 @@ function buildPermissionMap_(user) {
   return {
     canOpenSearch: can('buscar'),
     canCreateIngreso: can('nuevo-ingreso'),
-    canCreateSeguimiento: can('seguimiento'),
+    canCreateAvance: can('avance'),
     canEditOrganizacion: can('organizacion'),
     canEditInstrumento: can('instrumento'),
     canImportSocios: can('socios'),
@@ -566,7 +566,7 @@ function getModuleDefinitionsLegacyUnused_() {
     { key: 'nuevo-ingreso', label: 'Nuevo ingreso', view: 'nuevo-ingreso' },
     { key: 'buscar', label: 'Buscar vecino', view: 'buscar' },
     { key: 'ficha', label: 'Ficha', view: 'ficha', assignable: false },
-    { key: 'seguimiento', label: 'Registrar avance', view: 'seguimiento' },
+    { key: 'avance', label: 'Avance', view: 'avance' },
     { key: 'organizacion', label: 'Organizaciones', view: 'organizacion' },
     { key: 'socios', label: 'Socios', view: 'socios' },
     { key: 'instrumento', label: 'Beneficios', view: 'instrumento' },
@@ -729,7 +729,7 @@ function getConfiguredSuperUsers_() {
 function normalizedRoleAllowsFicha_(role, modules) {
   if (normalizeManagedUserProfile_(role) === 'visor') return false;
   return (modules || []).some(function(key) {
-    return ['nuevo-ingreso', 'buscar', 'seguimiento', 'organizacion', 'instrumento', 'socios'].indexOf(key) !== -1;
+    return ['nuevo-ingreso', 'buscar', 'avance', 'organizacion', 'instrumento', 'socios'].indexOf(key) !== -1;
   });
 }
 

@@ -1,6 +1,6 @@
 /**
- * Configuracion global administrable del sistema.
- * Persiste por seccion en CFG_Parametros para evitar multiples fuentes de verdad.
+ * Configuración global administrable del sistema.
+ * Persiste por sección en CFG_Parametros para evitar múltiples fuentes de verdad.
  */
 function getBaseModuleDefinitions_() {
   return [
@@ -174,7 +174,7 @@ function getDefaultSystemConfig_() {
         'Secretario',
         'Director',
         'Comisión electoral',
-        'Comision de finanzas',
+        'Comisión de finanzas',
         'Socio'
       ],
       requiredManualFields: ['organizacion_id', 'nombre_socio', 'cargo'],

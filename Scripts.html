@@ -99,7 +99,7 @@
     'Secretario',
     'Director',
     'Comisión electoral',
-    'Comision de finanzas',
+    'Comisión de finanzas',
     'Socio'
   ];
 
@@ -252,7 +252,7 @@
       toggle.setAttribute('aria-label', collapsed ? 'Expandir menú' : 'Contraer menú');
       toggle.title = collapsed ? 'Expandir menú' : 'Contraer menú';
       if (icon) icon.textContent = collapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left';
-      if (label) label.textContent = 'Modulos';
+      if (label) label.textContent = 'Módulos';
     };
 
     let stored = false;
@@ -2446,14 +2446,14 @@
   function renderBenefitConfigurationPanel_(benefit, hitos) {
     const item = benefit || {};
     if (!item.beneficio_codigo) {
-      return '<div class="empty-state">Selecciona un beneficio para ver su configuracion.</div>';
+      return '<div class="empty-state">Selecciona un beneficio para ver su configuración.</div>';
     }
 
     return `
       <form id="beneficio-config-form" class="beneficios-form" novalidate>
         <div class="beneficios-detail__head">
           <div>
-            <p class="eyebrow">Configuracion del beneficio</p>
+            <p class="eyebrow">Configuración del beneficio</p>
             <h3>${escapeHtml(item.beneficio_nombre || '')}</h3>
             <p class="muted">${escapeHtml(item.descripcion_beneficio || '')}</p>
           </div>
@@ -2466,7 +2466,7 @@
         ${item.config_mode === 'fondese' ? renderFondeseConfigPanel_(hitos || []) : ''}
         ${item.config_mode === 'camaras' ? renderCamarasConfigPanel_(item) : ''}
         <div class="beneficios-form__actions">
-          <button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar configuracion</button>
+          <button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar configuración</button>
         </div>
       </form>
     `;
@@ -2475,7 +2475,7 @@
   function renderCharlasConfigPanel_(benefit) {
     return `
       <section class="beneficios-block">
-        <h4>Configuracion operativa</h4>
+        <h4>Configuración operativa</h4>
         <div class="beneficios-form__grid">
           <div class="field">
             <label>Cantidad anual de capacitaciones</label>
@@ -2517,7 +2517,7 @@
         <input type="hidden" name="orden_visual" value="${escapeHtml(String(row.orden_visual || ((index + 1) * 10)))}">
         <div class="beneficio-schedule-row__copy">
           <strong>${escapeHtml(row.hito_nombre || '')}</strong>
-          <span>${escapeHtml((row.convocatoria_nombre || '') + (row.convocatoria_nombre ? ' � ' : '') + beneficioModoFechaLabel_(mode))}</span>
+          <span>${escapeHtml((row.convocatoria_nombre || '') + (row.convocatoria_nombre ? ' · ' : '') + beneficioModoFechaLabel_(mode))}</span>
         </div>
         <div class="beneficio-schedule-row__inputs">
           ${mode === 'rango' ? `
@@ -2550,7 +2550,7 @@
   function renderCamarasConfigPanel_(benefit) {
     return `
       <section class="beneficios-block">
-        <h4>Configuracion operativa</h4>
+        <h4>Configuración operativa</h4>
         <div class="beneficios-form__grid">
           <div class="field" data-span="2">
             <label>Paso inicial del flujo</label>
@@ -2643,9 +2643,9 @@
       <form id="beneficio-org-form" class="beneficios-form" novalidate>
         <div class="beneficios-detail__head">
           <div>
-            <p class="eyebrow">Seguimiento por organizacion</p>
+            <p class="eyebrow">Seguimiento por organización</p>
             <h3>${escapeHtml(org.nombre_organizacion || '')}</h3>
-            <p class="muted">${escapeHtml(eligibility.label || '')} � ${escapeHtml(eligibility.detalle || '')}</p>
+            <p class="muted">${escapeHtml(eligibility.label || '')} · ${escapeHtml(eligibility.detalle || '')}</p>
           </div>
           <div class="beneficios-detail__head-badges">
             <span class="beneficio-chip ${beneficioBadgeClass_(eligibility.cumple_flag ? 'ok' : 'warning')}">${escapeHtml(eligibility.cumple_flag ? 'Elegible' : 'No elegible')}</span>
@@ -2787,12 +2787,12 @@
     api('guardarConfiguracionBeneficio', payload).then(res => {
       APP.state.currentBeneficioCodigo = res.beneficio_codigo || payload.beneficio_codigo || '';
       APP.state.currentBeneficioOrganizacionId = '';
-      showSuccess(`Configuracion guardada: ${friendlyBeneficioLabel_(APP.state.currentBeneficioCodigo)}`);
+      showSuccess(`Configuración guardada: ${friendlyBeneficioLabel_(APP.state.currentBeneficioCodigo)}`);
       return refreshBeneficiosModuloView_();
     }).catch(showError).finally(() => {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = submitBtn.dataset.originalText || 'Guardar configuracion';
+        submitBtn.innerHTML = submitBtn.dataset.originalText || 'Guardar configuración';
       }
     });
   }
@@ -2831,7 +2831,7 @@
   function deactivateBenefitOrg_(organizacionId) {
     const orgId = String(organizacionId || '').trim();
     if (!orgId || !APP.state.currentBeneficioCodigo) return;
-    const ok = window.confirm('Se retirara esta organizacion del beneficio y se conservara su historial. �Continuar?');
+    const ok = window.confirm('Se retirará esta organización del beneficio y se conservará su historial. ¿Continuar?');
     if (!ok) return;
     api('desactivarBeneficioOrganizacion', {
       beneficio_codigo: APP.state.currentBeneficioCodigo,
@@ -5324,7 +5324,7 @@
           <div class="config-branding-logo-empty" data-branding-logo-empty>
             <span class="material-symbols-outlined">image</span>
             <strong>Sin logo cargado</strong>
-            <p>Pega un data URI valido para ver la vista previa.</p>
+            <p>Pega un data URI válido para ver la vista previa.</p>
           </div>
         </div>
         <p class="config-branding-logo-status muted" data-branding-logo-status>Se mantiene editable el valor tecnico sin exponerlo como bloque principal.</p>
@@ -5332,7 +5332,7 @@
           <summary>Editar data URI</summary>
           <div class="config-branding-source__body">
             <textarea name="${escapeHtml(name)}" rows="4" data-branding-logo-input>${escapeHtml(String(value == null ? '' : value))}</textarea>
-            <p class="muted">Se guarda en la misma configuracion actual. Si el valor no es valido, el guardado se bloquea con mensaje explicito.</p>
+            <p class="muted">Se guarda en la misma configuración actual. Si el valor no es válido, el guardado se bloquea con mensaje explícito.</p>
           </div>
         </details>
       </article>
@@ -5496,7 +5496,7 @@
       card.classList.add('is-invalid');
       if (swatch) swatch.style.background = 'linear-gradient(135deg, rgba(161,42,42,.14) 0%, rgba(161,42,42,.14) 44%, rgba(255,255,255,.85) 44%, rgba(255,255,255,.85) 56%, rgba(161,42,42,.14) 56%, rgba(161,42,42,.14) 100%)';
       if (valueLabel) valueLabel.textContent = String((textInput && textInput.value) || fallback || '').trim() || fallback;
-      if (hint) hint.textContent = 'Valor invalido. Usa formato #RRGGBB o #RGB.';
+      if (hint) hint.textContent = 'Valor inválido. Usa formato #RRGGBB o #RGB.';
     }
 
     updateConfiguracionBrandingPreviewPanel_(form);
@@ -5532,7 +5532,7 @@
         image.removeAttribute('src');
       }
       if (empty) empty.hidden = false;
-      setState('empty', 'Sin logo', 'Sin logo cargado', 'Pega un data URI valido para ver la vista previa.');
+      setState('empty', 'Sin logo', 'Sin logo cargado', 'Pega un data URI válido para ver la vista previa.');
       updateConfiguracionBrandingPreviewPanel_(form);
       return;
     }
@@ -5543,7 +5543,7 @@
         image.removeAttribute('src');
       }
       if (empty) empty.hidden = false;
-      setState('invalid', 'Invalido', 'Logo no valido', 'El valor debe ser un data URI de imagen base64 o base64 puro compatible.');
+      setState('invalid', 'Inválido', 'Logo no válido', 'El valor debe ser un data URI de imagen base64 o base64 puro compatible.');
       updateConfiguracionBrandingPreviewPanel_(form);
       return;
     }
@@ -5564,7 +5564,7 @@
       image.hidden = true;
       image.removeAttribute('src');
       if (empty) empty.hidden = false;
-      setState('invalid', 'Invalido', 'Logo no valido', 'El contenido parece imagen, pero no pudo renderizarse.');
+      setState('invalid', 'Inválido', 'Logo no válido', 'El contenido parece imagen, pero no pudo renderizarse.');
       updateConfiguracionBrandingPreviewPanel_(form);
     };
     image.src = normalized;
@@ -5642,7 +5642,7 @@
     if (invalidLogoCard) {
       return {
         ok: false,
-        message: `Revisa ${invalidLogoCard.dataset.logoLabel || 'el logo'}: el data URI no es valido o no pudo renderizarse.`
+        message: `Revisa ${invalidLogoCard.dataset.logoLabel || 'el logo'}: el data URI no es válido o no pudo renderizarse.`
       };
     }
 
@@ -5650,7 +5650,7 @@
     if (invalidColorCard) {
       return {
         ok: false,
-        message: `Revisa ${invalidColorCard.dataset.colorLabel || 'un color'}: usa un hexadecimal valido como #214E8A.`
+        message: `Revisa ${invalidColorCard.dataset.colorLabel || 'un color'}: usa un hexadecimal válido como #214E8A.`
       };
     }
 

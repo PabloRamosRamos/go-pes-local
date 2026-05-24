@@ -108,7 +108,7 @@
   function extractSplashProgramName_(subtitle) {
     const value = String(subtitle || '').trim();
     if (!value) return 'Programa Estamos Seguros';
-    return value.split('·')[0].trim() || value.split('Â·')[0].trim() || value;
+    return value.split('·')[0].trim() || value;
   }
 
   function applySplashRuntimeTheme_() {

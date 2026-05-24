@@ -1,6 +1,6 @@
-﻿/**
- * Servicios de aplicaciÃ³n y operaciones del dominio GO-PES.
- * Esta capa orquesta validaciÃ³n, persistencia y refresco de vistas derivadas.
+/**
+ * Servicios de aplicación y operaciones del dominio GO-PES.
+ * Esta capa orquesta validación, persistencia y refresco de vistas derivadas.
  */
 function buscarVecino(query) {
   const diag = goPesDiagStart_('Services.buscarVecino', {
@@ -366,7 +366,7 @@ function obtenerFicha(payload) {
     orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', caseRow.organizacion_id, false);
   }
   if (!caseRow && !orgRow) {
-    throw new Error('No se encontrÃƒÂ³ la ficha solicitada.');
+    throw new Error('No se encontró la ficha solicitada.');
   }
   const finalSolicitudId = String(
     (caseRow && caseRow.solicitud_id) ||
@@ -395,7 +395,7 @@ function obtenerFicha(payload) {
   const finalOrgId = orgIdFromBase || orgIdFromCase || organizacionId || '';
 
   if (!base && !caseRow) {
-    throw new Error('No se encontrÃ³ la ficha solicitada.');
+    throw new Error('No se encontró la ficha solicitada.');
   
 
   const orgRow = finalOrgId
@@ -485,11 +485,11 @@ function obtenerFicha(payload) {
       (orgRow && orgRow.updated_at) ||
       '',
     fuente_fecha_antiguedad_organizacion: hitoCreacionOrganizacion
-      ? 'Hito 5: Ingreso de documentaciÃ³n'
+      ? 'Hito 5: Ingreso de documentación'
       : (
-          (orgRow && orgRow.fecha_asamblea_constitucion && 'Fecha asamblea constituciÃ³n') ||
-          (orgRow && orgRow.fecha_inicio_acompanamiento && 'Fecha inicio acompaÃ±amiento') ||
-          (orgRow && orgRow.updated_at && 'Ãšltima actualizaciÃ³n') ||
+          (orgRow && orgRow.fecha_asamblea_constitucion && 'Fecha asamblea constitución') ||
+          (orgRow && orgRow.fecha_inicio_acompanamiento && 'Fecha inicio acompañamiento') ||
+          (orgRow && orgRow.updated_at && 'Última actualización') ||
           ''
         ),
     responsable_actual: String(
@@ -789,7 +789,7 @@ function guardarOrganizacion(payload) {
   if (payload.solicitud_id) {
     patchCaseSummary_(payload.solicitud_id, {
       organizacion_id: organizacionId,
-      estado_actual: payload.estado_general_organizacion || 'Avanza a organizaciÃ³n',
+      estado_actual: payload.estado_general_organizacion || 'Avanza a organización',
       etapa_actual: payload.estado_constitucion || '',
       responsable_actual: payload.responsable_actual || user.nombre_visible,
       observacion_resumen: payload.observacion_resumen || ''

@@ -18,7 +18,7 @@
             <div>
               <p class="eyebrow">Modulo 0</p>
               <h2>Inicio</h2>
-              <p class="muted">Resumen operativo, alertas reales o derivadas y visualizacion ejecutiva del sistema.</p>
+              <p class="muted">Resumen operativo, alertas reales o derivadas y visualización ejecutiva del sistema.</p>
             </div>
           </div>
 
@@ -27,7 +27,7 @@
               <div class="inicio-summary-grid">
                 ${renderMetric_('Alertas activas', summary.activeAlertsCount || 0, 'warning', escapeHtml)}
                 ${renderMetric_('Beneficios a revisar', summary.benefitsToReviewCount || 0, 'handshake', escapeHtml)}
-                ${renderMetric_('Proximas asambleas', summary.upcomingAssembliesCount || 0, 'groups', escapeHtml)}
+                ${renderMetric_('Próximas asambleas', summary.upcomingAssembliesCount || 0, 'groups', escapeHtml)}
               </div>
 
               <section class="inicio-card">
@@ -35,7 +35,7 @@
                   <span class="material-symbols-outlined">notifications_active</span>
                   <div>
                     <h3>Alertas de fechas de beneficios</h3>
-                    <p>${escapeHtml(meta.alertsDescription || 'Sin alertas operativas conectadas aun.')}</p>
+                    <p>${escapeHtml(meta.alertsDescription || 'Sin alertas operativas conectadas aún.')}</p>
                   </div>
                 </div>
                 <div class="inicio-alert-list">
@@ -49,8 +49,8 @@
                 <div class="inicio-card__head">
                   <span class="material-symbols-outlined">groups</span>
                   <div>
-                    <h3>Proximas Asambleas</h3>
-                    <p>${escapeHtml(meta.remindersDescription || 'Sin agenda conectada aun.')}</p>
+                    <h3>Próximas Asambleas</h3>
+                    <p>${escapeHtml(meta.remindersDescription || 'Sin agenda conectada aún.')}</p>
                   </div>
                 </div>
                 <div class="inicio-reminder-list">
@@ -71,7 +71,7 @@
               </div>
               ${homeEmbedUrl
                 ? `<iframe class="inicio-dashboard-embed" width="600" height="443" src="${escapeHtml(homeEmbedUrl)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" scrolling="no" title="Dashboard Inicio"></iframe>`
-                : `<div class="inicio-dashboard-empty"><span class="material-symbols-outlined">insert_chart</span><strong>Dashboard pendiente de configuracion</strong><span>Define <code>homeDashboardUrl</code> para mostrar el panel embebido.</span></div>`}
+                : `<div class="inicio-dashboard-empty"><span class="material-symbols-outlined">insert_chart</span><strong>Dashboard pendiente de configuración</strong><span>Define <code>homeDashboardUrl</code> para mostrar el panel embebido.</span></div>`}
             </section>
           </div>
         </div>
@@ -120,7 +120,7 @@
           <span class="material-symbols-outlined">info</span>
           <div>
             <small>Sin datos operativos</small>
-            <strong>Alertas aun no activadas</strong>
+            <strong>Alertas aún no activadas</strong>
             <p>${escapeHtml(message || 'No existen vencimientos con base suficiente para mostrar alertas reales en este momento.')}</p>
           </div>
         </article>

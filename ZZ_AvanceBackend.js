@@ -561,10 +561,10 @@ function buildVistaAvanceOrganizacionRecordById_(organizacionId) {
   const timeline = goPesGetTimelineAvanceRows_(organizacionId);
   const ultimo = timeline[0] || {};
   const totalPre = timeline.filter(function(x) {
-    return String(x.tramo || '') === 'PreconstituciÃ³n';
+    return String(x.tramo || '') === 'Preconstitución';
   }).length;
   const totalFor = timeline.filter(function(x) {
-    return String(x.tramo || '') === 'FormalizaciÃ³n posterior';
+    return String(x.tramo || '') === 'Formalización posterior';
   }).length;
 
   return {

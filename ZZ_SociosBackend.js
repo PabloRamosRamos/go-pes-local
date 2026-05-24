@@ -92,6 +92,63 @@ function importarSocios(payload) {
   return result;
 }
 
+function getSociosModuloClient() {
+  requireModuleAccess_('socios', ['operador', 'coordinador', 'administrador', 'superuser']);
+
+  const socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
+  const organizaciones = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES) || [];
+  const casos = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS) || [];
+
+  const orgById = organizaciones.reduce(function(acc, row) {
+    const key = String(row.organizacion_id || '').trim();
+    if (key) acc[key] = row;
+    return acc;
+  }, {});
+
+  const caseByOrgId = casos.reduce(function(acc, row) {
+    const key = String(row.organizacion_id || '').trim();
+    if (!key) return acc;
+    const current = acc[key];
+    if (!current || new Date(row.updated_at || row.fecha_ingreso || 0) > new Date(current.updated_at || current.fecha_ingreso || 0)) {
+      acc[key] = row;
+    }
+    return acc;
+  }, {});
+
+  const rows = socios.map(function(row) {
+    const organizacionId = String(row.organizacion_id || '').trim();
+    const org = orgById[organizacionId] || {};
+    const caseRow = caseByOrgId[organizacionId] || {};
+    const nombreComite = String(row.nombre_comite_origen || org.nombre_organizacion || '').trim();
+    return {
+      socio_id: row.socio_id || '',
+      organizacion_id: organizacionId,
+      solicitud_id: String(org.solicitud_id || caseRow.solicitud_id || '').trim(),
+      nombre_organizacion: String(org.nombre_organizacion || '').trim(),
+      nombre_comite: nombreComite,
+      nombre_comite_origen: String(row.nombre_comite_origen || '').trim(),
+      run_socio: String(row.run_socio || '').trim(),
+      numero_registro: String(row.numero_registro || '').trim(),
+      nombre_socio: String(row.nombre_socio || '').trim(),
+      edad: row.edad,
+      cargo: String(row.cargo || '').trim(),
+      direccion_socio: String(row.direccion_socio || '').trim(),
+      ubicacion_socio: String(row.ubicacion_socio || '').trim(),
+      telefono_contacto: String(caseRow.telefono_contacto || '').trim(),
+      correo_contacto: String(caseRow.correo_contacto || '').trim(),
+      status_carga: String(row.status_carga || '').trim(),
+      updated_by: String(row.updated_by || '').trim(),
+      updated_at: row.updated_at || ''
+    };
+  }).sort(function(a, b) {
+    return String(a.nombre_socio || '').localeCompare(String(b.nombre_socio || ''), 'es', { sensitivity: 'base' });
+  });
+
+  return serializeForClient_({
+    rows: rows
+  });
+}
+
 function actualizarCargoSocioOrganizacion(payload) {
   const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'administrador', 'superuser']);
   const socioId = String(payload && payload.socio_id || '').trim();

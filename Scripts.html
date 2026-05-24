@@ -37,6 +37,9 @@
       historialRequestSeq: 0,
       sociosOrganizaciones: [],
       sociosOrganizacionesFetchedAt: 0,
+      sociosModuleRows: [],
+      sociosModuleFetchedAt: 0,
+      currentSocioDetalle: null,
       pendingSociosRows: [],
       ingresoMatches: [],
       configSectionOrder: [],
@@ -1111,6 +1114,7 @@
 
       if (view === 'socios' && wasRendered) {
         refreshSociosComites_();
+        loadSociosModuleData_().catch(() => {});
       }
 
       if (view === 'historial') loadHistorial();
@@ -2922,6 +2926,8 @@
     api('importarSocios', { rows }).then(res => {
       showSuccess(`Socios importados: ${res.imported} de ${res.total}`);
       closeSociosModals_();
+      APP.state.sociosModuleFetchedAt = 0;
+      loadSociosModuleData_({ force: true }).catch(() => {});
       if (res.errors && res.errors.length) {
         document.getElementById('socios-preview').insertAdjacentHTML('beforeend', `<div class="message error">Errores: ${escapeHtml(JSON.stringify(res.errors))}</div>`);
       }
@@ -2935,11 +2941,183 @@
     }));
   }
 
+  function getSociosOrganizacionLabelById_(organizacionId) {
+    const key = String(organizacionId || '').trim();
+    if (!key) return '';
+    const found = (APP.state.sociosOrganizaciones || []).find(item => String(item.value || '').trim() === key);
+    return found ? String(found.label || '').trim() : '';
+  }
+
+  function getSocioTelefonoDisplay_(row) {
+    return String(row && row.telefono_contacto || '').trim() || 'Sin teléfono';
+  }
+
+  function getSocioDetailFields_(row) {
+    const socio = row || {};
+    const comiteLabel = String(socio.nombre_comite || socio.nombre_comite_origen || getSociosOrganizacionLabelById_(socio.organizacion_id) || socio.nombre_organizacion || '').trim();
+    return [
+      ['RUN', socio.run_socio],
+      ['Número de registro', socio.numero_registro],
+      ['Nombre', socio.nombre_socio],
+      ['Edad', socio.edad],
+      ['Cargo', socio.cargo],
+      ['Dirección', socio.direccion_socio],
+      ['Ubicación', socio.ubicacion_socio],
+      ['Comité asociado', comiteLabel],
+      ['Organización', socio.nombre_organizacion],
+      ['Organización ID', socio.organizacion_id],
+      ['Solicitud ID', socio.solicitud_id],
+      ['Teléfono contacto', socio.telefono_contacto],
+      ['Correo contacto', socio.correo_contacto],
+      ['Estado de carga', socio.status_carga],
+      ['Actualizado por', socio.updated_by],
+      ['Última actualización', socio.updated_at]
+    ].filter(item => item[1] !== undefined && item[1] !== null && String(item[1]).trim() !== '');
+  }
+
+  function renderSociosTableRows_(rows) {
+    if (!rows.length) {
+      return `<tr><td colspan="3" class="socios-table__empty">No hay socios cargados.</td></tr>`;
+    }
+
+    return rows.map(row => `
+      <tr>
+        <td>
+          <div class="socios-table__name">${escapeHtml(row.nombre_socio || 'Sin nombre')}</div>
+          <small>${escapeHtml(String(row.cargo || row.nombre_comite || row.nombre_comite_origen || '').trim() || 'Sin cargo')}</small>
+        </td>
+        <td>${escapeHtml(getSocioTelefonoDisplay_(row))}</td>
+        <td class="socios-table__action-cell">
+          <button
+            type="button"
+            class="table-action-btn socios-table__action-btn"
+            data-socio-detail-open="${escapeHtml(row.socio_id || '')}"
+            aria-label="Ver detalle de ${escapeHtml(row.nombre_socio || 'socio')}"
+            title="Ver detalle"
+          >
+            <span class="material-symbols-outlined">search</span>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function renderSociosTableSection_(rows) {
+    return `
+      <section class="socios-data-panel socios-table-panel">
+        <div class="socios-panel__head">
+          <div>
+            <p class="eyebrow">Socios cargados</p>
+            <h3>Tabla operativa</h3>
+            <p class="muted">Listado real desde la fuente actual del módulo con acceso rápido al detalle.</p>
+          </div>
+          <span class="socios-panel__count">${escapeHtml(String(rows.length || 0))}</span>
+        </div>
+        <div class="socios-table-wrap">
+          <table class="socios-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Teléfono</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="socios-table-body">
+              ${renderSociosTableRows_(rows)}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderSociosDetailModal_() {
+    return `
+      <div id="socios-detail-modal" class="socios-modal is-hidden" aria-hidden="true">
+        <div class="socios-modal__backdrop" data-socios-detail-close="true"></div>
+        <div class="socios-modal__dialog socios-modal__dialog--detail">
+          <div class="socios-modal__head">
+            <div>
+              <p class="eyebrow">Detalle socio</p>
+              <h3 id="socios-detail-title">Ficha de socio</h3>
+              <p class="muted" id="socios-detail-subtitle">Información completa del registro seleccionado.</p>
+            </div>
+            <button type="button" class="secondary-btn" data-socios-detail-close="true">
+              <span class="material-symbols-outlined">close</span>Cerrar
+            </button>
+          </div>
+          <div id="socios-detail-content" class="socios-detail-card"></div>
+          <div class="actions">
+            <button type="button" class="secondary-btn" data-socios-detail-close="true">
+              <span class="material-symbols-outlined">done</span>Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderSocioDetailContent_(row) {
+    const fields = getSocioDetailFields_(row);
+    if (!fields.length) {
+      return `<div class="empty-state">No hay datos disponibles para este socio.</div>`;
+    }
+
+    return `
+      <div class="socios-detail-grid">
+        ${fields.map(([label, value]) => `
+          <div class="socios-detail-field">
+            <span>${escapeHtml(label)}</span>
+            <strong>${escapeHtml(String(value == null ? '' : value))}</strong>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  function loadSociosModuleData_(options = {}) {
+    const force = !!options.force;
+    const now = Date.now();
+    const body = document.getElementById('socios-table-body');
+    const count = document.querySelector('.socios-panel__count');
+    const canReuse = !force
+      && APP.state.sociosModuleRows.length
+      && APP.state.sociosModuleFetchedAt
+      && (now - APP.state.sociosModuleFetchedAt) < 30000;
+
+    if (canReuse) {
+      if (body) body.innerHTML = renderSociosTableRows_(APP.state.sociosModuleRows);
+      if (count) count.textContent = String(APP.state.sociosModuleRows.length || 0);
+      bindSociosTableActions_();
+      return Promise.resolve(APP.state.sociosModuleRows);
+    }
+
+    if (body) {
+      body.innerHTML = '<tr><td colspan="3" class="socios-table__empty">Cargando socios...</td></tr>';
+    }
+
+    return api('getSociosModuloClient').then(data => {
+      APP.state.sociosModuleRows = (data && data.rows) || [];
+      APP.state.sociosModuleFetchedAt = Date.now();
+      if (body) body.innerHTML = renderSociosTableRows_(APP.state.sociosModuleRows);
+      if (count) count.textContent = String(APP.state.sociosModuleRows.length || 0);
+      bindSociosTableActions_();
+      return APP.state.sociosModuleRows;
+    }).catch(err => {
+      if (body) {
+        body.innerHTML = '<tr><td colspan="3" class="socios-table__empty">No fue posible cargar los socios.</td></tr>';
+      }
+      showError(err);
+      throw err;
+    });
+  }
+
   function renderSociosView_() {
     const root = document.getElementById('socios-root');
     if (!root) return;
     const dashboardUrl = getSociosDashboardUrl_();
     const dashboardHeight = getSociosDashboardHeight_();
+    const cachedRows = APP.state.sociosModuleRows || [];
 
     root.innerHTML = `
       <div class="socios-shell">
@@ -2959,21 +3137,36 @@
           </div>
         </div>
 
-        <div class="socios-embed-panel">
+        <div class="socios-layout">
+          ${renderSociosTableSection_(cachedRows)}
+          <section class="socios-data-panel socios-dashboard-panel">
+            <div class="socios-panel__head">
+              <div>
+                <p class="eyebrow">Dashboard</p>
+                <h3>Panel embebido</h3>
+                <p class="muted">Se mantiene el mismo reporte actual, ahora contenido en la mitad derecha del módulo.</p>
+              </div>
+              <span class="inicio-dashboard-pill">Looker Studio</span>
+            </div>
+            <div class="socios-embed-panel">
           ${dashboardUrl
             ? `<iframe class="socios-embed" width="600" height="${escapeHtml(String(dashboardHeight || 443))}" src="${escapeHtml(dashboardUrl)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" scrolling="no" title="Panel de socios"></iframe>`
             : `<div class="socios-embed socios-embed--empty"><span class="material-symbols-outlined">analytics</span><strong>Panel Looker Studio pendiente de configuración</strong><span>Define la URL en <code>SOCIOS_LOOKER_STUDIO_EMBED_URL</code> para mostrar el panel embebido.</span></div>`}
+            </div>
+          </section>
         </div>
 
         <div id="socios-preview" class="socios-preview"></div>
 
         ${renderSociosBulkModal_()}
         ${renderSociosManualModal_()}
+        ${renderSociosDetailModal_()}
       </div>
     `;
 
     bindSociosView_();
     fillSociosComiteSelects_();
+    loadSociosModuleData_().catch(() => {});
   }
 
   function renderSociosBulkModal_() {
@@ -3088,6 +3281,20 @@
     document.querySelectorAll('[data-socios-modal-close]').forEach(btn => {
       btn.addEventListener('click', () => closeSociosModals_());
     });
+
+    document.querySelectorAll('[data-socios-detail-close]').forEach(btn => {
+      btn.addEventListener('click', closeSocioDetailModal_);
+    });
+
+    bindSociosTableActions_();
+  }
+
+  function bindSociosTableActions_() {
+    document.querySelectorAll('[data-socio-detail-open]').forEach(btn => {
+      if (btn.dataset.boundSocioDetail === '1') return;
+      btn.dataset.boundSocioDetail = '1';
+      btn.addEventListener('click', () => openSocioDetailModal_(btn.dataset.socioDetailOpen));
+    });
   }
 
   function fillSociosComiteSelects_() {
@@ -3113,6 +3320,38 @@
 
   function closeSociosModals_() {
     document.querySelectorAll('.socios-modal').forEach(modal => modal.classList.add('is-hidden'));
+  }
+
+  function openSocioDetailModal_(socioId) {
+    const id = String(socioId || '').trim();
+    const row = (APP.state.sociosModuleRows || []).find(item => String(item.socio_id || '').trim() === id);
+    if (!row) {
+      showError('No se encontró el detalle del socio seleccionado.');
+      return;
+    }
+
+    APP.state.currentSocioDetalle = row;
+    const modal = document.getElementById('socios-detail-modal');
+    const title = document.getElementById('socios-detail-title');
+    const subtitle = document.getElementById('socios-detail-subtitle');
+    const content = document.getElementById('socios-detail-content');
+    if (!modal || !title || !subtitle || !content) return;
+
+    const comiteLabel = String(row.nombre_comite || row.nombre_comite_origen || getSociosOrganizacionLabelById_(row.organizacion_id) || row.nombre_organizacion || '').trim();
+    title.textContent = row.nombre_socio || 'Ficha de socio';
+    subtitle.textContent = comiteLabel
+      ? `Comité asociado: ${comiteLabel}`
+      : 'Información completa del registro seleccionado.';
+    content.innerHTML = renderSocioDetailContent_(row);
+    modal.classList.remove('is-hidden');
+    modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeSocioDetailModal_() {
+    const modal = document.getElementById('socios-detail-modal');
+    if (!modal) return;
+    modal.classList.add('is-hidden');
+    modal.setAttribute('aria-hidden', 'true');
   }
 
   function handleSociosBulkFile_(ev) {
@@ -3190,6 +3429,8 @@
         throw new Error(detail);
       }
       const saved = (res && Array.isArray(res.importedRows) && res.importedRows[0]) || row;
+      APP.state.sociosModuleFetchedAt = 0;
+      loadSociosModuleData_({ force: true }).catch(() => {});
       if (keepOpen) {
         showSociosManualLastMessage_(saved);
         clearSociosManualFields_();

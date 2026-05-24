@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
     <?!= include('Styles'); ?>
+    <?!= include('ThemeDark'); ?>
   </head>
   <body>
     <?!= include('Splash'); ?>
@@ -28,7 +29,19 @@
           </div>
         </div>
         <div class="hero__user">
-          <div class="pill"><span class="material-symbols-outlined">person</span><span id="user-name">Usuario</span></div>
+          <div class="hero__user-menu">
+            <button type="button" class="pill pill--button" id="user-menu-trigger" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu-dropdown">
+              <span class="material-symbols-outlined">person</span>
+              <span id="user-name">Usuario</span>
+              <span class="material-symbols-outlined pill__chevron" id="user-menu-chevron">expand_more</span>
+            </button>
+            <div class="user-menu-dropdown is-hidden" id="user-menu-dropdown" role="menu" aria-labelledby="user-menu-trigger">
+              <button type="button" class="user-menu-dropdown__item" id="theme-toggle-btn" role="menuitem">
+                <span class="material-symbols-outlined" id="theme-toggle-icon">dark_mode</span>
+                <span id="theme-toggle-label">Ver en modo oscuro</span>
+              </button>
+            </div>
+          </div>
           <div class="pill"><span class="material-symbols-outlined">verified_user</span><span id="user-role">perfil</span></div>
           <button type="button" class="admin-reset-btn is-hidden" id="admin-reset-open-btn">
             <span class="material-symbols-outlined">delete_sweep</span>Limpiar datos

@@ -7,12 +7,14 @@
     (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.sociosLookerStudioEmbedUrl) || '';
   const HOME_LOOKER_STUDIO_EMBED_URL =
     (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.homeLookerStudioEmbedUrl) || '';
+  const THEME_STORAGE_KEY = 'goPesTheme';
 
   const APP = {
     state: {
       bootstrap: BOOTSTRAP,
       catalogs: {},
       user: BOOTSTRAP.user || {},
+      theme: document.documentElement.dataset.theme || 'light',
       permissions: BOOTSTRAP.permissions || {},
       moduleDefinitions: BOOTSTRAP.moduleDefinitions || [],
       activeView: BOOTSTRAP.initialView || 'inicio',
@@ -120,6 +122,7 @@
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
+    hydrateTheme_();
     if (!APP.state.user || !APP.state.user.canAccess) {
       showAccessDenied_();
       hideAppLoading();
@@ -130,6 +133,7 @@
     bindGlobalNav();
     initSidebarCollapse_();
     hydrateStaticUser();
+    bindUserMenu_();
     hydrateAppVersion_();
     hydrateLogo();
     renderQuickActions();
@@ -217,6 +221,93 @@
         console.warn('No se pudo persistir el estado del menú lateral.', err);
       }
       applyState(collapsed);
+    });
+  }
+
+  function readStoredTheme_() {
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      return stored === 'dark' || stored === 'light' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function isDarkTheme_() {
+    return String(APP.state.theme || document.documentElement.dataset.theme || 'light') === 'dark';
+  }
+
+  function applyTheme_(theme, persist) {
+    const nextTheme = theme === 'dark' ? 'dark' : 'light';
+    APP.state.theme = nextTheme;
+    document.documentElement.dataset.theme = nextTheme;
+    if (document.body) {
+      document.body.dataset.theme = nextTheme;
+    }
+    if (persist) {
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+      } catch (err) {
+        console.warn('No se pudo persistir el tema seleccionado.', err);
+      }
+    }
+    updateThemeToggleUi_();
+  }
+
+  function hydrateTheme_() {
+    const bootTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    applyTheme_(readStoredTheme_() || bootTheme, false);
+  }
+
+  function updateThemeToggleUi_() {
+    const label = document.getElementById('theme-toggle-label');
+    const icon = document.getElementById('theme-toggle-icon');
+    const dark = isDarkTheme_();
+    if (label) label.textContent = dark ? 'Ver modo claro' : 'Ver en modo oscuro';
+    if (icon) icon.textContent = dark ? 'light_mode' : 'dark_mode';
+  }
+
+  function setUserMenuOpen_(open) {
+    const trigger = document.getElementById('user-menu-trigger');
+    const menu = document.getElementById('user-menu-dropdown');
+    const chevron = document.getElementById('user-menu-chevron');
+    if (!trigger || !menu) return;
+    trigger.setAttribute('aria-expanded', String(!!open));
+    menu.classList.toggle('is-hidden', !open);
+    if (chevron) chevron.textContent = open ? 'expand_less' : 'expand_more';
+  }
+
+  function bindUserMenu_() {
+    const trigger = document.getElementById('user-menu-trigger');
+    const menu = document.getElementById('user-menu-dropdown');
+    const toggleBtn = document.getElementById('theme-toggle-btn');
+    if (!trigger || !menu || !toggleBtn || trigger.dataset.bound === '1') return;
+
+    trigger.dataset.bound = '1';
+    updateThemeToggleUi_();
+    setUserMenuOpen_(false);
+
+    trigger.addEventListener('click', ev => {
+      ev.stopPropagation();
+      setUserMenuOpen_(trigger.getAttribute('aria-expanded') !== 'true');
+    });
+
+    toggleBtn.addEventListener('click', ev => {
+      ev.preventDefault();
+      applyTheme_(isDarkTheme_() ? 'light' : 'dark', true);
+      setUserMenuOpen_(false);
+    });
+
+    document.addEventListener('click', ev => {
+      if (!menu.contains(ev.target) && !trigger.contains(ev.target)) {
+        setUserMenuOpen_(false);
+      }
+    });
+
+    document.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape') {
+        setUserMenuOpen_(false);
+      }
     });
   }
 

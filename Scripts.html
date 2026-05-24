@@ -860,7 +860,11 @@
   }
 
   function getAssignableModuleDefinitions_() {
-    return (APP.state.moduleDefinitions || []).filter(module => !module.superOnly && module.assignable !== false && module.state !== 'hidden');
+    return (APP.state.moduleDefinitions || []).filter(module => !module.superOnly && module.assignable !== false && module.enabled !== false);
+  }
+
+  function getNavigableModuleDefinitions_() {
+    return (APP.state.moduleDefinitions || []).filter(module => module.navVisible !== false && module.enabled !== false);
   }
 
   function normalizeEditableUserProfile_(value) {
@@ -1375,18 +1379,7 @@
 
   function getFirstAllowedViewClient_() {
     const modules = APP.state.permissions.modules || {};
-    const priority = [
-      'inicio',
-      'nuevo-ingreso',
-      'buscar',
-      'seguimiento',
-      'organizacion',
-      'socios',
-      'instrumento',
-      'historial',
-      'usuarios',
-      'configuracion'
-    ];
+    const priority = getNavigableModuleDefinitions_().map(module => module.view || module.key);
     return priority.find(view => modules[view]) || '';
   }
 
@@ -5022,7 +5015,7 @@
     if (!sidebar) return;
 
     const buttons = Array.from(sidebar.querySelectorAll('.nav-btn'));
-    const defs = (APP.state.moduleDefinitions || []).slice().sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+    const defs = getNavigableModuleDefinitions_().slice().sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
     const defMap = defs.reduce((acc, def) => {
       acc[def.view || def.key] = def;
       return acc;
@@ -5034,7 +5027,9 @@
       if (!def) return;
       const label = def.label || view;
       const navLabel = button.querySelector('.nav-label');
+      const navIcon = button.querySelector('.material-symbols-outlined');
       if (navLabel) navLabel.textContent = label;
+      if (navIcon && def.icon) navIcon.textContent = def.icon;
       button.title = label;
     });
 
@@ -5734,7 +5729,7 @@
             ${configInput_('allowedDomain', 'Dominio permitido', section.allowedDomain || 'providencia.cl', 'text')}
             ${configInput_('primarySuperuserEmail', 'Correo del superuser principal', section.primarySuperuserEmail || '', 'email')}
             ${configSelect_('defaultUserProfile', 'Perfil por defecto', section.defaultUserProfile || 'operador', USER_ROLE_OPTIONS)}
-            ${configSelect_('defaultView', 'Módulo de inicio por defecto', section.defaultView || 'inicio', defs.filter(item => !item.superOnly).map(item => ({ value: item.view || item.key, label: item.label || item.key })))}
+            ${configSelect_('defaultView', 'Módulo de inicio por defecto', section.defaultView || 'inicio', defs.filter(item => !item.superOnly && item.navVisible !== false && item.enabled !== false).map(item => ({ value: item.view || item.key, label: item.label || item.key })))}
           </div>
           <div class="config-table-wrap">
             <table class="config-table">

@@ -4,18 +4,116 @@
  */
 function getBaseModuleDefinitions_() {
   return [
-    { key: 'inicio', label: 'Inicio', view: 'inicio', required: true, assignable: true, superOnly: false, order: 10, state: 'active' },
-    { key: 'nuevo-ingreso', label: 'Nuevo ingreso', view: 'nuevo-ingreso', assignable: true, superOnly: false, order: 20, state: 'active' },
-    { key: 'buscar', label: 'Buscar vecino', view: 'buscar', assignable: true, superOnly: false, order: 30, state: 'active' },
-    { key: 'ficha', label: 'Ficha', view: 'ficha', assignable: false, superOnly: false, order: 35, state: 'active' },
-    { key: 'seguimiento', label: 'Registrar avance', view: 'seguimiento', assignable: true, superOnly: false, order: 40, state: 'active' },
-    { key: 'organizacion', label: 'Organizaciones', view: 'organizacion', assignable: true, superOnly: false, order: 50, state: 'active' },
-    { key: 'socios', label: 'Socios', view: 'socios', assignable: true, superOnly: false, order: 60, state: 'active' },
-    { key: 'instrumento', label: 'Beneficios', view: 'instrumento', assignable: true, superOnly: false, order: 70, state: 'active' },
-    { key: 'historial', label: 'Historial', view: 'historial', assignable: true, superOnly: false, order: 80, state: 'active' },
-    { key: 'usuarios', label: 'Gestión de usuarios', view: 'usuarios', assignable: false, superOnly: true, order: 90, state: 'active' },
-    { key: 'configuracion', label: 'Configuración', view: 'configuracion', assignable: false, superOnly: true, order: 100, state: 'active' }
+    { key: 'inicio', label: 'Inicio', view: 'inicio', icon: 'home', required: true, defaultVisible: true, navVisible: true, assignable: true, superOnly: false, order: 10, state: 'active' },
+    { key: 'nuevo-ingreso', label: 'Nuevo ingreso', view: 'nuevo-ingreso', icon: 'person_add', defaultVisible: false, navVisible: true, assignable: true, superOnly: false, order: 20, state: 'active' },
+    { key: 'buscar', label: 'Buscar vecino', view: 'buscar', icon: 'search', defaultVisible: false, navVisible: true, assignable: true, superOnly: false, order: 30, state: 'active' },
+    { key: 'ficha', label: 'Ficha', view: 'ficha', icon: 'description', defaultVisible: false, navVisible: false, assignable: false, superOnly: false, order: 35, state: 'active' },
+    { key: 'seguimiento', label: 'Registrar avance', view: 'seguimiento', icon: 'event_note', defaultVisible: false, navVisible: true, assignable: true, superOnly: false, order: 40, state: 'active' },
+    { key: 'organizacion', label: 'Organizaciones', view: 'organizacion', icon: 'groups', defaultVisible: false, navVisible: true, assignable: true, superOnly: false, order: 50, state: 'active' },
+    { key: 'socios', label: 'Socios', view: 'socios', icon: 'badge', defaultVisible: false, navVisible: true, assignable: true, superOnly: false, order: 60, state: 'active' },
+    { key: 'instrumento', label: 'Beneficios', view: 'instrumento', icon: 'handshake', defaultVisible: false, navVisible: true, assignable: true, superOnly: false, order: 70, state: 'active' },
+    { key: 'historial', label: 'Historial', view: 'historial', icon: 'history', defaultVisible: false, navVisible: true, assignable: true, superOnly: false, order: 80, state: 'active' },
+    { key: 'usuarios', label: 'Gestión de usuarios', view: 'usuarios', icon: 'manage_accounts', defaultVisible: false, navVisible: true, assignable: false, superOnly: true, order: 90, state: 'active' },
+    { key: 'configuracion', label: 'Configuración', view: 'configuracion', icon: 'settings', defaultVisible: false, navVisible: true, assignable: false, superOnly: true, order: 100, state: 'active' }
   ];
+}
+
+function getFixedPrimarySuperuserEmail_() {
+  return sanitizeEmailValue_(
+    Array.isArray(GO_PES_V2.SUPERUSERS) ? (GO_PES_V2.SUPERUSERS[0] || '') : '',
+    'pablo.ramos@providencia.cl'
+  );
+}
+
+function normalizeModuleLookupKey_(value) {
+  return String(value == null ? '' : value)
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function getModuleKeyAliasMap_() {
+  const aliases = {
+    home: 'inicio',
+    inicio: 'inicio',
+    nuevo_ingreso: 'nuevo-ingreso',
+    ingreso: 'nuevo-ingreso',
+    buscar: 'buscar',
+    buscar_vecino: 'buscar',
+    buscar_ficha: 'buscar',
+    ficha: 'ficha',
+    ficha_vecino: 'ficha',
+    seguimiento: 'seguimiento',
+    registrar_avance: 'seguimiento',
+    avance: 'seguimiento',
+    organizacion: 'organizacion',
+    organizaciones: 'organizacion',
+    gestion_organizaciones: 'organizacion',
+    socios: 'socios',
+    beneficio: 'instrumento',
+    beneficios: 'instrumento',
+    instrumento: 'instrumento',
+    instrumentos: 'instrumento',
+    gestionar_beneficios: 'instrumento',
+    gestionar_instrumentos: 'instrumento',
+    historial: 'historial',
+    usuario: 'usuarios',
+    usuarios: 'usuarios',
+    gestion_usuarios: 'usuarios',
+    configuracion: 'configuracion',
+    config: 'configuracion',
+    settings: 'configuracion'
+  };
+
+  getBaseModuleDefinitions_().forEach(function(def) {
+    const lookup = normalizeModuleLookupKey_(def.key);
+    const viewLookup = normalizeModuleLookupKey_(def.view || def.key);
+    if (lookup) aliases[lookup] = def.key;
+    if (viewLookup) aliases[viewLookup] = def.key;
+  });
+
+  return aliases;
+}
+
+function normalizeModuleKey_(value) {
+  const lookup = normalizeModuleLookupKey_(value);
+  if (!lookup) return '';
+  return getModuleKeyAliasMap_()[lookup] || '';
+}
+
+function getModuleDefinitions_() {
+  const baseDefs = getBaseModuleDefinitions_();
+  const config = getRuntimeSystemConfig_();
+  const moduleConfigMap = ((config.accessModules && config.accessModules.modules) || []).reduce(function(acc, row) {
+    const key = normalizeModuleKey_(row && row.key);
+    if (key) acc[key] = row;
+    return acc;
+  }, {});
+  const alwaysVisible = getConfiguredAlwaysVisibleModules_();
+
+  return baseDefs.map(function(base) {
+    const configured = moduleConfigMap[base.key] || {};
+    const state = base.superOnly
+      ? 'active'
+      : sanitizeModuleState_(configured.state, base.state || 'active');
+    const required = !!base.required || alwaysVisible.indexOf(base.key) !== -1;
+    return Object.assign({}, base, {
+      key: base.key,
+      view: base.view || base.key,
+      icon: base.icon || '',
+      label: configured.label || base.label,
+      order: Number(configured.order || base.order || 0),
+      state: state,
+      enabled: state === 'active',
+      required: required,
+      defaultVisible: required || !!base.defaultVisible
+    });
+  }).sort(function(a, b) {
+    return Number(a.order || 0) - Number(b.order || 0);
+  });
 }
 
 function getSystemConfigSectionOrder_() {
@@ -315,12 +413,15 @@ function normalizeConfigSectionByName_(section, value, current) {
       };
     case 'accessModules': {
       const baseModules = getBaseModuleDefinitions_();
+      const defaultViewDefs = baseModules.filter(function(module) {
+        return module.navVisible !== false && !module.superOnly;
+      });
       const rawModules = Array.isArray(input.modules) ? input.modules : previous.modules;
       return {
         allowedDomain: sanitizeDomainValue_(input.allowedDomain, previous.allowedDomain),
-        primarySuperuserEmail: sanitizeEmailValue_(input.primarySuperuserEmail, previous.primarySuperuserEmail),
+        primarySuperuserEmail: getFixedPrimarySuperuserEmail_(),
         defaultUserProfile: sanitizeUserProfileValue_(input.defaultUserProfile, previous.defaultUserProfile),
-        defaultView: sanitizeViewKeyValue_(input.defaultView, previous.defaultView, baseModules),
+        defaultView: sanitizeViewKeyValue_(input.defaultView, previous.defaultView, defaultViewDefs),
         alwaysVisibleModules: sanitizeModuleKeyArray_(input.alwaysVisibleModules, previous.alwaysVisibleModules, baseModules),
         modules: normalizeConfiguredModules_(rawModules, baseModules)
       };
@@ -388,23 +489,23 @@ function normalizeConfigSectionByName_(section, value, current) {
 }
 
 function normalizeConfiguredModules_(rawModules, baseModules) {
-  const baseMap = (baseModules || getBaseModuleDefinitions_()).reduce(function(acc, item) {
-    acc[item.key] = item;
-    return acc;
-  }, {});
+  const defs = baseModules || getBaseModuleDefinitions_();
   const incomingMap = (Array.isArray(rawModules) ? rawModules : []).reduce(function(acc, row) {
-    const key = String(row && row.key || '').trim();
+    const key = normalizeModuleKey_(row && row.key);
     if (key) acc[key] = row;
     return acc;
   }, {});
 
-  return (baseModules || getBaseModuleDefinitions_()).map(function(base) {
+  return defs.map(function(base) {
     const incoming = incomingMap[base.key] || {};
+    const state = base.superOnly
+      ? 'active'
+      : sanitizeModuleState_(incoming.state, base.state || 'active');
     return {
       key: base.key,
       label: sanitizeConfigText_(incoming.label, base.label),
       order: sanitizeConfigNumber_(incoming.order, base.order || 0, 1, 999),
-      state: sanitizeModuleState_(incoming.state, base.state || 'active')
+      state: state
     };
   }).sort(function(a, b) {
     return Number(a.order || 0) - Number(b.order || 0);
@@ -446,7 +547,7 @@ function getConfiguredAllowedDomains_() {
 }
 
 function getConfiguredPrimarySuperuserEmail_() {
-  return sanitizeEmailValue_(getRuntimeSystemConfig_().accessModules.primarySuperuserEmail, '');
+  return getFixedPrimarySuperuserEmail_();
 }
 
 function getConfiguredDefaultManagedProfile_() {
@@ -454,7 +555,9 @@ function getConfiguredDefaultManagedProfile_() {
 }
 
 function getConfiguredDefaultView_() {
-  const defs = getBaseModuleDefinitions_();
+  const defs = getModuleDefinitions_().filter(function(def) {
+    return def.navVisible !== false && !def.superOnly && def.enabled !== false;
+  });
   return sanitizeViewKeyValue_(getRuntimeSystemConfig_().accessModules.defaultView, 'inicio', defs);
 }
 
@@ -600,12 +703,18 @@ function sanitizeModuleState_(value, fallback) {
 }
 
 function sanitizeViewKeyValue_(value, fallback, defs) {
-  const allowed = (defs || getBaseModuleDefinitions_()).map(function(item) {
-    return item.view || item.key;
-  });
-  const normalized = String(value == null ? '' : value).trim();
-  if (allowed.indexOf(normalized) !== -1) return normalized;
-  return String(fallback || 'inicio').trim() || 'inicio';
+  const allowed = (defs || getBaseModuleDefinitions_()).reduce(function(acc, item) {
+    const key = item.key || '';
+    const view = item.view || key;
+    if (key) acc[key] = view;
+    if (view) acc[view] = view;
+    return acc;
+  }, {});
+  const normalized = normalizeModuleKey_(value);
+  if (normalized && allowed[normalized]) return allowed[normalized];
+  const fallbackNormalized = normalizeModuleKey_(fallback);
+  if (fallbackNormalized && allowed[fallbackNormalized]) return allowed[fallbackNormalized];
+  return 'inicio';
 }
 
 function sanitizeStringList_(value, fallback) {
@@ -668,7 +777,7 @@ function sanitizeUrlValue_(value, fallback) {
 function sanitizeModuleKeyArray_(value, fallback, defs) {
   const allowed = (defs || getBaseModuleDefinitions_()).map(function(item) { return item.key; });
   const list = sanitizeStringList_(value, fallback || []);
-  return list.filter(function(item) {
+  return uniqueConfigList_(list.map(normalizeModuleKey_)).filter(function(item) {
     return allowed.indexOf(item) !== -1;
   });
 }

@@ -81,7 +81,7 @@ const GO_PES_V2 = {
     USERS: 'usuarios',
     CONFIG: 'configuracion'
   },
-  ROLES: ['operador', 'coordinador', 'administrador', 'superuser'],
+  ROLES: ['visor', 'operador', 'coordinador', 'superuser'],
   TRUSTED_DOMAIN_AUTO_ACTIVE: false,
   DEFAULT_VIEW: 'inicio'
 };
@@ -165,7 +165,7 @@ function buildBootstrapForTemplate_(e) {
   const user = getUsuarioActual();
   const permissions = buildPermissionMap_(user);
   const buildInfo = getAppBuildInfo_();
-  const requestedView = params.view || getConfiguredDefaultView_();
+  const requestedView = normalizeModuleKey_(params.view || getConfiguredDefaultView_()) || getConfiguredDefaultView_();
   const initialView = user.canAccess && (permissions.modules || {})[requestedView]
     ? requestedView
     : getFirstAllowedView_(permissions);
@@ -192,22 +192,19 @@ function buildBootstrapForTemplate_(e) {
 
 function getFirstAllowedView_(permissions) {
   const modules = (permissions && permissions.modules) || {};
-  const priority = [
-    getConfiguredDefaultView_(),
-    GO_PES_V2.VIEWS.NEW_INGRESO,
-    GO_PES_V2.VIEWS.SEARCH,
-    GO_PES_V2.VIEWS.SEGUIMIENTO,
-    GO_PES_V2.VIEWS.ORGANIZACION,
-    GO_PES_V2.VIEWS.SOCIOS,
-    GO_PES_V2.VIEWS.INSTRUMENTO,
-    GO_PES_V2.VIEWS.HISTORIAL,
-    GO_PES_V2.VIEWS.USERS,
-    GO_PES_V2.VIEWS.CONFIG
-  ];
+  const priority = getModuleDefinitions_()
+    .filter(function(def) {
+      return def.navVisible !== false && def.enabled !== false;
+    })
+    .map(function(def) { return def.view || def.key; });
+  const configuredDefault = getConfiguredDefaultView_();
+  if (priority.indexOf(configuredDefault) === -1) {
+    priority.unshift(configuredDefault);
+  }
   for (var i = 0; i < priority.length; i++) {
     if (modules[priority[i]]) return priority[i];
   }
-  return getConfiguredDefaultView_();
+  return modules.inicio ? 'inicio' : configuredDefault;
 }
 
 function getAppBootstrap() {

@@ -4887,6 +4887,8 @@
       form.dataset.boundConfigSubmit = '1';
       form.addEventListener('submit', submitConfiguracionSection_);
     });
+
+    bindConfiguracionBrandingSection_();
   }
 
   function submitConfiguracionSection_(ev) {
@@ -4894,6 +4896,14 @@
     const form = ev.currentTarget;
     const section = form.dataset.configSection;
     if (!section) return;
+
+    if (section === 'branding') {
+      const validation = validateConfiguracionBrandingForm_(form);
+      if (!validation.ok) {
+        showError(validation.message || 'Revisa los datos de branding antes de guardar.');
+        return;
+      }
+    }
 
     const payload = collectConfiguracionSectionPayload_(section, form);
     const submitBtn = form.querySelector('button[type="submit"]');
@@ -5026,6 +5036,385 @@
     }
   }
 
+  function getBrandingColorDefinitions_() {
+    return [
+      { name: 'primaryColor', label: 'Color primario', fallback: '#214E8A', role: 'Color principal para titulos, foco y acentos de marca.' },
+      { name: 'secondaryColor', label: 'Color secundario', fallback: '#007C4A', role: 'Apoyo visual para acciones secundarias y estados positivos.' },
+      { name: 'accentColor', label: 'Color acento', fallback: '#03C2AE', role: 'Resalta detalles, chips y elementos destacados.' },
+      { name: 'loadingProgressColor', label: 'Color de progreso', fallback: '#8CC63F', role: 'Representa barras de carga, progreso y avance.' },
+      { name: 'lightBackground', label: 'Fondo claro', fallback: '#F7FAFC', role: 'Base para superficies claras y fondos administrativos.' },
+      { name: 'darkBackground', label: 'Fondo oscuro', fallback: '#0D2940', role: 'Superficie institucional para contraste alto.' }
+    ];
+  }
+
+  function normalizeHexColor_(value) {
+    const text = String(value == null ? '' : value).trim();
+    if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(text)) return '';
+    const compact = text.length === 4
+      ? `#${text[1]}${text[1]}${text[2]}${text[2]}${text[3]}${text[3]}`
+      : text;
+    return compact.toUpperCase();
+  }
+
+  function normalizeBrandingLogoDataUri_(value) {
+    const text = String(value == null ? '' : value).trim();
+    if (!text) return '';
+    if (/^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+$/i.test(text)) return text.replace(/\s+/g, '');
+    if (/^[A-Za-z0-9+/=\s]+$/.test(text) && text.replace(/\s+/g, '').length > 64) {
+      return `data:image/png;base64,${text.replace(/\s+/g, '')}`;
+    }
+    return '';
+  }
+
+  function renderConfigBrandingLogoCard_(name, label, value, tone) {
+    const previewLabel = tone === 'dark' ? 'Preview en superficie oscura' : 'Preview en superficie clara';
+    return `
+      <article class="config-branding-logo-card" data-branding-logo-card data-logo-input-name="${escapeHtml(name)}" data-logo-label="${escapeHtml(label)}" data-logo-tone="${escapeHtml(tone)}" data-logo-state="empty">
+        <div class="config-branding-card__head">
+          <div>
+            <h4>${escapeHtml(label)}</h4>
+            <p class="muted">${escapeHtml(previewLabel)}</p>
+          </div>
+          <span class="config-branding-state-pill" data-branding-logo-chip>Sin logo</span>
+        </div>
+        <div class="config-branding-logo-preview config-branding-logo-preview--${escapeHtml(tone)}" data-branding-logo-preview aria-label="${escapeHtml(previewLabel)}">
+          <img data-branding-logo-image alt="${escapeHtml(label)}" hidden>
+          <div class="config-branding-logo-empty" data-branding-logo-empty>
+            <span class="material-symbols-outlined">image</span>
+            <strong>Sin logo cargado</strong>
+            <p>Pega un data URI valido para ver la vista previa.</p>
+          </div>
+        </div>
+        <p class="config-branding-logo-status muted" data-branding-logo-status>Se mantiene editable el valor tecnico sin exponerlo como bloque principal.</p>
+        <details class="config-branding-source">
+          <summary>Editar data URI</summary>
+          <div class="config-branding-source__body">
+            <textarea name="${escapeHtml(name)}" rows="4" data-branding-logo-input>${escapeHtml(String(value == null ? '' : value))}</textarea>
+            <p class="muted">Se guarda en la misma configuracion actual. Si el valor no es valido, el guardado se bloquea con mensaje explicito.</p>
+          </div>
+        </details>
+      </article>
+    `;
+  }
+
+  function renderConfigBrandingColorCard_(definition, value) {
+    const normalized = normalizeHexColor_(value) || normalizeHexColor_(definition.fallback) || '#000000';
+    const rawValue = String(value == null ? '' : value).trim() || normalized;
+    return `
+      <article class="config-branding-color-card" data-branding-color-card data-color-name="${escapeHtml(definition.name)}" data-color-label="${escapeHtml(definition.label)}" data-color-fallback="${escapeHtml(normalized)}" data-color-role="${escapeHtml(definition.role)}" data-color-valid="true">
+        <div class="config-branding-card__head">
+          <div>
+            <h4>${escapeHtml(definition.label)}</h4>
+            <p class="muted">${escapeHtml(definition.role)}</p>
+          </div>
+          <span class="config-branding-color-card__value" data-branding-color-label>${escapeHtml(normalized)}</span>
+        </div>
+        <div class="config-branding-color-card__swatch" data-branding-color-swatch style="background:${escapeHtml(normalized)};"></div>
+        <div class="config-branding-color-card__controls">
+          <input type="color" value="${escapeHtml(normalized)}" data-branding-color-picker aria-label="${escapeHtml(definition.label)}">
+          <input name="${escapeHtml(definition.name)}" type="text" value="${escapeHtml(rawValue)}" data-branding-color-text spellcheck="false" inputmode="text" maxlength="7" placeholder="${escapeHtml(normalized)}" aria-label="${escapeHtml(definition.label)} hexadecimal">
+        </div>
+        <p class="config-branding-color-card__hint muted" data-branding-color-hint>${escapeHtml(definition.role)}</p>
+      </article>
+    `;
+  }
+
+  function renderConfigBrandingPreviewPanel_(section, appName, subtitle) {
+    const primary = normalizeHexColor_(section.primaryColor) || '#214E8A';
+    const secondary = normalizeHexColor_(section.secondaryColor) || '#007C4A';
+    const accent = normalizeHexColor_(section.accentColor) || '#03C2AE';
+    const progress = normalizeHexColor_(section.loadingProgressColor) || '#8CC63F';
+    const lightBackground = normalizeHexColor_(section.lightBackground) || '#F7FAFC';
+    const darkBackground = normalizeHexColor_(section.darkBackground) || '#0D2940';
+    return `
+      <aside class="config-branding-preview-panel">
+        <div class="config-branding-card__head">
+          <div>
+            <p class="eyebrow">Preview</p>
+            <h4>Identidad aplicada</h4>
+          </div>
+          <span class="config-branding-state-pill config-branding-state-pill--preview">En vivo</span>
+        </div>
+        <div class="config-branding-mini" data-branding-mini-preview style="--branding-primary:${escapeHtml(primary)};--branding-secondary:${escapeHtml(secondary)};--branding-accent:${escapeHtml(accent)};--branding-progress:${escapeHtml(progress)};--branding-light:${escapeHtml(lightBackground)};--branding-dark:${escapeHtml(darkBackground)};">
+          <section class="config-branding-mini__surface config-branding-mini__surface--light">
+            <div class="config-branding-mini__top">
+              <div class="config-branding-mini__logo config-branding-mini__logo--light" data-branding-preview-logo="light">
+                <img data-branding-preview-logo-image alt="Logo claro" hidden>
+                <span data-branding-preview-logo-empty>Logo claro</span>
+              </div>
+              <span class="config-branding-mini__badge">Primario</span>
+            </div>
+            <div class="config-branding-mini__card">
+              <strong>${escapeHtml(appName || 'Gestor Operativo PES')}</strong>
+              <p>${escapeHtml(subtitle || 'Vista rapida de marca')}</p>
+              <div class="config-branding-mini__chips">
+                <span class="config-branding-mini__chip">Acento</span>
+                <span class="config-branding-mini__chip config-branding-mini__chip--soft">Secundario</span>
+              </div>
+              <div class="config-branding-mini__progress"><span></span></div>
+            </div>
+          </section>
+          <section class="config-branding-mini__surface config-branding-mini__surface--dark">
+            <div class="config-branding-mini__top">
+              <div class="config-branding-mini__logo config-branding-mini__logo--dark" data-branding-preview-logo="dark">
+                <img data-branding-preview-logo-image alt="Logo oscuro" hidden>
+                <span data-branding-preview-logo-empty>Logo oscuro</span>
+              </div>
+              <span class="config-branding-mini__badge config-branding-mini__badge--dark">Fondo oscuro</span>
+            </div>
+            <div class="config-branding-mini__card config-branding-mini__card--dark">
+              <strong>Acciones y estados</strong>
+              <p>Combinacion rapida de paleta para validar contraste.</p>
+              <div class="config-branding-mini__chips">
+                <span class="config-branding-mini__chip config-branding-mini__chip--inverse">CTA</span>
+                <span class="config-branding-mini__chip config-branding-mini__chip--outline">Soporte</span>
+              </div>
+            </div>
+          </section>
+          <div class="config-branding-mini__legend">
+            ${getBrandingColorDefinitions_().map(def => `
+              <div class="config-branding-mini__legend-item">
+                <span class="config-branding-mini__legend-dot" data-branding-preview-dot="${escapeHtml(def.name)}" style="background:${escapeHtml(normalizeHexColor_(section[def.name]) || normalizeHexColor_(def.fallback) || '')};"></span>
+                <div>
+                  <strong>${escapeHtml(def.label)}</strong>
+                  <span data-branding-preview-value="${escapeHtml(def.name)}">${escapeHtml(normalizeHexColor_(section[def.name]) || normalizeHexColor_(def.fallback) || '')}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </aside>
+    `;
+  }
+
+  function bindConfiguracionBrandingSection_() {
+    const form = document.querySelector('#config-section-branding form[data-config-section="branding"]');
+    if (!form || form.dataset.boundBranding === '1') return;
+    form.dataset.boundBranding = '1';
+
+    form.querySelectorAll('[data-branding-logo-input]').forEach(input => {
+      input.addEventListener('input', () => {
+        updateConfiguracionBrandingLogoCard_(input.closest('[data-branding-logo-card]'), form);
+      });
+    });
+
+    form.querySelectorAll('[data-branding-color-card]').forEach(card => {
+      const textInput = card.querySelector('[data-branding-color-text]');
+      const pickerInput = card.querySelector('[data-branding-color-picker]');
+      if (pickerInput) {
+        pickerInput.addEventListener('input', () => {
+          if (textInput) textInput.value = pickerInput.value.toUpperCase();
+          updateConfiguracionBrandingColorCard_(card, form, true);
+        });
+      }
+      if (textInput) {
+        textInput.addEventListener('input', () => updateConfiguracionBrandingColorCard_(card, form, false));
+        textInput.addEventListener('blur', () => {
+          const normalized = normalizeHexColor_(textInput.value);
+          if (normalized) {
+            textInput.value = normalized;
+            updateConfiguracionBrandingColorCard_(card, form, false);
+          }
+        });
+      }
+      updateConfiguracionBrandingColorCard_(card, form, false);
+    });
+
+    form.querySelectorAll('[data-branding-logo-card]').forEach(card => {
+      updateConfiguracionBrandingLogoCard_(card, form);
+    });
+
+    updateConfiguracionBrandingPreviewPanel_(form);
+  }
+
+  function updateConfiguracionBrandingColorCard_(card, form, fromPicker) {
+    if (!card) return;
+    const textInput = card.querySelector('[data-branding-color-text]');
+    const pickerInput = card.querySelector('[data-branding-color-picker]');
+    const swatch = card.querySelector('[data-branding-color-swatch]');
+    const valueLabel = card.querySelector('[data-branding-color-label]');
+    const hint = card.querySelector('[data-branding-color-hint]');
+    const fallback = card.dataset.colorFallback || '#000000';
+    const role = card.dataset.colorRole || '';
+
+    if (fromPicker && pickerInput && textInput) {
+      textInput.value = pickerInput.value.toUpperCase();
+    }
+
+    const normalized = normalizeHexColor_(textInput ? textInput.value : '');
+    if (normalized) {
+      card.dataset.colorValid = 'true';
+      card.classList.remove('is-invalid');
+      if (pickerInput) pickerInput.value = normalized;
+      if (swatch) swatch.style.background = normalized;
+      if (valueLabel) valueLabel.textContent = normalized;
+      if (hint) hint.textContent = role;
+    } else {
+      card.dataset.colorValid = 'false';
+      card.classList.add('is-invalid');
+      if (swatch) swatch.style.background = 'linear-gradient(135deg, rgba(161,42,42,.14) 0%, rgba(161,42,42,.14) 44%, rgba(255,255,255,.85) 44%, rgba(255,255,255,.85) 56%, rgba(161,42,42,.14) 56%, rgba(161,42,42,.14) 100%)';
+      if (valueLabel) valueLabel.textContent = String((textInput && textInput.value) || fallback || '').trim() || fallback;
+      if (hint) hint.textContent = 'Valor invalido. Usa formato #RRGGBB o #RGB.';
+    }
+
+    updateConfiguracionBrandingPreviewPanel_(form);
+  }
+
+  function updateConfiguracionBrandingLogoCard_(card, form) {
+    if (!card) return;
+    const input = card.querySelector('[data-branding-logo-input]');
+    const preview = card.querySelector('[data-branding-logo-preview]');
+    const image = card.querySelector('[data-branding-logo-image]');
+    const empty = card.querySelector('[data-branding-logo-empty]');
+    const chip = card.querySelector('[data-branding-logo-chip]');
+    const status = card.querySelector('[data-branding-logo-status]');
+    const rawValue = String(input && input.value || '').trim();
+    const normalized = normalizeBrandingLogoDataUri_(rawValue);
+
+    const setState = (state, chipText, title, body) => {
+      card.dataset.logoState = state;
+      if (chip) chip.textContent = chipText;
+      if (status) status.textContent = body;
+      if (preview) preview.dataset.logoState = state;
+      if (empty) {
+        const titleEl = empty.querySelector('strong');
+        const bodyEl = empty.querySelector('p');
+        if (titleEl) titleEl.textContent = title;
+        if (bodyEl) bodyEl.textContent = body;
+      }
+    };
+
+    if (!rawValue) {
+      if (image) {
+        image.hidden = true;
+        image.removeAttribute('src');
+      }
+      if (empty) empty.hidden = false;
+      setState('empty', 'Sin logo', 'Sin logo cargado', 'Pega un data URI valido para ver la vista previa.');
+      updateConfiguracionBrandingPreviewPanel_(form);
+      return;
+    }
+
+    if (!normalized) {
+      if (image) {
+        image.hidden = true;
+        image.removeAttribute('src');
+      }
+      if (empty) empty.hidden = false;
+      setState('invalid', 'Invalido', 'Logo no valido', 'El valor debe ser un data URI de imagen base64 o base64 puro compatible.');
+      updateConfiguracionBrandingPreviewPanel_(form);
+      return;
+    }
+
+    if (!image) return;
+    if (empty) empty.hidden = false;
+    image.hidden = true;
+    setState('loading', 'Validando', 'Validando logo', 'Verificando que la imagen pueda renderizarse sin romper la UI.');
+    image.onload = () => {
+      if (String(input && input.value || '').trim() !== rawValue) return;
+      image.hidden = false;
+      if (empty) empty.hidden = true;
+      setState('valid', 'Valido', 'Logo listo', 'Vista previa cargada correctamente.');
+      updateConfiguracionBrandingPreviewPanel_(form);
+    };
+    image.onerror = () => {
+      if (String(input && input.value || '').trim() !== rawValue) return;
+      image.hidden = true;
+      image.removeAttribute('src');
+      if (empty) empty.hidden = false;
+      setState('invalid', 'Invalido', 'Logo no valido', 'El contenido parece imagen, pero no pudo renderizarse.');
+      updateConfiguracionBrandingPreviewPanel_(form);
+    };
+    image.src = normalized;
+  }
+
+  function updateConfiguracionBrandingPreviewLogo_(slot, sourceCard, fallbackText) {
+    if (!slot) return;
+    const image = slot.querySelector('[data-branding-preview-logo-image]');
+    const empty = slot.querySelector('[data-branding-preview-logo-empty]');
+    const sourceImage = sourceCard ? sourceCard.querySelector('[data-branding-logo-image]') : null;
+    const isValid = sourceCard && sourceCard.dataset.logoState === 'valid' && sourceImage && sourceImage.getAttribute('src');
+
+    if (isValid) {
+      if (image) {
+        image.src = sourceImage.getAttribute('src');
+        image.hidden = false;
+      }
+      if (empty) empty.hidden = true;
+      return;
+    }
+
+    if (image) {
+      image.hidden = true;
+      image.removeAttribute('src');
+    }
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = fallbackText;
+    }
+  }
+
+  function updateConfiguracionBrandingPreviewPanel_(form) {
+    if (!form) return;
+    const preview = form.querySelector('[data-branding-mini-preview]');
+    if (!preview) return;
+
+    const getValue = name => {
+      const field = form.querySelector(`[name="${name}"]`);
+      return field ? field.value : '';
+    };
+
+    const definitions = getBrandingColorDefinitions_();
+    definitions.forEach(def => {
+      const normalized = normalizeHexColor_(getValue(def.name)) || normalizeHexColor_(def.fallback) || '#000000';
+      const previewValue = preview.querySelector(`[data-branding-preview-value="${def.name}"]`);
+      const previewDot = preview.querySelector(`[data-branding-preview-dot="${def.name}"]`);
+      if (previewValue) previewValue.textContent = normalized;
+      if (previewDot) previewDot.style.background = normalized;
+    });
+
+    preview.style.setProperty('--branding-primary', normalizeHexColor_(getValue('primaryColor')) || '#214E8A');
+    preview.style.setProperty('--branding-secondary', normalizeHexColor_(getValue('secondaryColor')) || '#007C4A');
+    preview.style.setProperty('--branding-accent', normalizeHexColor_(getValue('accentColor')) || '#03C2AE');
+    preview.style.setProperty('--branding-progress', normalizeHexColor_(getValue('loadingProgressColor')) || '#8CC63F');
+    preview.style.setProperty('--branding-light', normalizeHexColor_(getValue('lightBackground')) || '#F7FAFC');
+    preview.style.setProperty('--branding-dark', normalizeHexColor_(getValue('darkBackground')) || '#0D2940');
+
+    updateConfiguracionBrandingPreviewLogo_(
+      preview.querySelector('[data-branding-preview-logo="light"]'),
+      form.querySelector('[data-logo-input-name="logoLightDataUri"]'),
+      'Logo claro'
+    );
+    updateConfiguracionBrandingPreviewLogo_(
+      preview.querySelector('[data-branding-preview-logo="dark"]'),
+      form.querySelector('[data-logo-input-name="logoDarkDataUri"]'),
+      'Logo oscuro'
+    );
+  }
+
+  function validateConfiguracionBrandingForm_(form) {
+    const invalidLogoCard = Array.from(form.querySelectorAll('[data-branding-logo-card]')).find(card => {
+      const input = card.querySelector('[data-branding-logo-input]');
+      return !!String(input && input.value || '').trim() && card.dataset.logoState !== 'valid';
+    });
+    if (invalidLogoCard) {
+      return {
+        ok: false,
+        message: `Revisa ${invalidLogoCard.dataset.logoLabel || 'el logo'}: el data URI no es valido o no pudo renderizarse.`
+      };
+    }
+
+    const invalidColorCard = Array.from(form.querySelectorAll('[data-branding-color-card]')).find(card => card.dataset.colorValid === 'false');
+    if (invalidColorCard) {
+      return {
+        ok: false,
+        message: `Revisa ${invalidColorCard.dataset.colorLabel || 'un color'}: usa un hexadecimal valido como #214E8A.`
+      };
+    }
+
+    return { ok: true };
+  }
+
   function renderConfigGeneralSection_(section) {
     return `
       <section class="config-section" id="config-section-general">
@@ -5047,19 +5436,45 @@
   }
 
   function renderConfigBrandingSection_(section) {
+    const general = getSystemGeneralConfig_();
+    const colorCards = getBrandingColorDefinitions_().map(def => renderConfigBrandingColorCard_(def, section[def.name])).join('');
     return `
       <section class="config-section" id="config-section-branding">
-        <div class="config-section__head"><p class="eyebrow">Branding</p><h3>Identidad visual global</h3></div>
+        <div class="config-section__head">
+          <p class="eyebrow">Branding</p>
+          <h3>Identidad visual global</h3>
+          <p class="muted">Gestiona logos y paleta desde una vista util para validar marca antes de guardar.</p>
+        </div>
         <form class="config-form" data-config-section="branding">
-          <div class="config-grid">
-            ${configTextarea_('logoLightDataUri', 'Logo claro (data URI opcional)', section.logoLightDataUri || '', 'field--full', 4)}
-            ${configTextarea_('logoDarkDataUri', 'Logo oscuro (data URI opcional)', section.logoDarkDataUri || '', 'field--full', 4)}
-            ${configInput_('primaryColor', 'Color primario', section.primaryColor || '#214E8A', 'color')}
-            ${configInput_('secondaryColor', 'Color secundario', section.secondaryColor || '#007C4A', 'color')}
-            ${configInput_('accentColor', 'Color acento', section.accentColor || '#03C2AE', 'color')}
-            ${configInput_('loadingProgressColor', 'Color de progreso', section.loadingProgressColor || '#8CC63F', 'color')}
-            ${configInput_('lightBackground', 'Fondo claro', section.lightBackground || '#F7FAFC', 'color')}
-            ${configInput_('darkBackground', 'Fondo oscuro', section.darkBackground || '#0D2940', 'color')}
+          <div class="config-branding-layout">
+            <div class="config-branding-stack">
+              <section class="config-branding-block">
+                <div class="config-branding-card__head">
+                  <div>
+                    <p class="eyebrow">Logos</p>
+                    <h4>Aplicacion institucional</h4>
+                  </div>
+                  <span class="config-branding-state-pill">Editable</span>
+                </div>
+                <div class="config-branding-logo-grid">
+                  ${renderConfigBrandingLogoCard_('logoLightDataUri', 'Logo claro', section.logoLightDataUri || '', 'light')}
+                  ${renderConfigBrandingLogoCard_('logoDarkDataUri', 'Logo oscuro', section.logoDarkDataUri || '', 'dark')}
+                </div>
+              </section>
+              <section class="config-branding-block">
+                <div class="config-branding-card__head">
+                  <div>
+                    <p class="eyebrow">Paleta</p>
+                    <h4>Colores operativos</h4>
+                  </div>
+                  <span class="config-branding-state-pill">6 roles</span>
+                </div>
+                <div class="config-branding-palette-grid">
+                  ${colorCards}
+                </div>
+              </section>
+            </div>
+            ${renderConfigBrandingPreviewPanel_(section, general.appName || '', general.programName || general.appSubtitle || '')}
           </div>
           <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Branding</button></div>
         </form>

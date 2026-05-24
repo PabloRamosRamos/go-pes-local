@@ -59,7 +59,8 @@
     message: '',
     minDurationMs: 5000,
     rafId: 0,
-    hideTimerId: 0
+    hideTimerId: 0,
+    forceHideTimerId: 0
   };
 
   function getSplashElements_() {
@@ -148,10 +149,27 @@
     if (els.text) els.text.textContent = APP_SPLASH_STATE.message || getSplashLoadingText_();
   }
 
+  function clearSplashTimers_() {
+    window.clearTimeout(APP_SPLASH_STATE.hideTimerId);
+    window.clearTimeout(APP_SPLASH_STATE.forceHideTimerId);
+    APP_SPLASH_STATE.hideTimerId = 0;
+    APP_SPLASH_STATE.forceHideTimerId = 0;
+  }
+
+  function getSplashElapsed_(now) {
+    const currentTime = typeof now === 'number' ? now : performance.now();
+    return Math.max(0, currentTime - (APP_SPLASH_STATE.startedAt || currentTime));
+  }
+
   function finalizeSplashHide_() {
     const els = getSplashElements_();
     if (!els) return;
 
+    clearSplashTimers_();
+    if (APP_SPLASH_STATE.rafId) {
+      window.cancelAnimationFrame(APP_SPLASH_STATE.rafId);
+      APP_SPLASH_STATE.rafId = 0;
+    }
     APP_SPLASH_STATE.visible = false;
     APP_SPLASH_STATE.hideRequested = false;
     APP_SPLASH_STATE.progress = 100;
@@ -160,10 +178,23 @@
     els.root.setAttribute('aria-busy', 'false');
     els.root.classList.add('is-hidden');
 
-    window.clearTimeout(APP_SPLASH_STATE.hideTimerId);
     APP_SPLASH_STATE.hideTimerId = window.setTimeout(() => {
       els.root.style.display = 'none';
+      APP_SPLASH_STATE.hideTimerId = 0;
     }, 260);
+  }
+
+  function scheduleSplashForceHide_() {
+    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
+    const remainingMs = Math.max(0, minDurationMs - getSplashElapsed_());
+
+    window.clearTimeout(APP_SPLASH_STATE.forceHideTimerId);
+    APP_SPLASH_STATE.forceHideTimerId = window.setTimeout(() => {
+      if (!APP_SPLASH_STATE.visible || !APP_SPLASH_STATE.hideRequested) return;
+      APP_SPLASH_STATE.progress = 100;
+      renderSplashProgress_();
+      finalizeSplashHide_();
+    }, remainingMs + 260);
   }
 
   function tickSplashProgress_(now) {
@@ -208,14 +239,14 @@
     const els = getSplashElements_();
     if (!els) return;
 
-    window.clearTimeout(APP_SPLASH_STATE.hideTimerId);
+    clearSplashTimers_();
     APP_SPLASH_STATE.minDurationMs = getSplashMinDurationMs_();
     APP_SPLASH_STATE.message = message || APP_SPLASH_STATE.message || getSplashLoadingText_();
+    APP_SPLASH_STATE.hideRequested = false;
 
     if (!APP_SPLASH_STATE.visible) {
       APP_SPLASH_STATE.startedAt = performance.now();
       APP_SPLASH_STATE.progress = 0;
-      APP_SPLASH_STATE.hideRequested = false;
       APP_SPLASH_STATE.visible = true;
       els.root.classList.remove('is-hidden');
       els.root.style.display = 'grid';
@@ -233,6 +264,7 @@
 
     APP_SPLASH_STATE.message = APP_SPLASH_STATE.message || getSplashLoadingText_();
     APP_SPLASH_STATE.hideRequested = true;
+    scheduleSplashForceHide_();
     renderSplashProgress_();
     ensureSplashLoop_();
   }

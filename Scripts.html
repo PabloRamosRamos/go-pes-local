@@ -2,10 +2,11 @@
 (() => {
   const root = document.getElementById('app');
   const BOOTSTRAP = root ? JSON.parse(root.dataset.bootstrap || '{}') : {};
-  // Configuracion temporal del panel Looker Studio de Socios.
-  const SOCIOS_LOOKER_STUDIO_EMBED_URL =
+  const TEMPLATE_RUNTIME_CONFIG =
+    (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.runtimeConfig) || {};
+  let SOCIOS_LOOKER_STUDIO_EMBED_URL =
     (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.sociosLookerStudioEmbedUrl) || '';
-  const HOME_LOOKER_STUDIO_EMBED_URL =
+  let HOME_LOOKER_STUDIO_EMBED_URL =
     (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.homeLookerStudioEmbedUrl) || '';
   const THEME_STORAGE_KEY = 'goPesTheme';
 
@@ -16,6 +17,7 @@
       user: BOOTSTRAP.user || {},
       theme: document.documentElement.dataset.theme || 'light',
       permissions: BOOTSTRAP.permissions || {},
+      systemConfig: BOOTSTRAP.systemConfig || TEMPLATE_RUNTIME_CONFIG || {},
       moduleDefinitions: BOOTSTRAP.moduleDefinitions || [],
       activeView: BOOTSTRAP.initialView || 'inicio',
       currentFicha: null,
@@ -37,6 +39,8 @@
       sociosOrganizacionesFetchedAt: 0,
       pendingSociosRows: [],
       ingresoMatches: [],
+      configSectionOrder: [],
+      configLoadedAt: 0,
       renderedViews: {},
       catalogStatus: {
         app: false,
@@ -119,6 +123,17 @@
     ],
   };
 
+  const CONFIG_SECTIONS = [
+    { key: 'general', label: 'General', icon: 'tune' },
+    { key: 'branding', label: 'Branding', icon: 'palette' },
+    { key: 'accessModules', label: 'Acceso y módulos', icon: 'account_tree' },
+    { key: 'socios', label: 'Socios', icon: 'badge' },
+    { key: 'beneficios', label: 'Beneficios', icon: 'handshake' },
+    { key: 'alertsInicio', label: 'Alertas e Inicio', icon: 'notifications_active' },
+    { key: 'integrations', label: 'Integraciones', icon: 'hub' },
+    { key: 'technical', label: 'Administración técnica', icon: 'admin_panel_settings' }
+  ];
+
   document.addEventListener('DOMContentLoaded', init);
 
   function init() {
@@ -133,6 +148,8 @@
     bindGlobalNav();
     initSidebarCollapse_();
     hydrateStaticUser();
+    applySystemConfigUi_();
+    applyModuleDefinitionsUi_();
     bindUserMenu_();
     hydrateAppVersion_();
     hydrateLogo();
@@ -140,13 +157,15 @@
     renderHomeTiles();
     toggleTopQuickActions_(APP.state.activeView);
 
-    showAppLoading('Iniciando Gestor Operativo');
+    showAppLoading(getLoadingText_());
 
     Promise.resolve().then(() => {
       APP.state.user = BOOTSTRAP.user || APP.state.user;
       APP.state.permissions = BOOTSTRAP.permissions || APP.state.permissions;
       mergeCatalogs_(BOOTSTRAP.catalogs || {});
       hydrateStaticUser();
+      applySystemConfigUi_();
+      applyModuleDefinitionsUi_();
       applyPermissions();
       route(APP.state.activeView, BOOTSTRAP.query || {});
 
@@ -252,6 +271,7 @@
       }
     }
     updateThemeToggleUi_();
+    hydrateLogo();
   }
 
   function hydrateTheme_() {
@@ -314,6 +334,12 @@
   function hydrateAppVersion_() {
     const el = document.getElementById('app-version');
     if (!el) return;
+    if (!shouldShowVisibleVersionClient_()) {
+      el.textContent = '';
+      el.title = '';
+      el.classList.add('is-hidden');
+      return;
+    }
     const buildInfo = BOOTSTRAP.buildInfo || {};
     const path = String(window.location.pathname || '').toLowerCase();
     const channel = path.endsWith('/dev')
@@ -356,10 +382,10 @@
     const img = document.getElementById('appLogo');
     if (!img) return;
 
-    const logo =
-      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) ||
-      img.getAttribute('src') ||
-      '';
+    const branding = (APP.state.systemConfig && APP.state.systemConfig.branding) || {};
+    const logo = isDarkTheme_()
+      ? (branding.logoDarkDataUri || branding.logoLightDataUri || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDarkDataUri) || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) || img.getAttribute('src') || '')
+      : (branding.logoLightDataUri || branding.logoDarkDataUri || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) || img.getAttribute('src') || '');
 
     if (logo) {
       img.src = logo;
@@ -585,7 +611,7 @@
     window.GO_PES_INICIO.render({
       root,
       escapeHtml,
-      homeEmbedUrl: HOME_LOOKER_STUDIO_EMBED_URL
+      homeEmbedUrl: getHomeDashboardUrl_()
     });
   }
 
@@ -615,6 +641,10 @@
         break;
       case 'socios':
         renderSociosView_();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'configuracion':
+        renderConfiguracionView_();
         APP.state.renderedViews[view] = true;
         break;
       default:
@@ -785,6 +815,7 @@
   }
 
   function applyPermissions() {
+    applyModuleDefinitionsUi_();
     document.querySelectorAll('[data-view]').forEach(el => {
       const view = el.dataset.view;
       const allowed = canOpenView_(view);
@@ -806,6 +837,10 @@
     if (usersView && !APP.state.permissions.canManageUsers) {
       usersView.innerHTML = '<div class="empty-state">No tienes permisos para administrar usuarios.</div>';
     }
+    const configView = document.getElementById('view-configuracion');
+    if (configView && !APP.state.permissions.canManageConfig) {
+      configView.innerHTML = '<div class="empty-state">No tienes permisos para acceder a Configuración.</div>';
+    }
 
     fillSelect(document.getElementById('user-role-input'), USER_ROLE_OPTIONS, 'Seleccionar perfil');
     fillSelect(document.getElementById('user-edit-role-input'), USER_ROLE_OPTIONS, 'Seleccionar perfil');
@@ -814,14 +849,14 @@
     bindUserRoleVisibility_('user-edit-role-input', 'user-edit-modules-panel', 'user-edit-modules-input');
     const createRoleSelect = document.getElementById('user-role-input');
     if (createRoleSelect && !createRoleSelect.value) {
-      createRoleSelect.value = 'operador';
+      createRoleSelect.value = getDefaultManagedUserProfile_();
     }
     renderUserModuleOptions_();
     syncUserModulesVisibility_('user-role-input', 'user-modules-field', 'user-modules-input');
   }
 
   function getAssignableModuleDefinitions_() {
-    return (APP.state.moduleDefinitions || []).filter(module => !module.superOnly && module.assignable !== false);
+    return (APP.state.moduleDefinitions || []).filter(module => !module.superOnly && module.assignable !== false && module.state !== 'hidden');
   }
 
   function normalizeEditableUserProfile_(value) {
@@ -881,6 +916,7 @@
     if (!APP.state.user || !APP.state.user.canAccess) return false;
     if (!view) return false;
     if (view === 'usuarios') return !!APP.state.permissions.canManageUsers;
+    if (view === 'configuracion') return !!APP.state.permissions.canManageConfig;
     if (view === 'ficha') return !!((APP.state.permissions.modules || {}).ficha);
     return !!((APP.state.permissions.modules || {})[view]);
   }
@@ -1078,6 +1114,7 @@
 
       if (view === 'historial') loadHistorial();
       if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
+      if (view === 'configuracion' && APP.state.permissions.canManageConfig) loadConfiguracionView_();
       if (view === 'nuevo-ingreso') {
         renderNuevoIngresoView_();
       }
@@ -1342,7 +1379,8 @@
       'socios',
       'instrumento',
       'historial',
-      'usuarios'
+      'usuarios',
+      'configuracion'
     ];
     return priority.find(view => modules[view]) || '';
   }
@@ -1826,7 +1864,7 @@
       btn.addEventListener('click', closeOrganizacionSocioCargoModal_);
     });
 
-    fillSelect(document.getElementById('org-socio-cargo-select'), ORGANIZACION_SOCIO_CARGOS, 'Seleccionar cargo');
+    fillSelect(document.getElementById('org-socio-cargo-select'), getSocioCargoOptions_(), 'Seleccionar cargo');
 
     const form = document.getElementById('org-edit-form');
     if (form) {
@@ -2078,8 +2116,9 @@
     if (nombre) nombre.textContent = socio.nombre_socio || 'Socio';
     if (run) run.textContent = socio.run_socio || '';
     if (actual) actual.textContent = socio.cargo || 'Sin cargo';
-    fillSelect(select, ORGANIZACION_SOCIO_CARGOS, 'Seleccionar cargo');
-    select.value = ORGANIZACION_SOCIO_CARGOS.includes(socio.cargo) ? socio.cargo : 'Socio';
+    const cargos = getSocioCargoOptions_();
+    fillSelect(select, cargos, 'Seleccionar cargo');
+    select.value = cargos.includes(socio.cargo) ? socio.cargo : 'Socio';
 
     modal.classList.remove('is-hidden');
   }
@@ -2099,7 +2138,7 @@
       return;
     }
 
-    if (!ORGANIZACION_SOCIO_CARGOS.includes(cargo)) {
+    if (!getSocioCargoOptions_().includes(cargo)) {
       showError('Debes seleccionar un cargo válido.');
       return;
     }
@@ -2898,6 +2937,8 @@
   function renderSociosView_() {
     const root = document.getElementById('socios-root');
     if (!root) return;
+    const dashboardUrl = getSociosDashboardUrl_();
+    const dashboardHeight = getSociosDashboardHeight_();
 
     root.innerHTML = `
       <div class="socios-shell">
@@ -2918,8 +2959,8 @@
         </div>
 
         <div class="socios-embed-panel">
-          ${SOCIOS_LOOKER_STUDIO_EMBED_URL
-            ? `<iframe class="socios-embed" width="600" height="443" src="${escapeHtml(SOCIOS_LOOKER_STUDIO_EMBED_URL)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" scrolling="no" title="Panel de socios"></iframe>`
+          ${dashboardUrl
+            ? `<iframe class="socios-embed" width="600" height="${escapeHtml(String(dashboardHeight || 443))}" src="${escapeHtml(dashboardUrl)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" scrolling="no" title="Panel de socios"></iframe>`
             : `<div class="socios-embed socios-embed--empty"><span class="material-symbols-outlined">analytics</span><strong>Panel Looker Studio pendiente de configuración</strong><span>Define la URL en <code>SOCIOS_LOOKER_STUDIO_EMBED_URL</code> para mostrar el panel embebido.</span></div>`}
         </div>
 
@@ -3009,7 +3050,7 @@
               <label>Cargo</label>
               <select id="socios-manual-cargo">
                 <option value="">Seleccionar cargo</option>
-                ${ORGANIZACION_SOCIO_CARGOS.map(cargo => `<option value="${escapeHtml(cargo)}">${escapeHtml(cargo)}</option>`).join('')}
+                ${getSocioCargoOptions_().map(cargo => `<option value="${escapeHtml(cargo)}">${escapeHtml(cargo)}</option>`).join('')}
               </select>
             </div>
             <div class="field field--full"><label>Dirección socio</label><input id="socios-manual-direccion" type="text"></div>
@@ -3129,7 +3170,7 @@
       showSociosManualFeedback_('Debes indicar el nombre del socio.', 'error');
       return;
     }
-    if (!row.cargo || !ORGANIZACION_SOCIO_CARGOS.includes(row.cargo)) {
+    if (!row.cargo || !getSocioCargoOptions_().includes(row.cargo)) {
       showSociosManualFeedback_('Debes seleccionar un cargo válido.', 'error');
       return;
     }
@@ -4601,6 +4642,712 @@
 
     closeAvanceHitoModal_();
     lockAvanceActions_(true);
+  }
+
+  function getSystemConfig_() {
+    return APP.state.systemConfig || BOOTSTRAP.systemConfig || TEMPLATE_RUNTIME_CONFIG || {};
+  }
+
+  function getSystemGeneralConfig_() {
+    return getSystemConfig_().general || {};
+  }
+
+  function getSystemBrandingConfig_() {
+    return getSystemConfig_().branding || {};
+  }
+
+  function shouldShowVisibleVersionClient_() {
+    const general = getSystemGeneralConfig_();
+    return general.showVisibleVersion !== false;
+  }
+
+  function getLoadingText_() {
+    return getSystemGeneralConfig_().loadingText || 'Iniciando Gestor Operativo';
+  }
+
+  function getAllowedUserDomain_() {
+    return String((((getSystemConfig_().accessModules || {}).allowedDomain) || 'providencia.cl')).trim().replace(/^@+/, '') || 'providencia.cl';
+  }
+
+  function initUserEmailField_() {
+    const input = document.getElementById('user-email-local');
+    if (!input || input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+
+    const normalizeLocal = () => {
+      const raw = String(input.value || '').trim().toLowerCase().replace(/\s+/g, '');
+      const domain = getAllowedUserDomain_();
+      if (!raw) {
+        input.value = '';
+        return;
+      }
+
+      const parts = raw.split('@').filter(Boolean);
+      if (parts.length === 1) {
+        input.value = parts[0];
+        return;
+      }
+
+      if (parts.length === 2 && parts[1] === domain) {
+        input.value = parts[0];
+      }
+    };
+
+    input.addEventListener('blur', normalizeLocal);
+    input.addEventListener('paste', () => setTimeout(normalizeLocal, 0));
+  }
+
+  function buildProvidenciaEmailFromInput_() {
+    const input = document.getElementById('user-email-local');
+    const raw = String(input?.value || '').trim().toLowerCase().replace(/\s+/g, '');
+    const domain = getAllowedUserDomain_();
+    if (!raw) throw new Error('Debes ingresar el email del usuario.');
+
+    let localPart = raw;
+    if (raw.includes('@')) {
+      const parts = raw.split('@').filter(Boolean);
+      if (parts.length !== 2 || parts[1] !== domain) {
+        throw new Error(`Solo se permiten usuarios con correo @${domain}.`);
+      }
+      localPart = parts[0];
+    }
+
+    if (!/^[a-z0-9._-]+$/.test(localPart)) {
+      throw new Error('El correo solo puede contener letras, números, puntos, guiones y guion bajo.');
+    }
+
+    if (input) input.value = localPart;
+    return `${localPart}@${domain}`;
+  }
+
+  function getDefaultManagedUserProfile_() {
+    const profile = String((((getSystemConfig_().accessModules || {}).defaultUserProfile) || 'operador')).trim().toLowerCase();
+    return ['visor', 'operador', 'coordinador'].includes(profile) ? profile : 'operador';
+  }
+
+  function getHomeDashboardUrl_() {
+    return (((getSystemConfig_().integrations || {}).homeDashboardUrl) || HOME_LOOKER_STUDIO_EMBED_URL || '').trim();
+  }
+
+  function getSociosDashboardUrl_() {
+    return (((getSystemConfig_().integrations || {}).sociosDashboardUrl) || SOCIOS_LOOKER_STUDIO_EMBED_URL || '').trim();
+  }
+
+  function getSociosDashboardHeight_() {
+    const value = Number((((getSystemConfig_().socios || {}).dashboardHeight) || 443));
+    return Number.isFinite(value) && value > 0 ? value : 443;
+  }
+
+  function getSocioCargoOptions_() {
+    const configured = (((getSystemConfig_().socios || {}).allowedRoles) || []).filter(Boolean);
+    return configured.length ? configured : ORGANIZACION_SOCIO_CARGOS.slice();
+  }
+
+  function getViewDefinition_(view) {
+    return (APP.state.moduleDefinitions || []).find(module => module.view === view || module.key === view) || null;
+  }
+
+  function getViewLabel_(view, fallback) {
+    const def = getViewDefinition_(view);
+    return (def && def.label) || fallback || friendlyViewName_(view);
+  }
+
+  function applySystemConfigUi_() {
+    const config = getSystemConfig_();
+    const general = config.general || {};
+    const branding = config.branding || {};
+    const heroTitle = document.querySelector('.hero__title');
+    const heroSubtitle = document.querySelector('.hero__subtitle');
+    const splashText = document.querySelector('#app-loading .app-loading__text');
+    const contentText = document.querySelector('#content-loading .content-loading__text');
+    const emailSuffix = document.querySelector('.email-input-group__suffix');
+    const rootEl = document.documentElement;
+
+    if (heroTitle) heroTitle.textContent = general.appName || 'Gestor Operativo PES';
+    if (heroSubtitle) heroSubtitle.textContent = [
+      general.programName || '',
+      general.appSubtitle || ''
+    ].filter(Boolean).join(' · ');
+    if (splashText) splashText.textContent = getLoadingText_();
+    if (contentText) contentText.textContent = getLoadingText_();
+    if (emailSuffix) emailSuffix.textContent = '@' + getAllowedUserDomain_();
+
+    if (rootEl) {
+      if (branding.primaryColor) rootEl.style.setProperty('--brand-blue', branding.primaryColor);
+      if (branding.secondaryColor) rootEl.style.setProperty('--brand-green', branding.secondaryColor);
+      if (branding.accentColor) rootEl.style.setProperty('--brand-teal', branding.accentColor);
+      if (branding.lightBackground) rootEl.style.setProperty('--bg', branding.lightBackground);
+    }
+
+    HOME_LOOKER_STUDIO_EMBED_URL = getHomeDashboardUrl_();
+    SOCIOS_LOOKER_STUDIO_EMBED_URL = getSociosDashboardUrl_();
+  }
+
+  function applyModuleDefinitionsUi_() {
+    const sidebar = document.querySelector('.sidebar');
+    const version = document.getElementById('app-version');
+    if (!sidebar) return;
+
+    const buttons = Array.from(sidebar.querySelectorAll('.nav-btn'));
+    const defs = (APP.state.moduleDefinitions || []).slice().sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+    const defMap = defs.reduce((acc, def) => {
+      acc[def.view || def.key] = def;
+      return acc;
+    }, {});
+
+    buttons.forEach(button => {
+      const view = button.dataset.view;
+      const def = defMap[view];
+      if (!def) return;
+      const label = def.label || view;
+      const navLabel = button.querySelector('.nav-label');
+      if (navLabel) navLabel.textContent = label;
+      button.title = label;
+    });
+
+    defs.forEach(def => {
+      const button = sidebar.querySelector(`.nav-btn[data-view="${def.view || def.key}"]`);
+      if (!button || !version) return;
+      sidebar.insertBefore(button, version);
+    });
+
+    renderQuickActions();
+    renderHomeTiles();
+  }
+
+  function renderConfiguracionView_() {
+    const root = document.getElementById('configuracion-root');
+    if (!root) return;
+    root.innerHTML = `
+      <div class="config-shell">
+        <div class="section-head config-head">
+          <div>
+            <p class="eyebrow">Administración global</p>
+            <h2>Configuración</h2>
+            <p class="muted">Centraliza parámetros globales y semiglobales del sistema. Este módulo es exclusivo para superuser.</p>
+          </div>
+        </div>
+        <div class="config-layout">
+          <aside class="config-nav" id="config-nav"></aside>
+          <div class="config-content" id="config-content">
+            <div class="empty-state">Cargando configuración...</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function loadConfiguracionView_() {
+    const root = document.getElementById('configuracion-root');
+    if (!root || !APP.state.permissions.canManageConfig) return;
+
+    showContentLoading('Cargando configuración...');
+    api('getSystemConfigClient').then(data => {
+      APP.state.systemConfig = (data && data.config) || APP.state.systemConfig || {};
+      APP.state.moduleDefinitions = (data && data.moduleDefinitions) || APP.state.moduleDefinitions || [];
+      APP.state.configSectionOrder = (data && data.sectionOrder) || CONFIG_SECTIONS.map(section => section.key);
+      APP.state.configLoadedAt = Date.now();
+      applySystemConfigUi_();
+      applyModuleDefinitionsUi_();
+      renderConfiguracionSections_();
+    }).catch(err => {
+      const content = document.getElementById('config-content');
+      if (content) content.innerHTML = '<div class="empty-state">No fue posible cargar la configuración.</div>';
+      showError(err);
+    }).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function renderConfiguracionSections_() {
+    const nav = document.getElementById('config-nav');
+    const content = document.getElementById('config-content');
+    const config = getSystemConfig_();
+    if (!nav || !content) return;
+
+    nav.innerHTML = CONFIG_SECTIONS.map(section => `
+      <button type="button" class="config-nav__item" data-config-anchor="${escapeHtml(section.key)}">
+        <span class="material-symbols-outlined">${escapeHtml(section.icon)}</span>
+        <span>${escapeHtml(section.label)}</span>
+      </button>
+    `).join('');
+
+    content.innerHTML = `
+      ${renderConfigGeneralSection_(config.general || {})}
+      ${renderConfigBrandingSection_(config.branding || {})}
+      ${renderConfigAccessSection_(config.accessModules || {})}
+      ${renderConfigSociosSection_(config.socios || {})}
+      ${renderConfigBeneficiosSection_(config.beneficios || {})}
+      ${renderConfigAlertsInicioSection_(config.alertsInicio || {})}
+      ${renderConfigIntegrationsSection_(config.integrations || {})}
+      ${renderConfigTechnicalSection_(config.technical || {})}
+    `;
+
+    bindConfiguracionView_();
+  }
+
+  function bindConfiguracionView_() {
+    document.querySelectorAll('[data-config-anchor]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.getElementById(`config-section-${btn.dataset.configAnchor}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
+    document.querySelectorAll('.config-section form').forEach(form => {
+      if (form.dataset.boundConfigSubmit === '1') return;
+      form.dataset.boundConfigSubmit = '1';
+      form.addEventListener('submit', submitConfiguracionSection_);
+    });
+  }
+
+  function submitConfiguracionSection_(ev) {
+    ev.preventDefault();
+    const form = ev.currentTarget;
+    const section = form.dataset.configSection;
+    if (!section) return;
+
+    const payload = collectConfiguracionSectionPayload_(section, form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
+
+    showContentLoading('Guardando configuración...');
+    api('saveSystemConfigSection', { section, data: payload }).then(res => {
+      APP.state.systemConfig = (res && res.config) || APP.state.systemConfig || {};
+      APP.state.moduleDefinitions = (res && res.moduleDefinitions) || APP.state.moduleDefinitions || [];
+      BOOTSTRAP.systemConfig = (res && res.clientConfig) || BOOTSTRAP.systemConfig || {};
+      applySystemConfigUi_();
+      applyModuleDefinitionsUi_();
+      renderConfiguracionSections_();
+      showSuccess('Configuración guardada.');
+    }).catch(showError).finally(() => {
+      if (submitBtn) submitBtn.disabled = false;
+      hideContentLoading();
+    });
+  }
+
+  function collectConfiguracionSectionPayload_(section, form) {
+    const read = name => {
+      const field = form.querySelector(`[name="${name}"]`);
+      return field ? field.value : '';
+    };
+    const checked = name => !!form.querySelector(`[name="${name}"]`)?.checked;
+
+    switch (section) {
+      case 'general':
+        return {
+          appName: read('appName'),
+          appSubtitle: read('appSubtitle'),
+          programName: read('programName'),
+          environmentLabel: read('environmentLabel'),
+          showVisibleVersion: checked('showVisibleVersion'),
+          loadingText: read('loadingText'),
+          splashMinDurationMs: Number(read('splashMinDurationMs') || 5000)
+        };
+      case 'branding':
+        return {
+          logoLightDataUri: read('logoLightDataUri'),
+          logoDarkDataUri: read('logoDarkDataUri'),
+          primaryColor: read('primaryColor'),
+          secondaryColor: read('secondaryColor'),
+          accentColor: read('accentColor'),
+          lightBackground: read('lightBackground'),
+          darkBackground: read('darkBackground'),
+          loadingProgressColor: read('loadingProgressColor')
+        };
+      case 'accessModules':
+        return {
+          allowedDomain: read('allowedDomain'),
+          primarySuperuserEmail: read('primarySuperuserEmail'),
+          defaultUserProfile: read('defaultUserProfile'),
+          defaultView: read('defaultView'),
+          alwaysVisibleModules: Array.from(form.querySelectorAll('[data-config-always-visible]:checked')).map(input => input.value),
+          modules: Array.from(form.querySelectorAll('[data-config-module-row]')).map(row => ({
+            key: row.dataset.moduleKey,
+            label: row.querySelector('[data-config-module-label]')?.value || '',
+            order: Number(row.querySelector('[data-config-module-order]')?.value || 0),
+            state: row.querySelector('[data-config-module-state]')?.value || 'active'
+          }))
+        };
+      case 'socios':
+        return {
+          addressSuffix: read('addressSuffix'),
+          allowedRoles: splitLines_(read('allowedRoles')),
+          requiredManualFields: splitLines_(read('requiredManualFields')),
+          bulkColumnMap: parseKeyValueText_(read('bulkColumnMap')),
+          dashboardEmbedUrl: read('dashboardEmbedUrl'),
+          dashboardHeight: Number(read('dashboardHeight') || 443)
+        };
+      case 'beneficios':
+        return {
+          capacitaciones: {
+            annualDefaultCount: Number(read('capacitacionesAnnualDefaultCount') || 0),
+            displayName: read('capacitacionesDisplayName'),
+            allowedStates: splitLines_(read('capacitacionesAllowedStates')),
+            baseEligibilityCondition: read('capacitacionesBaseEligibilityCondition')
+          },
+          fondese: {
+            baseYear: Number(read('fondeseBaseYear') || new Date().getFullYear()),
+            callsPerYear: Number(read('fondeseCallsPerYear') || 1),
+            keyDates: parseKeyDateLines_(read('fondeseKeyDates')),
+            alertDaysBefore: Number(read('fondeseAlertDaysBefore') || 0),
+            baseStates: splitLines_(read('fondeseBaseStates'))
+          },
+          camaras1414: {
+            displayName: read('camarasDisplayName'),
+            baseStates: splitLines_(read('camarasBaseStates')),
+            technicalVisitAlertDays: Number(read('camarasTechnicalVisitAlertDays') || 0),
+            baseEligibilityCondition: read('camarasBaseEligibilityCondition')
+          }
+        };
+      case 'alertsInicio':
+        return {
+          alertHighDays: Number(read('alertHighDays') || 0),
+          alertMediumDays: Number(read('alertMediumDays') || 0),
+          maxVisibleAlerts: Number(read('maxVisibleAlerts') || 0),
+          maxUpcomingAssemblies: Number(read('maxUpcomingAssemblies') || 0),
+          homeBlocksOrder: splitLines_(read('homeBlocksOrder')),
+          homeBlocksVisibility: {
+            quickActions: checked('homeBlocksVisibilityQuickActions'),
+            tiles: checked('homeBlocksVisibilityTiles'),
+            dashboard: checked('homeBlocksVisibilityDashboard')
+          },
+          leftPanelDefaults: splitLines_(read('leftPanelDefaults'))
+        };
+      case 'integrations':
+        return {
+          homeDashboardUrl: read('homeDashboardUrl'),
+          sociosDashboardUrl: read('sociosDashboardUrl'),
+          futureReports: splitLines_(read('futureReports')),
+          googleCalendarId: read('googleCalendarId'),
+          externalLinks: splitLines_(read('externalLinks'))
+        };
+      case 'technical':
+        return {
+          maintenanceMode: checked('maintenanceMode'),
+          demoMode: checked('demoMode'),
+          showExtendedLogs: checked('showExtendedLogs'),
+          enableDataReset: checked('enableDataReset'),
+          resetExclusions: splitLines_(read('resetExclusions'))
+        };
+      default:
+        return {};
+    }
+  }
+
+  function renderConfigGeneralSection_(section) {
+    return `
+      <section class="config-section" id="config-section-general">
+        <div class="config-section__head"><p class="eyebrow">General</p><h3>Parámetros base del sistema</h3></div>
+        <form class="config-form" data-config-section="general">
+          <div class="config-grid">
+            ${configInput_('appName', 'Nombre de la app', section.appName || '', 'text')}
+            ${configInput_('programName', 'Nombre del programa', section.programName || '', 'text')}
+            ${configInput_('environmentLabel', 'Etiqueta de entorno', section.environmentLabel || '', 'text')}
+            ${configInput_('splashMinDurationMs', 'Splash mínimo (ms)', section.splashMinDurationMs || 5000, 'number')}
+            ${configInput_('appSubtitle', 'Subtítulo de la app', section.appSubtitle || '', 'text', 'field--full')}
+            ${configInput_('loadingText', 'Texto por defecto del loading', section.loadingText || '', 'text', 'field--full')}
+            ${configCheckbox_('showVisibleVersion', 'Mostrar versión visible', section.showVisibleVersion !== false)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar General</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigBrandingSection_(section) {
+    return `
+      <section class="config-section" id="config-section-branding">
+        <div class="config-section__head"><p class="eyebrow">Branding</p><h3>Identidad visual global</h3></div>
+        <form class="config-form" data-config-section="branding">
+          <div class="config-grid">
+            ${configTextarea_('logoLightDataUri', 'Logo claro (data URI opcional)', section.logoLightDataUri || '', 'field--full', 4)}
+            ${configTextarea_('logoDarkDataUri', 'Logo oscuro (data URI opcional)', section.logoDarkDataUri || '', 'field--full', 4)}
+            ${configInput_('primaryColor', 'Color primario', section.primaryColor || '#214E8A', 'color')}
+            ${configInput_('secondaryColor', 'Color secundario', section.secondaryColor || '#007C4A', 'color')}
+            ${configInput_('accentColor', 'Color acento', section.accentColor || '#03C2AE', 'color')}
+            ${configInput_('loadingProgressColor', 'Color de progreso', section.loadingProgressColor || '#8CC63F', 'color')}
+            ${configInput_('lightBackground', 'Fondo claro', section.lightBackground || '#F7FAFC', 'color')}
+            ${configInput_('darkBackground', 'Fondo oscuro', section.darkBackground || '#0D2940', 'color')}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Branding</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigAccessSection_(section) {
+    const defs = APP.state.moduleDefinitions || [];
+    const alwaysVisible = new Set((section.alwaysVisibleModules || []).concat(defs.filter(item => item.required).map(item => item.key)));
+    return `
+      <section class="config-section" id="config-section-accessModules">
+        <div class="config-section__head"><p class="eyebrow">Acceso y módulos</p><h3>Dominio, defaults y navegación</h3></div>
+        <form class="config-form" data-config-section="accessModules">
+          <div class="config-grid">
+            ${configInput_('allowedDomain', 'Dominio permitido', section.allowedDomain || 'providencia.cl', 'text')}
+            ${configInput_('primarySuperuserEmail', 'Correo del superuser principal', section.primarySuperuserEmail || '', 'email')}
+            ${configSelect_('defaultUserProfile', 'Perfil por defecto', section.defaultUserProfile || 'operador', USER_ROLE_OPTIONS)}
+            ${configSelect_('defaultView', 'Módulo de inicio por defecto', section.defaultView || 'inicio', defs.filter(item => !item.superOnly).map(item => ({ value: item.view || item.key, label: item.label || item.key })))}
+          </div>
+          <div class="config-table-wrap">
+            <table class="config-table">
+              <thead><tr><th>Módulo</th><th>Nombre visible</th><th>Orden</th><th>Estado</th><th>Siempre visible</th></tr></thead>
+              <tbody>
+                ${defs.map(def => `
+                  <tr data-config-module-row="true" data-module-key="${escapeHtml(def.key)}">
+                    <td><strong>${escapeHtml(def.key)}</strong></td>
+                    <td><input type="text" data-config-module-label value="${escapeHtml(def.label || def.key)}"></td>
+                    <td><input type="number" min="1" data-config-module-order value="${escapeHtml(String(def.order || 0))}"></td>
+                    <td>
+                      <select data-config-module-state>
+                        ${['active', 'hidden', 'development'].map(state => `<option value="${state}" ${state === (def.state || 'active') ? 'selected' : ''}>${state}</option>`).join('')}
+                      </select>
+                    </td>
+                    <td class="config-table__check">
+                      <input type="checkbox" data-config-always-visible value="${escapeHtml(def.key)}" ${alwaysVisible.has(def.key) ? 'checked' : ''} ${def.superOnly ? 'disabled' : ''}>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Acceso y módulos</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigSociosSection_(section) {
+    return `
+      <section class="config-section" id="config-section-socios">
+        <div class="config-section__head"><p class="eyebrow">Socios</p><h3>Defaults del módulo Socios</h3></div>
+        <form class="config-form" data-config-section="socios">
+          <div class="config-grid">
+            ${configInput_('addressSuffix', 'Sufijo automático de dirección', section.addressSuffix || '', 'text')}
+            ${configInput_('dashboardHeight', 'Altura dashboard', section.dashboardHeight || 443, 'number')}
+            ${configInput_('dashboardEmbedUrl', 'URL dashboard embebido', section.dashboardEmbedUrl || '', 'url', 'field--full')}
+            ${configTextarea_('allowedRoles', 'Cargos permitidos (uno por línea)', joinLines_(section.allowedRoles), '', 6)}
+            ${configTextarea_('requiredManualFields', 'Campos obligatorios manuales (uno por línea)', joinLines_(section.requiredManualFields), '', 6)}
+            ${configTextarea_('bulkColumnMap', 'Mapeo carga masiva (clave=columna)', joinKeyValueLines_(section.bulkColumnMap), 'field--full', 6)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Socios</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigBeneficiosSection_(section) {
+    const capacitaciones = section.capacitaciones || {};
+    const fondese = section.fondese || {};
+    const camaras = section.camaras1414 || {};
+    return `
+      <section class="config-section" id="config-section-beneficios">
+        <div class="config-section__head"><p class="eyebrow">Beneficios</p><h3>Parámetros base por tipo</h3></div>
+        <form class="config-form" data-config-section="beneficios">
+          <div class="config-subgrid">
+            <article class="config-subcard">
+              <h4>CAPACITACIONES</h4>
+              <div class="config-grid">
+                ${configInput_('capacitacionesDisplayName', 'Nombre visible', capacitaciones.displayName || '', 'text')}
+                ${configInput_('capacitacionesAnnualDefaultCount', 'Cantidad anual por defecto', capacitaciones.annualDefaultCount || 0, 'number')}
+                ${configTextarea_('capacitacionesAllowedStates', 'Estados permitidos', joinLines_(capacitaciones.allowedStates), 'field--full', 5)}
+                ${configTextarea_('capacitacionesBaseEligibilityCondition', 'Condición base de elegibilidad', capacitaciones.baseEligibilityCondition || '', 'field--full', 4)}
+              </div>
+            </article>
+            <article class="config-subcard">
+              <h4>FONDESE</h4>
+              <div class="config-grid">
+                ${configInput_('fondeseBaseYear', 'Año base', fondese.baseYear || new Date().getFullYear(), 'number')}
+                ${configInput_('fondeseCallsPerYear', 'Convocatorias por año', fondese.callsPerYear || 1, 'number')}
+                ${configInput_('fondeseAlertDaysBefore', 'Días de alerta', fondese.alertDaysBefore || 0, 'number')}
+                ${configTextarea_('fondeseBaseStates', 'Estados base', joinLines_(fondese.baseStates), 'field--full', 5)}
+                ${configTextarea_('fondeseKeyDates', 'Fechas clave (clave|etiqueta|fecha)', joinKeyDateLines_(fondese.keyDates), 'field--full', 6)}
+              </div>
+            </article>
+            <article class="config-subcard">
+              <h4>CAMARAS 1414</h4>
+              <div class="config-grid">
+                ${configInput_('camarasDisplayName', 'Nombre visible', camaras.displayName || '', 'text')}
+                ${configInput_('camarasTechnicalVisitAlertDays', 'Días alerta visita técnica', camaras.technicalVisitAlertDays || 0, 'number')}
+                ${configTextarea_('camarasBaseStates', 'Estados base', joinLines_(camaras.baseStates), 'field--full', 5)}
+                ${configTextarea_('camarasBaseEligibilityCondition', 'Condición base de elegibilidad', camaras.baseEligibilityCondition || '', 'field--full', 4)}
+              </div>
+            </article>
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Beneficios</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigAlertsInicioSection_(section) {
+    const visibility = section.homeBlocksVisibility || {};
+    return `
+      <section class="config-section" id="config-section-alertsInicio">
+        <div class="config-section__head"><p class="eyebrow">Alertas e Inicio</p><h3>Defaults del módulo inicial</h3></div>
+        <form class="config-form" data-config-section="alertsInicio">
+          <div class="config-grid">
+            ${configInput_('alertHighDays', 'Días alerta alta', section.alertHighDays || 0, 'number')}
+            ${configInput_('alertMediumDays', 'Días alerta media', section.alertMediumDays || 0, 'number')}
+            ${configInput_('maxVisibleAlerts', 'Máximo de alertas visibles', section.maxVisibleAlerts || 0, 'number')}
+            ${configInput_('maxUpcomingAssemblies', 'Máximo de próximas asambleas', section.maxUpcomingAssemblies || 0, 'number')}
+            ${configTextarea_('homeBlocksOrder', 'Orden de bloques inicio (uno por línea)', joinLines_(section.homeBlocksOrder), '', 5)}
+            ${configTextarea_('leftPanelDefaults', 'Defaults panel izquierdo (uno por línea)', joinLines_(section.leftPanelDefaults), '', 5)}
+          </div>
+          <div class="config-inline-checks">
+            ${configCheckbox_('homeBlocksVisibilityQuickActions', 'Mostrar accesos rápidos', visibility.quickActions !== false)}
+            ${configCheckbox_('homeBlocksVisibilityTiles', 'Mostrar tiles', visibility.tiles !== false)}
+            ${configCheckbox_('homeBlocksVisibilityDashboard', 'Mostrar dashboard', visibility.dashboard !== false)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Alertas e Inicio</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigIntegrationsSection_(section) {
+    return `
+      <section class="config-section" id="config-section-integrations">
+        <div class="config-section__head"><p class="eyebrow">Integraciones</p><h3>URLs y referencias externas</h3></div>
+        <form class="config-form" data-config-section="integrations">
+          <div class="config-grid">
+            ${configInput_('homeDashboardUrl', 'URL dashboard Inicio', section.homeDashboardUrl || '', 'url', 'field--full')}
+            ${configInput_('sociosDashboardUrl', 'URL dashboard Socios', section.sociosDashboardUrl || '', 'url', 'field--full')}
+            ${configInput_('googleCalendarId', 'ID o referencia Google Calendar', section.googleCalendarId || '', 'text', 'field--full')}
+            ${configTextarea_('futureReports', 'Futuras URLs de reportes (una por línea)', joinLines_(section.futureReports), '', 5)}
+            ${configTextarea_('externalLinks', 'URLs externas institucionales (una por línea)', joinLines_(section.externalLinks), '', 5)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Integraciones</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigTechnicalSection_(section) {
+    return `
+      <section class="config-section" id="config-section-technical">
+        <div class="config-section__head"><p class="eyebrow">Administración técnica</p><h3>Flags seguros para superuser</h3></div>
+        <form class="config-form" data-config-section="technical">
+          <div class="config-inline-checks">
+            ${configCheckbox_('maintenanceMode', 'Modo mantenimiento', !!section.maintenanceMode)}
+            ${configCheckbox_('demoMode', 'Modo demo', !!section.demoMode)}
+            ${configCheckbox_('showExtendedLogs', 'Logs extendidos', !!section.showExtendedLogs)}
+            ${configCheckbox_('enableDataReset', 'Habilitar botón reset de datos', section.enableDataReset !== false)}
+          </div>
+          <div class="config-grid">
+            ${configTextarea_('resetExclusions', 'Exclusiones del reset (una por línea)', joinLines_(section.resetExclusions), 'field--full', 6)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Administración técnica</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function configInput_(name, label, value, type, extraClass) {
+    return `
+      <div class="field ${extraClass || ''}">
+        <label>${escapeHtml(label)}</label>
+        <input name="${escapeHtml(name)}" type="${escapeHtml(type || 'text')}" value="${escapeHtml(String(value == null ? '' : value))}">
+      </div>
+    `;
+  }
+
+  function configSelect_(name, label, value, options) {
+    return `
+      <div class="field">
+        <label>${escapeHtml(label)}</label>
+        <select name="${escapeHtml(name)}">
+          ${(options || []).map(option => {
+            const optValue = typeof option === 'string' ? option : option.value;
+            const optLabel = typeof option === 'string' ? option : option.label;
+            return `<option value="${escapeHtml(String(optValue || ''))}" ${String(optValue || '') === String(value || '') ? 'selected' : ''}>${escapeHtml(String(optLabel || optValue || ''))}</option>`;
+          }).join('')}
+        </select>
+      </div>
+    `;
+  }
+
+  function configTextarea_(name, label, value, extraClass, rows) {
+    return `
+      <div class="field ${extraClass || ''}">
+        <label>${escapeHtml(label)}</label>
+        <textarea name="${escapeHtml(name)}" rows="${escapeHtml(String(rows || 4))}">${escapeHtml(String(value == null ? '' : value))}</textarea>
+      </div>
+    `;
+  }
+
+  function configCheckbox_(name, label, checked) {
+    return `
+      <label class="config-check">
+        <input name="${escapeHtml(name)}" type="checkbox" ${checked ? 'checked' : ''}>
+        <span>${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  function splitLines_(value) {
+    return String(value || '')
+      .split(/\r?\n|,/)
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  function joinLines_(values) {
+    return (values || []).join('\n');
+  }
+
+  function parseKeyValueText_(value) {
+    return String(value || '').split(/\r?\n/).reduce((acc, line) => {
+      const parts = String(line || '').split('=');
+      const key = String(parts.shift() || '').trim();
+      const val = parts.join('=').trim();
+      if (key) acc[key] = val;
+      return acc;
+    }, {});
+  }
+
+  function joinKeyValueLines_(value) {
+    return Object.keys(value || {}).map(key => `${key}=${value[key] || ''}`).join('\n');
+  }
+
+  function parseKeyDateLines_(value) {
+    return String(value || '').split(/\r?\n/).map(line => {
+      const parts = String(line || '').split('|').map(item => item.trim());
+      if (!parts[0] && !parts[1] && !parts[2]) return null;
+      return {
+        key: parts[0] || '',
+        label: parts[1] || parts[0] || '',
+        date: parts[2] || ''
+      };
+    }).filter(Boolean);
+  }
+
+  function joinKeyDateLines_(values) {
+    return (values || []).map(item => [
+      item && item.key || '',
+      item && item.label || '',
+      item && item.date || ''
+    ].join('|')).join('\n');
+  }
+
+  function friendlyViewName_(view) {
+    const def = getViewDefinition_(view);
+    if (def && def.label) return def.label;
+    const names = {
+      inicio: 'Inicio',
+      buscar: 'Buscar vecino',
+      ficha: 'Ficha',
+      'nuevo-ingreso': 'Nuevo ingreso',
+      seguimiento: 'Registrar avance',
+      organizacion: 'Organizaciones',
+      instrumento: 'Beneficios',
+      socios: 'Socios',
+      historial: 'Historial',
+      usuarios: 'Gestión de usuarios',
+      configuracion: 'Configuración'
+    };
+    return names[view] || view;
   }
 })();
 </script>

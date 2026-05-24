@@ -56,6 +56,7 @@ const GO_PES_V2 = {
     DIM_ORG_SUG: 'DIM_Organizaciones_Sugeridas',
     DIM_VEC_SUG: 'DIM_Vecinos_Sugeridos',
     DIM_SOL_SUG: 'DIM_Solicitudes_Sugeridas',
+    CFG_PARAMETROS: 'CFG_Parametros',
 
     LOG_PROC: 'LOG_Procesamiento',
     LOG_ACCESOS: 'LOG_Accesos',
@@ -77,7 +78,8 @@ const GO_PES_V2 = {
     INSTRUMENTO: 'instrumento',
     SOCIOS: 'socios',
     HISTORIAL: 'historial',
-    USERS: 'usuarios'
+    USERS: 'usuarios',
+    CONFIG: 'configuracion'
   },
   ROLES: ['operador', 'coordinador', 'administrador', 'superuser'],
   TRUSTED_DOMAIN_AUTO_ACTIVE: false,
@@ -85,12 +87,15 @@ const GO_PES_V2 = {
 };
 
 function doGet(e) {
+  const runtimeConfig = getRuntimeClientSystemConfig_();
   const template = HtmlService.createTemplateFromFile('Index');
   template.bootstrap = JSON.stringify(buildBootstrapForTemplate_(e));
-  template.logoDataUri = getLogoDataUri_();
+  template.logoDataUri = getConfiguredLogoDataUri_('light');
+  template.logoDarkDataUri = getConfiguredLogoDataUri_('dark');
+  template.runtimeConfig = JSON.stringify(runtimeConfig);
 
   return template.evaluate()
-    .setTitle(GO_PES_V2.PROGRAM_TITLE)
+    .setTitle(getConfiguredAppTitle_())
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -156,10 +161,11 @@ function goPesSeedSuperUsers_() {
 
 function buildBootstrapForTemplate_(e) {
   const params = (e && e.parameter) ? e.parameter : {};
+  const config = getRuntimeClientSystemConfig_();
   const user = getUsuarioActual();
   const permissions = buildPermissionMap_(user);
   const buildInfo = getAppBuildInfo_();
-  const requestedView = params.view || GO_PES_V2.DEFAULT_VIEW;
+  const requestedView = params.view || getConfiguredDefaultView_();
   const initialView = user.canAccess && (permissions.modules || {})[requestedView]
     ? requestedView
     : getFirstAllowedView_(permissions);
@@ -167,14 +173,15 @@ function buildBootstrapForTemplate_(e) {
   logAccess_('OPEN_APP', params);
 
   return {
-    appName: GO_PES_V2.APP_NAME,
-    programTitle: GO_PES_V2.PROGRAM_TITLE,
-    subtitle: GO_PES_V2.SUBTITLE,
+    appName: config.general.appName || GO_PES_V2.APP_NAME,
+    programTitle: config.general.appName || GO_PES_V2.PROGRAM_TITLE,
+    subtitle: getConfiguredAppSubtitle_(),
     version: buildInfo.baseVersion,
-    environment: GO_PES_V2.ENVIRONMENT,
+    environment: getConfiguredEnvironmentLabel_(),
     buildInfo: buildInfo,
     versionLabel: getAppVersionLabel_(buildInfo),
     colors: GO_PES_V2.COLORS,
+    systemConfig: config,
     initialView: initialView,
     query: params,
     user: user,
@@ -186,7 +193,7 @@ function buildBootstrapForTemplate_(e) {
 function getFirstAllowedView_(permissions) {
   const modules = (permissions && permissions.modules) || {};
   const priority = [
-    GO_PES_V2.DEFAULT_VIEW,
+    getConfiguredDefaultView_(),
     GO_PES_V2.VIEWS.NEW_INGRESO,
     GO_PES_V2.VIEWS.SEARCH,
     GO_PES_V2.VIEWS.SEGUIMIENTO,
@@ -194,26 +201,29 @@ function getFirstAllowedView_(permissions) {
     GO_PES_V2.VIEWS.SOCIOS,
     GO_PES_V2.VIEWS.INSTRUMENTO,
     GO_PES_V2.VIEWS.HISTORIAL,
-    GO_PES_V2.VIEWS.USERS
+    GO_PES_V2.VIEWS.USERS,
+    GO_PES_V2.VIEWS.CONFIG
   ];
   for (var i = 0; i < priority.length; i++) {
     if (modules[priority[i]]) return priority[i];
   }
-  return GO_PES_V2.DEFAULT_VIEW;
+  return getConfiguredDefaultView_();
 }
 
 function getAppBootstrap() {
+  const config = getRuntimeClientSystemConfig_();
   const user = getUsuarioActual();
   const buildInfo = getAppBuildInfo_();
   return serializeForClient_({
-    appName: GO_PES_V2.APP_NAME,
-    programTitle: GO_PES_V2.PROGRAM_TITLE,
-    subtitle: GO_PES_V2.SUBTITLE,
+    appName: config.general.appName || GO_PES_V2.APP_NAME,
+    programTitle: config.general.appName || GO_PES_V2.PROGRAM_TITLE,
+    subtitle: getConfiguredAppSubtitle_(),
     version: buildInfo.baseVersion,
-    environment: GO_PES_V2.ENVIRONMENT,
+    environment: getConfiguredEnvironmentLabel_(),
     buildInfo: buildInfo,
     versionLabel: getAppVersionLabel_(buildInfo),
     colors: GO_PES_V2.COLORS,
+    systemConfig: config,
     user: user,
     permissions: buildPermissionMap_(user),
     views: GO_PES_V2.VIEWS,
@@ -261,7 +271,7 @@ function buildProjectFingerprint_() {
 }
 
 function getProjectHtmlFingerprintSources_() {
-  const partials = ['Index', 'Styles', 'Loading', 'Inicio', 'Scripts'];
+  const partials = ['Index', 'Styles', 'ThemeDark', 'Splash', 'Loading', 'Inicio', 'Scripts'];
   return partials.map(function(name) {
     try {
       return `## ${name}\n${HtmlService.createHtmlOutputFromFile(name).getContent()}`;

@@ -8,6 +8,7 @@ var GO_PES_RUNTIME = this.GO_PES_RUNTIME || {
   sheetByName: {},
   headersBySheet: {},
   rowsBySheet: {},
+  systemConfig: null,
   currentUser: null,
   currentUserEmail: '',
   activityTouchedByEmail: {}
@@ -121,6 +122,7 @@ function buildSheetDefinitions_() {
     [S.DIM_ORG_SUG]: ['organizacion_id', 'nombre_organizacion', 'uv', 'sector', 'estado_constitucion', 'estado_general_organizacion', 'activo_flag'],
     [S.DIM_VEC_SUG]: ['vecino_id', 'solicitud_id', 'nombre_completo', 'telefono_contacto', 'direccion_original', 'uv', 'sector', 'estado_actual', 'activo_flag'],
     [S.DIM_SOL_SUG]: ['solicitud_id', 'vecino_id', 'nombre_completo', 'telefono_contacto', 'direccion_original', 'estado_actual', 'organizacion_id', 'activo_flag'],
+    [S.CFG_PARAMETROS]: ['config_section', 'value_json', 'updated_at', 'updated_by'],
 
     [S.LOG_PROC]: ['timestamp', 'nivel', 'accion', 'entidad', 'entidad_id', 'usuario', 'resultado', 'detalle_json'],
     [S.LOG_ACCESOS]: ['timestamp', 'event', 'email', 'payload_json'],

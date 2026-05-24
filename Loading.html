@@ -27,7 +27,12 @@
 
     const fragment = template.content.cloneNode(true);
     host.insertBefore(fragment, host.firstChild);
-    return document.getElementById('content-loading');
+    const overlay = document.getElementById('content-loading');
+    const text = overlay ? overlay.querySelector('.content-loading__text') : null;
+    const runtimeConfig = (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.runtimeConfig) || {};
+    const loadingText = (((runtimeConfig || {}).general || {}).loadingText) || '';
+    if (text && loadingText) text.textContent = loadingText;
+    return overlay;
   }
 
   document.addEventListener('DOMContentLoaded', ensureContentLoadingMounted_);

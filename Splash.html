@@ -51,14 +51,14 @@
 </div>
 
 <script>
-  const APP_SPLASH_MIN_DURATION_MS = 5000;
+  const APP_SPLASH_MIN_DURATION_MS = getSplashMinDurationMs_();
 
   const APP_SPLASH_STATE = {
     visible: true,
     hideRequested: false,
     startedAt: 0,
     progress: 0,
-    message: 'Iniciando Gestor Operativo',
+    message: getSplashLoadingText_(),
     rafId: 0,
     hideTimerId: 0
   };
@@ -89,6 +89,17 @@
     }
   }
 
+  function getSplashLoadingText_() {
+    const bootstrap = readSplashBootstrap_();
+    return (((bootstrap.systemConfig || {}).general || {}).loadingText) || 'Iniciando Gestor Operativo';
+  }
+
+  function getSplashMinDurationMs_() {
+    const bootstrap = readSplashBootstrap_();
+    const value = Number((((bootstrap.systemConfig || {}).general || {}).splashMinDurationMs) || 5000);
+    return Number.isFinite(value) && value >= 500 ? value : 5000;
+  }
+
   function extractSplashProgramName_(subtitle) {
     const value = String(subtitle || '').trim();
     if (!value) return 'Programa Estamos Seguros';
@@ -101,17 +112,23 @@
 
     const bootstrap = readSplashBootstrap_();
     const buildInfo = bootstrap.buildInfo || {};
+    const general = ((bootstrap.systemConfig || {}).general || {});
     const version = buildInfo.baseVersion || bootstrap.version || '';
     const buildHash = buildInfo.buildHash ? `build ${buildInfo.buildHash}` : '';
     const versionLabel = [version ? `v${version}` : '', buildHash].filter(Boolean).join(' · ');
     const logo =
+      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDarkDataUri) ||
       (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) ||
       document.getElementById('appLogo')?.getAttribute('src') ||
       '';
 
     if (els.logo && logo) els.logo.src = logo;
-    if (els.title) els.title.textContent = bootstrap.programTitle || 'Gestor Operativo PES';
-    if (els.program) els.program.textContent = extractSplashProgramName_(bootstrap.subtitle);
+    if (els.title) els.title.textContent = bootstrap.programTitle || general.appName || 'Gestor Operativo PES';
+    if (els.program) els.program.textContent = general.programName || extractSplashProgramName_(bootstrap.subtitle);
+    if (els.version && general.showVisibleVersion === false) {
+      els.version.textContent = '';
+      els.version.style.display = 'none';
+    }
     if (els.version) els.version.textContent = versionLabel || 'Versión disponible al iniciar';
   }
 
@@ -135,7 +152,7 @@
     }
     if (els.percent) els.percent.textContent = `${rounded}%`;
     if (els.status) els.status.textContent = getSplashStatusCopy_(progressValue, APP_SPLASH_STATE.hideRequested);
-    if (els.text) els.text.textContent = APP_SPLASH_STATE.message || 'Iniciando Gestor Operativo';
+    if (els.text) els.text.textContent = APP_SPLASH_STATE.message || getSplashLoadingText_();
   }
 
   function finalizeSplashHide_() {
@@ -200,7 +217,7 @@
     updateSplashBranding_();
 
     window.clearTimeout(APP_SPLASH_STATE.hideTimerId);
-    APP_SPLASH_STATE.message = message || APP_SPLASH_STATE.message || 'Iniciando Gestor Operativo';
+    APP_SPLASH_STATE.message = message || APP_SPLASH_STATE.message || getSplashLoadingText_();
 
     if (!APP_SPLASH_STATE.visible) {
       APP_SPLASH_STATE.startedAt = performance.now();
@@ -220,10 +237,36 @@
     const els = getSplashElements_();
     if (!els || !APP_SPLASH_STATE.visible) return;
 
-    APP_SPLASH_STATE.message = APP_SPLASH_STATE.message || 'Iniciando Gestor Operativo';
+    APP_SPLASH_STATE.message = APP_SPLASH_STATE.message || getSplashLoadingText_();
     APP_SPLASH_STATE.hideRequested = true;
     renderSplashProgress_();
     ensureSplashLoop_();
+  }
+
+  function updateSplashBranding_() {
+    const els = getSplashElements_();
+    if (!els) return;
+
+    const bootstrap = readSplashBootstrap_();
+    const general = ((bootstrap.systemConfig || {}).general || {});
+    const buildInfo = bootstrap.buildInfo || {};
+    const version = buildInfo.baseVersion || bootstrap.version || '';
+    const buildHash = buildInfo.buildHash ? `build ${buildInfo.buildHash}` : '';
+    const versionLabel = [version ? `v${version}` : '', buildHash].filter(Boolean).join(' · ');
+    const logo =
+      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDarkDataUri) ||
+      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) ||
+      document.getElementById('appLogo')?.getAttribute('src') ||
+      '';
+
+    if (els.logo && logo) els.logo.src = logo;
+    if (els.title) els.title.textContent = bootstrap.programTitle || general.appName || 'Gestor Operativo PES';
+    if (els.program) els.program.textContent = general.programName || extractSplashProgramName_(bootstrap.subtitle);
+    if (els.version) {
+      const showVersion = general.showVisibleVersion !== false;
+      els.version.textContent = showVersion ? (versionLabel || 'Versión disponible al iniciar') : '';
+      els.version.style.display = showVersion ? '' : 'none';
+    }
   }
 
   document.addEventListener('DOMContentLoaded', () => {

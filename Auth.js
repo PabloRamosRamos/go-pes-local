@@ -151,8 +151,8 @@ function updateUser(payload) {
   const existing = readDimUsuariosUsers_().users
     .find(r => normalizeEmail_(r.email) === normalizedEmail);
   const isConfiguredSuper = isConfiguredSuperUserEmail_(payload.email);
-  if (!existing && !isConfiguredSuper && !/@providencia\.cl$/.test(normalizedEmail)) {
-    throw new Error('Solo se permiten usuarios con correo @providencia.cl.');
+  if (!existing && !isConfiguredSuper && !isAllowedNativeIdentityEmail_(normalizedEmail)) {
+    throw new Error(`Solo se permiten usuarios con correo @${getConfiguredAllowedDomains_()[0] || 'providencia.cl'}.`);
   }
   const activeNext = isConfiguredSuper ? true : toBool_(payload.activo_flag);
   const superNext = isConfiguredSuper;
@@ -555,7 +555,8 @@ function buildPermissionMap_(user) {
     canImportSocios: can('socios'),
     canViewHistorial: can('historial'),
     canManageUsers: canAccess && isSuper,
-    canResetData: canAccess && isSuper,
+    canManageConfig: canAccess && isSuper && can('configuracion'),
+    canResetData: canAccess && isSuper && canShowResetDataButton_(),
     canAdmin: isSuper || role === 'administrador',
     modules: buildUserModulePermissionMap_(user)
   };
@@ -564,7 +565,9 @@ function buildPermissionMap_(user) {
 function isAllowedNativeIdentityEmail_(email) {
   const normalized = normalizeEmail_(email);
   if (isConfiguredSuperUserEmail_(normalized)) return true;
-  return /@providencia\.cl$/.test(normalized);
+  return getConfiguredAllowedDomains_().some(function(domain) {
+    return normalized.endsWith('@' + String(domain || '').trim().toLowerCase());
+  });
 }
 
 function getModuleDefinitions_() {
@@ -644,6 +647,82 @@ function isConfiguredSuperUserEmail_(email) {
 
 function getConfiguredSuperUsers_() {
   return Array.isArray(GO_PES_V2.SUPERUSERS) ? GO_PES_V2.SUPERUSERS : [];
+}
+
+function getModuleDefinitions_() {
+  const baseDefs = getBaseModuleDefinitions_();
+  const config = getRuntimeSystemConfig_();
+  const moduleConfigMap = ((config.accessModules && config.accessModules.modules) || []).reduce(function(acc, row) {
+    acc[row.key] = row;
+    return acc;
+  }, {});
+  const alwaysVisible = getConfiguredAlwaysVisibleModules_();
+
+  return baseDefs.map(function(base) {
+    const configured = moduleConfigMap[base.key] || {};
+    return Object.assign({}, base, {
+      label: configured.label || base.label,
+      order: Number(configured.order || base.order || 0),
+      state: configured.state || base.state || 'active',
+      required: !!base.required || alwaysVisible.indexOf(base.key) !== -1
+    });
+  }).sort(function(a, b) {
+    return Number(a.order || 0) - Number(b.order || 0);
+  });
+}
+
+function parseUserModules_(value, role) {
+  if (normalizeManagedUserProfile_(role) === 'visor') return ['inicio'];
+  const raw = String(value || '').trim();
+  const allowedDefs = safeModuleDefinitions_().filter(function(module) {
+    return module.state !== 'hidden';
+  });
+  if (!raw) return defaultModulesForRole_(role);
+  if (raw === '*') return allowedDefs.map(function(m) { return m.key; });
+  const allowedKeys = allowedDefs.map(function(m) { return m.key; });
+  return uniqueNonBlank_(raw.split(',').map(function(x) { return String(x || '').trim(); }))
+    .filter(function(key) { return allowedKeys.indexOf(key) !== -1; });
+}
+
+function normalizeModulePermissionsInput_(value, role) {
+  const normalizedRole = normalizeManagedUserProfile_(role);
+  if (normalizedRole === 'visor') return 'inicio';
+  const modules = Array.isArray(value) ? value : String(value || '').split(',');
+  const defs = safeModuleDefinitions_();
+  const allowedKeys = defs
+    .filter(function(m) { return !m.superOnly && m.assignable !== false && m.state !== 'hidden'; })
+    .map(function(m) { return m.key; });
+  const requiredKeys = defs
+    .filter(function(m) { return m.required; })
+    .map(function(m) { return m.key; });
+  const normalized = uniqueNonBlank_(modules.map(function(x) { return String(x || '').trim(); }))
+    .filter(function(key) { return allowedKeys.indexOf(key) !== -1; });
+  requiredKeys.slice().reverse().forEach(function(key) {
+    if (normalized.indexOf(key) === -1) normalized.unshift(key);
+  });
+  if (normalizedRole !== 'visor' && normalized.indexOf('ficha') === -1) normalized.push('ficha');
+  return normalized.join(',');
+}
+
+function userModuleAllowed_(user, moduleKey) {
+  if (!user || !user.canAccess) return false;
+  if (user.superuser_flag) return true;
+  const key = String(moduleKey || '').trim();
+  if (!key) return false;
+  const moduleDef = safeModuleDefinitions_().find(function(m) { return m.key === key; });
+  if (moduleDef && moduleDef.superOnly) return false;
+  if (moduleDef && moduleDef.state === 'hidden') return false;
+  const modules = Array.isArray(user.modules)
+    ? user.modules
+    : parseUserModules_(user.modulos_permitidos, user.perfil);
+  return modules.indexOf(key) !== -1;
+}
+
+function getConfiguredSuperUsers_() {
+  return uniqueNonBlank_([]
+    .concat(Array.isArray(GO_PES_V2.SUPERUSERS) ? GO_PES_V2.SUPERUSERS : [])
+    .concat(getConfiguredPrimarySuperuserEmail_ ? [getConfiguredPrimarySuperuserEmail_()] : [])
+    .map(normalizeEmail_));
 }
 
 function safeModuleDefinitions_() {

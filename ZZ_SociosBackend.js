@@ -145,3 +145,7 @@ function goPesSocioCargoPermitido_(cargo) {
     'Socio'
   ].indexOf(String(cargo || '').trim()) !== -1;
 }
+
+function goPesSocioCargoPermitido_(cargo) {
+  return getConfiguredSocioCargos_().indexOf(String(cargo || '').trim()) !== -1;
+}

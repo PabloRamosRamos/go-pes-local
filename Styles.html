@@ -1617,6 +1617,183 @@
     color: var(--brand-blue);
   }
 
+  .config-shell {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  .config-layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .config-nav {
+    position: sticky;
+    top: var(--space-6);
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .config-nav__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, transform .18s ease;
+  }
+
+  .config-nav__item:hover {
+    background: var(--surface-alt);
+    border-color: var(--border);
+    transform: translateY(-1px);
+  }
+
+  .config-content {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  .config-section {
+    padding: var(--space-6);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .config-section__head {
+    display: grid;
+    gap: 4px;
+    margin-bottom: var(--space-5);
+  }
+
+  .config-section__head h3,
+  .config-subcard h4 {
+    margin: 0;
+  }
+
+  .config-form,
+  .config-subgrid,
+  .config-content {
+    min-width: 0;
+  }
+
+  .config-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .config-grid .field--full {
+    grid-column: 1 / -1;
+  }
+
+  .config-inline-checks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    margin-top: var(--space-4);
+  }
+
+  .config-check {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--surface-soft);
+  }
+
+  .config-subgrid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+
+  .config-subcard {
+    padding: var(--space-5);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface-soft);
+  }
+
+  .config-table-wrap {
+    margin-top: var(--space-5);
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+  }
+
+  .config-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+  }
+
+  .config-table th,
+  .config-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: middle;
+    background: var(--surface);
+  }
+
+  .config-table thead th {
+    background: var(--surface-alt);
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
+  }
+
+  .config-table td input,
+  .config-table td select {
+    min-width: 0;
+  }
+
+  .config-table__check {
+    text-align: center;
+  }
+
+  @media (max-width: 1180px) {
+    .config-layout {
+      grid-template-columns: 1fr;
+    }
+
+    .config-nav {
+      position: static;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .config-subgrid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .config-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .config-nav {
+      grid-template-columns: 1fr;
+    }
+  }
+
   .user-email-field {
     align-self: start;
   }

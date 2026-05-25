@@ -343,6 +343,7 @@
       }
     }
     updateThemeToggleUi_();
+    applyBrandingRuntimeTheme_();
     hydrateLogo();
   }
 
@@ -4913,10 +4914,13 @@
     const branding = getSystemBrandingConfig_();
     const rootStyle = document.documentElement && document.documentElement.style;
     if (!rootStyle) return;
+    const runtimeAccent = isDarkTheme_()
+      ? '#8CC63F'
+      : (normalizeHexColor_(branding.accentColor) || '#9fd85a');
     const tokens = {
       '--runtime-brand-primary': normalizeHexColor_(branding.primaryColor) || '#214E8A',
       '--runtime-brand-secondary': normalizeHexColor_(branding.secondaryColor) || '#007C4A',
-      '--runtime-brand-accent': normalizeHexColor_(branding.accentColor) || '#9fd85a',
+      '--runtime-brand-accent': runtimeAccent,
       '--runtime-brand-progress': normalizeHexColor_(branding.loadingProgressColor) || '#8CC63F',
       '--runtime-brand-light': normalizeHexColor_(branding.lightBackground) || '#F7FAFC',
       '--runtime-brand-dark': normalizeHexColor_(branding.darkBackground) || '#0D2940'

@@ -2504,7 +2504,7 @@
 
         <section class="beneficios-layout beneficios-layout--camaras">
           <div class="beneficios-org-panel">
-            <section class="beneficios-block beneficios-block--wide">
+            <section class="beneficios-block beneficios-block--wide beneficios-block--eligible">
               <div class="beneficios-block__head">
                 <div>
                   <p class="eyebrow">B. Elegibles</p>
@@ -2611,55 +2611,49 @@
           </div>
         </div>
 
-        <section class="beneficios-block beneficios-block--subtle">
-          <h4>Resumen operativo</h4>
-          <div class="beneficios-form__grid">
-            <div class="field">
-              <label>Responsable</label>
-              <input type="text" name="responsable_beneficio" value="${escapeHtml(assignment.responsable_beneficio || '')}">
+        <section class="beneficios-detail-strip">
+          <section class="beneficios-block beneficios-block--subtle">
+            <h4>Resumen operativo</h4>
+            <div class="beneficios-form__grid">
+              <div class="field">
+                <label>Responsable</label>
+                <input type="text" name="responsable_beneficio" value="${escapeHtml(assignment.responsable_beneficio || '')}">
+              </div>
+              <div class="field">
+                <label>Próximo paso</label>
+                <input type="text" value="${escapeHtml(assignment.proximo_hito_beneficio || workflow.nextStep || '')}" disabled>
+              </div>
+              <div class="field" data-span="2">
+                <label>Observación general</label>
+                <textarea name="observacion_beneficio" rows="3">${escapeHtml(assignment.observacion_beneficio || '')}</textarea>
+              </div>
             </div>
-            <div class="field">
-              <label>Próximo paso</label>
-              <input type="text" value="${escapeHtml(assignment.proximo_hito_beneficio || workflow.nextStep || '')}" disabled>
+            <div class="beneficios-contact-grid">
+              <div><strong>Teléfono</strong><span>${escapeHtml(contacto.telefono_contacto || 'Sin dato')}</span></div>
+              <div><strong>Correo</strong><span>${escapeHtml(contacto.correo_contacto || 'Sin dato')}</span></div>
+              <div><strong>Dirección</strong><span>${escapeHtml(contacto.direccion_referencia || 'Sin dato')}</span></div>
+              <div><strong>UV / Sector</strong><span>${escapeHtml([contacto.uv ? 'UV ' + contacto.uv : '', contacto.sector || ''].filter(Boolean).join(' / ') || 'Sin dato')}</span></div>
             </div>
-            <div class="field" data-span="2">
-              <label>Observación general</label>
-              <textarea name="observacion_beneficio" rows="3">${escapeHtml(assignment.observacion_beneficio || '')}</textarea>
-            </div>
-          </div>
-          <div class="beneficios-contact-grid">
-            <div><strong>Teléfono</strong><span>${escapeHtml(contacto.telefono_contacto || 'Sin dato')}</span></div>
-            <div><strong>Correo</strong><span>${escapeHtml(contacto.correo_contacto || 'Sin dato')}</span></div>
-            <div><strong>Dirección</strong><span>${escapeHtml(contacto.direccion_referencia || 'Sin dato')}</span></div>
-            <div><strong>UV / Sector</strong><span>${escapeHtml([contacto.uv ? 'UV ' + contacto.uv : '', contacto.sector || ''].filter(Boolean).join(' / ') || 'Sin dato')}</span></div>
-          </div>
-        </section>
+          </section>
 
-        <section class="beneficios-block beneficios-block--subtle">
-          <h4>Checklist documental</h4>
-          <div class="beneficios-checklist">
-            ${checklist.map(item => `
-              <article class="beneficios-checklist__item" data-checklist-code="${escapeHtml(item.code || '')}">
-                <strong>${escapeHtml(item.label || '')}</strong>
-                <div class="beneficios-form__grid">
-                  <div class="field">
-                    <label>Estado</label>
-                    <select data-doc-status>
-                      ${renderSelectOptionsHtml_(['Pendiente', 'Disponible', 'En revision'], item.status, 'Seleccionar')}
-                    </select>
-                  </div>
-                  <div class="field">
-                    <label>Fecha</label>
-                    <input type="date" data-doc-date value="${escapeHtml(String(item.date || '').slice(0, 10))}">
-                  </div>
-                  <div class="field" data-span="2">
-                    <label>Observación</label>
-                    <textarea rows="2" data-doc-observation>${escapeHtml(item.observation || '')}</textarea>
-                  </div>
-                </div>
-              </article>
-            `).join('')}
-          </div>
+          <section class="beneficios-block beneficios-block--subtle">
+            <h4>Checklist documental</h4>
+            <div class="beneficios-checklist beneficios-checklist--simple">
+              ${checklist.map(item => {
+                const currentStatus = item.status || '';
+                const isAvailable = currentStatus && currentStatus !== 'Pendiente';
+                return `
+                  <label class="beneficios-checklist__row" data-checklist-code="${escapeHtml(item.code || '')}">
+                    <input type="checkbox" data-doc-toggle ${isAvailable ? 'checked' : ''}>
+                    <span>${escapeHtml(item.label || '')}</span>
+                    <input type="hidden" data-doc-status value="${escapeHtml(currentStatus || (isAvailable ? 'Disponible' : 'Pendiente'))}">
+                    <input type="hidden" data-doc-date value="${escapeHtml(String(item.date || '').slice(0, 10))}">
+                    <textarea data-doc-observation hidden>${escapeHtml(item.observation || '')}</textarea>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </section>
         </section>
 
         <section class="beneficios-block beneficios-block--subtle">
@@ -2844,6 +2838,16 @@
 
     const detailForm = document.getElementById('camaras1414-detail-form');
     if (detailForm) {
+      detailForm.querySelectorAll('[data-doc-toggle]').forEach(toggle => {
+        toggle.addEventListener('change', () => {
+          const card = toggle.closest('[data-checklist-code]');
+          const statusInput = card?.querySelector('[data-doc-status]');
+          if (statusInput) {
+            statusInput.value = toggle.checked ? 'Disponible' : 'Pendiente';
+          }
+        });
+      });
+
       detailForm.addEventListener('submit', ev => {
         ev.preventDefault();
         const payload = collectCamaras1414DetailPayload_(detailForm);

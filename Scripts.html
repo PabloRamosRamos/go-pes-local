@@ -2693,31 +2693,9 @@
         </section>
 
         <section class="beneficios-block beneficios-block--subtle">
-          <h4>Respuesta y fecha de visita</h4>
-          <div class="beneficios-form__grid">
-            <label class="checkbox-row" data-span="2">
-              <input type="checkbox" name="response_has_response" ${response.hasResponse ? 'checked' : ''}>
-              <span>Hubo respuesta de Seguridad Pública</span>
-            </label>
-            <div class="field">
-              <label>Fecha de respuesta</label>
-              <input type="date" name="response_date" value="${escapeHtml(String(response.responseDate || '').slice(0, 10))}">
-            </div>
-            <div class="field">
-              <label>Fecha de visita técnica</label>
-              <input type="date" name="response_visit_date" value="${escapeHtml(String(response.visitDate || '').slice(0, 10))}">
-            </div>
-            <div class="field" data-span="2">
-              <label>Observaciones</label>
-              <textarea rows="3" name="response_observations">${escapeHtml(response.observations || '')}</textarea>
-            </div>
-          </div>
-        </section>
-
-        <section class="beneficios-block beneficios-block--subtle">
           <h4>Resultado de visita técnica</h4>
           <div class="beneficios-form__grid">
-            <label class="checkbox-row" data-span="2">
+            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
               <input type="checkbox" name="visit_completed" ${visit.visitCompleted ? 'checked' : ''}>
               <span>Visita técnica realizada</span>
             </label>
@@ -2730,71 +2708,20 @@
               <input type="number" min="0" name="visit_camera_count" value="${escapeHtml(String(visit.cameraCount === '' ? '' : (visit.cameraCount || '')))}">
             </div>
             <div class="field" data-span="2">
-              <label>Ubicaciones de instalación</label>
-              <textarea rows="2" name="visit_locations">${escapeHtml(visit.installationLocations || '')}</textarea>
-            </div>
-            <div class="field" data-span="2">
-              <label>Puntos de energía</label>
-              <textarea rows="2" name="visit_power_points">${escapeHtml(visit.powerPoints || '')}</textarea>
-            </div>
-            <div class="field" data-span="2">
-              <label>Puntos de internet</label>
-              <textarea rows="2" name="visit_internet_points">${escapeHtml(visit.internetPoints || '')}</textarea>
-            </div>
-            <div class="field" data-span="2">
               <label>Observaciones técnicas</label>
-              <textarea rows="3" name="visit_observations">${escapeHtml(visit.technicalObservations || '')}</textarea>
+              <textarea rows="4" name="visit_observations">${escapeHtml(visit.technicalObservations || '')}</textarea>
             </div>
           </div>
         </section>
 
         <section class="beneficios-block beneficios-block--subtle">
-          <h4>Instalación</h4>
+          <h4>Cierre</h4>
+          <p class="muted">El convenio de colaboración marca el cierre y entrega efectiva del beneficio.</p>
           <div class="beneficios-form__grid">
-            <div class="field">
-              <label>Estado de instalación</label>
-              <select name="installation_status">
-                ${renderSelectOptionsHtml_(['Sin informacion', 'Pendiente', 'En proceso', 'Instalada'], installation.status, 'Seleccionar')}
-              </select>
-            </div>
-            <div class="field">
-              <label>Fecha conocida o estimada</label>
-              <input type="date" name="installation_date" value="${escapeHtml(String(installation.knownDate || '').slice(0, 10))}">
-            </div>
-            <div class="field" data-span="2">
-              <label>Observación</label>
-              <textarea rows="3" name="installation_observations">${escapeHtml(installation.observations || '')}</textarea>
-            </div>
-          </div>
-        </section>
-
-        <section class="beneficios-block beneficios-block--subtle">
-          <h4>Convenio y cierre</h4>
-          <div class="beneficios-form__grid">
-            <label class="checkbox-row">
-              <input type="checkbox" name="agreement_received" ${agreement.received ? 'checked' : ''}>
-              <span>Convenio recibido</span>
-            </label>
-            <div class="field">
-              <label>Fecha recepción convenio</label>
-              <input type="date" name="agreement_received_date" value="${escapeHtml(String(agreement.receivedDate || '').slice(0, 10))}">
-            </div>
-            <div class="field" data-span="2">
-              <label>Observación convenio</label>
-              <textarea rows="2" name="agreement_observations">${escapeHtml(agreement.observations || '')}</textarea>
-            </div>
-            <label class="checkbox-row">
+            <label class="checkbox-row checkbox-row--camaras1414 checkbox-row--camaras1414-closure" data-span="2">
               <input type="checkbox" name="closure_closed" ${closure.closed ? 'checked' : ''}>
               <span>Beneficio cerrado</span>
             </label>
-            <div class="field">
-              <label>Fecha cierre</label>
-              <input type="date" name="closure_closed_date" value="${escapeHtml(String(closure.closedDate || '').slice(0, 10))}">
-            </div>
-            <div class="field" data-span="2">
-              <label>Observación cierre</label>
-              <textarea rows="2" name="closure_observations">${escapeHtml(closure.observations || '')}</textarea>
-            </div>
           </div>
         </section>
 

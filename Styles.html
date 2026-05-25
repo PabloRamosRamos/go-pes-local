@@ -5178,6 +5178,51 @@
     font-weight: var(--font-weight-semibold);
   }
 
+  .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 {
+    width: 100%;
+    min-height: 54px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: linear-gradient(180deg, var(--surface) 0%, var(--surface-soft) 100%);
+    cursor: pointer;
+    transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease, transform .18s ease;
+  }
+
+  .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414:hover {
+    border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+    box-shadow: var(--shadow-sm);
+  }
+
+  .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414:has(input:focus-visible) {
+    border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+
+  .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    accent-color: var(--success-accent);
+    cursor: pointer;
+    flex: 0 0 auto;
+  }
+
+  .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 span {
+    color: var(--text);
+    font-weight: var(--font-weight-bold);
+  }
+
+  .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414:has(input:checked) {
+    border-color: color-mix(in srgb, var(--success-accent) 56%, var(--border));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--success-accent) 10%, var(--surface)) 0%, var(--surface) 100%);
+  }
+
+  .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414-closure:has(input:checked) {
+    border-color: color-mix(in srgb, var(--success-accent) 68%, var(--border));
+    background: linear-gradient(180deg, color-mix(in srgb, var(--success-accent) 14%, var(--surface)) 0%, color-mix(in srgb, var(--success-accent) 6%, var(--surface-soft)) 100%);
+  }
+
   .beneficios-block--eligible {
     min-height: 470px;
   }
@@ -5260,6 +5305,10 @@
 
   .beneficios-panel--operativo #camaras1414-detail-form .beneficios-block--subtle {
     gap: var(--space-3);
+  }
+
+  .beneficios-panel--operativo #camaras1414-detail-form textarea[name="visit_observations"] {
+    min-height: 120px;
   }
 
   .beneficios-panel--operativo #camaras1414-detail-form textarea[name="email_body"] {

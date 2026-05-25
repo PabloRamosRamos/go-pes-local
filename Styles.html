@@ -4386,7 +4386,9 @@
   }
 
   .socios-layout {
-    --socios-panel-height: clamp(560px, 74vh, 820px);
+    --socios-panel-min-height: 560px;
+    --socios-panel-max-height: 650px;
+    --socios-panel-height: clamp(var(--socios-panel-min-height), 70vh, var(--socios-panel-max-height));
     display: grid;
     grid-template-columns: minmax(280px, 1fr) minmax(0, 3fr);
     gap: var(--space-5);
@@ -4395,7 +4397,9 @@
 
   .socios-data-panel {
     min-width: 0;
-    min-height: var(--socios-panel-height);
+    min-height: var(--socios-panel-min-height);
+    height: var(--socios-panel-height);
+    max-height: var(--socios-panel-max-height);
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
@@ -4735,11 +4739,16 @@
     }
 
     .socios-layout {
+      --socios-panel-min-height: 460px;
+      --socios-panel-max-height: 560px;
+      --socios-panel-height: clamp(var(--socios-panel-min-height), 68vh, var(--socios-panel-max-height));
       grid-template-columns: 1fr;
     }
 
     .socios-data-panel {
-      min-height: 460px;
+      min-height: var(--socios-panel-min-height);
+      height: var(--socios-panel-height);
+      max-height: var(--socios-panel-max-height);
     }
   }
 

@@ -2384,99 +2384,8 @@
     });
   }
 
-  function renderBeneficiosViewLegacy_() {
-    return renderBeneficiosView_();
-  }
 
-  function bindBeneficiosShellActions_() {
-    document.getElementById('beneficios-reload-btn')?.addEventListener('click', () => refreshBeneficiosModuloMinimo_());
-  }
 
-  function refreshBeneficiosModuloView_() {
-    return refreshBeneficiosModuloMinimo_();
-  }
-
-  function renderBeneficiosPanel_(data) {
-    const summary = document.getElementById('beneficios-summary');
-    const cards = document.getElementById('beneficios-cards');
-    const workspace = document.getElementById('beneficios-workspace');
-    if (!summary || !cards || !workspace) return;
-
-    const benefits = data && data.beneficios || [];
-    const selected = data && data.selected_beneficio || null;
-    const selectedHitos = data && data.selected_beneficio_hitos || [];
-    const panel = data && data.organizaciones_panel || { activas: [], elegibles: [], no_elegibles: [] };
-    const selectedOrgDetail = data && data.selected_org_detail || null;
-
-    if (!benefits.length) {
-      summary.className = 'beneficios-summary empty-state';
-      summary.innerHTML = 'No hay beneficios disponibles.';
-      cards.innerHTML = '';
-      workspace.className = 'beneficios-workspace empty-state';
-      workspace.innerHTML = 'No hay beneficios configurados.';
-      return;
-    }
-
-    summary.className = 'beneficios-summary';
-    summary.innerHTML = `
-      <div class="beneficios-summary__main">
-        <div>
-          <p class="eyebrow">Resumen del modulo</p>
-          <h3>Beneficios base operativos</h3>
-          <p class="muted">Trabaja sobre Charlas y capacitaciones, Fondese y Camaras 1414 sin CRUD generico.</p>
-        </div>
-      </div>
-      <div class="beneficios-summary__metrics">
-        ${beneficiosMetricHtml_('Activas', benefits.reduce((acc, item) => acc + Number(item.total_activas || 0), 0))}
-        ${beneficiosMetricHtml_('Elegibles', benefits.reduce((acc, item) => acc + Number(item.total_elegibles || 0), 0))}
-        ${beneficiosMetricHtml_('No elegibles', benefits.reduce((acc, item) => acc + Number(item.total_no_elegibles || 0), 0))}
-      </div>
-    `;
-
-    cards.innerHTML = benefits.map(item => `
-      <button type="button" class="beneficio-card js-beneficio-select ${item.beneficio_codigo === APP.state.currentBeneficioCodigo ? 'is-active' : ''}" data-beneficio-codigo="${escapeHtml(item.beneficio_codigo || '')}">
-        <div class="beneficio-card__head">
-          <div>
-            <h3>${escapeHtml(item.beneficio_nombre || '')}</h3>
-            <p>${escapeHtml(item.descripcion_beneficio || '')}</p>
-          </div>
-          <span class="beneficio-chip ${beneficioBadgeClass_('info')}">${escapeHtml(item.elegibilidad_label || '')}</span>
-        </div>
-        <div class="beneficio-card__meta">
-          <div><strong>Activas</strong><span>${escapeHtml(String(item.total_activas || 0))}</span></div>
-          <div><strong>Elegibles</strong><span>${escapeHtml(String(item.total_elegibles || 0))}</span></div>
-          <div><strong>No elegibles</strong><span>${escapeHtml(String(item.total_no_elegibles || 0))}</span></div>
-        </div>
-      </button>
-    `).join('');
-
-    cards.querySelectorAll('.js-beneficio-select').forEach(btn => {
-      btn.addEventListener('click', () => {
-        APP.state.currentBeneficioCodigo = btn.dataset.beneficioCodigo || '';
-        APP.state.currentBeneficioOrganizacionId = '';
-        refreshBeneficiosModuloView_();
-      });
-    });
-
-    workspace.className = 'beneficios-workspace';
-    workspace.innerHTML = `
-      <div class="beneficios-layout">
-        <section class="beneficios-detail">
-          ${renderBenefitConfigurationPanel_(selected, selectedHitos)}
-        </section>
-        <section class="beneficios-org-panel">
-          ${renderBenefitOrganizationsPanel_(selected, panel)}
-        </section>
-        <section class="beneficios-org-detail">
-          ${renderBenefitOrgDetailPanel_(selectedOrgDetail, selected)}
-        </section>
-      </div>
-    `;
-
-    bindBeneficioConfigForm_();
-    bindBenefitOrganizationsPanel_();
-    bindBenefitOrgForm_();
-  }
 
   function renderBenefitConfigurationPanel_(benefit, hitos) {
     const item = benefit || {};
@@ -2749,15 +2658,17 @@
     `;
   }
 
-  function bindBeneficioConfigForm_() {
+  function bindBeneficioConfigFormLegacyInactive_() {
+    return;
     const form = document.getElementById('beneficio-config-form');
     if (!form) return;
     if (form.dataset.bound === '1') return;
     form.dataset.bound = '1';
-    form.addEventListener('submit', saveBeneficioConfigFromForm_);
+    form.addEventListener('submit', saveBeneficioConfigFromFormLegacyInactive_);
   }
 
-  function bindBenefitOrganizationsPanel_() {
+  function bindBenefitOrganizationsPanelLegacyInactive_() {
+    return;
     document.querySelectorAll('.js-beneficio-org-add, .js-beneficio-org-manage').forEach(btn => {
       btn.addEventListener('click', () => {
         APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
@@ -2777,14 +2688,15 @@
     });
 
     document.querySelectorAll('.js-beneficio-org-remove').forEach(btn => {
-      btn.addEventListener('click', () => deactivateBenefitOrg_(btn.dataset.organizacionId || ''));
+      btn.addEventListener('click', () => deactivateBenefitOrgLegacyInactive_(btn.dataset.organizacionId || ''));
     });
   }
 
-  function bindBenefitOrgForm_() {
+  function bindBenefitOrgFormLegacyInactive_() {
+    return;
     const form = document.getElementById('beneficio-org-form');
     if (!form) return;
-    form.addEventListener('submit', saveBeneficioOrgFromForm_);
+    form.addEventListener('submit', saveBeneficioOrgFromFormLegacyInactive_);
   }
 
   function collectFondeseConfigRows_() {
@@ -2804,7 +2716,9 @@
     }));
   }
 
-  function saveBeneficioConfigFromForm_(ev) {
+  function saveBeneficioConfigFromFormLegacyInactive_(ev) {
+    ev.preventDefault();
+    return;
     ev.preventDefault();
     const form = ev.target;
     const payload = serializeForm(form);
@@ -2823,7 +2737,7 @@
       APP.state.currentBeneficioCodigo = res.beneficio_codigo || payload.beneficio_codigo || '';
       APP.state.currentBeneficioOrganizacionId = '';
       showSuccess(`Configuración guardada: ${friendlyBeneficioLabel_(APP.state.currentBeneficioCodigo)}`);
-      return refreshBeneficiosModuloView_();
+      return Promise.resolve();
     }).catch(showError).finally(() => {
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -2832,7 +2746,9 @@
     });
   }
 
-  function saveBeneficioOrgFromForm_(ev) {
+  function saveBeneficioOrgFromFormLegacyInactive_(ev) {
+    ev.preventDefault();
+    return;
     ev.preventDefault();
     const form = ev.target;
     const payload = serializeForm(form);
@@ -2854,7 +2770,7 @@
     api('guardarBeneficioOrganizacion', payload).then(() => {
       showSuccess('Avance del beneficio guardado.');
       APP.state.currentBeneficioOrganizacionId = payload.organizacion_id || '';
-      return refreshBeneficiosModuloView_();
+      return Promise.resolve();
     }).catch(showError).finally(() => {
       if (submitBtn) {
         submitBtn.disabled = false;
@@ -2863,7 +2779,8 @@
     });
   }
 
-  function deactivateBenefitOrg_(organizacionId) {
+  function deactivateBenefitOrgLegacyInactive_(organizacionId) {
+    return;
     const orgId = String(organizacionId || '').trim();
     if (!orgId || !APP.state.currentBeneficioCodigo) return;
     const ok = window.confirm('Se retirará esta organización del beneficio y se conservará su historial. ¿Continuar?');
@@ -2876,7 +2793,7 @@
       if (APP.state.currentBeneficioOrganizacionId === orgId) {
         APP.state.currentBeneficioOrganizacionId = '';
       }
-      return refreshBeneficiosModuloView_();
+      return Promise.resolve();
     }).catch(showError);
   }
 

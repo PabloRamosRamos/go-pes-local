@@ -27,7 +27,7 @@ function goPesDiagnosticarAvanceBackend() {
  *  ========================= */
 
 function getCatalogosAvanceClient() {
-  requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const hitos = goPesGetCatalogoHitosAvance_();
@@ -45,7 +45,7 @@ function getCatalogosAvanceClient() {
 
 function getOrganizacionesAvanceClient() {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getOrganizacionesAvanceClient', {});
-  requireAnyModuleAccess_(['seguimiento', 'socios'], ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireAnyModuleAccess_(['avance', 'socios'], ['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const cached = typeof getCatalogCacheJson_ === 'function' &&
@@ -87,7 +87,7 @@ function getOrganizacionesAvanceClient() {
 
 function getGruposVecinosAvanceClient() {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getGruposVecinosAvanceClient', {});
-  requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS)
@@ -118,7 +118,7 @@ function getGruposVecinosAvanceClient() {
 }
 
 function getTimelineAvance(payload) {
-  requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const ctx = goPesResolveAvanceContext_(payload);
@@ -128,7 +128,7 @@ function getTimelineAvance(payload) {
 }
 
 function getBotonesAvanceEstado(payload) {
-  requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const ctx = goPesResolveAvanceContext_(payload);
@@ -139,14 +139,14 @@ function getBotonesAvanceEstado(payload) {
 
 function getAvanceOrganizacion(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getAvanceOrganizacion', payload || {});
-  requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const ctx = goPesResolveAvanceContext_(payload);
   const orgId = ctx.organizacion.organizacion_id;
   const solicitudId = ctx.organizacion.solicitud_id || '';
 
-  goPesEnsureEstadoAvanceInicial_(orgId, solicitudId, requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']));
+  goPesEnsureEstadoAvanceInicial_(orgId, solicitudId, requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']));
 
   const estadoActual = goPesGetEstadoAvanceActual_(orgId, solicitudId);
   const timeline = goPesGetTimelineAvanceRows_(orgId);
@@ -168,7 +168,7 @@ function getAvanceOrganizacion(payload) {
 
 function getAvanceGrupoVecinos(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getAvanceGrupoVecinos', payload || {});
-  requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const solicitudId = String(payload && payload.solicitud_id || '').trim();
@@ -199,7 +199,7 @@ function getAvanceGrupoVecinos(payload) {
 
 function registrarHitoAvance(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.registrarHitoAvance', payload || {});
-  const user = requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   payload = payload || {};
@@ -397,7 +397,7 @@ function registrarHitoAvanceGrupoVecinos_(payload, user, diag) {
 
 function cambiarEstadoAvance(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.cambiarEstadoAvance', payload || {});
-  const user = requireModuleAccess_('seguimiento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   payload = payload || {};

@@ -191,7 +191,7 @@ function actualizarCargoSocioOrganizacion(payload) {
   });
 }
 
-function goPesSocioCargoPermitido_(cargo) {
+function goPesSocioCargoPermitidoLegacy_(cargo) {
   return [
     'Presidente',
     'Tesorero',

@@ -657,7 +657,7 @@ function goPesGetCatalogoHitosAvance_() {
     });
 
   return rows.map(function(r) {
-    return {
+    return goPesNormalizeCatalogoHitoAvance_({
       codigo_hito: String(r.codigo_hito || ''),
       tramo: String(r.tramo || ''),
       orden_hito: Number(r.orden_hito || 0),
@@ -666,8 +666,67 @@ function goPesGetCatalogoHitosAvance_() {
       codigo_hito_previo: String(r.codigo_hito_previo || ''),
       permite_saltar: goPesBool_(r.permite_saltar),
       activo_flag: goPesBool_(r.activo_flag)
-    };
+    });
   });
+}
+
+function goPesGetAvanceHitoOverrides_() {
+  return {
+    FOR_01: {
+      orden_hito: 8
+    },
+    FOR_02: {
+      orden_hito: 9
+    },
+    FOR_03: {
+      orden_hito: 10
+    },
+    FOR_04: {
+      orden_hito: 11
+    },
+    FOR_07: {
+      orden_hito: 12,
+      nombre_hito: 'Obtención de RUT',
+      codigo_hito_previo: 'FOR_04',
+      permite_saltar: true
+    },
+    FOR_06: {
+      orden_hito: 13,
+      nombre_hito: 'Registro de colaboradores del Estado (RCCE)',
+      codigo_hito_previo: 'FOR_04',
+      permite_saltar: true
+    },
+    FOR_08: {
+      orden_hito: 14,
+      nombre_hito: 'Cuenta bancaria habilitada',
+      codigo_hito_previo: 'FOR_04',
+      permite_saltar: true
+    },
+    FOR_05: {
+      orden_hito: 15,
+      nombre_hito: 'Registro municipal habilitado (RMRFP)',
+      codigo_hito_previo: 'FOR_04',
+      permite_saltar: true
+    }
+  };
+}
+
+function goPesNormalizeCatalogoHitoAvance_(row) {
+  const nextRow = Object.assign({}, row || {});
+  const codigo = String(nextRow.codigo_hito || '').trim().toUpperCase();
+  const override = goPesGetAvanceHitoOverrides_()[codigo];
+  if (!override) return nextRow;
+  return Object.assign(nextRow, override);
+}
+
+function goPesNormalizeTimelineHitoAvanceRow_(row) {
+  const nextRow = Object.assign({}, row || {});
+  const catalogo = goPesFindHitoCatalogo_(nextRow.codigo_hito);
+  if (!catalogo) return nextRow;
+  nextRow.tramo = String(catalogo.tramo || nextRow.tramo || '');
+  nextRow.orden_hito = Number(catalogo.orden_hito || nextRow.orden_hito || 0);
+  nextRow.nombre_hito = String(catalogo.nombre_hito || nextRow.nombre_hito || '');
+  return nextRow;
 }
 
 function goPesFindHitoCatalogo_(codigoHito) {
@@ -947,6 +1006,8 @@ function goPesGetTimelineAvanceRows_(organizacionId) {
   const rows = (getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS) || []).filter(function(row) {
     return String(row.organizacion_id || '').trim() === String(organizacionId || '').trim()
       || (solicitudId && String(row.solicitud_id || '').trim() === solicitudId);
+  }).map(function(row) {
+    return goPesNormalizeTimelineHitoAvanceRow_(row);
   });
   return rows.sort(function(a, b) {
     return new Date(b.timestamp_registro || 0) - new Date(a.timestamp_registro || 0);
@@ -954,7 +1015,9 @@ function goPesGetTimelineAvanceRows_(organizacionId) {
 }
 
 function goPesGetTimelineAvanceRowsBySolicitud_(solicitudId) {
-  const rows = filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'solicitud_id', solicitudId, false) || [];
+  const rows = (filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'solicitud_id', solicitudId, false) || []).map(function(row) {
+    return goPesNormalizeTimelineHitoAvanceRow_(row);
+  });
   return rows.sort(function(a, b) {
     return new Date(b.timestamp_registro || 0) - new Date(a.timestamp_registro || 0);
   });

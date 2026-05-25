@@ -96,7 +96,7 @@ function getSeedCatalogoHitosAvance_() {
     {
       codigo_hito: 'FOR_01',
       tramo: 'Formalización posterior',
-      orden_hito: 1,
+      orden_hito: 8,
       nombre_hito: 'Ingreso comisión electoral',
       descripcion: 'Informan a secretaría municipal la fecha de asamblea para ratificar directiva.',
       codigo_hito_previo: 'PRE_07',
@@ -106,7 +106,7 @@ function getSeedCatalogoHitosAvance_() {
     {
       codigo_hito: 'FOR_02',
       tramo: 'Formalización posterior',
-      orden_hito: 2,
+      orden_hito: 9,
       nombre_hito: 'Asamblea de ratificación',
       descripcion: 'Se realiza la asamblea de ratificación sin presencia municipal.',
       codigo_hito_previo: 'FOR_01',
@@ -116,7 +116,7 @@ function getSeedCatalogoHitosAvance_() {
     {
       codigo_hito: 'FOR_03',
       tramo: 'Formalización posterior',
-      orden_hito: 3,
+      orden_hito: 10,
       nombre_hito: 'Documentación ingresada a ratificación',
       descripcion: 'El acta y documentación fueron presentados ante la entidad correspondiente.',
       codigo_hito_previo: 'FOR_02',
@@ -126,7 +126,7 @@ function getSeedCatalogoHitosAvance_() {
     {
       codigo_hito: 'FOR_04',
       tramo: 'Formalización posterior',
-      orden_hito: 4,
+      orden_hito: 11,
       nombre_hito: 'Certificado definitivo obtenido',
       descripcion: 'Registro Civil hace entrega del certificado definitivo válido por 3 años.',
       codigo_hito_previo: 'FOR_03',
@@ -134,42 +134,42 @@ function getSeedCatalogoHitosAvance_() {
       activo_flag: true
     },
     {
-      codigo_hito: 'FOR_05',
+      codigo_hito: 'FOR_07',
       tramo: 'Formalización posterior',
-      orden_hito: 5,
-      nombre_hito: 'Registro municipal habilitado (RMRFP)',
-      descripcion: 'Para organizaciones que deben quedar aptas para gestión o subvención.',
+      orden_hito: 12,
+      nombre_hito: 'Obtención de RUT',
+      descripcion: 'Hito administrativo clave para iniciar otras gestiones paralelas.',
       codigo_hito_previo: 'FOR_04',
-      permite_saltar: false,
+      permite_saltar: true,
       activo_flag: true
     },
     {
       codigo_hito: 'FOR_06',
       tramo: 'Formalización posterior',
-      orden_hito: 6,
-      nombre_hito: 'Registro de colaboradores del Estado (RCCE) completado',
-      descripcion: 'Si aplica al tipo de organización.',
-      codigo_hito_previo: 'FOR_05',
-      permite_saltar: true,
-      activo_flag: true
-    },
-    {
-      codigo_hito: 'FOR_07',
-      tramo: 'Formalización posterior',
-      orden_hito: 7,
-      nombre_hito: 'RUT obtenido',
-      descripcion: 'Hito administrativo clave.',
-      codigo_hito_previo: 'FOR_06',
+      orden_hito: 13,
+      nombre_hito: 'Registro de colaboradores del Estado (RCCE)',
+      descripcion: 'Gestión administrativa independiente posterior al certificado definitivo.',
+      codigo_hito_previo: 'FOR_04',
       permite_saltar: true,
       activo_flag: true
     },
     {
       codigo_hito: 'FOR_08',
       tramo: 'Formalización posterior',
-      orden_hito: 8,
-      nombre_hito: 'Cuenta corriente habilitada',
-      descripcion: 'Último hito fuerte de formalización operativa.',
-      codigo_hito_previo: 'FOR_07',
+      orden_hito: 14,
+      nombre_hito: 'Cuenta bancaria habilitada',
+      descripcion: 'Gestión financiera independiente posterior al certificado definitivo.',
+      codigo_hito_previo: 'FOR_04',
+      permite_saltar: true,
+      activo_flag: true
+    },
+    {
+      codigo_hito: 'FOR_05',
+      tramo: 'Formalización posterior',
+      orden_hito: 15,
+      nombre_hito: 'Registro municipal habilitado (RMRFP)',
+      descripcion: 'Gestión administrativa independiente posterior al certificado definitivo.',
+      codigo_hito_previo: 'FOR_04',
       permite_saltar: true,
       activo_flag: true
     }

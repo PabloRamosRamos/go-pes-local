@@ -2454,6 +2454,33 @@
     }
   }
 
+  function getCamaras1414EligibilityIssue_(row) {
+    const item = row || {};
+    if (!String(item.organizacion_id || '').trim()) return 'La organización no tiene identificador válido para gestionar CAMARAS 1414.';
+    if (!String(item.fecha_hito_11 || '').trim()) return 'La organización no cumple requisitos: falta la fecha del hito 11 / certificado definitivo.';
+    if (String(item.elegible_flag || 'Si').trim().toLowerCase() === 'no') return 'La organización no cumple los requisitos para cargar la ficha operativa.';
+    return '';
+  }
+
+  function renderBeneficiosAlertCard_(alert) {
+    const item = alert || {};
+    const heading = item.nombre_organizacion || item.title || '';
+    const subline = item.nombre_organizacion && item.title ? item.title : '';
+    return `
+      <article class="beneficios-alert ${beneficioAlertClass_(item.tone)}">
+        <span class="beneficios-alert__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">warning</span>
+        </span>
+        <span class="beneficios-alert__divider" aria-hidden="true"></span>
+        <div class="beneficios-alert__body">
+          <strong>${escapeHtml(heading)}</strong>
+          ${subline ? `<span>${escapeHtml(subline)}</span>` : ''}
+          ${item.detail ? `<small>${escapeHtml(item.detail || '')}</small>` : ''}
+        </div>
+      </article>
+    `;
+  }
+
   function renderCamaras1414Panel_(panel, activeTab) {
     const data = panel || {};
     const summary = data.summary || {};
@@ -2536,13 +2563,7 @@
             </div>
             ${alerts.length ? `
               <div class="beneficios-alerts">
-                ${alerts.map(alert => `
-                  <article class="beneficios-alert">
-                    <strong>${escapeHtml(alert.nombre_organizacion || '')}</strong>
-                    <span>${escapeHtml(alert.title || '')}</span>
-                    <small>${escapeHtml(alert.detail || '')}</small>
-                  </article>
-                `).join('')}
+                ${alerts.map(alert => renderBeneficiosAlertCard_(alert)).join('')}
               </div>
             ` : '<div class="empty-state">Sin alertas operativas dentro del rango configurado.</div>'}
           </section>
@@ -2909,7 +2930,7 @@
                   <h4>Detalle operativo CAMARAS 1414</h4>
                 </div>
                 ${detail ? `
-                  <button type="button" class="secondary-btn" id="camaras1414-clear-selection-btn">
+                  <button type="button" class="secondary-btn beneficios-detail__clear-btn" id="camaras1414-clear-selection-btn">
                     <span class="material-symbols-outlined">close</span>Quitar seleccion
                   </button>
                 ` : ''}
@@ -2936,14 +2957,19 @@
             <tr>
               <th>Organizacion</th>
               <th>Fecha hito 11</th>
-              ${isEligible ? '' : '<th>Estado</th><th>Proximo paso</th>'}
+              ${isEligible ? '<th>Accion</th>' : '<th>Estado</th><th>Proximo paso</th>'}
             </tr>
           </thead>
           <tbody>
-            ${list.map(row => `
+            ${list.map(row => {
+              const issue = getCamaras1414EligibilityIssue_(row);
+              const canManage = !issue;
+              return `
               <tr
                 class="camaras1414-row ${String(APP.state.currentBeneficioOrganizacionId || '') === String(row.organizacion_id || '') ? 'is-selected' : ''}"
                 data-camaras1414-row="${escapeHtml(row.organizacion_id || '')}"
+                data-camaras1414-row-mode="${escapeHtml(mode)}"
+                data-camaras1414-row-issue="${escapeHtml(issue)}"
                 tabindex="0"
                 role="button"
                 aria-label="Seleccionar organizacion ${escapeHtml(row.nombre_organizacion || '')}"
@@ -2955,9 +2981,21 @@
                     : `<small class="beneficios-table__meta">${escapeHtml(isEligible ? 'Lista para gestionar' : 'Caso en seguimiento')}</small>`}
                 </td>
                 <td>${escapeHtml(formatFechaHoraUi_(row.fecha_hito_11 || ''))}</td>
-                ${isEligible ? '' : `<td>${escapeHtml(row.estado_beneficio || '')}</td><td>${escapeHtml(row.proximo_hito_beneficio || '')}</td>`}
+                ${isEligible
+                  ? `<td class="beneficios-table__action-cell">
+                      <button
+                        type="button"
+                        class="secondary-btn js-camaras1414-eligible-action"
+                        data-organizacion-id="${escapeHtml(row.organizacion_id || '')}"
+                        data-eligibility-issue="${escapeHtml(issue)}"
+                      >
+                        <span class="material-symbols-outlined">play_circle</span>Gestionar
+                      </button>
+                    </td>`
+                  : `<td>${escapeHtml(row.estado_beneficio || '')}</td><td>${escapeHtml(row.proximo_hito_beneficio || '')}</td>`}
               </tr>
-            `).join('')}
+            `;
+            }).join('')}
           </tbody>
         </table>
       </div>
@@ -3031,12 +3069,7 @@
               : ''}
             ${detailAlerts.length
               ? `<div class="beneficios-alerts beneficios-alerts--inline">
-                  ${detailAlerts.map(alert => `
-                    <article class="beneficios-alert">
-                      <strong>${escapeHtml(alert.title || '')}</strong>
-                      <small>${escapeHtml(alert.detail || '')}</small>
-                    </article>
-                  `).join('')}
+                  ${detailAlerts.map(alert => renderBeneficiosAlertCard_(Object.assign({}, alert, { nombre_organizacion: '', title: alert.title || '', detail: alert.detail || '' }))).join('')}
                 </div>`
               : ''}
             <div class="beneficios-contact-grid">
@@ -3073,7 +3106,7 @@
               <h4>Correo formal de solicitud</h4>
               <p class="muted">No envia nada automaticamente. Prepara el borrador y permite copiar o abrir mailto.</p>
             </div>
-            <div class="beneficios-inline-actions">
+            <div class="beneficios-inline-actions beneficios-inline-actions--mail">
               <button type="button" class="secondary-btn js-camaras1414-copy-subject"><span class="material-symbols-outlined">content_copy</span>Copiar asunto</button>
               <button type="button" class="secondary-btn js-camaras1414-copy-body"><span class="material-symbols-outlined">content_copy</span>Copiar cuerpo</button>
               <button type="button" class="secondary-btn js-camaras1414-mailto"><span class="material-symbols-outlined">mail</span>Abrir mailto</button>
@@ -3224,6 +3257,11 @@
   function bindCamaras1414Panel_() {
     document.querySelectorAll('[data-camaras1414-row]').forEach(row => {
       const selectRow = () => {
+        const issue = String(row.dataset.camaras1414RowIssue || '').trim();
+        if (issue) {
+          window.alert(issue);
+          return;
+        }
         APP.state.currentBeneficioOrganizacionId = row.dataset.camaras1414Row || '';
         refreshBeneficiosModuloMinimo_();
       };
@@ -3232,6 +3270,19 @@
         if (ev.key !== 'Enter' && ev.key !== ' ') return;
         ev.preventDefault();
         selectRow();
+      });
+    });
+
+    document.querySelectorAll('.js-camaras1414-eligible-action').forEach(btn => {
+      btn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        const issue = String(btn.dataset.eligibilityIssue || '').trim();
+        if (issue) {
+          window.alert(issue);
+          return;
+        }
+        APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
+        refreshBeneficiosModuloMinimo_();
       });
     });
 

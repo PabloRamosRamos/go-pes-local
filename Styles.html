@@ -41,6 +41,7 @@
     --highlight-soft: color-mix(in srgb, var(--runtime-brand-accent, var(--brand-teal)) 12%, var(--surface));
     --app-bg-start: color-mix(in srgb, var(--runtime-brand-light, var(--surface)) 82%, #ffffff);
     --app-bg-end: color-mix(in srgb, var(--runtime-brand-light, var(--bg)) 42%, var(--bg));
+    --splash-backdrop: linear-gradient(145deg, #0b2140 0%, #143d69 52%, #145b65 100%);
     --heading-color: var(--accent-strong);
     --eyebrow-color: color-mix(in srgb, var(--success-accent) 82%, #8cc63f);
     --interactive-surface: var(--surface-alt);
@@ -220,13 +221,17 @@
     display: none !important;
   }
 
+  html,
+  body {
+    background: var(--splash-backdrop);
+  }
+
   body {
     margin: 0;
     font-family: var(--font-base);
     font-size: var(--font-size-base);
     line-height: var(--line-normal);
     color: var(--text);
-    background: linear-gradient(180deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
   }
 
   body.app-has-modal {
@@ -1765,7 +1770,7 @@
     place-items: center;
     overflow: hidden;
     isolation: isolate;
-    background: linear-gradient(145deg, #0b2140 0%, #143d69 52%, #145b65 100%);
+    background: var(--splash-backdrop);
     opacity: 1;
     visibility: visible;
     transition: opacity 0.26s ease, visibility 0.26s ease;

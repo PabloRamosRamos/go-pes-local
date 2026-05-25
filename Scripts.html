@@ -3047,6 +3047,7 @@
         cargo: committeeContact.cargo || '',
         telefono_contacto: committeeContact.telefono_contacto || '',
         correo_contacto: committeeContact.correo_contacto || '',
+        direccion: committeeContact.direccion || '',
         unavailable: true
       });
     }
@@ -3088,6 +3089,7 @@
                       data-contact-cargo="${escapeHtml(item.cargo || '')}"
                       data-contact-phone="${escapeHtml(item.telefono_contacto || '')}"
                       data-contact-email="${escapeHtml(item.correo_contacto || '')}"
+                      data-contact-address="${escapeHtml(item.direccion || '')}"
                       data-contact-unavailable="${item.unavailable ? '1' : '0'}"
                       ${String(item.socio_id || '').trim() === String(committeeContact.socio_id || '').trim() ? 'selected' : ''}
                     >
@@ -3098,10 +3100,6 @@
                 ${committeeOptions.length
                   ? '<p class="muted">Selecciona el socio definido por la organizacion como contacto operativo del beneficio.</p>'
                   : `<p class="muted">${escapeHtml(committeeContact.emptyMessage || 'No hay socios disponibles para seleccionar.')}</p>`}
-              </div>
-              <div class="field">
-                <label>Cargo del contacto</label>
-                <input type="text" value="${escapeHtml(contacto.contacto_cargo || 'Sin definir')}" data-default-value="${escapeHtml(contacto.contacto_cargo || 'Sin definir')}" disabled data-camaras-contact-field="cargo">
               </div>
               <div class="field" data-span="2">
                 <label>Observacion general</label>
@@ -3133,10 +3131,9 @@
               : ''}
             <div class="beneficios-contact-grid">
               <div><strong>Contacto</strong><span data-camaras-contact-display="name" data-default-value="${escapeHtml(contacto.contacto_nombre || 'Sin definir')}">${escapeHtml(contacto.contacto_nombre || 'Sin definir')}</span></div>
-              <div><strong>Cargo</strong><span data-camaras-contact-display="cargo" data-default-value="${escapeHtml(contacto.contacto_cargo || 'Sin definir')}">${escapeHtml(contacto.contacto_cargo || 'Sin definir')}</span></div>
               <div><strong>Telefono</strong><span data-camaras-contact-display="phone" data-default-value="${escapeHtml(contacto.telefono_contacto || 'Sin dato')}">${escapeHtml(contacto.telefono_contacto || 'Sin dato')}</span></div>
               <div><strong>Correo</strong><span data-camaras-contact-display="email" data-default-value="${escapeHtml(contacto.correo_contacto || 'Sin dato')}">${escapeHtml(contacto.correo_contacto || 'Sin dato')}</span></div>
-              <div><strong>Direccion</strong><span>${escapeHtml(contacto.direccion_referencia || 'Sin dato')}</span></div>
+              <div><strong>Direccion</strong><span data-camaras-contact-display="address" data-default-value="${escapeHtml(contacto.direccion_referencia || 'Sin dato')}">${escapeHtml(contacto.direccion_referencia || 'Sin dato')}</span></div>
               <div><strong>UV / Sector</strong><span>${escapeHtml([contacto.uv ? 'UV ' + contacto.uv : '', contacto.sector || ''].filter(Boolean).join(' / ') || 'Sin dato')}</span></div>
             </div>
             </div>
@@ -3452,6 +3449,7 @@
         cargo: selectedContactOption ? selectedContactOption.dataset.contactCargo || '' : '',
         telefono_contacto: selectedContactOption ? selectedContactOption.dataset.contactPhone || '' : '',
         correo_contacto: selectedContactOption ? selectedContactOption.dataset.contactEmail || '' : '',
+        direccion: selectedContactOption ? selectedContactOption.dataset.contactAddress || '' : '',
         unavailable: selectedContactOption ? selectedContactOption.dataset.contactUnavailable === '1' : false
       },
       response: {
@@ -3507,9 +3505,9 @@
     const option = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
     const values = {
       name: option && select.value ? String(option.dataset.contactName || '').trim() : '',
-      cargo: option && select.value ? String(option.dataset.contactCargo || '').trim() : '',
       phone: option && select.value ? String(option.dataset.contactPhone || '').trim() : '',
-      email: option && select.value ? String(option.dataset.contactEmail || '').trim() : ''
+      email: option && select.value ? String(option.dataset.contactEmail || '').trim() : '',
+      address: option && select.value ? String(option.dataset.contactAddress || '').trim() : ''
     };
 
     const setText = (selector, value, fallback) => {
@@ -3517,13 +3515,10 @@
       if (node) node.textContent = value || node.dataset.defaultValue || fallback;
     };
 
-    const cargoInput = form.querySelector('[data-camaras-contact-field="cargo"]');
-    if (cargoInput) cargoInput.value = values.cargo || cargoInput.dataset.defaultValue || 'Sin definir';
-
     setText('[data-camaras-contact-display="name"]', values.name, 'Sin definir');
-    setText('[data-camaras-contact-display="cargo"]', values.cargo, 'Sin definir');
     setText('[data-camaras-contact-display="phone"]', values.phone, 'Sin dato');
     setText('[data-camaras-contact-display="email"]', values.email, 'Sin dato');
+    setText('[data-camaras-contact-display="address"]', values.address, 'Sin dato');
   }
 
   function copyTextToClipboard_(value, successMessage) {

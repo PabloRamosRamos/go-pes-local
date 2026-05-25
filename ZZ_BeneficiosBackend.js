@@ -378,10 +378,9 @@ function buildCamarasDetailByOrgId_(organizacionId) {
       solicitud_id: sync.organizacion.solicitud_id || '',
       contacto_socio_id: committeeContact.socio_id || '',
       contacto_nombre: committeeContact.nombre_socio || '',
-      contacto_cargo: committeeContact.cargo || '',
       telefono_contacto: committeeContact.telefono_contacto || caso.telefono_contacto || '',
       correo_contacto: committeeContact.correo_contacto || caso.correo_contacto || '',
-      direccion_referencia: sync.organizacion.direccion_referencia || caso.direccion_original || '',
+      direccion_referencia: committeeContact.direccion || sync.organizacion.direccion_referencia || caso.direccion_original || '',
       uv: sync.organizacion.uv || caso.uv || '',
       sector: sync.organizacion.sector || caso.sector || ''
     },
@@ -647,6 +646,7 @@ function buildCamarasCommitteeContactView_(detailMap, organizacion, caseRow) {
     cargo: sanitizeCamarasText_(fallback.cargo, 120),
     telefono_contacto: sanitizeCamarasText_(fallback.telefono_contacto || caso.telefono_contacto, 80),
     correo_contacto: sanitizeCamarasText_(fallback.correo_contacto || caso.correo_contacto, 200),
+    direccion: sanitizeCamarasText_(fallback.direccion || fallback.direccion_socio || org.direccion_referencia || caso.direccion_original, 300),
     available: !!selectedSocio
   };
 
@@ -656,6 +656,7 @@ function buildCamarasCommitteeContactView_(detailMap, organizacion, caseRow) {
     cargo: current.cargo || '',
     telefono_contacto: current.telefono_contacto || '',
     correo_contacto: current.correo_contacto || '',
+    direccion: current.direccion || '',
     available: current.available,
     emptyMessage: socios.length ? '' : 'No hay socios disponibles para seleccionar',
     options: socios.map(function(item) {
@@ -664,7 +665,8 @@ function buildCamarasCommitteeContactView_(detailMap, organizacion, caseRow) {
         nombre_socio: String(item.nombre_socio || '').trim(),
         cargo: String(item.cargo || '').trim(),
         telefono_contacto: String(item.telefono_contacto || '').trim(),
-        correo_contacto: String(item.correo_contacto || '').trim()
+        correo_contacto: String(item.correo_contacto || '').trim(),
+        direccion: String(item.direccion || '').trim()
       };
     })
   };
@@ -777,7 +779,8 @@ function getCamarasSociosByOrganizacionId_(organizacionId, caseRow) {
         nombre_socio: String(row.nombre_socio || '').trim(),
         cargo: String(row.cargo || '').trim(),
         telefono_contacto: String(caso.telefono_contacto || '').trim(),
-        correo_contacto: String(caso.correo_contacto || '').trim()
+        correo_contacto: String(caso.correo_contacto || '').trim(),
+        direccion: String(row.direccion_socio || '').trim()
       };
     })
     .filter(function(row) {
@@ -876,7 +879,8 @@ function normalizeCamarasCommitteeContactPayload_(value, socios, caseRow) {
         nombre_socio: sanitizeCamarasText_(input.nombre_socio, 200),
         cargo: sanitizeCamarasText_(input.cargo, 120),
         telefono_contacto: sanitizeCamarasText_(input.telefono_contacto || caso.telefono_contacto, 80),
-        correo_contacto: sanitizeCamarasText_(input.correo_contacto || caso.correo_contacto, 200)
+        correo_contacto: sanitizeCamarasText_(input.correo_contacto || caso.correo_contacto, 200),
+        direccion: sanitizeCamarasText_(input.direccion || caso.direccion_original, 300)
       };
     }
     throw new Error('El socio seleccionado ya no está disponible para este comité. Recarga la ficha y selecciona un contacto válido.');
@@ -888,7 +892,8 @@ function normalizeCamarasCommitteeContactPayload_(value, socios, caseRow) {
     nombre_socio: sanitizeCamarasText_(socio.nombre_socio, 200),
     cargo: sanitizeCamarasText_(socio.cargo, 120),
     telefono_contacto: sanitizeCamarasText_(socio.telefono_contacto || caso.telefono_contacto, 80),
-    correo_contacto: sanitizeCamarasText_(socio.correo_contacto || caso.correo_contacto, 200)
+    correo_contacto: sanitizeCamarasText_(socio.correo_contacto || caso.correo_contacto, 200),
+    direccion: sanitizeCamarasText_(socio.direccion || caso.direccion_original, 300)
   };
 }
 

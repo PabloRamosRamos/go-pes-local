@@ -50,6 +50,7 @@
     --highlight-soft: color-mix(in srgb, var(--runtime-brand-accent, #36d5bf) 12%, var(--surface));
     --app-bg-start: color-mix(in srgb, var(--runtime-brand-dark, #0f1824) 76%, #08111a);
     --app-bg-end: color-mix(in srgb, var(--runtime-brand-dark, #0b121b) 62%, #05090e);
+    --splash-backdrop: linear-gradient(145deg, #08131d 0%, #10314b 52%, #0d3d46 100%);
     --heading-color: color-mix(in srgb, var(--runtime-brand-primary, #74c8e6) 74%, #f5fbff);
     --eyebrow-color: color-mix(in srgb, var(--runtime-brand-accent, #9fd85a) 72%, white);
     --interactive-surface: #172433;
@@ -96,8 +97,9 @@
     --reminder-icon: #7be8dc;
   }
 
+  html[data-theme="dark"],
   html[data-theme="dark"] body {
-    background: linear-gradient(180deg, var(--app-bg-start) 0%, var(--app-bg-end) 100%);
+    background: var(--splash-backdrop);
   }
 
   html[data-theme="dark"] .hero,
@@ -169,7 +171,7 @@
   }
 
   html[data-theme="dark"] .app-loading {
-    background: linear-gradient(145deg, #08131d 0%, #10314b 52%, #0d3d46 100%);
+    background: var(--splash-backdrop);
   }
 
   html[data-theme="dark"] .splash-screen {

@@ -2398,6 +2398,16 @@
     `;
   }
 
+  function renderBeneficiosMetric_(label, value, icon) {
+    return `
+      <article class="beneficios-metric">
+        <span class="material-symbols-outlined">${escapeHtml(icon || 'insights')}</span>
+        <strong>${escapeHtml(String(value == null ? 0 : value))}</strong>
+        <span>${escapeHtml(label || '')}</span>
+      </article>
+    `;
+  }
+
   function renderCamaras1414Panel_(panel, activeTab) {
     const data = panel || {};
     const summary = data.summary || {};
@@ -2419,9 +2429,9 @@
         </div>
 
         <div class="beneficios-summary__metrics">
-          ${renderMetric_('Elegibles', summary.totalEligible || 0, 'groups', escapeHtml)}
-          ${renderMetric_('En gestion', summary.totalActive || 0, 'handshake', escapeHtml)}
-          ${renderMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active', escapeHtml)}
+          ${renderBeneficiosMetric_('Elegibles', summary.totalEligible || 0, 'groups')}
+          ${renderBeneficiosMetric_('En gestion', summary.totalActive || 0, 'handshake')}
+          ${renderBeneficiosMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active')}
         </div>
 
         <section class="beneficios-block">

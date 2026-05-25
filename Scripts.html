@@ -107,6 +107,7 @@
       sociosOrganizacionesFetchedAt: 0,
       sociosModuleRows: [],
       sociosModuleFetchedAt: 0,
+      sociosModuleQuery: '',
       currentSocioDetalle: null,
       pendingSociosRows: [],
       ingresoMatches: [],
@@ -3415,6 +3416,64 @@
     return String(row && row.telefono_contacto || '').trim() || 'Sin teléfono';
   }
 
+  function normalizeSociosSearchText_(value) {
+    return String(value == null ? '' : value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function filterSociosModuleRows_(rows, query) {
+    const terms = normalizeSociosSearchText_(query).split(' ').filter(Boolean);
+    if (!terms.length) return rows;
+
+    return rows.filter(row => {
+      const haystack = normalizeSociosSearchText_([
+        row.nombre_socio,
+        getSocioTelefonoDisplay_(row),
+        row.nombre_comite,
+        row.nombre_comite_origen,
+        row.nombre_organizacion,
+        row.cargo
+      ].join(' '));
+      return terms.every(term => haystack.includes(term));
+    });
+  }
+
+  function getSociosTableSummaryText_(filteredCount, totalCount, query) {
+    const hasQuery = !!normalizeSociosSearchText_(query);
+    if (!totalCount) return 'No hay socios cargados.';
+    if (!hasQuery) return `${totalCount} socio${totalCount === 1 ? '' : 's'} cargado${totalCount === 1 ? '' : 's'}.`;
+    if (!filteredCount) return 'Sin resultados para la b\u00fasqueda actual.';
+    return `${filteredCount} de ${totalCount} socio${totalCount === 1 ? '' : 's'}.`;
+  }
+
+  function updateSociosTableView_(rows) {
+    const sourceRows = Array.isArray(rows) ? rows : (APP.state.sociosModuleRows || []);
+    const queryInput = document.getElementById('socios-table-search');
+    const query = queryInput ? queryInput.value : (APP.state.sociosModuleQuery || '');
+    const filteredRows = filterSociosModuleRows_(sourceRows, query);
+    const body = document.getElementById('socios-table-body');
+    const count = document.querySelector('.socios-panel__count');
+    const summary = document.getElementById('socios-table-summary');
+    const hasQuery = !!normalizeSociosSearchText_(query);
+
+    APP.state.sociosModuleQuery = query;
+
+    if (body) {
+      const emptyMessage = sourceRows.length
+        ? 'Sin resultados para la b\u00fasqueda actual.'
+        : 'No hay socios cargados.';
+      body.innerHTML = renderSociosTableRows_(filteredRows, { emptyMessage });
+    }
+    if (count) count.textContent = hasQuery ? `${filteredRows.length}/${sourceRows.length}` : String(sourceRows.length || 0);
+    if (summary) summary.textContent = getSociosTableSummaryText_(filteredRows.length, sourceRows.length, query);
+    bindSociosTableActions_();
+    return filteredRows;
+  }
+
   function getSocioDetailFields_(row) {
     const socio = row || {};
     const comiteLabel = String(socio.nombre_comite || socio.nombre_comite_origen || getSociosOrganizacionLabelById_(socio.organizacion_id) || socio.nombre_organizacion || '').trim();
@@ -3438,9 +3497,13 @@
     ].filter(item => item[1] !== undefined && item[1] !== null && String(item[1]).trim() !== '');
   }
 
-  function renderSociosTableRows_(rows) {
+  function renderSociosTableEmptyRow_(message) {
+    return `<tr><td colspan="3" class="socios-table__empty">${escapeHtml(message || 'No hay socios cargados.')}</td></tr>`;
+  }
+
+  function renderSociosTableRows_(rows, options = {}) {
     if (!rows.length) {
-      return `<tr><td colspan="3" class="socios-table__empty">No hay socios cargados.</td></tr>`;
+      return renderSociosTableEmptyRow_(options.emptyMessage || 'No hay socios cargados.');
     }
 
     return rows.map(row => `
@@ -3466,6 +3529,7 @@
   }
 
   function renderSociosTableSection_(rows) {
+    const totalRows = rows.length || 0;
     return `
       <section class="socios-data-panel socios-table-panel">
         <div class="socios-panel__head">
@@ -3474,7 +3538,20 @@
             <h3>Tabla operativa</h3>
             <p class="muted">Listado real desde la fuente actual del módulo con acceso rápido al detalle.</p>
           </div>
-          <span class="socios-panel__count">${escapeHtml(String(rows.length || 0))}</span>
+          <span class="socios-panel__count">${escapeHtml(String(totalRows))}</span>
+        </div>
+        <div class="socios-table-toolbar">
+          <label class="socios-search-field" for="socios-table-search">
+            <span class="material-symbols-outlined">search</span>
+            <input
+              id="socios-table-search"
+              type="search"
+              placeholder="Buscar por nombre, tel\u00e9fono o comit\u00e9"
+              value="${escapeHtml(APP.state.sociosModuleQuery || '')}"
+              autocomplete="off"
+            >
+          </label>
+          <p id="socios-table-summary" class="socios-table__summary muted">${escapeHtml(getSociosTableSummaryText_(totalRows, totalRows, APP.state.sociosModuleQuery || ''))}</p>
         </div>
         <div class="socios-table-wrap">
           <table class="socios-table">
@@ -3549,27 +3626,25 @@
       && (now - APP.state.sociosModuleFetchedAt) < 30000;
 
     if (canReuse) {
-      if (body) body.innerHTML = renderSociosTableRows_(APP.state.sociosModuleRows);
-      if (count) count.textContent = String(APP.state.sociosModuleRows.length || 0);
-      bindSociosTableActions_();
+      updateSociosTableView_(APP.state.sociosModuleRows);
       return Promise.resolve(APP.state.sociosModuleRows);
     }
 
     if (body) {
       body.innerHTML = '<tr><td colspan="3" class="socios-table__empty">Cargando socios...</td></tr>';
     }
+    if (count) count.textContent = '...';
 
     return api('getSociosModuloClient').then(data => {
       APP.state.sociosModuleRows = (data && data.rows) || [];
       APP.state.sociosModuleFetchedAt = Date.now();
-      if (body) body.innerHTML = renderSociosTableRows_(APP.state.sociosModuleRows);
-      if (count) count.textContent = String(APP.state.sociosModuleRows.length || 0);
-      bindSociosTableActions_();
+      updateSociosTableView_(APP.state.sociosModuleRows);
       return APP.state.sociosModuleRows;
     }).catch(err => {
       if (body) {
         body.innerHTML = '<tr><td colspan="3" class="socios-table__empty">No fue posible cargar los socios.</td></tr>';
       }
+      if (count) count.textContent = '0';
       showError(err);
       throw err;
     });
@@ -3607,7 +3682,7 @@
               <div>
                 <p class="eyebrow">Dashboard</p>
                 <h3>Panel embebido</h3>
-                <p class="muted">Se mantiene el mismo reporte actual, ahora contenido en la mitad derecha del módulo.</p>
+                <p class="muted">Se mantiene el mismo reporte actual, ahora contenido en el panel derecho del módulo.</p>
               </div>
               <span class="inicio-dashboard-pill">Looker Studio</span>
             </div>
@@ -3748,6 +3823,13 @@
     document.querySelectorAll('[data-socios-detail-close]').forEach(btn => {
       btn.addEventListener('click', closeSocioDetailModal_);
     });
+
+    const searchInput = document.getElementById('socios-table-search');
+    if (searchInput && searchInput.dataset.boundSociosSearch !== '1') {
+      searchInput.dataset.boundSociosSearch = '1';
+      searchInput.addEventListener('input', () => updateSociosTableView_());
+      searchInput.addEventListener('search', () => updateSociosTableView_());
+    }
 
     bindSociosTableActions_();
   }

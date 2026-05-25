@@ -2924,7 +2924,7 @@
 
           <div class="beneficios-org-detail">
             <section class="beneficios-block beneficios-block--wide">
-              <div class="beneficios-block__head">
+              <div class="beneficios-block__head beneficios-block__head--detail">
                 <div>
                   <p class="eyebrow">Ficha por organizacion</p>
                   <h4>Detalle operativo CAMARAS 1414</h4>
@@ -2957,13 +2957,12 @@
             <tr>
               <th>Organizacion</th>
               <th>Fecha hito 11</th>
-              ${isEligible ? '<th>Accion</th>' : '<th>Estado</th><th>Proximo paso</th>'}
+              ${isEligible ? '<th>Accion</th>' : '<th>Estado</th><th>Proximo paso</th><th>Accion</th>'}
             </tr>
           </thead>
           <tbody>
             ${list.map(row => {
-              const issue = getCamaras1414EligibilityIssue_(row);
-              const canManage = !issue;
+              const issue = isEligible ? getCamaras1414EligibilityIssue_(row) : '';
               return `
               <tr
                 class="camaras1414-row ${String(APP.state.currentBeneficioOrganizacionId || '') === String(row.organizacion_id || '') ? 'is-selected' : ''}"
@@ -2992,7 +2991,19 @@
                         <span class="material-symbols-outlined">play_circle</span>Gestionar
                       </button>
                     </td>`
-                  : `<td>${escapeHtml(row.estado_beneficio || '')}</td><td>${escapeHtml(row.proximo_hito_beneficio || '')}</td>`}
+                  : `<td>${escapeHtml(row.estado_beneficio || '')}</td>
+                     <td>${escapeHtml(row.proximo_hito_beneficio || '')}</td>
+                     <td class="beneficios-table__action-cell beneficios-table__action-cell--icon">
+                       <button
+                         type="button"
+                         class="secondary-btn beneficios-table__icon-action js-camaras1414-open-detail"
+                         data-organizacion-id="${escapeHtml(row.organizacion_id || '')}"
+                         title="Ver detalle"
+                         aria-label="Ver detalle de ${escapeHtml(row.nombre_organizacion || '')}"
+                       >
+                         <span class="material-symbols-outlined">search</span>
+                       </button>
+                     </td>`}
               </tr>
             `;
             }).join('')}
@@ -3050,6 +3061,7 @@
                 <textarea name="observacion_beneficio" rows="3">${escapeHtml(assignment.observacion_beneficio || '')}</textarea>
               </div>
             </div>
+            <div class="beneficios-summary-stack">
             ${(responseWait || inactivity)
               ? `<div class="beneficios-inline-statuses">
                   ${responseWait ? `
@@ -3077,6 +3089,7 @@
               <div><strong>Correo</strong><span>${escapeHtml(contacto.correo_contacto || 'Sin dato')}</span></div>
               <div><strong>Direccion</strong><span>${escapeHtml(contacto.direccion_referencia || 'Sin dato')}</span></div>
               <div><strong>UV / Sector</strong><span>${escapeHtml([contacto.uv ? 'UV ' + contacto.uv : '', contacto.sector || ''].filter(Boolean).join(' / ') || 'Sin dato')}</span></div>
+            </div>
             </div>
           </section>
 
@@ -3281,6 +3294,14 @@
           window.alert(issue);
           return;
         }
+        APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
+        refreshBeneficiosModuloMinimo_();
+      });
+    });
+
+    document.querySelectorAll('.js-camaras1414-open-detail').forEach(btn => {
+      btn.addEventListener('click', ev => {
+        ev.stopPropagation();
         APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
         refreshBeneficiosModuloMinimo_();
       });

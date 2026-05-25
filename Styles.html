@@ -5597,6 +5597,17 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .beneficios-detail__head > :first-child,
+  .beneficios-block__head > :first-child {
+    min-width: 0;
+    flex: 1 1 320px;
+  }
+
+  .beneficios-block__head--detail {
+    align-items: center;
   }
 
   .beneficios-form,
@@ -5833,28 +5844,33 @@
   .beneficios-checklist__row,
   .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 {
     display: grid;
-    grid-template-columns: 16px minmax(0, 1fr);
-    align-items: center;
-    gap: 10px;
-    padding: 9px 11px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    background: color-mix(in srgb, var(--surface) 92%, var(--surface-soft));
+    grid-template-columns: 15px minmax(0, 1fr);
+    align-items: start;
+    gap: 11px;
+    padding: 8px 0;
     color: var(--text);
     font-weight: var(--font-weight-medium);
+  }
+
+  .beneficios-checklist__row {
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+    border-radius: 0;
+    background: transparent;
   }
 
   .beneficios-checklist__row input[type="checkbox"],
   .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 input[type="checkbox"] {
     appearance: none;
-    width: 16px;
-    min-height: 16px;
-    height: 16px;
-    margin: 0;
+    width: 15px;
+    min-width: 15px;
+    min-height: 15px;
+    height: 15px;
+    margin: 2px 0 0;
     flex: 0 0 auto;
-    border: 1.25px solid color-mix(in srgb, var(--accent) 34%, var(--border));
-    border-radius: 5px;
-    background: var(--surface);
+    border: 1px solid color-mix(in srgb, var(--brand-blue) 18%, var(--border));
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--surface) 96%, var(--surface-soft));
     display: grid;
     place-items: center;
     cursor: pointer;
@@ -5864,10 +5880,10 @@
   .beneficios-checklist__row input[type="checkbox"]::after,
   .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 input[type="checkbox"]::after {
     content: '';
-    width: 8px;
-    height: 4px;
-    border-left: 1.8px solid #fff;
-    border-bottom: 1.8px solid #fff;
+    width: 7px;
+    height: 3px;
+    border-left: 1.6px solid #fff;
+    border-bottom: 1.6px solid #fff;
     transform: rotate(-45deg) scale(0);
     transform-origin: center;
     transition: transform .16s ease;
@@ -5877,7 +5893,7 @@
   .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 input[type="checkbox"]:checked {
     background: var(--accent);
     border-color: var(--accent);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
   }
 
   .beneficios-checklist__row input[type="checkbox"]:checked::after,
@@ -5888,6 +5904,7 @@
   .beneficios-checklist__row span,
   .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 span {
     min-width: 0;
+    line-height: 1.35;
   }
 
   .beneficios-contact-grid {
@@ -5943,9 +5960,11 @@
 
   .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 {
     width: 100%;
-    min-height: 46px;
-    padding: 10px 12px;
-    background: color-mix(in srgb, var(--surface) 88%, var(--surface-soft));
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface) 92%, var(--surface-soft));
     cursor: pointer;
     transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
   }
@@ -5962,7 +5981,7 @@
 
   .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414 span {
     color: var(--text);
-    font-weight: var(--font-weight-bold);
+    font-weight: var(--font-weight-semibold);
   }
 
   .beneficios-panel--operativo #camaras1414-detail-form .checkbox-row--camaras1414:has(input:checked) {
@@ -6022,8 +6041,23 @@
     white-space: nowrap;
   }
 
+  .beneficios-table__action-cell--icon {
+    width: 76px;
+  }
+
   .beneficios-table__action-cell .secondary-btn {
     min-height: 38px;
+  }
+
+  .beneficios-table__icon-action {
+    min-width: 40px;
+    width: 40px;
+    min-height: 40px;
+    padding: 0;
+  }
+
+  .beneficios-table__icon-action .material-symbols-outlined {
+    font-size: 18px;
   }
 
   .table-wrap--camaras1414 .data-table thead th {
@@ -6095,7 +6129,6 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: var(--space-3);
-    margin-top: var(--space-3);
   }
 
   .beneficios-inline-status {
@@ -6137,14 +6170,22 @@
   }
 
   .beneficios-alerts--inline {
-    margin-top: var(--space-3);
+    margin-top: 0;
   }
 
   .beneficios-detail__clear-btn {
     flex: 0 0 auto;
     min-height: 40px;
     padding-inline: 16px;
-    margin-top: 2px;
+    margin-top: 0;
+    margin-left: auto;
+    align-self: center;
+  }
+
+  .beneficios-summary-stack {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
   }
 
   .field--hidden-spacer {

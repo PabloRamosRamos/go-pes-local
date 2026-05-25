@@ -4800,7 +4800,7 @@
   }
 
   .beneficios-layout--camaras {
-    grid-template-columns: minmax(340px, 0.95fr) minmax(0, 1.45fr);
+    grid-template-columns: minmax(320px, 0.88fr) minmax(0, 1.32fr);
   }
 
   .beneficios-block--subtle {
@@ -4882,6 +4882,95 @@
     font-weight: var(--font-weight-semibold);
   }
 
+  .table-wrap--camaras1414 {
+    max-height: 320px;
+    overflow: auto;
+  }
+
+  .table-wrap--camaras1414 .data-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  .table-wrap--camaras1414 .data-table th,
+  .table-wrap--camaras1414 .data-table td {
+    padding: 12px 14px;
+    font-size: var(--font-size-sm);
+  }
+
+  .beneficios-panel--operativo .beneficios-block,
+  .beneficios-panel--operativo .beneficios-metric {
+    padding: var(--space-5);
+  }
+
+  .beneficios-panel--operativo .beneficios-summary__metrics {
+    gap: var(--space-3);
+  }
+
+  .beneficios-panel--operativo .beneficios-metric strong {
+    font-size: var(--font-size-xl);
+  }
+
+  .beneficios-panel--operativo .beneficios-form {
+    gap: var(--space-3);
+  }
+
+  .beneficios-panel--operativo .beneficios-form__grid {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    gap: var(--space-3) var(--space-4);
+    align-items: end;
+  }
+
+  .beneficios-panel--operativo .field {
+    min-width: 0;
+  }
+
+  .beneficios-panel--operativo input[type="number"] {
+    width: min(100%, 112px);
+  }
+
+  .beneficios-panel--operativo input[type="date"] {
+    width: min(100%, 176px);
+  }
+
+  .beneficios-panel--operativo select {
+    width: min(100%, 220px);
+  }
+
+  .beneficios-panel--operativo input[type="email"] {
+    width: min(100%, 340px);
+  }
+
+  .beneficios-panel--operativo input[type="text"] {
+    width: min(100%, 320px);
+  }
+
+  .beneficios-panel--operativo input[type="text"][disabled] {
+    width: 100%;
+  }
+
+  .beneficios-panel--operativo textarea {
+    width: 100%;
+  }
+
+  .beneficios-panel--operativo #camaras1414-config-form .beneficios-form__grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, max-content));
+    align-items: end;
+  }
+
+  .beneficios-panel--operativo #camaras1414-config-form input[type="number"] {
+    width: 96px;
+  }
+
+  .beneficios-panel--operativo #camaras1414-detail-form .beneficios-block--subtle {
+    gap: var(--space-3);
+  }
+
+  .beneficios-panel--operativo #camaras1414-detail-form textarea[name="email_body"] {
+    min-height: 150px;
+  }
+
   @media (max-width: 1100px) {
     .beneficios-tabs {
       grid-template-columns: 1fr;
@@ -4909,6 +4998,11 @@
 
     .beneficio-schedule-row__inputs {
       grid-template-columns: 1fr;
+    }
+
+    .beneficios-panel--operativo .beneficios-form__grid,
+    .beneficios-panel--operativo #camaras1414-config-form .beneficios-form__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .organizaciones-metrics {
@@ -4940,6 +5034,19 @@
 
     .beneficios-form__grid {
       grid-template-columns: 1fr;
+    }
+
+    .beneficios-panel--operativo .beneficios-form__grid,
+    .beneficios-panel--operativo #camaras1414-config-form .beneficios-form__grid {
+      grid-template-columns: 1fr;
+    }
+
+    .beneficios-panel--operativo input[type="number"],
+    .beneficios-panel--operativo input[type="date"],
+    .beneficios-panel--operativo select,
+    .beneficios-panel--operativo input[type="email"],
+    .beneficios-panel--operativo input[type="text"] {
+      width: 100%;
     }
 
     .organizaciones-summary {

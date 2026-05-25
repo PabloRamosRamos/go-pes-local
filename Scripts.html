@@ -5973,6 +5973,379 @@
     `;
   }
 
+  function getBrandingVisualColorDefinitions_() {
+    return [
+      { name: 'Primario', token: '--accent', usage: 'Titulos, foco y acentos principales.' },
+      { name: 'Secundario', token: '--success-accent', usage: 'Acciones positivas y estados OK.' },
+      { name: 'Acento', token: '--highlight-accent', usage: 'Chips, detalles y elementos destacados.' },
+      { name: 'Fondo app', token: '--bg', usage: 'Base general de la interfaz.' },
+      { name: 'Superficie', token: '--surface', usage: 'Cards, paneles y modales.' },
+      { name: 'Superficie suave', token: '--surface-soft', usage: 'Cabeceras, estados y apoyos visuales.' },
+      { name: 'Texto principal', token: '--text', usage: 'Contenido principal de lectura.' },
+      { name: 'Texto secundario', token: '--text-secondary', usage: 'Ayudas, metadatos y subtitulos.' },
+      { name: 'Borde', token: '--border', usage: 'Separacion y contencion de bloques.' },
+      { name: 'Exito', token: '--success', usage: 'Estados cumplidos y confirmaciones.' },
+      { name: 'Advertencia', token: '--warning', usage: 'Seguimientos y alertas medias.' },
+      { name: 'Error', token: '--danger', usage: 'Acciones sensibles y bloqueos.' },
+      { name: 'Informativo', token: '--info', usage: 'Indicadores neutrales y ayudas.' },
+      { name: 'Progreso', token: '--runtime-brand-progress', usage: 'Barras de carga y avance.' }
+    ];
+  }
+
+  function renderConfigVisualKitColorCards_() {
+    return getBrandingVisualColorDefinitions_().map(def => `
+      <article class="config-visual-kit-color-card" data-ui-kit-color-card data-ui-kit-color-var="${escapeHtml(def.token)}">
+        <span class="config-visual-kit-color-card__swatch" data-ui-kit-color-swatch></span>
+        <div>
+          <strong>${escapeHtml(def.name)}</strong>
+          <span>${escapeHtml(def.token)}</span>
+          <small>${escapeHtml(def.usage)}</small>
+        </div>
+        <code data-ui-kit-color-value>--</code>
+      </article>
+    `).join('');
+  }
+
+  function renderConfigVisualKitTypography_() {
+    return `
+      <div class="config-visual-kit-type-grid">
+        <article class="config-visual-kit-typography-card">
+          <p class="eyebrow">Familia tipográfica</p>
+          <h2>Raleway como base institucional</h2>
+          <p>La jerarquía principal usa la misma familia de la app para mantener consistencia ejecutiva.</p>
+          <div class="config-visual-kit-meta-list">
+            <div><strong>Fuente base</strong><span data-ui-kit-font-family="base">--</span></div>
+            <div><strong>Fuente headings</strong><span data-ui-kit-font-family="heading">--</span></div>
+          </div>
+        </article>
+        <div class="config-visual-kit-type-scale">
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-display">--</strong>
+              <span>Display / títulos críticos</span>
+            </div>
+            <p class="config-visual-kit-type-display">Gestor Operativo PES</p>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-2xl">--</strong>
+              <span>H1 / encabezado de módulo</span>
+            </div>
+            <h1 class="config-visual-kit-type-h1">Ficha de organización</h1>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-xl">--</strong>
+              <span>H2 / sección principal</span>
+            </div>
+            <h2 class="config-visual-kit-type-h2">Sistema visual operativo</h2>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-lg">--</strong>
+              <span>H3 / subtítulo y bloque</span>
+            </div>
+            <h3 class="config-visual-kit-type-h3">Cards, formularios y tablas</h3>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-base">--</strong>
+              <span>Texto base</span>
+            </div>
+            <p class="config-visual-kit-type-body">Texto de trabajo para formularios, paneles y lecturas operativas.</p>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-sm">--</strong>
+              <span>Texto secundario / caption</span>
+            </div>
+            <p class="config-visual-kit-type-caption">Metadatos, ayudas y etiquetas de bajo peso visual.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderConfigVisualKitCards_() {
+    return `
+      <div class="config-visual-kit-card-grid">
+        <article class="panel config-visual-kit-card-sample">
+          <div class="config-visual-kit-card-sample__head">
+            <div>
+              <p class="eyebrow">Card base</p>
+              <h4>Panel estándar</h4>
+            </div>
+            <span class="badge">Operativo</span>
+          </div>
+          <p>Usar para contención general, formularios, bloques de configuración y resúmenes.</p>
+        </article>
+        <article class="beneficios-block config-visual-kit-card-sample">
+          <div class="beneficios-block__head">
+            <div>
+              <h4>Card informativa</h4>
+              <p class="muted">Patrón real del módulo Beneficios.</p>
+            </div>
+          </div>
+          <div class="beneficios-summary__badges">
+            <span class="beneficio-chip beneficio-chip--ok">Cumplido</span>
+            <span class="beneficio-chip beneficio-chip--info">En gestión</span>
+          </div>
+        </article>
+        <article class="organizaciones-metric">
+          <strong>23</strong>
+          <span>Card compacta KPI</span>
+        </article>
+      </div>
+      <div class="config-visual-kit-avance-grid">
+        <button type="button" class="avance-hito-card is-completed" data-estado="Cumplido">
+          <div class="avance-hito-card__head">
+            <div class="avance-hito-card__eyebrow">Hito 4</div>
+            <div class="avance-hito-card__icon" aria-hidden="true"><span class="material-symbols-outlined">check</span></div>
+          </div>
+          <div class="avance-hito-card__body">
+            <div class="avance-hito-card__title">Certificado definitivo obtenido</div>
+            <div class="avance-hito-card__status">Cumplido</div>
+            <div class="avance-hito-card__detail">24-05-2026 20:00</div>
+          </div>
+        </button>
+        <button type="button" class="avance-hito-card is-enabled" data-estado="Disponible">
+          <div class="avance-hito-card__head">
+            <div class="avance-hito-card__eyebrow">Hito 5</div>
+            <div class="avance-hito-card__icon" aria-hidden="true"><span class="material-symbols-outlined">radio_button_unchecked</span></div>
+          </div>
+          <div class="avance-hito-card__body">
+            <div class="avance-hito-card__title">Registro municipal habilitado</div>
+            <div class="avance-hito-card__status">Disponible</div>
+            <div class="avance-hito-card__detail">Clic para registrar</div>
+          </div>
+        </button>
+        <button type="button" class="avance-hito-card is-blocked" data-estado="Bloqueado" disabled>
+          <div class="avance-hito-card__head">
+            <div class="avance-hito-card__eyebrow">Hito 6</div>
+            <div class="avance-hito-card__icon" aria-hidden="true"><span class="material-symbols-outlined">remove</span></div>
+          </div>
+          <div class="avance-hito-card__body">
+            <div class="avance-hito-card__title">Cuenta bancaria habilitada</div>
+            <div class="avance-hito-card__status">Bloqueado</div>
+            <div class="avance-hito-card__detail">Requiere información previa.</div>
+          </div>
+        </button>
+      </div>
+    `;
+  }
+
+  function renderConfigVisualKitCanvas_(theme) {
+    const isDark = theme === 'dark';
+    return `
+      <div class="config-visual-kit-preview ${isDark ? 'theme-dark' : ''}" data-ui-kit-theme-surface="${escapeHtml(theme)}">
+        <div class="config-visual-kit-preview__surface">
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">${isDark ? 'Modo oscuro' : 'Modo claro'}</p>
+                <h4>Tipografía</h4>
+              </div>
+            </div>
+            ${renderConfigVisualKitTypography_()}
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Paleta</p>
+                <h4>Colores del sistema</h4>
+              </div>
+            </div>
+            <div class="config-visual-kit-color-grid">
+              ${renderConfigVisualKitColorCards_()}
+            </div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Acciones</p>
+                <h4>Botones, pills y estados</h4>
+              </div>
+            </div>
+            <div class="config-visual-kit-inline-grid">
+              <div class="config-visual-kit-stack">
+                <div class="config-visual-kit-button-row">
+                  <button type="button" class="primary-btn"><span class="material-symbols-outlined">save</span>Principal</button>
+                  <button type="button" class="secondary-btn"><span class="material-symbols-outlined">tune</span>Secundario</button>
+                  <button type="button" class="danger-btn"><span class="material-symbols-outlined">warning</span>Sensible</button>
+                  <button type="button" class="secondary-btn" disabled>Disabled</button>
+                </div>
+                <div class="config-visual-kit-chip-row">
+                  <span class="badge">Badge base</span>
+                  <span class="pill">Pill informativa</span>
+                  <span class="user-status-pill is-active">Activo</span>
+                  <span class="user-status-pill is-inactive">Inactivo</span>
+                  <span class="beneficio-chip beneficio-chip--ok">OK</span>
+                  <span class="beneficio-chip beneficio-chip--warning">Warning</span>
+                  <span class="beneficio-chip beneficio-chip--info">Info</span>
+                  <span class="beneficio-chip beneficio-chip--muted">Muted</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Formularios</p>
+                <h4>Inputs y controles</h4>
+              </div>
+            </div>
+            <div class="form-grid form-grid--dense config-visual-kit-form-grid">
+              <div class="field">
+                <label>Input texto</label>
+                <input type="text" value="Comité de seguridad Alberto Magno">
+              </div>
+              <div class="field">
+                <label>Select</label>
+                <select>
+                  <option>Providencia</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Checkbox</label>
+                <label class="config-visual-kit-check"><input type="checkbox" checked> Visita técnica realizada</label>
+              </div>
+              <div class="field">
+                <label>Radio</label>
+                <div class="config-visual-kit-radio-row">
+                  <label class="config-visual-kit-check"><input type="radio" name="ui-kit-radio-${escapeHtml(theme)}" checked> Claro</label>
+                  <label class="config-visual-kit-check"><input type="radio" name="ui-kit-radio-${escapeHtml(theme)}"> Oscuro</label>
+                </div>
+              </div>
+              <div class="field field--full" data-span="2">
+                <label>Textarea</label>
+                <textarea rows="3">Observaciones operativas y texto auxiliar del sistema.</textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Cards</p>
+                <h4>Superficies y estados</h4>
+              </div>
+            </div>
+            ${renderConfigVisualKitCards_()}
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Tablas</p>
+                <h4>Listado base</h4>
+              </div>
+            </div>
+            <div class="table-wrap config-visual-kit-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Acción</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>ORG-000003</td><td>Comité de seguridad Alberto Magno</td><td><span class="beneficio-chip beneficio-chip--info">Activo</span></td><td><button type="button" class="secondary-btn">Ver</button></td></tr>
+                  <tr><td>ORG-000004</td><td>Junta de vecinos UV-3</td><td><span class="beneficio-chip beneficio-chip--ok">Cumplido</span></td><td><button type="button" class="secondary-btn">Editar</button></td></tr>
+                  <tr><td>ORG-000005</td><td>Club deportivo sector norte</td><td><span class="beneficio-chip beneficio-chip--warning">Seguimiento</span></td><td><button type="button" class="secondary-btn">Abrir</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="empty-state">Estado vacío base para tablas, listados y paneles sin información.</div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Alertas</p>
+                <h4>Recordatorios y estados vacíos</h4>
+              </div>
+            </div>
+            <div class="config-visual-kit-alert-grid">
+              <div class="inicio-alert-item inicio-alert-item--danger">
+                <span class="material-symbols-outlined">priority_high</span>
+                <div><small>Alta</small><strong>Solicitud vencida</strong><p>Existe una gestión crítica sin resolución.</p></div>
+              </div>
+              <div class="inicio-alert-item inicio-alert-item--warning">
+                <span class="material-symbols-outlined">schedule</span>
+                <div><small>Media</small><strong>Seguimiento pendiente</strong><p>La visita técnica ya fue realizada y requiere cierre.</p></div>
+              </div>
+              <div class="inicio-alert-item inicio-alert-item--info">
+                <span class="material-symbols-outlined">info</span>
+                <div><small>Informativa</small><strong>Configuración disponible</strong><p>El módulo está listo para revisión operativa.</p></div>
+              </div>
+              <div class="inicio-reminder-item">
+                <span class="material-symbols-outlined">notifications</span>
+                <div><small>Recordatorio</small><strong>Revisar documentación</strong><p>Corresponde validar antecedentes antes del siguiente paso.</p></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Contenedores</p>
+                <h4>Paneles y bloques de acciones</h4>
+              </div>
+            </div>
+            <div class="config-visual-kit-panel-grid">
+              <div class="panel">
+                <div>
+                  <p class="eyebrow">Panel base</p>
+                  <h4>Sección con título y subtítulo</h4>
+                  <p class="muted">Sirve como referencia para bloques operativos con contenido mixto.</p>
+                </div>
+                <div class="actions actions--start">
+                  <button type="button" class="primary-btn">Guardar</button>
+                  <button type="button" class="secondary-btn">Cancelar</button>
+                </div>
+              </div>
+              <div class="beneficios-block beneficios-block--subtle">
+                <div class="beneficios-block__head">
+                  <div>
+                    <h4>Bloque de formulario</h4>
+                    <p class="muted">Patrón interno para configuración y fichas.</p>
+                  </div>
+                </div>
+                <div class="actions actions--start">
+                  <button type="button" class="secondary-btn">Acción secundaria</button>
+                  <button type="button" class="danger-btn">Acción sensible</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderConfigVisualKitSection_() {
+    return `
+      <section class="config-branding-visual-kit" data-branding-visual-kit data-ui-kit-mode="both">
+        <div class="config-branding-card__head">
+          <div>
+            <p class="eyebrow">Base gráfica</p>
+            <h4>Sistema visual vivo</h4>
+            <p class="muted">Referencia oficial de tipografía, colores, cards, formularios, tablas y estados para futuros desarrollos.</p>
+          </div>
+          <div class="config-visual-kit-toggle" role="tablist" aria-label="Modo de visualización">
+            <button type="button" class="config-visual-kit-toggle__btn" data-ui-kit-mode-btn="light" aria-pressed="false">Claro</button>
+            <button type="button" class="config-visual-kit-toggle__btn" data-ui-kit-mode-btn="dark" aria-pressed="false">Oscuro</button>
+            <button type="button" class="config-visual-kit-toggle__btn is-active" data-ui-kit-mode-btn="both" aria-pressed="true">Ambos</button>
+          </div>
+        </div>
+        <div class="config-visual-kit-stage" data-ui-kit-stage>
+          <div class="config-visual-kit-stage__item" data-ui-kit-canvas="light">${renderConfigVisualKitCanvas_('light')}</div>
+          <div class="config-visual-kit-stage__item" data-ui-kit-canvas="dark">${renderConfigVisualKitCanvas_('dark')}</div>
+        </div>
+      </section>
+    `;
+  }
+
   function bindConfiguracionBrandingSection_() {
     const form = document.querySelector('#config-section-branding form[data-config-section="branding"]');
     if (!form || form.dataset.boundBranding === '1') return;
@@ -6010,7 +6383,33 @@
       updateConfiguracionBrandingLogoCard_(card, form);
     });
 
+    bindConfiguracionVisualKit_(form);
     updateConfiguracionBrandingPreviewPanel_(form);
+  }
+
+  function bindConfiguracionVisualKit_(form) {
+    const kit = form.querySelector('[data-branding-visual-kit]');
+    if (!kit || kit.dataset.boundVisualKit === '1') return;
+    kit.dataset.boundVisualKit = '1';
+    kit.querySelectorAll('[data-ui-kit-mode-btn]').forEach(btn => {
+      btn.addEventListener('click', () => setConfiguracionVisualKitMode_(kit, btn.dataset.uiKitModeBtn || 'both'));
+    });
+    setConfiguracionVisualKitMode_(kit, kit.dataset.uiKitMode || 'both');
+  }
+
+  function setConfiguracionVisualKitMode_(kit, mode) {
+    if (!kit) return;
+    const normalized = ['light', 'dark', 'both'].includes(mode) ? mode : 'both';
+    kit.dataset.uiKitMode = normalized;
+    kit.querySelectorAll('[data-ui-kit-mode-btn]').forEach(btn => {
+      const active = (btn.dataset.uiKitModeBtn || '') === normalized;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    kit.querySelectorAll('[data-ui-kit-canvas]').forEach(canvas => {
+      const key = canvas.dataset.uiKitCanvas || '';
+      canvas.classList.toggle('is-hidden', normalized !== 'both' && key !== normalized);
+    });
   }
 
   function updateConfiguracionBrandingColorCard_(card, form, fromPicker) {
@@ -6176,6 +6575,55 @@
       form.querySelector('[data-logo-input-name="logoDarkDataUri"]'),
       'Logo oscuro'
     );
+
+    updateConfiguracionVisualKitPreview_(form);
+  }
+
+  function updateConfiguracionVisualKitPreview_(form) {
+    if (!form) return;
+    const kit = form.querySelector('[data-branding-visual-kit]');
+    if (!kit) return;
+
+    const getValue = name => {
+      const field = form.querySelector(`[name="${name}"]`);
+      return field ? field.value : '';
+    };
+
+    const tokenMap = {
+      '--runtime-brand-primary': normalizeHexColor_(getValue('primaryColor')) || '#214E8A',
+      '--runtime-brand-secondary': normalizeHexColor_(getValue('secondaryColor')) || '#007C4A',
+      '--runtime-brand-accent': normalizeHexColor_(getValue('accentColor')) || '#03C2AE',
+      '--runtime-brand-progress': normalizeHexColor_(getValue('loadingProgressColor')) || '#8CC63F',
+      '--runtime-brand-light': normalizeHexColor_(getValue('lightBackground')) || '#F7FAFC',
+      '--runtime-brand-dark': normalizeHexColor_(getValue('darkBackground')) || '#0D2940'
+    };
+
+    kit.querySelectorAll('[data-ui-kit-theme-surface]').forEach(surface => {
+      Object.keys(tokenMap).forEach(key => surface.style.setProperty(key, tokenMap[key]));
+    });
+
+    kit.querySelectorAll('[data-ui-kit-font-family]').forEach(node => {
+      const family = node.dataset.uiKitFontFamily === 'heading' ? '--font-heading' : '--font-base';
+      const scope = node.closest('[data-ui-kit-theme-surface]') || kit;
+      const value = getComputedStyle(scope).getPropertyValue(family).trim();
+      node.textContent = value || family;
+    });
+
+    kit.querySelectorAll('[data-ui-kit-font-var]').forEach(node => {
+      const scope = node.closest('[data-ui-kit-theme-surface]') || kit;
+      const value = getComputedStyle(scope).getPropertyValue(node.dataset.uiKitFontVar || '').trim();
+      node.textContent = value || '--';
+    });
+
+    kit.querySelectorAll('[data-ui-kit-color-card]').forEach(card => {
+      const token = card.dataset.uiKitColorVar || '';
+      const scope = card.closest('[data-ui-kit-theme-surface]') || kit;
+      const value = getComputedStyle(scope).getPropertyValue(token).trim();
+      const swatch = card.querySelector('[data-ui-kit-color-swatch]');
+      const label = card.querySelector('[data-ui-kit-color-value]');
+      if (swatch) swatch.style.background = value || '#000000';
+      if (label) label.textContent = value || token;
+    });
   }
 
   function validateConfiguracionBrandingForm_(form) {
@@ -6262,6 +6710,7 @@
             </div>
             ${renderConfigBrandingPreviewPanel_(section, general.appName || '', general.programName || general.appSubtitle || '')}
           </div>
+          ${renderConfigVisualKitSection_()}
           <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Branding</button></div>
         </form>
       </section>

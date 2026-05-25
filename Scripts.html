@@ -5040,14 +5040,13 @@
   }
 
   function isAvanceHitoCreacionOrganizacion_(item) {
-    const current = APP.state.currentAvance || {};
-    const isGrupo = String(current.context_type || '') === 'grupo_vecinos';
     const tramo = normalizeAvanceTramoKey_(item && item.tramo);
+    const nombre = normalizeAvanceTramoKey_(item && item.nombre_hito);
     const codigo = String(item && item.codigo_hito || '').trim().toUpperCase();
-    const isHito5 = codigo ? codigo === 'PRE_05' : Number(item && item.orden_hito || 0) === 5;
-    return isGrupo
-      && isHito5
-      && tramo.includes('preconstitucion');
+    const isHito5 = codigo === 'PRE_05' || Number(item && item.orden_hito || 0) === 5;
+    return isHito5
+      && tramo.includes('preconstitucion')
+      && (nombre.includes('ingreso') || nombre.includes('documentacion'));
   }
 
   function getAvanceTramoItems_(tramos, aliases) {

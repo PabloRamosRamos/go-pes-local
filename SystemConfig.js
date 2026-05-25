@@ -227,6 +227,7 @@ function getDefaultSystemConfig_() {
         maxDaysWithoutVisitResponse: 10,
         maxDaysPostVisitFollowup: 7,
         maxDaysToConvenio: 20,
+        maxDaysWithoutProgress: 30,
         alertHighDays: 3,
         alertMediumDays: 7
       }
@@ -495,6 +496,7 @@ function normalizeConfigSectionByName_(section, value, current) {
           maxDaysWithoutVisitResponse: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.maxDaysWithoutVisitResponse, previous.camaras1414.maxDaysWithoutVisitResponse, 0, 365),
           maxDaysPostVisitFollowup: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.maxDaysPostVisitFollowup, previous.camaras1414.maxDaysPostVisitFollowup, 0, 365),
           maxDaysToConvenio: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.maxDaysToConvenio, previous.camaras1414.maxDaysToConvenio, 0, 365),
+          maxDaysWithoutProgress: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.maxDaysWithoutProgress, previous.camaras1414.maxDaysWithoutProgress, 0, 365),
           alertHighDays: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.alertHighDays, previous.camaras1414.alertHighDays, 0, 365),
           alertMediumDays: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.alertMediumDays, previous.camaras1414.alertMediumDays, 0, 365)
         }

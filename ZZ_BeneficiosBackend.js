@@ -165,6 +165,12 @@ function guardarCamaras1414Organizacion(payload) {
     eligibilityDate: sync.eligibilityDate
   });
   const emailPayload = normalizeCamarasEmailPayload_(payload.email, emailDraft);
+  if (emailPayload.sentConfirmed && !emailPayload.sentDate) {
+    throw new Error('Debes registrar la fecha de envio cuando confirmas que el correo fue enviado.');
+  }
+  if (!emailPayload.sentConfirmed && emailPayload.sentDate) {
+    throw new Error('Marca "Correo enviado" para confirmar la fecha de envio registrada.');
+  }
 
   const detailRows = buildCamarasDetailRows_(sync.assignment, {
     checklist: checklist,
@@ -355,9 +361,11 @@ function buildCamarasDetailByOrgId_(organizacionId) {
   const workflow = buildCamarasWorkflowState_(sync.assignment, detailMap, sync.eligibilityDate);
   const caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', sync.organizacion.solicitud_id, false) || {};
   const checklist = buildCamarasChecklistView_(detailMap);
+  const config = getCamaras1414Config_();
   const emailDraft = buildCamarasEmailDraft_(sync.organizacion, checklist, {
     eligibilityDate: sync.eligibilityDate
   });
+  const assignmentSummary = buildCamarasAssignmentSummary_(sync.assignment);
 
   return {
     organizacion: sync.organizacion,
@@ -375,9 +383,9 @@ function buildCamarasDetailByOrgId_(organizacionId) {
       label: 'Elegible por certificado definitivo',
       detalle: 'Hito 11 de Avance completado.'
     },
-    assignment: buildCamarasAssignmentSummary_(sync.assignment),
+    assignment: assignmentSummary,
     state_options: getCamarasStateOptions_(),
-    config: getCamaras1414Config_(),
+    config: config,
     email: buildCamarasEmailView_(detailMap, emailDraft),
     checklist: checklist,
     response: buildCamarasResponseView_(detailMap),
@@ -385,8 +393,9 @@ function buildCamarasDetailByOrgId_(organizacionId) {
     installation: buildCamarasInstallationView_(detailMap),
     agreement: buildCamarasAgreementView_(detailMap),
     closure: buildCamarasClosureView_(detailMap),
-    alerts: buildCamarasAlertRows_([buildCamarasAssignmentSummary_(sync.assignment)], getCamaras1414Config_()),
-    workflow: workflow
+    alerts: buildCamarasAlertRows_([assignmentSummary], config),
+    workflow: workflow,
+    tracking: buildCamarasTrackingSummary_(sync.assignment, detailMap, sync.eligibilityDate, config)
   };
 }
 
@@ -483,8 +492,11 @@ function resolveCamarasStageIndex_(data) {
   if (response.visitDate) {
     return { index: 5, label: 'Visita agendada', nextStep: 'Registrar resultado de la visita tecnica.' };
   }
-  if (response.hasResponse || email.sentDate) {
-    return { index: 4, label: 'En espera de respuesta', nextStep: 'Registrar respuesta de Seguridad Publica o fecha de visita.' };
+  if (response.hasResponse) {
+    return { index: 4, label: 'En espera de respuesta', nextStep: 'Registrar fecha de visita o seguimiento de la respuesta.' };
+  }
+  if ((email.sentConfirmed || email.sentDate) && email.sentDate) {
+    return { index: 3, label: 'Solicitud enviada', nextStep: 'Registrar respuesta de Seguridad Publica o fecha de visita.' };
   }
   if (email.prepared || email.subject || email.body) {
     return { index: 2, label: 'Solicitud de visita tecnica preparada', nextStep: 'Enviar solicitud formal a Seguridad Publica.' };
@@ -532,6 +544,7 @@ function getCamaras1414Config_() {
     maxDaysWithoutVisitResponse: Number(config.maxDaysWithoutVisitResponse || 10),
     maxDaysPostVisitFollowup: Number(config.maxDaysPostVisitFollowup || 7),
     maxDaysToConvenio: Number(config.maxDaysToConvenio || 20),
+    maxDaysWithoutProgress: Number(config.maxDaysWithoutProgress || 30),
     alertHighDays: Number(config.alertHighDays || 3),
     alertMediumDays: Number(config.alertMediumDays || 7)
   };
@@ -558,8 +571,121 @@ function buildCamarasEmailView_(detailMap, emailDraft) {
     body: payload.body || emailDraft.body,
     prepared: !!payload.prepared || !!payload.subject || !!payload.body,
     preparedDate: payload.preparedDate || '',
+    sentConfirmed: payload.sentConfirmed === undefined ? !!payload.sentDate : !!payload.sentConfirmed,
     sentDate: payload.sentDate || '',
     notes: payload.notes || ''
+  };
+}
+
+function buildCamarasTrackingSummary_(assignment, detailMap, eligibilityDate, config) {
+  const detail = detailMap || {};
+  const email = parseCamarasDetailPayload_(detail.MAIL_SOLICITUD);
+  const response = parseCamarasDetailPayload_(detail.VISITA_RESPUESTA);
+  const visit = parseCamarasDetailPayload_(detail.VISITA_TECNICA);
+  const installation = parseCamarasDetailPayload_(detail.INSTALACION);
+  const agreement = parseCamarasDetailPayload_(detail.CONVENIO);
+  const closure = parseCamarasDetailPayload_(detail.CIERRE);
+  const today = stripTimeFromDate_(new Date());
+
+  let responseWait = null;
+  const sentDate = (email.sentConfirmed || email.sentDate) && email.sentDate ? stripTimeFromDate_(email.sentDate) : '';
+  if (sentDate) {
+    const responseStopDate = resolveCamarasResponseStopDate_(sentDate, response, visit);
+    const endDate = responseStopDate || today;
+    const days = Math.max(0, diffDays_(sentDate, endDate));
+    responseWait = {
+      active: !responseStopDate,
+      days: days,
+      label: !responseStopDate
+        ? days + ' dias desde envio'
+        : days + ' dias hasta respuesta / visita',
+      referenceDate: sentDate,
+      endDate: responseStopDate || '',
+      tone: !responseStopDate && days > Number(config.maxDaysWithoutVisitResponse || 0)
+        ? 'danger'
+        : (!responseStopDate ? 'info' : 'success')
+    };
+  }
+
+  return {
+    responseWait: responseWait,
+    inactivity: buildCamarasInactivitySummary_(assignment, {
+      email: email,
+      response: response,
+      visit: visit,
+      installation: installation,
+      agreement: agreement,
+      closure: closure,
+      eligibilityDate: eligibilityDate
+    }, config)
+  };
+}
+
+function resolveCamarasResponseStopDate_(sentDate, response, visit) {
+  const base = stripTimeFromDate_(sentDate);
+  if (!base) return '';
+
+  return [
+    response && response.responseDate,
+    response && response.visitDate,
+    visit && visit.performedDate
+  ].map(asDateOrBlank_).filter(function(date) {
+    return date && stripTimeFromDate_(date).getTime() >= base.getTime();
+  }).sort(function(a, b) {
+    return a.getTime() - b.getTime();
+  })[0] || '';
+}
+
+function buildCamarasInactivitySummary_(assignment, data, config) {
+  const threshold = Number(config && config.maxDaysWithoutProgress || 0);
+  const today = stripTimeFromDate_(new Date());
+  const email = data && data.email || {};
+  const response = data && data.response || {};
+  const visit = data && data.visit || {};
+  const installation = data && data.installation || {};
+  const agreement = data && data.agreement || {};
+  const closure = data && data.closure || {};
+  if (!threshold || closure.closed) return null;
+
+  let reference = '';
+  let label = '';
+  let detail = '';
+
+  if (agreement.receivedDate && !closure.closed) {
+    reference = agreement.receivedDate;
+    label = 'Convenio recibido sin cierre';
+    detail = 'El convenio ya fue recibido y el cierre del beneficio sigue pendiente.';
+  } else if ((installation.knownDate || String(installation.status || '').trim() === 'Instalada') && !agreement.receivedDate) {
+    reference = installation.knownDate || visit.performedDate || response.visitDate || '';
+    label = 'Convenio pendiente sin novedad';
+    detail = 'No se han registrado nuevas novedades posteriores a instalacion / convenio.';
+  } else if (visit.performedDate && !agreement.receivedDate) {
+    reference = visit.performedDate;
+    label = 'Visita pendiente sin actualizacion';
+    detail = 'La visita tecnica fue realizada y no hay una novedad posterior registrada.';
+  } else if (response.visitDate && !visit.performedDate) {
+    reference = response.visitDate;
+    label = 'Visita agendada sin actualizacion';
+    detail = 'Existe una fecha de visita, pero no se ha registrado su resultado.';
+  } else if ((email.sentConfirmed || email.sentDate) && email.sentDate && !response.responseDate && !response.visitDate && !visit.performedDate) {
+    reference = email.sentDate;
+    label = 'Correo enviado sin respuesta';
+    detail = 'No se ha registrado respuesta ni fecha de visita desde el envio.';
+  } else {
+    return null;
+  }
+
+  const referenceDate = stripTimeFromDate_(reference);
+  if (!referenceDate || !today) return null;
+
+  const days = Math.max(0, diffDays_(referenceDate, today));
+  return {
+    active: days > threshold,
+    days: days,
+    threshold: threshold,
+    label: label,
+    detail: detail,
+    referenceDate: referenceDate
   };
 }
 
@@ -663,19 +789,20 @@ function buildCamarasAlertRows_(assignments, config) {
     const email = parseCamarasDetailPayload_(detailMap.MAIL_SOLICITUD);
     const response = parseCamarasDetailPayload_(detailMap.VISITA_RESPUESTA);
     const visit = parseCamarasDetailPayload_(detailMap.VISITA_TECNICA);
+    const installation = parseCamarasDetailPayload_(detailMap.INSTALACION);
     const agreement = parseCamarasDetailPayload_(detailMap.CONVENIO);
     const closure = parseCamarasDetailPayload_(detailMap.CIERRE);
     if (closure.closed) return;
 
     const checks = [
       {
-        active: !email.sentDate,
+        active: !(email.sentConfirmed || email.sentDate),
         reference: row.fecha_hito_11 || row.fecha_inicio_beneficio,
         limitDays: Number(config.maxDaysToSendRequest || 5),
         label: 'Gestion sin solicitud enviada'
       },
       {
-        active: !!email.sentDate && !response.visitDate,
+        active: !!(email.sentConfirmed || email.sentDate) && !!email.sentDate && !response.visitDate,
         reference: email.sentDate,
         limitDays: Number(config.maxDaysWithoutVisitResponse || 10),
         label: 'Solicitud enviada sin fecha de visita'
@@ -707,6 +834,28 @@ function buildCamarasAlertRows_(assignments, config) {
           : 'Vence en ' + daysUntil + ' dias.'
       });
     });
+
+    const inactivity = buildCamarasInactivitySummary_(row, {
+      email: email,
+      response: response,
+      visit: visit,
+      installation: installation,
+      agreement: agreement,
+      closure: closure,
+      eligibilityDate: row.fecha_hito_11 || row.fecha_inicio_beneficio || ''
+    }, config);
+    if (inactivity && inactivity.active) {
+      rows.push({
+        organizacion_id: row.organizacion_id,
+        nombre_organizacion: row.nombre_organizacion,
+        estado_beneficio: row.estado_beneficio,
+        title: 'Mas de ' + inactivity.threshold + ' dias sin avance',
+        due_date: inactivity.referenceDate,
+        days_until: -inactivity.days,
+        tone: 'danger',
+        detail: inactivity.label + '. ' + inactivity.days + ' dias sin novedad.'
+      });
+    }
   });
 
   return rows.sort(function(a, b) {
@@ -815,7 +964,7 @@ function resolveCamarasPayloadMainDate_(payload) {
 function resolveCamarasPayloadState_(code, payload) {
   switch (code) {
     case 'MAIL_SOLICITUD':
-      return payload.sentDate ? 'Enviado' : (payload.prepared ? 'Preparado' : 'Pendiente');
+      return (payload.sentConfirmed || payload.sentDate) && payload.sentDate ? 'Enviado' : (payload.prepared ? 'Preparado' : 'Pendiente');
     case 'VISITA_RESPUESTA':
       return payload.visitDate ? 'Visita agendada' : (payload.hasResponse ? 'Respondido' : 'Sin respuesta');
     case 'VISITA_TECNICA':
@@ -845,7 +994,7 @@ function resolveCamarasPayloadNumericValue_(code, payload) {
 }
 
 function resolveCamarasPayloadFlagValue_(code, payload) {
-  if (code === 'MAIL_SOLICITUD') return payload.sentDate ? 'Si' : 'No';
+  if (code === 'MAIL_SOLICITUD') return (payload.sentConfirmed || payload.sentDate) ? 'Si' : 'No';
   if (code === 'VISITA_RESPUESTA') return payload.hasResponse ? 'Si' : 'No';
   if (code === 'VISITA_TECNICA') return payload.visitCompleted ? 'Si' : 'No';
   if (code === 'CONVENIO') return payload.received ? 'Si' : 'No';
@@ -880,6 +1029,7 @@ function normalizeCamarasEmailPayload_(value, defaults) {
     body: sanitizeCamarasText_(input.body || defaults.body, 8000) || defaults.body,
     prepared: true,
     preparedDate: sanitizeCamarasDate_(input.preparedDate) || sanitizeCamarasDate_(new Date()),
+    sentConfirmed: toBool_(input.sentConfirmed),
     sentDate: sanitizeCamarasDate_(input.sentDate),
     notes: sanitizeCamarasText_(input.notes, 1000)
   };

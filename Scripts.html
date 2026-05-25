@@ -2329,6 +2329,19 @@
     }).catch(showError).finally(hideContentLoading);
   }
 
+  function getBeneficioTabVisual_(codigo) {
+    switch (String(codigo || '').trim().toUpperCase()) {
+      case 'CAMARAS_1414':
+        return { icon: 'videocam', label: 'Camaras 1414' };
+      case 'FONDESE':
+        return { icon: 'savings', label: 'Fondese' };
+      case 'CHARLAS_CAPACITACIONES':
+        return { icon: 'school', label: 'Capacitaciones' };
+      default:
+        return { icon: 'handshake', label: 'Beneficio' };
+    }
+  }
+
   function renderBeneficiosPanelMinimo_(data) {
     const host = document.getElementById('beneficios-content');
     if (!host) return;
@@ -2350,18 +2363,27 @@
     host.innerHTML = `
       <section class="beneficios-tabs-shell">
         <div class="beneficios-tabs" role="tablist" aria-label="Pestañas del módulo Beneficios">
-          ${tabs.map(tab => `
+          ${tabs.map(tab => {
+            const visual = getBeneficioTabVisual_(tab.codigo);
+            return `
             <button
               type="button"
               class="beneficios-tab js-beneficio-tab ${tab.codigo === activeTab.codigo ? 'is-active' : ''}"
               data-beneficio-codigo="${escapeHtml(tab.codigo || '')}"
               role="tab"
               aria-selected="${tab.codigo === activeTab.codigo ? 'true' : 'false'}">
-              <span class="beneficios-tab__eyebrow">Beneficio</span>
-              <strong class="beneficios-tab__title">${escapeHtml(tab.titulo || '')}</strong>
-              <span class="beneficios-tab__desc">${escapeHtml(tab.descripcion_corta || '')}</span>
+              <span class="beneficios-tab__content">
+                <span class="beneficios-tab__eyebrow">${escapeHtml(visual.label || 'Beneficio')}</span>
+                <strong class="beneficios-tab__title">${escapeHtml(tab.titulo || '')}</strong>
+                <span class="beneficios-tab__desc">${escapeHtml(tab.descripcion_corta || '')}</span>
+              </span>
+              <span class="beneficios-tab__divider" aria-hidden="true"></span>
+              <span class="beneficios-tab__icon" aria-hidden="true">
+                <span class="material-symbols-outlined">${escapeHtml(visual.icon || 'handshake')}</span>
+              </span>
             </button>
-          `).join('')}
+          `;
+          }).join('')}
         </div>
         ${activeTab.codigo === 'CAMARAS_1414'
           ? renderCamaras1414Panel_(data && data.camaras1414, activeTab)
@@ -2417,6 +2439,19 @@
         <span>${escapeHtml(label || '')}</span>
       </article>
     `;
+  }
+
+  function beneficioAlertClass_(tone) {
+    switch (String(tone || '').trim()) {
+      case 'danger':
+        return 'beneficios-inline-status--danger';
+      case 'warning':
+        return 'beneficios-inline-status--warning';
+      case 'success':
+        return 'beneficios-inline-status--success';
+      default:
+        return 'beneficios-inline-status--info';
+    }
   }
 
   function renderCamaras1414Panel_(panel, activeTab) {
@@ -2745,11 +2780,458 @@
     `;
   }
 
+  function renderCamaras1414Panel_(panel, activeTab) {
+    const data = panel || {};
+    const summary = data.summary || {};
+    const config = data.config || {};
+    const eligibleRows = data.eligible_rows || [];
+    const activeRows = data.active_rows || [];
+    const detail = data.detail || null;
+    const alerts = data.alerts_preview || [];
+
+    return `
+      <article class="beneficios-panel beneficios-panel--operativo" role="tabpanel">
+        <div class="beneficios-panel__head">
+          <div>
+            <p class="eyebrow">Beneficio operativo</p>
+            <h3>${escapeHtml(activeTab.titulo || '')}</h3>
+            <p class="muted">${escapeHtml(activeTab.descripcion || '')}</p>
+          </div>
+          <span class="beneficios-panel__status">${escapeHtml(activeTab.estado || 'Operativo')}</span>
+        </div>
+
+        <div class="beneficios-summary__metrics">
+          ${renderBeneficiosMetric_('Elegibles', summary.totalEligible || 0, 'groups')}
+          ${renderBeneficiosMetric_('En gestion', summary.totalActive || 0, 'handshake')}
+          ${renderBeneficiosMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active')}
+        </div>
+
+        <section class="beneficios-top-strip">
+          <section class="beneficios-block beneficios-top-strip__config">
+            <div class="beneficios-block__head">
+              <div>
+                <p class="eyebrow">Configuracion de plazos</p>
+                <h4>Plazos configurables de CAMARAS 1414</h4>
+              </div>
+            </div>
+            <form id="camaras1414-config-form" class="beneficios-form" novalidate>
+              <div class="beneficios-form__grid">
+                <div class="field">
+                  <label>Dias desde hito 11 para recordar inicio</label>
+                  <input type="number" min="0" name="reminderDaysFromEligibility" value="${escapeHtml(String(config.reminderDaysFromEligibility || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias maximos para enviar solicitud</label>
+                  <input type="number" min="0" name="maxDaysToSendRequest" value="${escapeHtml(String(config.maxDaysToSendRequest || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias de espera sin respuesta</label>
+                  <input type="number" min="0" name="maxDaysWithoutVisitResponse" value="${escapeHtml(String(config.maxDaysWithoutVisitResponse || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias posteriores a visita</label>
+                  <input type="number" min="0" name="maxDaysPostVisitFollowup" value="${escapeHtml(String(config.maxDaysPostVisitFollowup || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias hasta convenio</label>
+                  <input type="number" min="0" name="maxDaysToConvenio" value="${escapeHtml(String(config.maxDaysToConvenio || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias sin avance para alertar</label>
+                  <input type="number" min="0" name="maxDaysWithoutProgress" value="${escapeHtml(String(config.maxDaysWithoutProgress || 0))}">
+                </div>
+                <div class="field">
+                  <label>Alerta alta antes del vencimiento</label>
+                  <input type="number" min="0" name="alertHighDays" value="${escapeHtml(String(config.alertHighDays || 0))}">
+                </div>
+                <div class="field">
+                  <label>Alerta media antes del vencimiento</label>
+                  <input type="number" min="0" name="alertMediumDays" value="${escapeHtml(String(config.alertMediumDays || 0))}">
+                </div>
+              </div>
+              <div class="beneficios-form__actions">
+                <button type="submit" class="primary-btn">
+                  <span class="material-symbols-outlined">save</span>Guardar plazos
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="beneficios-block beneficios-top-strip__alerts">
+            <div class="beneficios-block__head">
+              <div>
+                <p class="eyebrow">Alertas base</p>
+                <h4>Base para inicio y seguimiento operativo</h4>
+              </div>
+            </div>
+            ${alerts.length ? `
+              <div class="beneficios-alerts">
+                ${alerts.map(alert => `
+                  <article class="beneficios-alert">
+                    <strong>${escapeHtml(alert.nombre_organizacion || '')}</strong>
+                    <span>${escapeHtml(alert.title || '')}</span>
+                    <small>${escapeHtml(alert.detail || '')}</small>
+                  </article>
+                `).join('')}
+              </div>
+            ` : '<div class="empty-state">Sin alertas operativas dentro del rango configurado.</div>'}
+          </section>
+        </section>
+
+        <section class="beneficios-layout beneficios-layout--camaras">
+          <div class="beneficios-org-panel">
+            <section class="beneficios-block beneficios-block--wide beneficios-block--eligible">
+              <div class="beneficios-block__head">
+                <div>
+                  <p class="eyebrow">Elegibles</p>
+                  <h4>Organizaciones elegibles</h4>
+                </div>
+              </div>
+              ${renderCamaras1414Table_(eligibleRows, 'elegible')}
+            </section>
+
+            <section class="beneficios-block beneficios-block--wide">
+              <div class="beneficios-block__head">
+                <div>
+                  <p class="eyebrow">En gestion</p>
+                  <h4>Organizaciones en seguimiento</h4>
+                </div>
+              </div>
+              ${renderCamaras1414Table_(activeRows, 'active')}
+            </section>
+          </div>
+
+          <div class="beneficios-org-detail">
+            <section class="beneficios-block beneficios-block--wide">
+              <div class="beneficios-block__head">
+                <div>
+                  <p class="eyebrow">Ficha por organizacion</p>
+                  <h4>Detalle operativo CAMARAS 1414</h4>
+                </div>
+                ${detail ? `
+                  <button type="button" class="secondary-btn" id="camaras1414-clear-selection-btn">
+                    <span class="material-symbols-outlined">close</span>Quitar seleccion
+                  </button>
+                ` : ''}
+              </div>
+              ${detail ? renderCamaras1414Detail_(detail) : '<div class="empty-state">Selecciona una organizacion elegible o en gestion para administrar el beneficio.</div>'}
+            </section>
+          </div>
+        </section>
+      </article>
+    `;
+  }
+
+  function renderCamaras1414Table_(rows, mode) {
+    const list = rows || [];
+    if (!list.length) {
+      return '<div class="empty-state">Sin registros.</div>';
+    }
+
+    const isEligible = mode === 'elegible';
+    return `
+      <div class="table-wrap table-wrap--camaras1414">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Organizacion</th>
+              <th>Fecha hito 11</th>
+              ${isEligible ? '' : '<th>Estado</th><th>Proximo paso</th>'}
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map(row => `
+              <tr
+                class="camaras1414-row ${String(APP.state.currentBeneficioOrganizacionId || '') === String(row.organizacion_id || '') ? 'is-selected' : ''}"
+                data-camaras1414-row="${escapeHtml(row.organizacion_id || '')}"
+                tabindex="0"
+                role="button"
+                aria-label="Seleccionar organizacion ${escapeHtml(row.nombre_organizacion || '')}"
+              >
+                <td>
+                  <div class="beneficios-table__org-name">${escapeHtml(row.nombre_organizacion || '')}</div>
+                  ${String(APP.state.currentBeneficioOrganizacionId || '') === String(row.organizacion_id || '')
+                    ? '<small class="beneficios-table__meta">Seleccionada</small>'
+                    : `<small class="beneficios-table__meta">${escapeHtml(isEligible ? 'Lista para gestionar' : 'Caso en seguimiento')}</small>`}
+                </td>
+                <td>${escapeHtml(formatFechaHoraUi_(row.fecha_hito_11 || ''))}</td>
+                ${isEligible ? '' : `<td>${escapeHtml(row.estado_beneficio || '')}</td><td>${escapeHtml(row.proximo_hito_beneficio || '')}</td>`}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderCamaras1414Detail_(detail) {
+    const org = detail.organizacion || {};
+    const contacto = detail.contacto || {};
+    const assignment = detail.assignment || {};
+    const workflow = detail.workflow || {};
+    const checklist = detail.checklist || [];
+    const email = detail.email || {};
+    const response = detail.response || {};
+    const visit = detail.visit || {};
+    const installation = detail.installation || {};
+    const agreement = detail.agreement || {};
+    const closure = detail.closure || {};
+    const tracking = detail.tracking || {};
+    const responseWait = tracking.responseWait || null;
+    const inactivity = tracking.inactivity || null;
+    const detailAlerts = detail.alerts || [];
+
+    return `
+      <form id="camaras1414-detail-form" class="beneficios-form" novalidate>
+        <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">
+        <div class="beneficios-detail__head">
+          <div>
+            <h3>${escapeHtml(org.nombre_organizacion || '')}</h3>
+            <p class="muted">${escapeHtml(org.organizacion_id || '')} · Elegible desde ${escapeHtml(formatFechaHoraUi_(detail.elegibilidad && detail.elegibilidad.fecha_hito_11 || ''))}</p>
+          </div>
+          <div class="beneficios-detail__head-badges">
+            <span class="beneficio-chip ${beneficioBadgeClass_('ok')}">${escapeHtml(assignment.estado_beneficio || workflow.status || '')}</span>
+            <span class="beneficio-chip ${beneficioBadgeClass_('info')}">Avance ${escapeHtml(String(assignment.avance_beneficio_pct || workflow.progressPct || 0))}%</span>
+          </div>
+        </div>
+
+        <section class="beneficios-detail-strip">
+          <section class="beneficios-block beneficios-block--subtle">
+            <h4>Resumen operativo</h4>
+            <div class="beneficios-form__grid">
+              <div class="field">
+                <label>Responsable</label>
+                <input type="text" name="responsable_beneficio" value="${escapeHtml(assignment.responsable_beneficio || '')}">
+              </div>
+              <div class="field">
+                <label>Proximo paso</label>
+                <input type="text" value="${escapeHtml(assignment.proximo_hito_beneficio || workflow.nextStep || '')}" disabled>
+              </div>
+              <div class="field" data-span="2">
+                <label>Observacion general</label>
+                <textarea name="observacion_beneficio" rows="3">${escapeHtml(assignment.observacion_beneficio || '')}</textarea>
+              </div>
+            </div>
+            ${(responseWait || inactivity)
+              ? `<div class="beneficios-inline-statuses">
+                  ${responseWait ? `
+                    <article class="beneficios-inline-status ${beneficioAlertClass_(responseWait.tone)}">
+                      <strong>Seguimiento correo</strong>
+                      <span>${escapeHtml(responseWait.label || '')}</span>
+                    </article>
+                  ` : ''}
+                  ${inactivity ? `
+                    <article class="beneficios-inline-status ${beneficioAlertClass_(inactivity.active ? 'danger' : 'info')}">
+                      <strong>Sin avance</strong>
+                      <span>${escapeHtml(inactivity.days + ' dias desde el ultimo hito operativo')}</span>
+                      <small>${escapeHtml(inactivity.label || '')}</small>
+                    </article>
+                  ` : ''}
+                </div>`
+              : ''}
+            ${detailAlerts.length
+              ? `<div class="beneficios-alerts beneficios-alerts--inline">
+                  ${detailAlerts.map(alert => `
+                    <article class="beneficios-alert">
+                      <strong>${escapeHtml(alert.title || '')}</strong>
+                      <small>${escapeHtml(alert.detail || '')}</small>
+                    </article>
+                  `).join('')}
+                </div>`
+              : ''}
+            <div class="beneficios-contact-grid">
+              <div><strong>Telefono</strong><span>${escapeHtml(contacto.telefono_contacto || 'Sin dato')}</span></div>
+              <div><strong>Correo</strong><span>${escapeHtml(contacto.correo_contacto || 'Sin dato')}</span></div>
+              <div><strong>Direccion</strong><span>${escapeHtml(contacto.direccion_referencia || 'Sin dato')}</span></div>
+              <div><strong>UV / Sector</strong><span>${escapeHtml([contacto.uv ? 'UV ' + contacto.uv : '', contacto.sector || ''].filter(Boolean).join(' / ') || 'Sin dato')}</span></div>
+            </div>
+          </section>
+
+          <section class="beneficios-block beneficios-block--subtle">
+            <h4>Checklist documental</h4>
+            <div class="beneficios-checklist beneficios-checklist--simple">
+              ${checklist.map(item => {
+                const currentStatus = item.status || '';
+                const isAvailable = currentStatus && currentStatus !== 'Pendiente';
+                return `
+                  <label class="beneficios-checklist__row" data-checklist-code="${escapeHtml(item.code || '')}">
+                    <input type="checkbox" data-doc-toggle ${isAvailable ? 'checked' : ''}>
+                    <span>${escapeHtml(item.label || '')}</span>
+                    <input type="hidden" data-doc-status value="${escapeHtml(currentStatus || (isAvailable ? 'Disponible' : 'Pendiente'))}">
+                    <input type="hidden" data-doc-date value="${escapeHtml(String(item.date || '').slice(0, 10))}">
+                    <textarea data-doc-observation hidden>${escapeHtml(item.observation || '')}</textarea>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </section>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <div class="beneficios-block__head">
+            <div>
+              <h4>Correo formal de solicitud</h4>
+              <p class="muted">No envia nada automaticamente. Prepara el borrador y permite copiar o abrir mailto.</p>
+            </div>
+            <div class="beneficios-inline-actions">
+              <button type="button" class="secondary-btn js-camaras1414-copy-subject"><span class="material-symbols-outlined">content_copy</span>Copiar asunto</button>
+              <button type="button" class="secondary-btn js-camaras1414-copy-body"><span class="material-symbols-outlined">content_copy</span>Copiar cuerpo</button>
+              <button type="button" class="secondary-btn js-camaras1414-mailto"><span class="material-symbols-outlined">mail</span>Abrir mailto</button>
+            </div>
+          </div>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
+              <input type="checkbox" name="email_sent_confirmed" ${email.sentConfirmed ? 'checked' : ''}>
+              <span>Correo enviado</span>
+            </label>
+            <div class="field">
+              <label>Destinatario</label>
+              <input type="email" name="email_recipient" value="${escapeHtml(email.recipient || '')}">
+            </div>
+            <div class="field">
+              <label>Fecha de envio</label>
+              <input type="date" name="email_sent_date" value="${escapeHtml(String(email.sentDate || '').slice(0, 10))}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Asunto</label>
+              <input type="text" name="email_subject" value="${escapeHtml(email.subject || '')}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Cuerpo</label>
+              <textarea rows="7" name="email_body">${escapeHtml(email.body || '')}</textarea>
+            </div>
+            <div class="field" data-span="2">
+              <label>Observaciones del correo</label>
+              <textarea rows="2" name="email_notes">${escapeHtml(email.notes || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Respuesta y coordinacion</h4>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
+              <input type="checkbox" name="response_has_response" ${response.hasResponse ? 'checked' : ''}>
+              <span>Respuesta recibida</span>
+            </label>
+            <div class="field">
+              <label>Fecha de respuesta</label>
+              <input type="date" name="response_date" value="${escapeHtml(String(response.responseDate || '').slice(0, 10))}">
+            </div>
+            <div class="field">
+              <label>Fecha de visita agendada</label>
+              <input type="date" name="response_visit_date" value="${escapeHtml(String(response.visitDate || '').slice(0, 10))}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Observaciones de respuesta</label>
+              <textarea rows="3" name="response_observations">${escapeHtml(response.observations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Resultado de visita tecnica</h4>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
+              <input type="checkbox" name="visit_completed" ${visit.visitCompleted ? 'checked' : ''}>
+              <span>Visita tecnica realizada</span>
+            </label>
+            <div class="field">
+              <label>Fecha visita realizada</label>
+              <input type="date" name="visit_performed_date" value="${escapeHtml(String(visit.performedDate || '').slice(0, 10))}">
+            </div>
+            <div class="field">
+              <label>Cantidad de camaras</label>
+              <input type="number" min="0" name="visit_camera_count" value="${escapeHtml(String(visit.cameraCount === '' ? '' : (visit.cameraCount || '')))}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Observaciones tecnicas</label>
+              <textarea rows="4" name="visit_observations">${escapeHtml(visit.technicalObservations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Seguimiento de instalacion</h4>
+          <div class="beneficios-form__grid">
+            <div class="field">
+              <label>Estado de instalacion</label>
+              <select name="installation_status">
+                ${['Sin informacion', 'Pendiente', 'En proceso', 'Instalada'].map(option => `
+                  <option value="${escapeHtml(option)}" ${String(installation.status || '') === option ? 'selected' : ''}>${escapeHtml(option)}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="field">
+              <label>Fecha conocida</label>
+              <input type="date" name="installation_date" value="${escapeHtml(String(installation.knownDate || '').slice(0, 10))}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Observaciones de instalacion</label>
+              <textarea rows="3" name="installation_observations">${escapeHtml(installation.observations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Convenio</h4>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
+              <input type="checkbox" name="agreement_received" ${agreement.received ? 'checked' : ''}>
+              <span>Convenio recibido</span>
+            </label>
+            <div class="field">
+              <label>Fecha convenio recibido</label>
+              <input type="date" name="agreement_received_date" value="${escapeHtml(String(agreement.receivedDate || '').slice(0, 10))}">
+            </div>
+            <div class="field field--hidden-spacer" aria-hidden="true"></div>
+            <div class="field" data-span="2">
+              <label>Observaciones del convenio</label>
+              <textarea rows="3" name="agreement_observations">${escapeHtml(agreement.observations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Cierre</h4>
+          <p class="muted">El convenio de colaboracion marca el cierre y entrega efectiva del beneficio.</p>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414 checkbox-row--camaras1414-closure" data-span="2">
+              <input type="checkbox" name="closure_closed" ${closure.closed ? 'checked' : ''}>
+              <span>Beneficio cerrado</span>
+            </label>
+            <div class="field">
+              <label>Fecha de cierre</label>
+              <input type="date" name="closure_closed_date" value="${escapeHtml(String(closure.closedDate || '').slice(0, 10))}">
+            </div>
+            <div class="field field--hidden-spacer" aria-hidden="true"></div>
+            <div class="field" data-span="2">
+              <label>Observaciones de cierre</label>
+              <textarea rows="3" name="closure_observations">${escapeHtml(closure.observations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <div class="beneficios-form__actions">
+          <button type="submit" class="primary-btn">
+            <span class="material-symbols-outlined">save</span>Guardar gestion CAMARAS 1414
+          </button>
+        </div>
+      </form>
+    `;
+  }
+
   function bindCamaras1414Panel_() {
-    document.querySelectorAll('.js-camaras1414-open-detail').forEach(btn => {
-      btn.addEventListener('click', () => {
-        APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
+    document.querySelectorAll('[data-camaras1414-row]').forEach(row => {
+      const selectRow = () => {
+        APP.state.currentBeneficioOrganizacionId = row.dataset.camaras1414Row || '';
         refreshBeneficiosModuloMinimo_();
+      };
+      row.addEventListener('click', selectRow);
+      row.addEventListener('keydown', ev => {
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        ev.preventDefault();
+        selectRow();
       });
     });
 
@@ -2788,6 +3270,11 @@
 
       detailForm.addEventListener('submit', ev => {
         ev.preventDefault();
+        const validationError = validateCamaras1414DetailForm_(detailForm);
+        if (validationError) {
+          showError(validationError);
+          return;
+        }
         const payload = collectCamaras1414DetailPayload_(detailForm);
         APP.state.currentBeneficioOrganizacionId = payload.organizacion_id || APP.state.currentBeneficioOrganizacionId || '';
         showContentLoading('Guardando gestión CAMARAS 1414...');
@@ -2824,6 +3311,7 @@
         recipient: form.querySelector('[name="email_recipient"]')?.value || '',
         subject: form.querySelector('[name="email_subject"]')?.value || '',
         body: form.querySelector('[name="email_body"]')?.value || '',
+        sentConfirmed: !!form.querySelector('[name="email_sent_confirmed"]')?.checked,
         sentDate: form.querySelector('[name="email_sent_date"]')?.value || '',
         notes: form.querySelector('[name="email_notes"]')?.value || ''
       },
@@ -2858,6 +3346,18 @@
         observations: form.querySelector('[name="closure_observations"]')?.value || ''
       }
     };
+  }
+
+  function validateCamaras1414DetailForm_(form) {
+    const sentConfirmed = !!form.querySelector('[name="email_sent_confirmed"]')?.checked;
+    const sentDate = String(form.querySelector('[name="email_sent_date"]')?.value || '').trim();
+    if (sentConfirmed && !sentDate) {
+      return 'Marca "Correo enviado" solo si registras tambien la fecha de envio.';
+    }
+    if (!sentConfirmed && sentDate) {
+      return 'Si registras fecha de envio, debes marcar tambien "Correo enviado".';
+    }
+    return '';
   }
 
   function copyTextToClipboard_(value, successMessage) {
@@ -5866,7 +6366,8 @@
             displayName: read('camarasDisplayName'),
             baseStates: splitLines_(read('camarasBaseStates')),
             technicalVisitAlertDays: Number(read('camarasTechnicalVisitAlertDays') || 0),
-            baseEligibilityCondition: read('camarasBaseEligibilityCondition')
+            baseEligibilityCondition: read('camarasBaseEligibilityCondition'),
+            maxDaysWithoutProgress: Number(read('camarasMaxDaysWithoutProgress') || 0)
           }
         };
       case 'alertsInicio':
@@ -6893,6 +7394,51 @@
                 ${configInput_('camarasTechnicalVisitAlertDays', 'Días alerta visita técnica', camaras.technicalVisitAlertDays || 0, 'number')}
                 ${configTextarea_('camarasBaseStates', 'Estados base', joinLines_(camaras.baseStates), 'field--full', 5)}
                 ${configTextarea_('camarasBaseEligibilityCondition', 'Condición base de elegibilidad', camaras.baseEligibilityCondition || '', 'field--full', 4)}
+              </div>
+            </article>
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Beneficios</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigBeneficiosSection_(section) {
+    const capacitaciones = section.capacitaciones || {};
+    const fondese = section.fondese || {};
+    const camaras = section.camaras1414 || {};
+    return `
+      <section class="config-section" id="config-section-beneficios">
+        <div class="config-section__head"><p class="eyebrow">Beneficios</p><h3>Parametros base por tipo</h3></div>
+        <form class="config-form" data-config-section="beneficios">
+          <div class="config-subgrid">
+            <article class="config-subcard">
+              <h4>CAPACITACIONES</h4>
+              <div class="config-grid">
+                ${configInput_('capacitacionesDisplayName', 'Nombre visible', capacitaciones.displayName || '', 'text')}
+                ${configInput_('capacitacionesAnnualDefaultCount', 'Cantidad anual por defecto', capacitaciones.annualDefaultCount || 0, 'number')}
+                ${configTextarea_('capacitacionesAllowedStates', 'Estados permitidos', joinLines_(capacitaciones.allowedStates), 'field--full', 5)}
+                ${configTextarea_('capacitacionesBaseEligibilityCondition', 'Condicion base de elegibilidad', capacitaciones.baseEligibilityCondition || '', 'field--full', 4)}
+              </div>
+            </article>
+            <article class="config-subcard">
+              <h4>FONDESE</h4>
+              <div class="config-grid">
+                ${configInput_('fondeseBaseYear', 'Ano base', fondese.baseYear || new Date().getFullYear(), 'number')}
+                ${configInput_('fondeseCallsPerYear', 'Convocatorias por ano', fondese.callsPerYear || 1, 'number')}
+                ${configInput_('fondeseAlertDaysBefore', 'Dias de alerta', fondese.alertDaysBefore || 0, 'number')}
+                ${configTextarea_('fondeseBaseStates', 'Estados base', joinLines_(fondese.baseStates), 'field--full', 5)}
+                ${configTextarea_('fondeseKeyDates', 'Fechas clave (clave|etiqueta|fecha)', joinKeyDateLines_(fondese.keyDates), 'field--full', 6)}
+              </div>
+            </article>
+            <article class="config-subcard">
+              <h4>CAMARAS 1414</h4>
+              <div class="config-grid">
+                ${configInput_('camarasDisplayName', 'Nombre visible', camaras.displayName || '', 'text')}
+                ${configInput_('camarasTechnicalVisitAlertDays', 'Dias alerta visita tecnica', camaras.technicalVisitAlertDays || 0, 'number')}
+                ${configInput_('camarasMaxDaysWithoutProgress', 'Dias sin avance', camaras.maxDaysWithoutProgress || 30, 'number')}
+                ${configTextarea_('camarasBaseStates', 'Estados base', joinLines_(camaras.baseStates), 'field--full', 5)}
+                ${configTextarea_('camarasBaseEligibilityCondition', 'Condicion base de elegibilidad', camaras.baseEligibilityCondition || '', 'field--full', 4)}
               </div>
             </article>
           </div>

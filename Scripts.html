@@ -2466,16 +2466,24 @@
     const item = alert || {};
     const heading = item.nombre_organizacion || item.title || '';
     const subline = item.nombre_organizacion && item.title ? item.title : '';
+    const iconByTone = {
+      danger: 'warning',
+      warning: 'schedule',
+      success: 'check_circle',
+      info: 'info'
+    };
+    const iconName = iconByTone[String(item.tone || '').trim()] || 'notification_important';
     return `
       <article class="beneficios-alert ${beneficioAlertClass_(item.tone)}">
-        <span class="beneficios-alert__icon" aria-hidden="true">
-          <span class="material-symbols-outlined">warning</span>
-        </span>
-        <span class="beneficios-alert__divider" aria-hidden="true"></span>
         <div class="beneficios-alert__body">
           <strong>${escapeHtml(heading)}</strong>
           ${subline ? `<span>${escapeHtml(subline)}</span>` : ''}
+        </div>
+        <div class="beneficios-alert__meta">
           ${item.detail ? `<small>${escapeHtml(item.detail || '')}</small>` : ''}
+          <span class="beneficios-alert__icon" aria-hidden="true">
+            <span class="material-symbols-outlined">${iconName}</span>
+          </span>
         </div>
       </article>
     `;

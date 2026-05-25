@@ -4350,10 +4350,12 @@
   }
 
   .organizaciones-age-card {
-    justify-self: end;
-    min-width: 220px;
-    padding: var(--space-4) var(--space-5);
-    text-align: right;
+    display: grid;
+    align-content: center;
+    align-self: stretch;
+    min-width: 0;
+    padding: 12px 14px;
+    text-align: left;
     border-radius: var(--radius-xl);
     background: linear-gradient(180deg, var(--surface-soft) 0%, var(--surface-alt) 100%);
     border: 1px solid color-mix(in srgb, var(--accent) 14%, var(--border));
@@ -4376,6 +4378,13 @@
     line-height: var(--line-tight);
   }
 
+  .organizaciones-age-card small {
+    margin-top: 6px;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
   .organizaciones-selector-panel {
     display: flex;
     align-items: end;
@@ -4387,11 +4396,63 @@
     gap: var(--space-4);
   }
 
-  .organizaciones-top-grid {
+  .organizaciones-hero-card {
     display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-columns: 88px minmax(0, 1.1fr) minmax(420px, 0.9fr);
+    gap: var(--space-5);
+    align-items: stretch;
+    padding: 14px 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface) 88%, var(--accent-soft)) 0%, var(--surface) 100%);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .organizaciones-hero-card__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    height: 76px;
+    border-radius: var(--radius-xl);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 16%, var(--surface)) 0%, color-mix(in srgb, var(--accent) 7%, var(--surface-soft)) 100%);
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, #ffffff 4%, transparent);
+  }
+
+  .organizaciones-hero-card__icon .material-symbols-outlined {
+    font-size: 34px;
+    color: var(--accent);
+  }
+
+  .organizaciones-hero-card__main {
+    display: grid;
+    align-content: center;
+    gap: var(--space-3);
+    min-width: 0;
+    padding-right: var(--space-3);
+  }
+
+  .organizaciones-hero-card__main h3 {
+    font-size: 20px;
+    line-height: 1.18;
+  }
+
+  .organizaciones-hero-card__aux {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: var(--font-weight-medium);
+  }
+
+  .organizaciones-hero-card__stats {
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
     gap: var(--space-4);
-    align-items: start;
+    align-items: stretch;
+    min-width: 0;
+    padding-left: var(--space-5);
+    border-left: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
   }
 
   .organizaciones-summary,
@@ -4409,18 +4470,6 @@
     justify-content: space-between;
     align-items: stretch;
     gap: var(--space-4);
-  }
-
-  .organizaciones-summary--hero {
-    grid-column: span 8;
-    min-width: 0;
-  }
-
-  .organizaciones-summary__identity {
-    display: grid;
-    gap: var(--space-3);
-    min-width: 0;
-    flex: 1;
   }
 
   .organizaciones-summary__meta {
@@ -4444,6 +4493,7 @@
   }
 
   .organizaciones-summary h3,
+  .organizaciones-hero-card h3,
   .organizaciones-block h4,
   .organizaciones-modal__head h3 {
     margin: 0;
@@ -4457,9 +4507,9 @@
   }
 
   .organizaciones-metrics--compact {
-    grid-column: span 4;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-self: start;
+    gap: 10px;
   }
 
   .organizaciones-metric {
@@ -4468,6 +4518,9 @@
     display: grid;
     align-content: center;
     gap: 4px;
+    min-width: 0;
+    padding: 14px 14px 12px;
+    border-radius: var(--radius-xl);
   }
 
   .organizaciones-metric strong {
@@ -5486,13 +5539,17 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .organizaciones-top-grid {
-      grid-template-columns: 1fr;
+    .organizaciones-hero-card {
+      grid-template-columns: 72px minmax(0, 1fr);
     }
 
-    .organizaciones-summary--hero,
-    .organizaciones-metrics--compact {
-      grid-column: auto;
+    .organizaciones-hero-card__stats {
+      grid-column: 1 / -1;
+      grid-template-columns: 180px minmax(0, 1fr);
+      padding-left: 0;
+      padding-top: var(--space-4);
+      border-left: 0;
+      border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
     }
 
     .organizaciones-metrics,
@@ -5571,6 +5628,21 @@
       align-items: flex-start;
     }
 
+    .organizaciones-hero-card {
+      grid-template-columns: 1fr;
+      padding: 14px;
+    }
+
+    .organizaciones-hero-card__icon {
+      width: 64px;
+      height: 64px;
+    }
+
+    .organizaciones-hero-card__stats {
+      grid-column: auto;
+      grid-template-columns: 1fr;
+    }
+
     .organizaciones-age-card {
       justify-self: stretch;
       width: 100%;
@@ -5582,6 +5654,7 @@
     }
 
     .organizaciones-metrics,
+    .organizaciones-metrics--compact,
     .organizaciones-form-grid {
       grid-template-columns: 1fr;
     }

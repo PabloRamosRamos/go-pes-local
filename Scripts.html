@@ -2005,31 +2005,34 @@
     const r = data.resumen || {};
     detail.className = 'organizaciones-detail';
     detail.innerHTML = `
-      <div class="organizaciones-top-grid">
-        <section class="organizaciones-summary organizaciones-summary--hero">
-          <div class="organizaciones-summary__identity">
-            <p class="eyebrow">Ficha de organización</p>
-            <h3>${escapeHtml(org.nombre_organizacion || 'Sin nombre')}</h3>
-            <div class="organizaciones-summary__meta">
-              <span>ID ${escapeHtml(org.organizacion_id || 'Sin ID')}</span>
-              <span>Antigüedad ${escapeHtml(formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}</span>
-              <span>Casos ${escapeHtml(String(r.cantidad_casos || 0))}</span>
-              <span>${escapeHtml(org.estado_general_organizacion || 'Sin estado')}</span>
-            </div>
-          </div>
-          <div class="organizaciones-age-card">
-            <span>Estado de constitución</span>
-            <strong>${escapeHtml(formatUiValue_(org.estado_constitucion || 'Sin dato'))}</strong>
-          </div>
-        </section>
-
-        <div class="organizaciones-metrics organizaciones-metrics--compact">
-          ${organizacionMetricHtml_('Socios', r.cantidad_socios || 0)}
-          ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
-          ${organizacionMetricHtml_('Requisitos', r.cantidad_requisitos || 0)}
-          ${organizacionMetricHtml_('Hitos avance', r.cantidad_avance_hitos || 0)}
+      <section class="organizaciones-hero-card">
+        <div class="organizaciones-hero-card__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">apartment</span>
         </div>
-      </div>
+        <div class="organizaciones-hero-card__main">
+          <p class="eyebrow">Ficha de organización</p>
+          <h3>${escapeHtml(org.nombre_organizacion || 'Sin nombre')}</h3>
+          <div class="organizaciones-summary__meta">
+            <span>ID ${escapeHtml(org.organizacion_id || 'Sin ID')}</span>
+            <span>${escapeHtml(org.estado_general_organizacion || 'Sin estado')}</span>
+            <span>${escapeHtml(formatUiValue_(org.estado_constitucion || 'Sin dato'))}</span>
+          </div>
+          <p class="organizaciones-hero-card__aux">Casos vinculados: ${escapeHtml(String(r.cantidad_casos || 0))}</p>
+        </div>
+        <div class="organizaciones-hero-card__stats">
+          <div class="organizaciones-age-card">
+            <span>Antigüedad</span>
+            <strong>${escapeHtml(formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}</strong>
+            <small>${escapeHtml(formatUiValue_(r.fecha_antiguedad_organizacion || 'Sin fecha base'))}</small>
+          </div>
+          <div class="organizaciones-metrics organizaciones-metrics--compact">
+            ${organizacionMetricHtml_('Socios', r.cantidad_socios || 0)}
+            ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
+            ${organizacionMetricHtml_('Requisitos', r.cantidad_requisitos || 0)}
+            ${organizacionMetricHtml_('Hitos avance', r.cantidad_avance_hitos || 0)}
+          </div>
+        </div>
+      </section>
 
       <div class="organizaciones-grid organizaciones-grid--profile">
         ${organizacionBlockHtml_('Datos generales', [

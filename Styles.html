@@ -4799,6 +4799,57 @@
     gap: var(--space-5);
   }
 
+  .beneficios-top-strip {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 2.1fr);
+    gap: var(--space-4);
+    align-items: stretch;
+  }
+
+  .beneficios-top-strip > .beneficios-block {
+    height: 100%;
+    margin: 0;
+  }
+
+  .beneficios-top-strip__config,
+  .beneficios-top-strip__alerts {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .beneficios-top-strip__config .beneficios-form {
+    flex: 1;
+  }
+
+  .beneficios-top-strip__config .beneficios-form__grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+    align-content: start;
+  }
+
+  .beneficios-top-strip__config .beneficios-form__actions {
+    margin-top: auto;
+    justify-content: flex-start;
+  }
+
+  .beneficios-top-strip__alerts .beneficios-alerts,
+  .beneficios-top-strip__alerts .empty-state {
+    flex: 1;
+  }
+
+  .beneficios-top-strip__alerts .beneficios-alerts {
+    display: grid;
+    gap: var(--space-3);
+    overflow: auto;
+    min-height: 0;
+    padding-right: 4px;
+  }
+
+  .beneficios-top-strip__alerts .empty-state {
+    min-height: 0;
+  }
+
   .beneficios-layout--camaras {
     grid-template-columns: minmax(320px, 0.88fr) minmax(0, 1.32fr);
   }
@@ -4954,11 +5005,6 @@
     width: 100%;
   }
 
-  .beneficios-panel--operativo #camaras1414-config-form .beneficios-form__grid {
-    grid-template-columns: repeat(auto-fit, minmax(180px, max-content));
-    align-items: end;
-  }
-
   .beneficios-panel--operativo #camaras1414-config-form input[type="number"] {
     width: 96px;
   }
@@ -4973,6 +5019,10 @@
 
   @media (max-width: 1100px) {
     .beneficios-tabs {
+      grid-template-columns: 1fr;
+    }
+
+    .beneficios-top-strip {
       grid-template-columns: 1fr;
     }
 
@@ -5001,7 +5051,7 @@
     }
 
     .beneficios-panel--operativo .beneficios-form__grid,
-    .beneficios-panel--operativo #camaras1414-config-form .beneficios-form__grid {
+    .beneficios-top-strip__config .beneficios-form__grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -5037,7 +5087,7 @@
     }
 
     .beneficios-panel--operativo .beneficios-form__grid,
-    .beneficios-panel--operativo #camaras1414-config-form .beneficios-form__grid {
+    .beneficios-top-strip__config .beneficios-form__grid {
       grid-template-columns: 1fr;
     }
 

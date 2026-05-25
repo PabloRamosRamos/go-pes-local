@@ -2434,70 +2434,72 @@
           ${renderBeneficiosMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active')}
         </div>
 
-        <section class="beneficios-block">
-          <div class="beneficios-block__head">
-            <div>
-              <p class="eyebrow">A. Configuración de plazos</p>
-              <h4>Plazos configurables de CAMARAS 1414</h4>
-            </div>
-          </div>
-          <form id="camaras1414-config-form" class="beneficios-form" novalidate>
-            <div class="beneficios-form__grid">
-              <div class="field">
-                <label>Días desde hito 11 para recordar inicio</label>
-                <input type="number" min="0" name="reminderDaysFromEligibility" value="${escapeHtml(String(config.reminderDaysFromEligibility || 0))}">
-              </div>
-              <div class="field">
-                <label>Días máximos para enviar solicitud</label>
-                <input type="number" min="0" name="maxDaysToSendRequest" value="${escapeHtml(String(config.maxDaysToSendRequest || 0))}">
-              </div>
-              <div class="field">
-                <label>Días de espera sin respuesta</label>
-                <input type="number" min="0" name="maxDaysWithoutVisitResponse" value="${escapeHtml(String(config.maxDaysWithoutVisitResponse || 0))}">
-              </div>
-              <div class="field">
-                <label>Días posteriores a visita</label>
-                <input type="number" min="0" name="maxDaysPostVisitFollowup" value="${escapeHtml(String(config.maxDaysPostVisitFollowup || 0))}">
-              </div>
-              <div class="field">
-                <label>Días hasta convenio</label>
-                <input type="number" min="0" name="maxDaysToConvenio" value="${escapeHtml(String(config.maxDaysToConvenio || 0))}">
-              </div>
-              <div class="field">
-                <label>Alerta alta antes del vencimiento</label>
-                <input type="number" min="0" name="alertHighDays" value="${escapeHtml(String(config.alertHighDays || 0))}">
-              </div>
-              <div class="field">
-                <label>Alerta media antes del vencimiento</label>
-                <input type="number" min="0" name="alertMediumDays" value="${escapeHtml(String(config.alertMediumDays || 0))}">
+        <section class="beneficios-top-strip">
+          <section class="beneficios-block beneficios-top-strip__config">
+            <div class="beneficios-block__head">
+              <div>
+                <p class="eyebrow">A. Configuración de plazos</p>
+                <h4>Plazos configurables de CAMARAS 1414</h4>
               </div>
             </div>
-            <div class="beneficios-form__actions">
-              <button type="submit" class="primary-btn">
-                <span class="material-symbols-outlined">save</span>Guardar plazos
-              </button>
-            </div>
-          </form>
-        </section>
+            <form id="camaras1414-config-form" class="beneficios-form" novalidate>
+              <div class="beneficios-form__grid">
+                <div class="field">
+                  <label>Días desde hito 11 para recordar inicio</label>
+                  <input type="number" min="0" name="reminderDaysFromEligibility" value="${escapeHtml(String(config.reminderDaysFromEligibility || 0))}">
+                </div>
+                <div class="field">
+                  <label>Días máximos para enviar solicitud</label>
+                  <input type="number" min="0" name="maxDaysToSendRequest" value="${escapeHtml(String(config.maxDaysToSendRequest || 0))}">
+                </div>
+                <div class="field">
+                  <label>Días de espera sin respuesta</label>
+                  <input type="number" min="0" name="maxDaysWithoutVisitResponse" value="${escapeHtml(String(config.maxDaysWithoutVisitResponse || 0))}">
+                </div>
+                <div class="field">
+                  <label>Días posteriores a visita</label>
+                  <input type="number" min="0" name="maxDaysPostVisitFollowup" value="${escapeHtml(String(config.maxDaysPostVisitFollowup || 0))}">
+                </div>
+                <div class="field">
+                  <label>Días hasta convenio</label>
+                  <input type="number" min="0" name="maxDaysToConvenio" value="${escapeHtml(String(config.maxDaysToConvenio || 0))}">
+                </div>
+                <div class="field">
+                  <label>Alerta alta antes del vencimiento</label>
+                  <input type="number" min="0" name="alertHighDays" value="${escapeHtml(String(config.alertHighDays || 0))}">
+                </div>
+                <div class="field">
+                  <label>Alerta media antes del vencimiento</label>
+                  <input type="number" min="0" name="alertMediumDays" value="${escapeHtml(String(config.alertMediumDays || 0))}">
+                </div>
+              </div>
+              <div class="beneficios-form__actions">
+                <button type="submit" class="primary-btn">
+                  <span class="material-symbols-outlined">save</span>Guardar plazos
+                </button>
+              </div>
+            </form>
+          </section>
 
-        <section class="beneficios-block">
-          <div class="beneficios-block__head">
-            <div>
-              <p class="eyebrow">Alertas base</p>
-              <h4>Base para Inicio y seguimiento operativo</h4>
+          <section class="beneficios-block beneficios-top-strip__alerts">
+            <div class="beneficios-block__head">
+              <div>
+                <p class="eyebrow">Alertas base</p>
+                <h4>Base para Inicio y seguimiento operativo</h4>
+              </div>
             </div>
-          </div>
-          ${alerts.length ? `
-            <div class="beneficios-alerts">
-              ${alerts.map(alert => `
-                <article class="beneficios-alert">
-                  <strong>${escapeHtml(alert.nombre_organizacion || '')}</strong>
-                  <span>${escapeHtml(alert.title || '')}</span>
-                  <small>${escapeHtml(alert.detail || '')}</small>
-                </article>
-              `).join('')}
-            </div>
-          ` : '<div class="empty-state">Sin alertas operativas dentro del rango configurado.</div>'}
+            ${alerts.length ? `
+              <div class="beneficios-alerts">
+                ${alerts.map(alert => `
+                  <article class="beneficios-alert">
+                    <strong>${escapeHtml(alert.nombre_organizacion || '')}</strong>
+                    <span>${escapeHtml(alert.title || '')}</span>
+                    <small>${escapeHtml(alert.detail || '')}</small>
+                  </article>
+                `).join('')}
+              </div>
+            ` : '<div class="empty-state">Sin alertas operativas dentro del rango configurado.</div>'}
+          </section>
         </section>
 
         <section class="beneficios-layout beneficios-layout--camaras">

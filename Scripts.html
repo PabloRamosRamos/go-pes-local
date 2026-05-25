@@ -5152,6 +5152,7 @@
     const titleAttr = item.blocked_reason
       ? ` title="${escapeHtml(item.blocked_reason)}"`
       : '';
+    const hitoLabel = `Hito ${Number(item.orden_hito || 0) || ''}`.trim();
 
     return `
       <button
@@ -5163,12 +5164,15 @@
         data-estado="${escapeHtml(statusText)}"
         ${titleAttr}
         ${disabled}>
-        <div class="avance-hito-card__icon" aria-hidden="true">
-          <span class="material-symbols-outlined">${icon}</span>
+        <div class="avance-hito-card__head">
+          <div class="avance-hito-card__eyebrow">${escapeHtml(hitoLabel)}</div>
+          <div class="avance-hito-card__icon" aria-hidden="true">
+            <span class="material-symbols-outlined">${icon}</span>
+          </div>
         </div>
         <div class="avance-hito-card__body">
           <div class="avance-hito-card__title">${escapeHtml(item.nombre_hito || '')}</div>
-          <div class="avance-hito-card__status">${statusText}</div>
+          <div class="avance-hito-card__status">${escapeHtml(statusText)}</div>
           <div class="avance-hito-card__detail">${statusDetail}</div>
         </div>
       </button>

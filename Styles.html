@@ -147,6 +147,71 @@
     --sidebar-width-collapsed: 96px;
     --sidebar-compact-button-size: 48px;
 
+    --avance-card-bg: linear-gradient(180deg, #FFFFFF 0%, #F7FBFD 100%);
+    --avance-card-border: #D8E6EE;
+    --avance-card-border-hover: color-mix(in srgb, var(--brand-blue) 45%, #D8E6EE);
+    --avance-card-shadow: 0 10px 24px rgba(16, 42, 58, 0.08);
+    --avance-card-shadow-hover: 0 18px 36px rgba(16, 42, 58, 0.14);
+    --avance-card-title: #102A3A;
+    --avance-card-text: #607D8B;
+    --avance-card-detail: #607D8B;
+    --avance-card-divider: rgba(96, 125, 139, 0.22);
+    --avance-card-head-bg: rgba(46, 144, 184, 0.10);
+    --avance-card-head-fg: #235A74;
+    --avance-card-status-bg: rgba(96, 125, 139, 0.12);
+    --avance-card-status-fg: #4D6775;
+    --avance-card-icon-bg: rgba(46, 144, 184, 0.10);
+    --avance-card-icon-fg: #2E90B8;
+    --avance-card-success-bg: linear-gradient(180deg, #FFFFFF 0%, #F4FBEA 100%);
+    --avance-card-success-border: #7CB342;
+    --avance-card-success-pill-bg: rgba(124, 179, 66, 0.14);
+    --avance-card-success-pill-fg: #5E8A29;
+    --avance-card-success-icon-bg: rgba(124, 179, 66, 0.12);
+    --avance-card-info-bg: linear-gradient(180deg, #FFFFFF 0%, #F1F8FC 100%);
+    --avance-card-info-border: #2E90B8;
+    --avance-card-info-pill-bg: rgba(46, 144, 184, 0.14);
+    --avance-card-info-pill-fg: #2B6E89;
+    --avance-card-info-icon-bg: rgba(46, 144, 184, 0.12);
+    --avance-card-blocked-bg: linear-gradient(180deg, #F8FBFC 0%, #F1F5F8 100%);
+    --avance-card-blocked-border: #A8B6C0;
+    --avance-card-blocked-pill-bg: rgba(168, 182, 192, 0.18);
+    --avance-card-blocked-pill-fg: #6F8390;
+    --avance-card-blocked-icon-bg: rgba(168, 182, 192, 0.12);
+
+  }
+
+  [data-theme="dark"],
+  .theme-dark {
+    --avance-card-bg: linear-gradient(180deg, #102C40 0%, #0C2234 100%);
+    --avance-card-border: rgba(90, 180, 210, 0.25);
+    --avance-card-border-hover: rgba(90, 180, 210, 0.48);
+    --avance-card-shadow: 0 14px 30px rgba(2, 10, 18, 0.34);
+    --avance-card-shadow-hover: 0 22px 42px rgba(2, 10, 18, 0.46);
+    --avance-card-title: #EAF6FB;
+    --avance-card-text: #8FAFC0;
+    --avance-card-detail: #8FAFC0;
+    --avance-card-divider: rgba(143, 175, 192, 0.22);
+    --avance-card-head-bg: rgba(62, 150, 180, 0.16);
+    --avance-card-head-fg: #9ED9EC;
+    --avance-card-status-bg: rgba(143, 175, 192, 0.14);
+    --avance-card-status-fg: #B8CCD8;
+    --avance-card-icon-bg: rgba(62, 150, 180, 0.12);
+    --avance-card-icon-fg: #5FB8D9;
+    --avance-card-success-bg: linear-gradient(180deg, #102C40 0%, #132D24 100%);
+    --avance-card-success-border: #8CC63F;
+    --avance-card-success-pill-bg: rgba(140, 198, 63, 0.16);
+    --avance-card-success-pill-fg: #B7E36F;
+    --avance-card-success-icon-bg: rgba(140, 198, 63, 0.12);
+    --avance-card-info-bg: linear-gradient(180deg, #102C40 0%, #0D2639 100%);
+    --avance-card-info-border: #3E96B4;
+    --avance-card-info-pill-bg: rgba(62, 150, 180, 0.16);
+    --avance-card-info-pill-fg: #8FD4EC;
+    --avance-card-info-icon-bg: rgba(62, 150, 180, 0.12);
+    --avance-card-blocked-bg: linear-gradient(180deg, #11283A 0%, #0E2231 100%);
+    --avance-card-blocked-border: #7E94A3;
+    --avance-card-blocked-pill-bg: rgba(126, 148, 163, 0.18);
+    --avance-card-blocked-pill-fg: #B4C4CF;
+    --avance-card-blocked-icon-bg: rgba(126, 148, 163, 0.12);
   }
 
   * { box-sizing: border-box; }
@@ -3373,21 +3438,29 @@
 
   .avance-hito-card {
     width: auto;
-    min-height: 136px;
-    aspect-ratio: 1 / 1;
-    border: 1.5px solid var(--border-strong);
-    border-radius: var(--radius-xl);
-    background: var(--surface);
-    padding: 14px 12px 12px;
+    min-height: 182px;
+    aspect-ratio: auto;
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid var(--avance-card-border);
+    border-radius: 16px;
+    background: var(--avance-card-bg);
+    padding: 16px 16px 14px;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    gap: 8px;
+    gap: 14px;
     text-align: left;
     cursor: pointer;
-    transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-    box-shadow: var(--shadow-sm);
+    transition:
+      transform .18s ease,
+      box-shadow .18s ease,
+      border-color .18s ease,
+      background-color .18s ease,
+      opacity .18s ease;
+    box-shadow: var(--avance-card-shadow);
     min-width: 0;
     max-width: none;
     grid-column: auto;
@@ -3396,26 +3469,38 @@
     appearance: none;
   }
 
+  .avance-hito-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at top right, color-mix(in srgb, var(--avance-card-icon-fg) 10%, transparent) 0%, transparent 38%),
+      linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 34%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
   .avance-hito-card__head {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
   }
 
   .avance-hito-card__eyebrow {
     display: inline-flex;
     align-items: center;
-    min-height: 28px;
-    padding: 4px 10px;
+    min-height: 30px;
+    padding: 5px 12px;
     border-radius: var(--radius-pill);
-    background: var(--surface-soft);
-    color: var(--brand-blue-dark);
-    font-size: 11px;
+    background: var(--avance-card-head-bg);
+    color: var(--avance-card-head-fg);
+    font-size: 10px;
     font-weight: var(--font-weight-bold);
-    letter-spacing: .05em;
+    letter-spacing: .12em;
     text-transform: uppercase;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--avance-card-head-fg) 10%, transparent);
   }
 
   .avance-hitos-grid > *,
@@ -3431,12 +3516,25 @@
   }
 
   .avance-hito-card:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    transform: translateY(-3px);
+    border-color: var(--avance-card-border-hover);
+    box-shadow: var(--avance-card-shadow-hover);
   }
 
   .avance-hito-card:disabled {
-    cursor: not-allowed;
+    cursor: default;
+  }
+
+  .avance-hito-card:focus-visible {
+    outline: none;
+    border-color: color-mix(in srgb, var(--accent) 58%, var(--avance-card-border));
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent),
+      var(--avance-card-shadow-hover);
+  }
+
+  .avance-hito-card:active:not(:disabled) {
+    transform: translateY(-1px) scale(0.995);
   }
 
   .avance-hito-card__icon {
@@ -3444,17 +3542,24 @@
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    background: var(--avance-card-icon-bg);
+    color: var(--avance-card-icon-fg);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--avance-card-icon-fg) 16%, transparent);
   }
 
   .avance-hito-card__icon .material-symbols-outlined {
-    font-size: 28px;
+    font-size: 24px;
     line-height: 1;
+    color: currentColor;
   }
 
   .avance-hito-card__body {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     align-items: flex-start;
     width: 100%;
     min-width: 0;
@@ -3462,10 +3567,10 @@
   }
 
   .avance-hito-card__title {
-    font-size: 15px;
-    font-weight: var(--font-weight-bold);
-    line-height: 1.2;
-    color: var(--text);
+    font-size: 16px;
+    font-weight: var(--font-weight-extrabold);
+    line-height: 1.24;
+    color: var(--avance-card-title);
     max-width: none;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -3476,22 +3581,37 @@
   .avance-hito-card__status {
     display: inline-flex;
     align-items: center;
-    padding: 3px 8px;
+    gap: 6px;
+    padding: 4px 10px;
     border-radius: var(--radius-pill);
-    background: var(--surface-alt);
-    font-size: 11px;
+    background: var(--avance-card-status-bg);
+    font-size: 10px;
     font-weight: var(--font-weight-bold);
     line-height: 1.2;
-    color: var(--text-muted);
+    color: var(--avance-card-status-fg);
     text-transform: uppercase;
-    letter-spacing: .04em;
+    letter-spacing: .1em;
+  }
+
+  .avance-hito-card__status::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.92;
+    flex: 0 0 auto;
   }
 
   .avance-hito-card__detail {
+    margin-top: auto;
+    width: 100%;
+    padding-top: 12px;
+    border-top: 1px dashed var(--avance-card-divider);
     font-size: 12px;
-    line-height: 1.25;
-    color: var(--text-muted);
-    min-height: 30px;
+    line-height: 1.35;
+    color: var(--avance-card-detail);
+    min-height: 44px;
     max-width: none;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -3500,60 +3620,91 @@
   }
 
   .avance-hito-card.is-completed {
-    border-color: var(--brand-green);
-    background: var(--brand-green-soft);
+    border-color: var(--avance-card-success-border);
+    background: var(--avance-card-success-bg);
   }
 
   .avance-hito-card.is-completed .avance-hito-card__icon .material-symbols-outlined {
-    color: var(--brand-green);
+    font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
   }
 
   .avance-hito-card.is-completed .avance-hito-card__eyebrow {
-    background: rgba(0, 124, 74, 0.12);
-    color: var(--success-dark);
+    background: var(--avance-card-success-pill-bg);
+    color: var(--avance-card-success-pill-fg);
   }
 
   .avance-hito-card.is-completed .avance-hito-card__status {
-    color: var(--success-dark);
-    background: rgba(0, 124, 74, 0.12);
+    color: var(--avance-card-success-pill-fg);
+    background: var(--avance-card-success-pill-bg);
+  }
+
+  .avance-hito-card.is-completed .avance-hito-card__icon {
+    background: var(--avance-card-success-icon-bg);
+    color: var(--avance-card-success-border);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--avance-card-success-border) 18%, transparent);
   }
 
   .avance-hito-card.is-enabled {
-    border-color: var(--brand-blue);
-    background: var(--surface);
+    border-color: var(--avance-card-info-border);
+    background: var(--avance-card-info-bg);
   }
 
   .avance-hito-card.is-enabled .avance-hito-card__icon .material-symbols-outlined {
-    color: var(--brand-blue);
+    font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
   }
 
   .avance-hito-card.is-enabled .avance-hito-card__eyebrow {
-    background: var(--brand-blue-soft);
-    color: var(--brand-blue-dark);
+    background: var(--avance-card-info-pill-bg);
+    color: var(--avance-card-info-pill-fg);
   }
 
   .avance-hito-card.is-enabled .avance-hito-card__status {
-    color: var(--brand-blue);
-    background: var(--brand-blue-soft);
+    color: var(--avance-card-info-pill-fg);
+    background: var(--avance-card-info-pill-bg);
+  }
+
+  .avance-hito-card.is-enabled .avance-hito-card__icon {
+    background: var(--avance-card-info-icon-bg);
+    color: var(--avance-card-info-border);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--avance-card-info-border) 20%, transparent);
   }
 
   .avance-hito-card.is-blocked {
-    border-color: var(--border);
-    background: var(--disabled-soft);
+    border-color: var(--avance-card-blocked-border);
+    background: var(--avance-card-blocked-bg);
+    box-shadow: 0 10px 24px rgba(36, 54, 75, 0.05);
   }
 
   .avance-hito-card.is-blocked .avance-hito-card__icon .material-symbols-outlined {
-    color: var(--disabled);
+    font-variation-settings: 'FILL' 0, 'wght' 350, 'GRAD' 0, 'opsz' 24;
   }
 
   .avance-hito-card.is-blocked .avance-hito-card__eyebrow {
-    background: rgba(148, 163, 184, 0.18);
-    color: var(--text-muted);
+    background: var(--avance-card-blocked-pill-bg);
+    color: var(--avance-card-blocked-pill-fg);
   }
 
   .avance-hito-card.is-blocked .avance-hito-card__status {
-    color: var(--text-muted);
-    background: rgba(148, 163, 184, 0.18);
+    color: var(--avance-card-blocked-pill-fg);
+    background: var(--avance-card-blocked-pill-bg);
+  }
+
+  .avance-hito-card.is-blocked .avance-hito-card__icon {
+    background: var(--avance-card-blocked-icon-bg);
+    color: var(--avance-card-blocked-border);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--avance-card-blocked-border) 18%, transparent);
+  }
+
+  .avance-hito-card.is-blocked .avance-hito-card__title {
+    color: color-mix(in srgb, var(--avance-card-title) 84%, var(--avance-card-blocked-border));
+  }
+
+  .avance-hito-card.is-blocked .avance-hito-card__detail {
+    color: color-mix(in srgb, var(--avance-card-detail) 88%, var(--avance-card-blocked-border));
+  }
+
+  .avance-hito-card[data-estado="Pendiente"] {
+    border-color: color-mix(in srgb, var(--warning) 42%, var(--avance-card-border));
   }
 
   .avance-timeline {
@@ -3768,7 +3919,7 @@
 
     .avance-hito-card {
       aspect-ratio: auto;
-      min-height: 128px;
+      min-height: 156px;
     }
 
     .avance-org-name-input {

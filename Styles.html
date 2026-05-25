@@ -131,6 +131,14 @@
     --layer-modal: 1300;
     --layer-modal-loading: 1400;
     --layer-splash: 99999;
+    --panel-padding: var(--space-7);
+    --panel-gap: var(--space-5);
+    --field-gap: var(--space-2);
+    --field-row-gap: var(--space-4);
+    --action-gap: var(--space-3);
+    --control-min-height: 42px;
+    --empty-state-padding: 20px;
+    --empty-state-min-height: 96px;
     --shadow-sm: 0 4px 12px rgba(36, 54, 75, 0.05);
     --shadow-md: 0 8px 20px rgba(26, 49, 80, 0.08);
     --shadow-lg: 0 18px 40px rgba(36, 54, 75, 0.14);
@@ -938,10 +946,14 @@
   }
 
   .panel {
+    display: grid;
+    gap: var(--panel-gap);
+    width: 100%;
+    min-width: 0;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
-    padding: var(--space-7);
+    padding: var(--panel-padding);
     box-shadow: var(--shadow-md);
   }
 
@@ -1205,9 +1217,11 @@
   .field {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--field-gap);
     margin-bottom: 4px;
+    width: 100%;
     min-width: 0;
+    align-self: start;
   }
 
   .field--grow {
@@ -1242,6 +1256,7 @@
   select,
   textarea {
     width: 100%;
+    min-height: var(--control-min-height);
     padding: 11px var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
@@ -1251,6 +1266,7 @@
   }
 
   textarea {
+    min-height: calc(var(--control-min-height) * 2.2);
     resize: vertical;
   }
 
@@ -1272,11 +1288,15 @@
   .admin-reset-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: var(--space-2);
+    min-height: var(--control-min-height);
     border-radius: var(--radius-lg);
     padding: var(--space-4) var(--space-6);
     font-weight: var(--font-weight-bold);
     font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
     cursor: pointer;
     border: 1px solid transparent;
     transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
@@ -1337,20 +1357,34 @@
 
   .actions {
     display: flex;
-    gap: var(--space-3);
+    align-items: center;
+    width: 100%;
+    gap: var(--action-gap);
     flex-wrap: wrap;
-    margin-top: 8px;
+    margin-top: var(--space-2);
     justify-content: flex-end;
+  }
+
+  .actions > * {
+    flex: 0 0 auto;
+  }
+
+  .actions--start {
+    justify-content: flex-start;
+  }
+
+  .actions--between {
+    justify-content: space-between;
   }
 
   .form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 var(--space-6);
+    gap: var(--field-row-gap) var(--space-6);
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
-    padding: var(--space-7);
+    padding: var(--panel-padding);
     box-shadow: var(--shadow-md);
   }
 
@@ -1360,7 +1394,7 @@
     border-radius: 0;
     padding: 0;
     box-shadow: none;
-    gap: 0 var(--space-6);
+    gap: var(--field-row-gap) var(--space-6);
   }
 
   .form-grid .field[data-span="2"] {
@@ -1462,9 +1496,32 @@
   }
 
   .empty-state {
-    padding: 20px;
+    padding: var(--empty-state-padding);
     text-align: center;
     color: var(--text-muted);
+    min-width: 0;
+  }
+
+  .empty-state:not(.image-upload__preview):not(.inicio-dashboard-empty) {
+    display: grid;
+    place-items: center;
+    gap: var(--space-2);
+    min-height: var(--empty-state-min-height);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface-soft);
+  }
+
+  .empty-state strong {
+    color: var(--text);
+  }
+
+  .empty-state .empty-state {
+    min-height: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
 
   .is-admin {
@@ -1539,7 +1596,9 @@
 
   .form-actions-row {
     display: flex;
-    gap: 10px;
+    align-items: center;
+    width: 100%;
+    gap: var(--action-gap);
     flex-wrap: wrap;
     justify-content: flex-end;
   }
@@ -2929,7 +2988,7 @@
 
   .user-edit-layout__actions {
     margin-top: 0;
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 
   .user-delete-warning {

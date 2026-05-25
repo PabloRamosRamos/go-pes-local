@@ -650,14 +650,8 @@ function goPesResolveAvanceContext_(payload) {
 function goPesGetCatalogoHitosAvance_() {
   const rows = getSheetData_(GO_PES_V2.SHEETS.CAT_HITOS_AVANCE)
     .filter(function(r) { return goPesBool_(r.activo_flag); })
-    .sort(function(a, b) {
-      const tramoCompare = String(a.tramo || '').localeCompare(String(b.tramo || ''), 'es');
-      if (tramoCompare !== 0) return tramoCompare;
-      return Number(a.orden_hito || 0) - Number(b.orden_hito || 0);
-    });
-
-  return rows.map(function(r) {
-    return goPesNormalizeCatalogoHitoAvance_({
+    .map(function(r) {
+      return goPesNormalizeCatalogoHitoAvance_({
       codigo_hito: String(r.codigo_hito || ''),
       tramo: String(r.tramo || ''),
       orden_hito: Number(r.orden_hito || 0),
@@ -666,7 +660,13 @@ function goPesGetCatalogoHitosAvance_() {
       codigo_hito_previo: String(r.codigo_hito_previo || ''),
       permite_saltar: goPesBool_(r.permite_saltar),
       activo_flag: goPesBool_(r.activo_flag)
+      });
     });
+
+  return rows.sort(function(a, b) {
+    const tramoCompare = String(a.tramo || '').localeCompare(String(b.tramo || ''), 'es');
+    if (tramoCompare !== 0) return tramoCompare;
+    return Number(a.orden_hito || 0) - Number(b.orden_hito || 0);
   });
 }
 

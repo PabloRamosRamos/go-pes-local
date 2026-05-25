@@ -2662,6 +2662,7 @@
   function renderCamaras1414Detail_(detail) {
     const org = detail.organizacion || {};
     const contacto = detail.contacto || {};
+    const committeeContact = detail.committeeContact || {};
     const assignment = detail.assignment || {};
     const workflow = detail.workflow || {};
     const checklist = detail.checklist || [];
@@ -3024,6 +3025,7 @@
   function renderCamaras1414Detail_(detail) {
     const org = detail.organizacion || {};
     const contacto = detail.contacto || {};
+    const committeeContact = detail.committeeContact || {};
     const assignment = detail.assignment || {};
     const workflow = detail.workflow || {};
     const checklist = detail.checklist || [];
@@ -3037,6 +3039,17 @@
     const responseWait = tracking.responseWait || null;
     const inactivity = tracking.inactivity || null;
     const detailAlerts = detail.alerts || [];
+    const committeeOptions = Array.isArray(committeeContact.options) ? committeeContact.options.slice() : [];
+    if (committeeContact.socio_id && !committeeOptions.some(item => String(item.socio_id || '').trim() === String(committeeContact.socio_id || '').trim())) {
+      committeeOptions.unshift({
+        socio_id: committeeContact.socio_id || '',
+        nombre_socio: committeeContact.nombre_socio || 'Contacto guardado',
+        cargo: committeeContact.cargo || '',
+        telefono_contacto: committeeContact.telefono_contacto || '',
+        correo_contacto: committeeContact.correo_contacto || '',
+        unavailable: true
+      });
+    }
 
     return `
       <form id="camaras1414-detail-form" class="beneficios-form" novalidate>
@@ -3063,6 +3076,32 @@
               <div class="field">
                 <label>Proximo paso</label>
                 <input type="text" value="${escapeHtml(assignment.proximo_hito_beneficio || workflow.nextStep || '')}" disabled>
+              </div>
+              <div class="field" data-span="2">
+                <label>Contacto del comite</label>
+                <select name="committee_contact_socio_id" data-camaras-contact-select ${committeeOptions.length ? '' : 'disabled'}>
+                  <option value="">${escapeHtml(committeeOptions.length ? 'Seleccionar socio del comite' : 'No hay socios disponibles para seleccionar')}</option>
+                  ${committeeOptions.map(item => `
+                    <option
+                      value="${escapeHtml(item.socio_id || '')}"
+                      data-contact-name="${escapeHtml(item.nombre_socio || '')}"
+                      data-contact-cargo="${escapeHtml(item.cargo || '')}"
+                      data-contact-phone="${escapeHtml(item.telefono_contacto || '')}"
+                      data-contact-email="${escapeHtml(item.correo_contacto || '')}"
+                      data-contact-unavailable="${item.unavailable ? '1' : '0'}"
+                      ${String(item.socio_id || '').trim() === String(committeeContact.socio_id || '').trim() ? 'selected' : ''}
+                    >
+                      ${escapeHtml(item.nombre_socio || 'Socio sin nombre')}${item.cargo ? ' · ' + escapeHtml(item.cargo) : ''}${item.unavailable ? ' · No disponible en socios' : ''}
+                    </option>
+                  `).join('')}
+                </select>
+                ${committeeOptions.length
+                  ? '<p class="muted">Selecciona el socio definido por la organizacion como contacto operativo del beneficio.</p>'
+                  : `<p class="muted">${escapeHtml(committeeContact.emptyMessage || 'No hay socios disponibles para seleccionar.')}</p>`}
+              </div>
+              <div class="field">
+                <label>Cargo del contacto</label>
+                <input type="text" value="${escapeHtml(contacto.contacto_cargo || 'Sin definir')}" data-default-value="${escapeHtml(contacto.contacto_cargo || 'Sin definir')}" disabled data-camaras-contact-field="cargo">
               </div>
               <div class="field" data-span="2">
                 <label>Observacion general</label>
@@ -3093,8 +3132,10 @@
                 </div>`
               : ''}
             <div class="beneficios-contact-grid">
-              <div><strong>Telefono</strong><span>${escapeHtml(contacto.telefono_contacto || 'Sin dato')}</span></div>
-              <div><strong>Correo</strong><span>${escapeHtml(contacto.correo_contacto || 'Sin dato')}</span></div>
+              <div><strong>Contacto</strong><span data-camaras-contact-display="name" data-default-value="${escapeHtml(contacto.contacto_nombre || 'Sin definir')}">${escapeHtml(contacto.contacto_nombre || 'Sin definir')}</span></div>
+              <div><strong>Cargo</strong><span data-camaras-contact-display="cargo" data-default-value="${escapeHtml(contacto.contacto_cargo || 'Sin definir')}">${escapeHtml(contacto.contacto_cargo || 'Sin definir')}</span></div>
+              <div><strong>Telefono</strong><span data-camaras-contact-display="phone" data-default-value="${escapeHtml(contacto.telefono_contacto || 'Sin dato')}">${escapeHtml(contacto.telefono_contacto || 'Sin dato')}</span></div>
+              <div><strong>Correo</strong><span data-camaras-contact-display="email" data-default-value="${escapeHtml(contacto.correo_contacto || 'Sin dato')}">${escapeHtml(contacto.correo_contacto || 'Sin dato')}</span></div>
               <div><strong>Direccion</strong><span>${escapeHtml(contacto.direccion_referencia || 'Sin dato')}</span></div>
               <div><strong>UV / Sector</strong><span>${escapeHtml([contacto.uv ? 'UV ' + contacto.uv : '', contacto.sector || ''].filter(Boolean).join(' / ') || 'Sin dato')}</span></div>
             </div>
@@ -3338,6 +3379,12 @@
 
     const detailForm = document.getElementById('camaras1414-detail-form');
     if (detailForm) {
+      const committeeContactSelect = detailForm.querySelector('[data-camaras-contact-select]');
+      if (committeeContactSelect) {
+        committeeContactSelect.addEventListener('change', () => syncCamarasCommitteeContactUi_(detailForm));
+        syncCamarasCommitteeContactUi_(detailForm);
+      }
+
       detailForm.querySelectorAll('[data-doc-toggle]').forEach(toggle => {
         toggle.addEventListener('change', () => {
           const card = toggle.closest('[data-checklist-code]');
@@ -3377,6 +3424,10 @@
   }
 
   function collectCamaras1414DetailPayload_(form) {
+    const selectedContactOption = (() => {
+      const select = form.querySelector('[name="committee_contact_socio_id"]');
+      return select && select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+    })();
     return {
       organizacion_id: form.querySelector('[name="organizacion_id"]')?.value || '',
       responsable_beneficio: form.querySelector('[name="responsable_beneficio"]')?.value || '',
@@ -3394,6 +3445,14 @@
         sentConfirmed: !!form.querySelector('[name="email_sent_confirmed"]')?.checked,
         sentDate: form.querySelector('[name="email_sent_date"]')?.value || '',
         notes: form.querySelector('[name="email_notes"]')?.value || ''
+      },
+      committeeContact: {
+        socio_id: form.querySelector('[name="committee_contact_socio_id"]')?.value || '',
+        nombre_socio: selectedContactOption ? selectedContactOption.dataset.contactName || '' : '',
+        cargo: selectedContactOption ? selectedContactOption.dataset.contactCargo || '' : '',
+        telefono_contacto: selectedContactOption ? selectedContactOption.dataset.contactPhone || '' : '',
+        correo_contacto: selectedContactOption ? selectedContactOption.dataset.contactEmail || '' : '',
+        unavailable: selectedContactOption ? selectedContactOption.dataset.contactUnavailable === '1' : false
       },
       response: {
         hasResponse: !!form.querySelector('[name="response_has_response"]')?.checked,
@@ -3438,6 +3497,33 @@
       return 'Si registras fecha de envio, debes marcar tambien "Correo enviado".';
     }
     return '';
+  }
+
+  function syncCamarasCommitteeContactUi_(form) {
+    if (!form) return;
+    const select = form.querySelector('[data-camaras-contact-select]');
+    if (!select) return;
+
+    const option = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+    const values = {
+      name: option && select.value ? String(option.dataset.contactName || '').trim() : '',
+      cargo: option && select.value ? String(option.dataset.contactCargo || '').trim() : '',
+      phone: option && select.value ? String(option.dataset.contactPhone || '').trim() : '',
+      email: option && select.value ? String(option.dataset.contactEmail || '').trim() : ''
+    };
+
+    const setText = (selector, value, fallback) => {
+      const node = form.querySelector(selector);
+      if (node) node.textContent = value || node.dataset.defaultValue || fallback;
+    };
+
+    const cargoInput = form.querySelector('[data-camaras-contact-field="cargo"]');
+    if (cargoInput) cargoInput.value = values.cargo || cargoInput.dataset.defaultValue || 'Sin definir';
+
+    setText('[data-camaras-contact-display="name"]', values.name, 'Sin definir');
+    setText('[data-camaras-contact-display="cargo"]', values.cargo, 'Sin definir');
+    setText('[data-camaras-contact-display="phone"]', values.phone, 'Sin dato');
+    setText('[data-camaras-contact-display="email"]', values.email, 'Sin dato');
   }
 
   function copyTextToClipboard_(value, successMessage) {

@@ -161,6 +161,9 @@ function guardarCamaras1414Organizacion(payload) {
   const installation = normalizeCamarasInstallationPayload_(payload.installation);
   const agreement = normalizeCamarasAgreementPayload_(payload.agreement);
   const closure = normalizeCamarasClosurePayload_(payload.closure);
+  const caseRow = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', org && org.solicitud_id, false) || {};
+  const socios = getCamarasSociosByOrganizacionId_(organizacionId, caseRow);
+  const committeeContact = normalizeCamarasCommitteeContactPayload_(payload.committeeContact, socios, caseRow);
   const emailDraft = buildCamarasEmailDraft_(org, checklist, {
     eligibilityDate: sync.eligibilityDate
   });
@@ -174,6 +177,7 @@ function guardarCamaras1414Organizacion(payload) {
 
   const detailRows = buildCamarasDetailRows_(sync.assignment, {
     checklist: checklist,
+    committeeContact: committeeContact,
     email: emailPayload,
     response: response,
     visit: visit,
@@ -366,17 +370,22 @@ function buildCamarasDetailByOrgId_(organizacionId) {
     eligibilityDate: sync.eligibilityDate
   });
   const assignmentSummary = buildCamarasAssignmentSummary_(sync.assignment);
+  const committeeContact = buildCamarasCommitteeContactView_(detailMap, sync.organizacion, caso);
 
   return {
     organizacion: sync.organizacion,
     contacto: {
       solicitud_id: sync.organizacion.solicitud_id || '',
-      telefono_contacto: caso.telefono_contacto || '',
-      correo_contacto: caso.correo_contacto || '',
+      contacto_socio_id: committeeContact.socio_id || '',
+      contacto_nombre: committeeContact.nombre_socio || '',
+      contacto_cargo: committeeContact.cargo || '',
+      telefono_contacto: committeeContact.telefono_contacto || caso.telefono_contacto || '',
+      correo_contacto: committeeContact.correo_contacto || caso.correo_contacto || '',
       direccion_referencia: sync.organizacion.direccion_referencia || caso.direccion_original || '',
       uv: sync.organizacion.uv || caso.uv || '',
       sector: sync.organizacion.sector || caso.sector || ''
     },
+    committeeContact: committeeContact,
     elegibilidad: {
       cumple_flag: true,
       fecha_hito_11: sync.eligibilityDate || '',
@@ -621,6 +630,46 @@ function buildCamarasTrackingSummary_(assignment, detailMap, eligibilityDate, co
   };
 }
 
+function buildCamarasCommitteeContactView_(detailMap, organizacion, caseRow) {
+  const org = organizacion || {};
+  const caso = caseRow || {};
+  const payload = parseCamarasDetailPayload_(detailMap.CONTACTO_COMITE);
+  const socios = getCamarasSociosByOrganizacionId_(org.organizacion_id, caso);
+  const selectedId = String(payload.socio_id || '').trim();
+  const selectedSocio = socios.find(function(item) {
+    return String(item.socio_id || '').trim() === selectedId;
+  }) || null;
+
+  const fallback = selectedSocio || payload || {};
+  const current = {
+    socio_id: selectedSocio ? String(selectedSocio.socio_id || '').trim() : selectedId,
+    nombre_socio: sanitizeCamarasText_(fallback.nombre_socio, 200),
+    cargo: sanitizeCamarasText_(fallback.cargo, 120),
+    telefono_contacto: sanitizeCamarasText_(fallback.telefono_contacto || caso.telefono_contacto, 80),
+    correo_contacto: sanitizeCamarasText_(fallback.correo_contacto || caso.correo_contacto, 200),
+    available: !!selectedSocio
+  };
+
+  return {
+    socio_id: current.socio_id || '',
+    nombre_socio: current.nombre_socio || '',
+    cargo: current.cargo || '',
+    telefono_contacto: current.telefono_contacto || '',
+    correo_contacto: current.correo_contacto || '',
+    available: current.available,
+    emptyMessage: socios.length ? '' : 'No hay socios disponibles para seleccionar',
+    options: socios.map(function(item) {
+      return {
+        socio_id: String(item.socio_id || '').trim(),
+        nombre_socio: String(item.nombre_socio || '').trim(),
+        cargo: String(item.cargo || '').trim(),
+        telefono_contacto: String(item.telefono_contacto || '').trim(),
+        correo_contacto: String(item.correo_contacto || '').trim()
+      };
+    })
+  };
+}
+
 function resolveCamarasResponseStopDate_(sentDate, response, visit) {
   const base = stripTimeFromDate_(sentDate);
   if (!base) return '';
@@ -712,6 +761,33 @@ function buildCamarasVisitView_(detailMap) {
   };
 }
 
+function getCamarasSociosByOrganizacionId_(organizacionId, caseRow) {
+  const orgId = String(organizacionId || '').trim();
+  if (!orgId) return [];
+
+  const caso = caseRow || findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'organizacion_id', orgId, false) || {};
+  return getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS)
+    .filter(function(row) {
+      return String(row.organizacion_id || '').trim() === orgId;
+    })
+    .map(function(row) {
+      return {
+        socio_id: String(row.socio_id || '').trim(),
+        organizacion_id: orgId,
+        nombre_socio: String(row.nombre_socio || '').trim(),
+        cargo: String(row.cargo || '').trim(),
+        telefono_contacto: String(caso.telefono_contacto || '').trim(),
+        correo_contacto: String(caso.correo_contacto || '').trim()
+      };
+    })
+    .filter(function(row) {
+      return row.socio_id && row.nombre_socio;
+    })
+    .sort(function(a, b) {
+      return String(a.nombre_socio || '').localeCompare(String(b.nombre_socio || ''), 'es', { sensitivity: 'base' });
+    });
+}
+
 function buildCamarasInstallationView_(detailMap) {
   const payload = parseCamarasDetailPayload_(detailMap.INSTALACION);
   return {
@@ -773,6 +849,46 @@ function buildCamarasEmailDraft_(organizacion, checklist, options) {
     recipient: 'barbara.collado@seguridadprovidencia.cl',
     subject: subject,
     body: bodyLines.join('\n')
+  };
+}
+
+function normalizeCamarasCommitteeContactPayload_(value, socios, caseRow) {
+  const input = value || {};
+  const socioId = String(input.socio_id || '').trim();
+  if (!socioId) {
+    return {
+      socio_id: '',
+      nombre_socio: '',
+      cargo: '',
+      telefono_contacto: '',
+      correo_contacto: ''
+    };
+  }
+
+  const socio = (socios || []).find(function(item) {
+    return String(item.socio_id || '').trim() === socioId;
+  });
+  if (!socio) {
+    if (input.unavailable && String(input.nombre_socio || '').trim()) {
+      const caso = caseRow || {};
+      return {
+        socio_id: socioId,
+        nombre_socio: sanitizeCamarasText_(input.nombre_socio, 200),
+        cargo: sanitizeCamarasText_(input.cargo, 120),
+        telefono_contacto: sanitizeCamarasText_(input.telefono_contacto || caso.telefono_contacto, 80),
+        correo_contacto: sanitizeCamarasText_(input.correo_contacto || caso.correo_contacto, 200)
+      };
+    }
+    throw new Error('El socio seleccionado ya no está disponible para este comité. Recarga la ficha y selecciona un contacto válido.');
+  }
+
+  const caso = caseRow || {};
+  return {
+    socio_id: socio.socio_id,
+    nombre_socio: sanitizeCamarasText_(socio.nombre_socio, 200),
+    cargo: sanitizeCamarasText_(socio.cargo, 120),
+    telefono_contacto: sanitizeCamarasText_(socio.telefono_contacto || caso.telefono_contacto, 80),
+    correo_contacto: sanitizeCamarasText_(socio.correo_contacto || caso.correo_contacto, 200)
   };
 }
 
@@ -921,6 +1037,7 @@ function buildCamarasDetailRows_(assignment, payload, actorEmail, now) {
     }));
   });
 
+  rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'CONTACTO_COMITE', 'Contacto definido por la organizacion', 90, payload.committeeContact));
   rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'MAIL_SOLICITUD', 'Solicitud de visita tecnica', 100, payload.email));
   rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'VISITA_RESPUESTA', 'Respuesta / fecha de visita', 110, payload.response));
   rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'VISITA_TECNICA', 'Resultado visita tecnica', 120, payload.visit));
@@ -963,6 +1080,8 @@ function resolveCamarasPayloadMainDate_(payload) {
 
 function resolveCamarasPayloadState_(code, payload) {
   switch (code) {
+    case 'CONTACTO_COMITE':
+      return payload.socio_id ? 'Definido' : 'Pendiente';
     case 'MAIL_SOLICITUD':
       return (payload.sentConfirmed || payload.sentDate) && payload.sentDate ? 'Enviado' : (payload.prepared ? 'Preparado' : 'Pendiente');
     case 'VISITA_RESPUESTA':
@@ -981,6 +1100,7 @@ function resolveCamarasPayloadState_(code, payload) {
 }
 
 function resolveCamarasPayloadTextValue_(code, payload) {
+  if (code === 'CONTACTO_COMITE') return payload.nombre_socio || '';
   if (code === 'VISITA_TECNICA') return payload.installationLocations || '';
   if (code === 'MAIL_SOLICITUD') return payload.subject || '';
   return payload.status || '';
@@ -994,6 +1114,7 @@ function resolveCamarasPayloadNumericValue_(code, payload) {
 }
 
 function resolveCamarasPayloadFlagValue_(code, payload) {
+  if (code === 'CONTACTO_COMITE') return payload.socio_id ? 'Si' : 'No';
   if (code === 'MAIL_SOLICITUD') return (payload.sentConfirmed || payload.sentDate) ? 'Si' : 'No';
   if (code === 'VISITA_RESPUESTA') return payload.hasResponse ? 'Si' : 'No';
   if (code === 'VISITA_TECNICA') return payload.visitCompleted ? 'Si' : 'No';

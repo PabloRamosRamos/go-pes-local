@@ -149,6 +149,64 @@
     if (els.text) els.text.textContent = APP_SPLASH_STATE.message || getSplashLoadingText_();
   }
 
+  function easeOutCubic_(value) {
+    const t = Math.max(0, Math.min(1, Number(value) || 0));
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function getSplashVisualTarget_(elapsed, minDurationMs, hideRequested) {
+    const safeDuration = Math.max(500, Number(minDurationMs) || 5000);
+    const normalized = Math.max(0, Math.min(1, elapsed / safeDuration));
+
+    if (hideRequested) {
+      if (normalized < 0.82) {
+        return 4 + easeOutCubic_(normalized / 0.82) * 84;
+      }
+      return 88 + easeOutCubic_((normalized - 0.82) / 0.18) * 12;
+    }
+
+    if (elapsed <= safeDuration) {
+      return 4 + easeOutCubic_(normalized) * 88;
+    }
+
+    const extraElapsed = elapsed - safeDuration;
+    const settlingWindow = Math.max(1800, safeDuration * 0.9);
+    const extraNormalized = 1 - Math.exp(-extraElapsed / settlingWindow);
+    return 92 + (extraNormalized * 6);
+  }
+
+  function getSplashStatusCopy_(elapsed, minDurationMs, hideRequested) {
+    if (hideRequested && elapsed >= minDurationMs) return 'Finalizando la carga inicial.';
+
+    const statuses = [
+      'Preparando entorno operativo.',
+      'Cargando configuracion institucional.',
+      'Sincronizando estructura operativa.',
+      'Validando modulos y permisos.'
+    ];
+    const safeDuration = Math.max(500, Number(minDurationMs) || 5000);
+    const normalized = Math.max(0, Math.min(0.999, elapsed / safeDuration));
+    const index = Math.min(statuses.length - 1, Math.floor(normalized * statuses.length));
+    return statuses[index];
+  }
+
+  function renderSplashProgress_() {
+    const els = getSplashElements_();
+    if (!els) return;
+    const progressValue = Math.max(0, Math.min(100, APP_SPLASH_STATE.progress));
+    const rounded = Math.round(progressValue);
+    const elapsed = getSplashElapsed_();
+    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
+
+    if (els.bar) {
+      els.bar.style.width = `${progressValue}%`;
+      els.bar.setAttribute('aria-valuenow', String(rounded));
+    }
+    if (els.percent) els.percent.textContent = `${rounded}%`;
+    if (els.status) els.status.textContent = getSplashStatusCopy_(elapsed, minDurationMs, APP_SPLASH_STATE.hideRequested);
+    if (els.text) els.text.textContent = APP_SPLASH_STATE.message || getSplashLoadingText_();
+  }
+
   function clearSplashTimers_() {
     window.clearTimeout(APP_SPLASH_STATE.hideTimerId);
     window.clearTimeout(APP_SPLASH_STATE.forceHideTimerId);
@@ -227,6 +285,39 @@
     }
 
     const easing = APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs ? 0.18 : 0.075;
+    APP_SPLASH_STATE.progress += (target - APP_SPLASH_STATE.progress) * easing;
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && (100 - APP_SPLASH_STATE.progress) < 0.4) {
+      APP_SPLASH_STATE.progress = 100;
+    }
+
+    renderSplashProgress_();
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && APP_SPLASH_STATE.progress >= 100) {
+      finalizeSplashHide_();
+      APP_SPLASH_STATE.rafId = 0;
+      return;
+    }
+
+    APP_SPLASH_STATE.rafId = window.requestAnimationFrame(tickSplashProgress_);
+  }
+
+  function tickSplashProgress_(now) {
+    const els = getSplashElements_();
+    if (!els || !APP_SPLASH_STATE.visible) {
+      APP_SPLASH_STATE.rafId = 0;
+      return;
+    }
+
+    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
+    const elapsed = now - APP_SPLASH_STATE.startedAt;
+    let target = getSplashVisualTarget_(elapsed, minDurationMs, APP_SPLASH_STATE.hideRequested);
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs) {
+      target = 100;
+    }
+
+    const easing = APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs ? 0.22 : 0.065;
     APP_SPLASH_STATE.progress += (target - APP_SPLASH_STATE.progress) * easing;
 
     if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && (100 - APP_SPLASH_STATE.progress) < 0.4) {

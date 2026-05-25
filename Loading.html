@@ -1,5 +1,5 @@
 <template id="content-loading-template">
-  <div id="content-loading" class="content-loading is-hidden" aria-live="polite" aria-busy="false">
+  <div id="content-loading" class="content-loading is-hidden content-loading--content" aria-live="polite" aria-busy="false">
     <div class="content-loading__box loading-shell" role="status">
       <div class="content-loading__spinner loading-shell__visual" aria-hidden="true">
         <span class="loading-shell__halo"></span>
@@ -18,6 +18,14 @@
 </template>
 
 <script>
+  const CONTENT_LOADING_MODAL_SELECTOR = [
+    '.admin-reset-modal:not(.is-hidden)',
+    '.user-modal:not(.is-hidden)',
+    '.avance-modal:not(.is-hidden)',
+    '.socios-modal:not(.is-hidden)',
+    '.organizaciones-modal:not(.is-hidden)'
+  ].join(', ');
+
   function getLoadingSystemConfig_() {
     const app = document.getElementById('app');
     if (!app) return {};
@@ -29,37 +37,78 @@
     }
   }
 
-  function ensureContentLoadingMounted_() {
-    if (document.getElementById('content-loading')) return document.getElementById('content-loading');
+  function getLoadingText_() {
+    return (((getLoadingSystemConfig_() || {}).general || {}).loadingText) || 'Iniciando Gestor Operativo';
+  }
 
-    const host = document.querySelector('.content');
+  function getContentLoadingContentHost_() {
+    return document.querySelector('#app .content');
+  }
+
+  function getContentLoadingGlobalHost_() {
+    return document.getElementById('app') || document.body;
+  }
+
+  function hasOpenContentLoadingModal_() {
+    return !!document.querySelector(CONTENT_LOADING_MODAL_SELECTOR);
+  }
+
+  function mountContentLoadingForContext_(overlay, forceModal) {
+    if (!overlay) return null;
+
+    const isModal = typeof forceModal === 'boolean' ? forceModal : hasOpenContentLoadingModal_();
+    const host = isModal ? getContentLoadingGlobalHost_() : getContentLoadingContentHost_();
+    if (!host) return overlay;
+
+    if (overlay.parentElement !== host) {
+      host.insertBefore(overlay, host.firstChild || null);
+    }
+
+    overlay.classList.toggle('content-loading--modal', isModal);
+    overlay.classList.toggle('content-loading--content', !isModal);
+    overlay.dataset.loadingContext = isModal ? 'modal' : 'content';
+    return overlay;
+  }
+
+  function syncContentLoadingLayerState_(overlay) {
+    const hasModalLoading = !!(
+      overlay &&
+      !overlay.classList.contains('is-hidden') &&
+      overlay.classList.contains('content-loading--modal')
+    );
+    const shouldLock = hasModalLoading || hasOpenContentLoadingModal_();
+    document.body.classList.toggle('app-has-modal', shouldLock);
+    document.documentElement.classList.toggle('app-has-modal', shouldLock);
+  }
+
+  function ensureContentLoadingMounted_(forceModal) {
+    const existing = document.getElementById('content-loading');
+    if (existing) return mountContentLoadingForContext_(existing, forceModal);
+
     const template = document.getElementById('content-loading-template');
-    if (!host || !template) return null;
+    const initialHost = getContentLoadingContentHost_() || getContentLoadingGlobalHost_();
+    if (!template || !initialHost) return null;
 
     const fragment = template.content.cloneNode(true);
-    host.insertBefore(fragment, host.firstChild);
-    const overlay = document.getElementById('content-loading');
+    initialHost.insertBefore(fragment, initialHost.firstChild || null);
+    const overlay = mountContentLoadingForContext_(document.getElementById('content-loading'), forceModal);
     const text = overlay ? overlay.querySelector('.content-loading__text') : null;
-    const loadingText = (((getLoadingSystemConfig_() || {}).general || {}).loadingText) || '';
-    if (text && loadingText) text.textContent = loadingText;
+    if (text) text.textContent = getLoadingText_();
     return overlay;
   }
 
   document.addEventListener('DOMContentLoaded', ensureContentLoadingMounted_);
 
   function showContentLoading(message) {
-    const overlay = ensureContentLoadingMounted_();
+    const overlay = ensureContentLoadingMounted_(hasOpenContentLoadingModal_());
     const text = overlay ? overlay.querySelector('.content-loading__text') : null;
     if (!overlay) return;
 
-    if (text && message) text.textContent = message;
+    if (text) text.textContent = message || getLoadingText_();
     overlay.setAttribute('aria-busy', 'true');
-    overlay.classList.toggle(
-      'content-loading--modal',
-      !!document.querySelector('.admin-reset-modal:not(.is-hidden), .user-modal:not(.is-hidden), .avance-modal:not(.is-hidden)')
-    );
     overlay.classList.remove('is-hidden');
     overlay.style.display = 'flex';
+    syncContentLoadingLayerState_(overlay);
   }
 
   function hideContentLoading() {
@@ -67,7 +116,10 @@
     if (!overlay) return;
     overlay.setAttribute('aria-busy', 'false');
     overlay.classList.remove('content-loading--modal');
+    overlay.classList.add('content-loading--content');
     overlay.classList.add('is-hidden');
     overlay.style.display = 'none';
+    mountContentLoadingForContext_(overlay, false);
+    syncContentLoadingLayerState_(overlay);
   }
 </script>

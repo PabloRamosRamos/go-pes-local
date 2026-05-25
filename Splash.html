@@ -156,6 +156,18 @@
     APP_SPLASH_STATE.forceHideTimerId = 0;
   }
 
+  function syncSplashVisibilityLock_() {
+    const splash = document.getElementById('app-loading');
+    const visible = !!(
+      splash &&
+      APP_SPLASH_STATE.visible &&
+      !splash.classList.contains('is-hidden') &&
+      splash.style.display !== 'none'
+    );
+    document.body.classList.toggle('app-has-modal', visible);
+    document.documentElement.classList.toggle('app-has-modal', visible);
+  }
+
   function getSplashElapsed_(now) {
     const currentTime = typeof now === 'number' ? now : performance.now();
     return Math.max(0, currentTime - (APP_SPLASH_STATE.startedAt || currentTime));
@@ -177,9 +189,11 @@
 
     els.root.setAttribute('aria-busy', 'false');
     els.root.classList.add('is-hidden');
+    syncSplashVisibilityLock_();
 
     APP_SPLASH_STATE.hideTimerId = window.setTimeout(() => {
       els.root.style.display = 'none';
+      syncSplashVisibilityLock_();
       APP_SPLASH_STATE.hideTimerId = 0;
     }, 260);
   }
@@ -255,6 +269,7 @@
     updateSplashBranding_();
     els.root.setAttribute('aria-busy', 'true');
     renderSplashProgress_();
+    syncSplashVisibilityLock_();
     ensureSplashLoop_();
   }
 
@@ -302,6 +317,7 @@
     APP_SPLASH_STATE.message = getSplashLoadingText_();
     updateSplashBranding_();
     renderSplashProgress_();
+    syncSplashVisibilityLock_();
     ensureSplashLoop_();
   });
 </script>

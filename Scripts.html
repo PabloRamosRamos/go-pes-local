@@ -35,6 +35,46 @@
     return CLIENT_MODULE_ALIAS_MAP[lookup] || '';
   }
 
+  const GLOBAL_MODAL_SELECTOR = [
+    '.admin-reset-modal:not(.is-hidden)',
+    '.user-modal:not(.is-hidden)',
+    '.avance-modal:not(.is-hidden)',
+    '.socios-modal:not(.is-hidden)',
+    '.organizaciones-modal:not(.is-hidden)'
+  ].join(', ');
+
+  function hasOpenGlobalModal_() {
+    return !!document.querySelector(GLOBAL_MODAL_SELECTOR);
+  }
+
+  function syncGlobalUiLayerState_() {
+    const splash = document.getElementById('app-loading');
+    const contentLoading = document.getElementById('content-loading');
+    const hasModal = hasOpenGlobalModal_();
+    const hasModalLoading = !!(
+      contentLoading &&
+      !contentLoading.classList.contains('is-hidden') &&
+      contentLoading.classList.contains('content-loading--modal')
+    );
+    const hasSplash = !!(splash && !splash.classList.contains('is-hidden') && splash.style.display !== 'none');
+    const shouldLock = hasModal || hasModalLoading || hasSplash;
+
+    document.body.classList.toggle('app-has-modal', shouldLock);
+    document.documentElement.classList.toggle('app-has-modal', shouldLock);
+  }
+
+  function setModalVisibility_(modalOrId, visible) {
+    const modal = typeof modalOrId === 'string'
+      ? document.getElementById(modalOrId)
+      : modalOrId;
+    if (!modal) return null;
+
+    modal.classList.toggle('is-hidden', !visible);
+    modal.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    syncGlobalUiLayerState_();
+    return modal;
+  }
+
   const APP = {
     state: {
       bootstrap: BOOTSTRAP,
@@ -178,6 +218,7 @@
 
     bindGlobalNav();
     initSidebarCollapse_();
+    syncGlobalUiLayerState_();
     hydrateStaticUser();
     applySystemConfigUi_();
     applyModuleDefinitionsUi_();
@@ -1060,18 +1101,12 @@
     const modal = document.getElementById('admin-reset-modal');
     const form = document.getElementById('admin-reset-form');
     if (form) form.reset();
-    if (modal) {
-      modal.classList.remove('is-hidden');
-      modal.setAttribute('aria-hidden', 'false');
-    }
+    setModalVisibility_(modal, true);
     setTimeout(() => document.getElementById('admin-reset-pin')?.focus(), 20);
   }
 
   function closeAdminResetModal_() {
-    const modal = document.getElementById('admin-reset-modal');
-    if (!modal) return;
-    modal.classList.add('is-hidden');
-    modal.setAttribute('aria-hidden', 'true');
+    setModalVisibility_('admin-reset-modal', false);
   }
 
   function submitAdminReset_(ev) {
@@ -1797,7 +1832,7 @@
 
   function renderOrganizacionEditModal_() {
     return `
-      <div id="org-edit-modal" class="organizaciones-modal is-hidden">
+      <div id="org-edit-modal" class="organizaciones-modal is-hidden" aria-hidden="true">
         <div class="organizaciones-modal__backdrop" data-org-modal-close="true"></div>
         <form id="org-edit-form" class="organizaciones-modal__dialog">
           <div class="organizaciones-modal__head">
@@ -1850,7 +1885,7 @@
 
   function renderOrganizacionSocioCargoModal_() {
     return `
-      <div id="org-socio-cargo-modal" class="organizaciones-modal is-hidden">
+      <div id="org-socio-cargo-modal" class="organizaciones-modal is-hidden" aria-hidden="true">
         <div class="organizaciones-modal__backdrop" data-org-socio-cargo-close="true"></div>
         <form id="org-socio-cargo-form" class="organizaciones-modal__dialog organizaciones-modal__dialog--sm">
           <div class="organizaciones-modal__head">
@@ -2135,11 +2170,11 @@
       syncSectorOptions(sector, uv.value);
       if (data.sector) sector.value = data.sector;
     }
-    modal.classList.remove('is-hidden');
+    setModalVisibility_(modal, true);
   }
 
   function closeOrganizacionEditModal_() {
-    document.getElementById('org-edit-modal')?.classList.add('is-hidden');
+    setModalVisibility_('org-edit-modal', false);
   }
 
   function openOrganizacionSocioCargoModal_(socioId) {
@@ -2166,11 +2201,11 @@
     fillSelect(select, cargos, 'Seleccionar cargo');
     select.value = cargos.includes(socio.cargo) ? socio.cargo : 'Socio';
 
-    modal.classList.remove('is-hidden');
+    setModalVisibility_(modal, true);
   }
 
   function closeOrganizacionSocioCargoModal_() {
-    document.getElementById('org-socio-cargo-modal')?.classList.add('is-hidden');
+    setModalVisibility_('org-socio-cargo-modal', false);
   }
 
   function saveOrganizacionSocioCargo_(ev) {
@@ -3173,7 +3208,7 @@
 
   function renderSociosBulkModal_() {
     return `
-      <div id="socios-bulk-modal" class="socios-modal is-hidden">
+      <div id="socios-bulk-modal" class="socios-modal is-hidden" aria-hidden="true">
         <div class="socios-modal__backdrop" data-socios-modal-close="true"></div>
         <div class="socios-modal__dialog">
           <div class="socios-modal__head">
@@ -3220,7 +3255,7 @@
 
   function renderSociosManualModal_() {
     return `
-      <div id="socios-manual-modal" class="socios-modal is-hidden">
+      <div id="socios-manual-modal" class="socios-modal is-hidden" aria-hidden="true">
         <div class="socios-modal__backdrop" data-socios-modal-close="true"></div>
         <div class="socios-modal__dialog">
           <div class="socios-modal__head">
@@ -3317,11 +3352,11 @@
   function openSociosModal_(id) {
     refreshSociosComites_();
     clearSociosManualFeedback_();
-    document.getElementById(id)?.classList.remove('is-hidden');
+    setModalVisibility_(id, true);
   }
 
   function closeSociosModals_() {
-    document.querySelectorAll('.socios-modal').forEach(modal => modal.classList.add('is-hidden'));
+    document.querySelectorAll('.socios-modal').forEach(modal => setModalVisibility_(modal, false));
   }
 
   function openSocioDetailModal_(socioId) {
@@ -3345,15 +3380,11 @@
       ? `Comité asociado: ${comiteLabel}`
       : 'Información completa del registro seleccionado.';
     content.innerHTML = renderSocioDetailContent_(row);
-    modal.classList.remove('is-hidden');
-    modal.setAttribute('aria-hidden', 'false');
+    setModalVisibility_(modal, true);
   }
 
   function closeSocioDetailModal_() {
-    const modal = document.getElementById('socios-detail-modal');
-    if (!modal) return;
-    modal.classList.add('is-hidden');
-    modal.setAttribute('aria-hidden', 'true');
+    setModalVisibility_('socios-detail-modal', false);
   }
 
   function handleSociosBulkFile_(ev) {
@@ -3443,7 +3474,7 @@
       renderSociosManualSavedPreview_(saved);
     }).catch(err => {
       if (!keepOpen) {
-        document.getElementById('socios-manual-modal')?.classList.remove('is-hidden');
+        setModalVisibility_('socios-manual-modal', true);
       }
       showSociosManualFeedback_(getErrorMessage_(err), 'error');
     }).finally(() => {
@@ -3731,15 +3762,11 @@
     renderUserModuleOptions_(btn.dataset.modules || '', 'user-edit-modules-input');
     syncUserModulesVisibility_('user-edit-role-input', 'user-edit-modules-panel', 'user-edit-modules-input');
 
-    modal.classList.remove('is-hidden');
-    modal.setAttribute('aria-hidden', 'false');
+    setModalVisibility_(modal, true);
   }
 
   function closeUserEditModal_() {
-    const modal = document.getElementById('user-edit-modal');
-    if (!modal) return;
-    modal.classList.add('is-hidden');
-    modal.setAttribute('aria-hidden', 'true');
+    setModalVisibility_('user-edit-modal', false);
   }
 
   function saveUserEditModal_(ev) {
@@ -3773,16 +3800,12 @@
     document.getElementById('user-delete-email').value = btn.dataset.email || '';
     document.getElementById('user-delete-label').textContent = btn.dataset.name || btn.dataset.email || '';
     document.getElementById('user-delete-pin').value = '';
-    modal.classList.remove('is-hidden');
-    modal.setAttribute('aria-hidden', 'false');
+    setModalVisibility_(modal, true);
     setTimeout(() => document.getElementById('user-delete-pin')?.focus(), 20);
   }
 
   function closeUserDeleteModal_() {
-    const modal = document.getElementById('user-delete-modal');
-    if (!modal) return;
-    modal.classList.add('is-hidden');
-    modal.setAttribute('aria-hidden', 'true');
+    setModalVisibility_('user-delete-modal', false);
   }
 
   function confirmDeactivateUser_(ev) {
@@ -4165,7 +4188,7 @@
         </div>
       </section>
 
-      <div id="avance-hito-modal" class="avance-modal is-hidden">
+      <div id="avance-hito-modal" class="avance-modal is-hidden" aria-hidden="true">
         <div class="avance-modal__backdrop" data-avance-modal-close="true"></div>
         <div class="avance-modal__dialog">
           <div class="avance-modal__head">
@@ -4687,13 +4710,11 @@
       if (orgNombreError) orgNombreError.classList.add('is-hidden');
     }
 
-    modal.classList.remove('is-hidden');
+    setModalVisibility_(modal, true);
   }
 
   function closeAvanceHitoModal_() {
-    const modal = document.getElementById('avance-hito-modal');
-    if (!modal) return;
-    modal.classList.add('is-hidden');
+    setModalVisibility_('avance-hito-modal', false);
   }
 
   function submitAvanceHitoModal_() {

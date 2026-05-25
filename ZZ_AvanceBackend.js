@@ -300,7 +300,10 @@ function registrarHitoAvance(payload) {
     organizacion_id: organizacionId,
     solicitud_id: solicitudId,
     codigo_hito: codigoHito,
-    nombre_hito: hitoCatalogo.nombre_hito
+    nombre_hito: hitoCatalogo.nombre_hito,
+    beneficio_recordatorio: typeof goPesHandleCamaras1414EligibilityFromAvance_ === 'function'
+      ? goPesHandleCamaras1414EligibilityFromAvance_(organizacionId, fechaHito, hitoCatalogo)
+      : null
   });
   goPesDiagEnd_(diag, {
     ok: true,

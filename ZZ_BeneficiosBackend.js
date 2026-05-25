@@ -3,59 +3,64 @@ function getFixedBenefitMeta_() {
     {
       beneficio_codigo: 'CAMARAS_1414',
       beneficio_nombre: 'CAMARAS 1414',
-      descripcion_beneficio: 'Base mínima del módulo para el flujo de CAMARAS 1414.',
-      descripcion_corta: 'Flujo municipal listo para construirse por etapas.',
+      descripcion_beneficio: 'Flujo operativo desde certificado definitivo hasta cierre por convenio firmado.',
+      descripcion_corta: 'Solicitud, visita tecnica, convenio y cierre por organizacion.',
       instrumento_tipo: 'beneficio_municipal',
       origen_instrumento: 'municipal',
-      elegibilidad_tipo: '',
-      elegibilidad_label: 'Base mínima',
-      estado: 'Base mínima',
+      elegibilidad_tipo: 'hito_avance',
+      elegibilidad_label: 'Hito 11 / Certificado definitivo',
+      estado: 'Operativo',
       items: [
-        'Pestaña operativa lista para desarrollar la administración del beneficio.',
-        'Sin formularios ni reglas complejas activas en esta etapa.',
-        'Estructura preparada para incorporar flujos posteriores sin rehacer el módulo.'
+        'Elegibilidad automatica al registrar el certificado definitivo.',
+        'Checklist documental, borrador formal de correo y seguimiento operativo.',
+        'Registro de visita tecnica, instalacion, convenio y cierre.'
       ],
-      nota: 'La implementación funcional de CAMARAS 1414 se retomará por partes desde esta base.'
+      nota: 'Primer beneficio operativo real del modulo Beneficios.'
     },
     {
       beneficio_codigo: 'FONDESE',
       beneficio_nombre: 'FONDESE',
-      descripcion_beneficio: 'Base mínima del módulo para el flujo FONDESE.',
-      descripcion_corta: 'Convocatorias y seguimiento se reconstruirán en iteraciones futuras.',
+      descripcion_beneficio: 'Base minima del modulo para el flujo FONDESE.',
+      descripcion_corta: 'Convocatorias y seguimiento se reconstruiran en iteraciones futuras.',
       instrumento_tipo: 'fondo_municipal',
       origen_instrumento: 'municipal',
       elegibilidad_tipo: '',
-      elegibilidad_label: 'Base mínima',
-      estado: 'Base mínima',
+      elegibilidad_label: 'Base minima',
+      estado: 'Base minima',
       items: [
-        'Pestaña fija para organizar el futuro desarrollo del flujo FONDESE.',
+        'Pestana fija para organizar el futuro desarrollo del flujo FONDESE.',
         'Sin calendario editable ni CRUD legado activos.',
-        'Espacio reservado para construir administración, hitos y operación por separado.'
+        'Espacio reservado para construir administracion, hitos y operacion por separado.'
       ],
-      nota: 'El backend anterior de configuración y seguimiento fue retirado para evitar complejidad residual.'
+      nota: 'El backend anterior de configuracion y seguimiento fue retirado para evitar complejidad residual.'
     },
     {
       beneficio_codigo: 'CHARLAS_CAPACITACIONES',
       beneficio_nombre: 'CAPACITACIONES',
-      descripcion_beneficio: 'Base mínima del módulo para CAPACITACIONES.',
-      descripcion_corta: 'Espacio operativo reservado para contenidos y gestión futura.',
+      descripcion_beneficio: 'Base minima del modulo para CAPACITACIONES.',
+      descripcion_corta: 'Espacio operativo reservado para contenidos y gestion futura.',
       instrumento_tipo: 'capacitacion_municipal',
       origen_instrumento: 'municipal',
       elegibilidad_tipo: '',
-      elegibilidad_label: 'Base mínima',
-      estado: 'Base mínima',
+      elegibilidad_label: 'Base minima',
+      estado: 'Base minima',
       items: [
-        'Pestaña preparada para construir la lógica propia de capacitaciones.',
+        'Pestana preparada para construir la logica propia de capacitaciones.',
         'Sin planes anuales, formularios ni asignaciones activas por ahora.',
-        'Lista para crecer de forma incremental sin arrastrar la implementación anterior.'
+        'Lista para crecer de forma incremental sin arrastrar la implementacion anterior.'
       ],
-      nota: 'La pestaña queda visible y estable, con el módulo operativo pero sin sobrearquitectura.'
+      nota: 'La pestana queda visible y estable, con el modulo operativo pero sin sobrearquitectura.'
     }
   ];
 }
 
 function seedBeneficios_() {
-  ensureSheetsSubset_([GO_PES_V2.SHEETS.DIM_BENEFICIOS]);
+  ensureSheetsSubset_([
+    GO_PES_V2.SHEETS.DIM_BENEFICIOS,
+    GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG,
+    GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG_HITOS,
+    GO_PES_V2.SHEETS.FACT_INSTRUMENTOS
+  ]);
 
   const now = new Date();
   const actor = 'system';
@@ -94,14 +99,983 @@ function getBeneficiosModuloPanel(payload) {
       nota: item.nota || ''
     };
   });
+
   const requestedCode = String(payload.beneficio_codigo || '').trim().toUpperCase();
   const selected = tabs.find(function(tab) {
     return String(tab.codigo || '').trim().toUpperCase() === requestedCode;
   }) || tabs[0] || null;
 
-  return serializeForClient_({
+  const result = {
     tabs: tabs,
     selected_tab_codigo: selected ? selected.codigo : '',
     selected_tab: selected || ''
+  };
+
+  if (selected && selected.codigo === 'CAMARAS_1414') {
+    result.camaras1414 = buildCamaras1414Panel_(payload);
+  }
+
+  return serializeForClient_(result);
+}
+
+function guardarConfiguracionCamaras1414(payload) {
+  const actor = requireModuleAccess_('instrumento', ['coordinador', 'administrador', 'superuser']);
+  const current = getRuntimeSystemConfig_();
+  const beneficios = cloneSystemConfig_(current.beneficios || {});
+  beneficios.camaras1414 = Object.assign({}, beneficios.camaras1414 || {}, payload || {});
+  const normalized = normalizeConfigSectionByName_('beneficios', beneficios, current);
+
+  writeSystemConfigSection_('beneficios', normalized, getBeneficiosActorEmail_(actor));
+  invalidateSystemConfigRuntimeCache_();
+
+  logUserAction_('GUARDAR_CONFIG_CAMARAS_1414', 'beneficio_config', 'CAMARAS_1414', 'OK', {
+    actor: getBeneficiosActorEmail_(actor)
   });
+
+  return serializeForClient_({
+    ok: true,
+    config: getCamaras1414Config_()
+  });
+}
+
+function guardarCamaras1414Organizacion(payload) {
+  const actor = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  seedBeneficios_();
+  goPesEnsureAvanceBackendReady_();
+
+  payload = payload || {};
+  const organizacionId = String(payload.organizacion_id || '').trim();
+  if (!organizacionId) throw new Error('Falta organizacion_id.');
+
+  const sync = ensureCamaras1414EligibilityForOrg_(organizacionId);
+  if (!sync.assignment) {
+    throw new Error('La organizacion no es elegible para CAMARAS 1414 porque aun no registra el certificado definitivo.');
+  }
+
+  const now = new Date();
+  const actorEmail = getBeneficiosActorEmail_(actor);
+  const org = sync.organizacion || findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  const checklist = normalizeCamarasChecklistPayload_(payload.checklist);
+  const response = normalizeCamarasResponsePayload_(payload.response);
+  const visit = normalizeCamarasVisitPayload_(payload.visit);
+  const installation = normalizeCamarasInstallationPayload_(payload.installation);
+  const agreement = normalizeCamarasAgreementPayload_(payload.agreement);
+  const closure = normalizeCamarasClosurePayload_(payload.closure);
+  const emailDraft = buildCamarasEmailDraft_(org, checklist, {
+    eligibilityDate: sync.eligibilityDate
+  });
+  const emailPayload = normalizeCamarasEmailPayload_(payload.email, emailDraft);
+
+  const detailRows = buildCamarasDetailRows_(sync.assignment, {
+    checklist: checklist,
+    email: emailPayload,
+    response: response,
+    visit: visit,
+    installation: installation,
+    agreement: agreement,
+    closure: closure
+  }, actorEmail, now);
+
+  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG_HITOS, 'beneficio_org_hito_id', detailRows, false);
+
+  const detailMap = indexCamarasDetailRows_(getCamarasDetailRowsByAssignmentId_(sync.assignment.beneficio_org_id));
+  const computed = buildCamarasWorkflowState_(sync.assignment, detailMap, sync.eligibilityDate);
+  const nextAssignment = Object.assign({}, sync.assignment, {
+    elegible_flag: 'Si',
+    criterio_elegibilidad: 'Certificado definitivo registrado en Avance (FOR_04 / hito 11).',
+    motivo_no_elegibilidad: '',
+    activo_flag: closure.closed ? 'No' : 'Si',
+    estado_beneficio: computed.status,
+    avance_beneficio_pct: computed.progressPct,
+    proximo_hito_beneficio: computed.nextStep,
+    fecha_inicio_beneficio: sync.assignment.fecha_inicio_beneficio || sync.eligibilityDate || now,
+    fecha_termino_beneficio: closure.closedDate || agreement.receivedDate || sync.assignment.fecha_termino_beneficio || '',
+    resultado_beneficio: closure.closed ? 'Beneficio cerrado' : (agreement.received ? 'Convenio recibido' : sync.assignment.resultado_beneficio || ''),
+    responsable_beneficio: String(payload.responsable_beneficio || sync.assignment.responsable_beneficio || org.responsable_actual || '').trim(),
+    observacion_beneficio: String(payload.observacion_beneficio || '').trim(),
+    updated_by: actorEmail,
+    updated_at: now
+  });
+
+  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_org_id', [nextAssignment], false);
+  syncFactInstrumentoFromCamaras_(org, nextAssignment, computed, actorEmail, now);
+
+  logUserAction_('GUARDAR_CAMARAS_1414_ORG', 'beneficio_org', nextAssignment.beneficio_org_id, 'OK', {
+    organizacion_id: organizacionId,
+    estado_beneficio: nextAssignment.estado_beneficio
+  });
+
+  return serializeForClient_({
+    ok: true,
+    organizacion_id: organizacionId,
+    beneficio_org_id: nextAssignment.beneficio_org_id,
+    estado_beneficio: nextAssignment.estado_beneficio
+  });
+}
+
+function goPesHandleCamaras1414EligibilityFromAvance_(organizacionId, fechaHito, hitoCatalogo) {
+  const codigo = String(hitoCatalogo && hitoCatalogo.codigo_hito || '').trim().toUpperCase();
+  if (codigo !== 'FOR_04') return null;
+
+  const sync = ensureCamaras1414EligibilityForOrg_(organizacionId, fechaHito);
+  if (!sync || !sync.assignment || !sync.organizacion) return null;
+
+  return serializeForClient_({
+    beneficio_codigo: 'CAMARAS_1414',
+    beneficio_nombre: 'CAMARAS 1414',
+    organizacion_id: organizacionId,
+    organizacion_nombre: sync.organizacion.nombre_organizacion || '',
+    eligibility_date: sync.eligibilityDate || fechaHito || '',
+    title: 'Organizacion elegible para CAMARAS 1414',
+    message: 'La organizacion ya cuenta con certificado definitivo. Corresponde iniciar la gestion de visita tecnica con Seguridad Publica.'
+  });
+}
+
+function buildCamaras1414Panel_(payload) {
+  const selectedOrgId = String(payload && payload.organizacion_id || '').trim();
+  const sync = syncAllCamaras1414Eligibility_();
+  const config = getCamaras1414Config_();
+  const assignments = sync.assignments || [];
+  const alertRows = buildCamarasAlertRows_(assignments, config);
+
+  const eligibleRows = assignments.filter(function(row) {
+    return isCamarasEligibleListRow_(row);
+  });
+  const activeRows = assignments.filter(function(row) {
+    return isCamarasActiveListRow_(row);
+  });
+
+  return {
+    config: config,
+    summary: {
+      totalEligible: eligibleRows.length,
+      totalActive: activeRows.length,
+      totalClosed: assignments.filter(function(row) { return String(row.estado_beneficio || '') === 'Beneficio cerrado'; }).length,
+      totalAlerts: alertRows.length
+    },
+    eligible_rows: eligibleRows,
+    active_rows: activeRows,
+    alerts_preview: alertRows,
+    selected_org_id: selectedOrgId,
+    detail: selectedOrgId ? buildCamarasDetailByOrgId_(selectedOrgId) : null
+  };
+}
+
+function syncAllCamaras1414Eligibility_() {
+  goPesEnsureAvanceBackendReady_();
+  seedBeneficios_();
+
+  const avanceRows = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS).filter(function(row) {
+    return String(row.codigo_hito || '').trim().toUpperCase() === 'FOR_04' && String(row.organizacion_id || '').trim();
+  });
+  const latestByOrg = {};
+  avanceRows.forEach(function(row) {
+    const orgId = String(row.organizacion_id || '').trim();
+    if (!orgId) return;
+    const current = latestByOrg[orgId];
+    if (!current || new Date(row.fecha_hito || 0).getTime() > new Date(current.fecha_hito || 0).getTime()) {
+      latestByOrg[orgId] = row;
+    }
+  });
+
+  Object.keys(latestByOrg).forEach(function(orgId) {
+    ensureCamaras1414EligibilityForOrg_(orgId, latestByOrg[orgId].fecha_hito);
+  });
+
+  const assignments = getSheetData_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG)
+    .filter(function(row) {
+      return String(row.beneficio_codigo || '').trim().toUpperCase() === 'CAMARAS_1414';
+    })
+    .map(function(row) {
+      return buildCamarasAssignmentSummary_(row);
+    })
+    .sort(function(a, b) {
+      return String(a.nombre_organizacion || '').localeCompare(String(b.nombre_organizacion || ''), 'es');
+    });
+
+  return {
+    assignments: assignments
+  };
+}
+
+function ensureCamaras1414EligibilityForOrg_(organizacionId, fechaHito) {
+  const orgId = String(organizacionId || '').trim();
+  if (!orgId) return { assignment: null, organizacion: null, eligibilityDate: '' };
+
+  const organizacion = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', orgId, false);
+  if (!organizacion) return { assignment: null, organizacion: null, eligibilityDate: '' };
+
+  const eligibilityRow = findLatestCamarasEligibilityHito_(orgId);
+  const eligibilityDate = asDateOrBlank_(fechaHito) || asDateOrBlank_(eligibilityRow && eligibilityRow.fecha_hito) || '';
+  if (!eligibilityDate) return { assignment: null, organizacion: organizacion, eligibilityDate: '' };
+
+  const existing = findCamarasAssignmentByOrgId_(orgId);
+  const currentDetail = existing ? indexCamarasDetailRows_(getCamarasDetailRowsByAssignmentId_(existing.beneficio_org_id)) : {};
+  const computed = buildCamarasWorkflowState_(existing || {}, currentDetail, eligibilityDate);
+  const now = new Date();
+  const orgInstrumentId = existing && existing.org_instrumento_id
+    ? existing.org_instrumento_id
+    : deterministicId_('INST', ['CAMARAS_1414', orgId]);
+  const assignment = Object.assign({}, existing || {}, {
+    beneficio_org_id: existing && existing.beneficio_org_id ? existing.beneficio_org_id : deterministicId_('BENORG', ['CAMARAS_1414', orgId]),
+    beneficio_codigo: 'CAMARAS_1414',
+    organizacion_id: orgId,
+    org_instrumento_id: orgInstrumentId,
+    elegible_flag: 'Si',
+    criterio_elegibilidad: 'Certificado definitivo registrado en Avance (FOR_04 / hito 11).',
+    motivo_no_elegibilidad: '',
+    activo_flag: String(existing && existing.activo_flag || '').trim() || 'Si',
+    estado_beneficio: computed.status,
+    avance_beneficio_pct: computed.progressPct,
+    proximo_hito_beneficio: computed.nextStep,
+    fecha_inicio_beneficio: existing && existing.fecha_inicio_beneficio ? existing.fecha_inicio_beneficio : eligibilityDate,
+    fecha_termino_beneficio: existing && existing.fecha_termino_beneficio ? existing.fecha_termino_beneficio : '',
+    resultado_beneficio: existing && existing.resultado_beneficio ? existing.resultado_beneficio : '',
+    responsable_beneficio: existing && existing.responsable_beneficio ? existing.responsable_beneficio : String(organizacion.responsable_actual || '').trim(),
+    observacion_beneficio: existing && existing.observacion_beneficio ? existing.observacion_beneficio : '',
+    updated_by: existing && existing.updated_by ? existing.updated_by : 'system',
+    updated_at: existing && existing.updated_at ? existing.updated_at : now
+  });
+
+  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_org_id', [assignment], false);
+  syncFactInstrumentoFromCamaras_(organizacion, assignment, computed, 'system', now);
+
+  return {
+    assignment: assignment,
+    organizacion: organizacion,
+    eligibilityDate: eligibilityDate
+  };
+}
+
+function buildCamarasDetailByOrgId_(organizacionId) {
+  const sync = ensureCamaras1414EligibilityForOrg_(organizacionId);
+  if (!sync.assignment || !sync.organizacion) return null;
+
+  const detailMap = indexCamarasDetailRows_(getCamarasDetailRowsByAssignmentId_(sync.assignment.beneficio_org_id));
+  const workflow = buildCamarasWorkflowState_(sync.assignment, detailMap, sync.eligibilityDate);
+  const caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', sync.organizacion.solicitud_id, false) || {};
+  const checklist = buildCamarasChecklistView_(detailMap);
+  const emailDraft = buildCamarasEmailDraft_(sync.organizacion, checklist, {
+    eligibilityDate: sync.eligibilityDate
+  });
+
+  return {
+    organizacion: sync.organizacion,
+    contacto: {
+      solicitud_id: sync.organizacion.solicitud_id || '',
+      telefono_contacto: caso.telefono_contacto || '',
+      correo_contacto: caso.correo_contacto || '',
+      direccion_referencia: sync.organizacion.direccion_referencia || caso.direccion_original || '',
+      uv: sync.organizacion.uv || caso.uv || '',
+      sector: sync.organizacion.sector || caso.sector || ''
+    },
+    elegibilidad: {
+      cumple_flag: true,
+      fecha_hito_11: sync.eligibilityDate || '',
+      label: 'Elegible por certificado definitivo',
+      detalle: 'Hito 11 de Avance completado.'
+    },
+    assignment: buildCamarasAssignmentSummary_(sync.assignment),
+    state_options: getCamarasStateOptions_(),
+    config: getCamaras1414Config_(),
+    email: buildCamarasEmailView_(detailMap, emailDraft),
+    checklist: checklist,
+    response: buildCamarasResponseView_(detailMap),
+    visit: buildCamarasVisitView_(detailMap),
+    installation: buildCamarasInstallationView_(detailMap),
+    agreement: buildCamarasAgreementView_(detailMap),
+    closure: buildCamarasClosureView_(detailMap),
+    alerts: buildCamarasAlertRows_([buildCamarasAssignmentSummary_(sync.assignment)], getCamaras1414Config_()),
+    workflow: workflow
+  };
+}
+
+function buildCamarasAssignmentSummary_(row) {
+  const assignment = row || {};
+  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', assignment.organizacion_id, false) || {};
+  const detailMap = assignment.beneficio_org_id
+    ? indexCamarasDetailRows_(getCamarasDetailRowsByAssignmentId_(assignment.beneficio_org_id))
+    : {};
+  const eligibilityDate = getCamarasEligibilityDateFromAssignment_(assignment);
+  const workflow = buildCamarasWorkflowState_(assignment, detailMap, eligibilityDate);
+
+  return {
+    beneficio_org_id: assignment.beneficio_org_id || '',
+    beneficio_codigo: 'CAMARAS_1414',
+    organizacion_id: assignment.organizacion_id || '',
+    org_instrumento_id: assignment.org_instrumento_id || '',
+    nombre_organizacion: org.nombre_organizacion || assignment.organizacion_id || '',
+    responsable_beneficio: assignment.responsable_beneficio || org.responsable_actual || '',
+    estado_beneficio: workflow.status,
+    avance_beneficio_pct: workflow.progressPct,
+    proximo_hito_beneficio: workflow.nextStep,
+    fecha_inicio_beneficio: assignment.fecha_inicio_beneficio || eligibilityDate || '',
+    fecha_termino_beneficio: assignment.fecha_termino_beneficio || '',
+    observacion_beneficio: assignment.observacion_beneficio || '',
+    elegible_flag: 'Si',
+    criterio_elegibilidad: assignment.criterio_elegibilidad || 'Certificado definitivo registrado en Avance.',
+    estado_constitucion: org.estado_constitucion || '',
+    fecha_hito_11: eligibilityDate || '',
+    ultima_actualizacion: assignment.updated_at || '',
+    alert_tone: workflow.alertTone || '',
+    alert_label: workflow.alertLabel || ''
+  };
+}
+
+function buildCamarasWorkflowState_(assignment, detailMap, eligibilityDate) {
+  const detail = detailMap || {};
+  const email = parseCamarasDetailPayload_(detail.MAIL_SOLICITUD);
+  const response = parseCamarasDetailPayload_(detail.VISITA_RESPUESTA);
+  const visit = parseCamarasDetailPayload_(detail.VISITA_TECNICA);
+  const installation = parseCamarasDetailPayload_(detail.INSTALACION);
+  const agreement = parseCamarasDetailPayload_(detail.CONVENIO);
+  const closure = parseCamarasDetailPayload_(detail.CIERRE);
+
+  const stage = resolveCamarasStageIndex_({
+    eligibilityDate: eligibilityDate,
+    email: email,
+    response: response,
+    visit: visit,
+    installation: installation,
+    agreement: agreement,
+    closure: closure
+  });
+  const stages = getCamarasStateOptions_();
+  const progressPct = Math.round(((stage.index + 1) / stages.length) * 100);
+  return {
+    index: stage.index,
+    status: stage.label,
+    progressPct: progressPct,
+    nextStep: stage.nextStep,
+    alertTone: stage.alertTone || '',
+    alertLabel: stage.alertLabel || ''
+  };
+}
+
+function resolveCamarasStageIndex_(data) {
+  const email = data.email || {};
+  const response = data.response || {};
+  const visit = data.visit || {};
+  const installation = data.installation || {};
+  const agreement = data.agreement || {};
+  const closure = data.closure || {};
+
+  if (closure.closed && closure.closedDate) {
+    return { index: 9, label: 'Beneficio cerrado', nextStep: 'Sin acciones pendientes.' };
+  }
+  if (agreement.received && agreement.receivedDate) {
+    return { index: 8, label: 'Convenio recibido', nextStep: 'Marcar cierre del beneficio.' };
+  }
+  if (String(installation.status || '').trim() && String(installation.status || '').trim() !== 'Sin informacion') {
+    return {
+      index: 7,
+      label: 'Instalacion en seguimiento',
+      nextStep: 'Dar seguimiento a instalacion y esperar convenio firmado.'
+    };
+  }
+  if (visit.visitCompleted) {
+    return {
+      index: 6,
+      label: 'Visita realizada',
+      nextStep: 'Registrar seguimiento de instalacion o novedades posteriores a la visita.'
+    };
+  }
+  if (response.visitDate) {
+    return { index: 5, label: 'Visita agendada', nextStep: 'Registrar resultado de la visita tecnica.' };
+  }
+  if (response.hasResponse || email.sentDate) {
+    return { index: 4, label: 'En espera de respuesta', nextStep: 'Registrar respuesta de Seguridad Publica o fecha de visita.' };
+  }
+  if (email.prepared || email.subject || email.body) {
+    return { index: 2, label: 'Solicitud de visita tecnica preparada', nextStep: 'Enviar solicitud formal a Seguridad Publica.' };
+  }
+  if (data.eligibilityDate) {
+    return { index: 0, label: 'Elegible por certificado definitivo', nextStep: 'Preparar checklist documental e iniciar gestion.' };
+  }
+  return { index: 1, label: 'Gestion pendiente', nextStep: 'Revisar elegibilidad del beneficio.' };
+}
+
+function getCamarasStateOptions_() {
+  return [
+    'Elegible por certificado definitivo',
+    'Gestion pendiente',
+    'Solicitud de visita tecnica preparada',
+    'Solicitud enviada',
+    'En espera de respuesta',
+    'Visita agendada',
+    'Visita realizada',
+    'Instalacion en seguimiento',
+    'Convenio recibido',
+    'Beneficio cerrado'
+  ];
+}
+
+function getCamarasChecklistDefinitions_() {
+  return [
+    { code: 'DOC_CONTACTO', label: 'Datos de contacto' },
+    { code: 'DOC_GEOREFERENCIA', label: 'Geo referencia de socios' },
+    { code: 'DOC_FOTO_LIBRO', label: 'Foto libro socios' },
+    { code: 'DOC_CERT_VIGENCIA', label: 'Certificado de vigencia' },
+    { code: 'DOC_CERT_DIRECTORIO', label: 'Certificado de directorio' }
+  ];
+}
+
+function getCamaras1414Config_() {
+  const config = (((getRuntimeSystemConfig_() || {}).beneficios || {}).camaras1414) || {};
+  return {
+    displayName: config.displayName || 'CAMARAS 1414',
+    baseStates: Array.isArray(config.baseStates) ? config.baseStates.slice() : getCamarasStateOptions_(),
+    technicalVisitAlertDays: Number(config.technicalVisitAlertDays || 7),
+    baseEligibilityCondition: config.baseEligibilityCondition || 'Organizacion con certificado definitivo',
+    reminderDaysFromEligibility: Number(config.reminderDaysFromEligibility || 0),
+    maxDaysToSendRequest: Number(config.maxDaysToSendRequest || 5),
+    maxDaysWithoutVisitResponse: Number(config.maxDaysWithoutVisitResponse || 10),
+    maxDaysPostVisitFollowup: Number(config.maxDaysPostVisitFollowup || 7),
+    maxDaysToConvenio: Number(config.maxDaysToConvenio || 20),
+    alertHighDays: Number(config.alertHighDays || 3),
+    alertMediumDays: Number(config.alertMediumDays || 7)
+  };
+}
+
+function buildCamarasChecklistView_(detailMap) {
+  return getCamarasChecklistDefinitions_().map(function(def) {
+    const payload = parseCamarasDetailPayload_(detailMap[def.code]);
+    return {
+      code: def.code,
+      label: def.label,
+      status: payload.status || 'Pendiente',
+      date: payload.date || '',
+      observation: payload.observation || ''
+    };
+  });
+}
+
+function buildCamarasEmailView_(detailMap, emailDraft) {
+  const payload = parseCamarasDetailPayload_(detailMap.MAIL_SOLICITUD);
+  return {
+    recipient: payload.recipient || emailDraft.recipient,
+    subject: payload.subject || emailDraft.subject,
+    body: payload.body || emailDraft.body,
+    prepared: !!payload.prepared || !!payload.subject || !!payload.body,
+    preparedDate: payload.preparedDate || '',
+    sentDate: payload.sentDate || '',
+    notes: payload.notes || ''
+  };
+}
+
+function buildCamarasResponseView_(detailMap) {
+  const payload = parseCamarasDetailPayload_(detailMap.VISITA_RESPUESTA);
+  return {
+    hasResponse: !!payload.hasResponse,
+    responseDate: payload.responseDate || '',
+    visitDate: payload.visitDate || '',
+    observations: payload.observations || ''
+  };
+}
+
+function buildCamarasVisitView_(detailMap) {
+  const payload = parseCamarasDetailPayload_(detailMap.VISITA_TECNICA);
+  return {
+    visitCompleted: !!payload.visitCompleted,
+    performedDate: payload.performedDate || '',
+    cameraCount: payload.cameraCount === '' ? '' : Number(payload.cameraCount || 0),
+    installationLocations: payload.installationLocations || '',
+    powerPoints: payload.powerPoints || '',
+    internetPoints: payload.internetPoints || '',
+    technicalObservations: payload.technicalObservations || ''
+  };
+}
+
+function buildCamarasInstallationView_(detailMap) {
+  const payload = parseCamarasDetailPayload_(detailMap.INSTALACION);
+  return {
+    status: payload.status || 'Sin informacion',
+    knownDate: payload.knownDate || '',
+    observations: payload.observations || ''
+  };
+}
+
+function buildCamarasAgreementView_(detailMap) {
+  const payload = parseCamarasDetailPayload_(detailMap.CONVENIO);
+  return {
+    received: !!payload.received,
+    receivedDate: payload.receivedDate || '',
+    observations: payload.observations || ''
+  };
+}
+
+function buildCamarasClosureView_(detailMap) {
+  const payload = parseCamarasDetailPayload_(detailMap.CIERRE);
+  return {
+    closed: !!payload.closed,
+    closedDate: payload.closedDate || '',
+    observations: payload.observations || ''
+  };
+}
+
+function buildCamarasEmailDraft_(organizacion, checklist, options) {
+  const org = organizacion || {};
+  const caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', org.solicitud_id, false) || {};
+  const eligibilityDate = options && options.eligibilityDate ? options.eligibilityDate : '';
+  const subject = 'Solicitud de visita tecnica CAMARAS 1414 - ' + String(org.nombre_organizacion || org.organizacion_id || 'Organizacion').trim();
+  const bodyLines = [
+    'Estimada Barbara Collado:',
+    '',
+    'Junto con saludar, solicitamos coordinar visita tecnica para la organizacion ' +
+      String(org.nombre_organizacion || 'sin nombre').trim() +
+      (org.organizacion_id ? ' (' + org.organizacion_id + ')' : '') + '.',
+    '',
+    'La organizacion ya obtuvo su certificado definitivo' + (eligibilityDate ? ' con fecha ' + formatDateOnlyForMail_(eligibilityDate) + '.' : '.'),
+    '',
+    'Datos de contacto y referencia:',
+    '- Telefono: ' + String(caso.telefono_contacto || 'Pendiente').trim(),
+    '- Correo: ' + String(caso.correo_contacto || 'Pendiente').trim(),
+    '- Direccion / referencia: ' + String(org.direccion_referencia || caso.direccion_original || 'Pendiente').trim(),
+    '- UV / Sector: ' + [org.uv ? 'UV ' + org.uv : '', org.sector || caso.sector || ''].filter(Boolean).join(' / '),
+    '',
+    'Estado de informacion/documentacion requerida:',
+    (checklist || []).map(function(item) {
+      return '- ' + item.label + ': ' + String(item.status || 'Pendiente').trim();
+    }).join('\n'),
+    '',
+    'Agradecemos informar disponibilidad y fecha de visita tecnica.',
+    '',
+    'Saludos cordiales,'
+  ];
+
+  return {
+    recipient: 'barbara.collado@seguridadprovidencia.cl',
+    subject: subject,
+    body: bodyLines.join('\n')
+  };
+}
+
+function buildCamarasAlertRows_(assignments, config) {
+  const today = stripTimeFromDate_(new Date());
+  const high = Number(config.alertHighDays || 3);
+  const medium = Math.max(high, Number(config.alertMediumDays || 7));
+  const rows = [];
+
+  (assignments || []).forEach(function(row) {
+    const detailMap = row.beneficio_org_id
+      ? indexCamarasDetailRows_(getCamarasDetailRowsByAssignmentId_(row.beneficio_org_id))
+      : {};
+    const email = parseCamarasDetailPayload_(detailMap.MAIL_SOLICITUD);
+    const response = parseCamarasDetailPayload_(detailMap.VISITA_RESPUESTA);
+    const visit = parseCamarasDetailPayload_(detailMap.VISITA_TECNICA);
+    const agreement = parseCamarasDetailPayload_(detailMap.CONVENIO);
+    const closure = parseCamarasDetailPayload_(detailMap.CIERRE);
+    if (closure.closed) return;
+
+    const checks = [
+      {
+        active: !email.sentDate,
+        reference: row.fecha_hito_11 || row.fecha_inicio_beneficio,
+        limitDays: Number(config.maxDaysToSendRequest || 5),
+        label: 'Gestion sin solicitud enviada'
+      },
+      {
+        active: !!email.sentDate && !response.visitDate,
+        reference: email.sentDate,
+        limitDays: Number(config.maxDaysWithoutVisitResponse || 10),
+        label: 'Solicitud enviada sin fecha de visita'
+      },
+      {
+        active: !!visit.performedDate && !agreement.receivedDate,
+        reference: visit.performedDate,
+        limitDays: Number(config.maxDaysToConvenio || 20),
+        label: 'Visita realizada sin convenio recibido'
+      }
+    ];
+
+    checks.forEach(function(check) {
+      const ref = asDateOrBlank_(check.reference);
+      if (!check.active || !ref) return;
+      const due = addDays_(stripTimeFromDate_(ref), check.limitDays);
+      const daysUntil = diffDays_(today, due);
+      if (daysUntil > medium) return;
+      rows.push({
+        organizacion_id: row.organizacion_id,
+        nombre_organizacion: row.nombre_organizacion,
+        estado_beneficio: row.estado_beneficio,
+        title: check.label,
+        due_date: due,
+        days_until: daysUntil,
+        tone: daysUntil <= high ? 'danger' : (daysUntil <= medium ? 'warning' : 'info'),
+        detail: daysUntil < 0
+          ? 'Atrasado por ' + Math.abs(daysUntil) + ' dias.'
+          : 'Vence en ' + daysUntil + ' dias.'
+      });
+    });
+  });
+
+  return rows.sort(function(a, b) {
+    return Number(a.days_until || 0) - Number(b.days_until || 0);
+  });
+}
+
+function isCamarasEligibleListRow_(row) {
+  const status = String(row && row.estado_beneficio || '').trim();
+  return status === 'Elegible por certificado definitivo' || status === 'Gestion pendiente' || status === 'Solicitud de visita tecnica preparada';
+}
+
+function isCamarasActiveListRow_(row) {
+  const status = String(row && row.estado_beneficio || '').trim();
+  return [
+    'Solicitud enviada',
+    'En espera de respuesta',
+    'Visita agendada',
+    'Visita realizada',
+    'Instalacion en seguimiento',
+    'Convenio recibido'
+  ].indexOf(status) !== -1;
+}
+
+function buildCamarasDetailRows_(assignment, payload, actorEmail, now) {
+  const beneficioOrgId = assignment.beneficio_org_id;
+  const base = {
+    beneficio_org_id: beneficioOrgId,
+    beneficio_codigo: 'CAMARAS_1414',
+    organizacion_id: assignment.organizacion_id,
+    convocatoria_codigo: '',
+    convocatoria_nombre: '',
+    modo_fecha: '',
+    fecha_inicio: '',
+    fecha_fin: '',
+    fecha_referencia: '',
+    descripcion_operativa: '',
+    estado_hito: '',
+    alerta_clave_flag: 'No',
+    orden_visual: 0,
+    valor_texto: '',
+    valor_numero: '',
+    valor_flag: '',
+    observacion_hito: '',
+    payload_json: '',
+    updated_by: actorEmail,
+    updated_at: now
+  };
+
+  const rows = [];
+
+  (payload.checklist || []).forEach(function(item, index) {
+    rows.push(Object.assign({}, base, {
+      beneficio_org_hito_id: deterministicId_('BENH', [beneficioOrgId, item.code]),
+      hito_codigo: item.code,
+      hito_nombre: item.label,
+      fecha_referencia: item.date || '',
+      estado_hito: item.status || 'Pendiente',
+      orden_visual: (index + 1) * 10,
+      observacion_hito: item.observation || '',
+      valor_texto: item.status || 'Pendiente',
+      payload_json: JSON.stringify(item)
+    }));
+  });
+
+  rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'MAIL_SOLICITUD', 'Solicitud de visita tecnica', 100, payload.email));
+  rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'VISITA_RESPUESTA', 'Respuesta / fecha de visita', 110, payload.response));
+  rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'VISITA_TECNICA', 'Resultado visita tecnica', 120, payload.visit));
+  rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'INSTALACION', 'Seguimiento instalacion', 130, payload.installation));
+  rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'CONVENIO', 'Convenio firmado', 140, payload.agreement));
+  rows.push(buildCamarasSingleDetailRow_(base, beneficioOrgId, 'CIERRE', 'Cierre beneficio', 150, payload.closure));
+
+  return rows;
+}
+
+function buildCamarasSingleDetailRow_(base, beneficioOrgId, code, label, order, payload) {
+  const safe = payload || {};
+  return Object.assign({}, base, {
+    beneficio_org_hito_id: deterministicId_('BENH', [beneficioOrgId, code]),
+    hito_codigo: code,
+    hito_nombre: label,
+    fecha_referencia: resolveCamarasPayloadMainDate_(safe),
+    estado_hito: resolveCamarasPayloadState_(code, safe),
+    orden_visual: order,
+    valor_texto: resolveCamarasPayloadTextValue_(code, safe),
+    valor_numero: resolveCamarasPayloadNumericValue_(code, safe),
+    valor_flag: resolveCamarasPayloadFlagValue_(code, safe),
+    observacion_hito: safe.observations || safe.notes || '',
+    payload_json: JSON.stringify(safe)
+  });
+}
+
+function resolveCamarasPayloadMainDate_(payload) {
+  return payload.sentDate ||
+    payload.visitDate ||
+    payload.performedDate ||
+    payload.receivedDate ||
+    payload.closedDate ||
+    payload.date ||
+    payload.knownDate ||
+    payload.responseDate ||
+    payload.preparedDate ||
+    '';
+}
+
+function resolveCamarasPayloadState_(code, payload) {
+  switch (code) {
+    case 'MAIL_SOLICITUD':
+      return payload.sentDate ? 'Enviado' : (payload.prepared ? 'Preparado' : 'Pendiente');
+    case 'VISITA_RESPUESTA':
+      return payload.visitDate ? 'Visita agendada' : (payload.hasResponse ? 'Respondido' : 'Sin respuesta');
+    case 'VISITA_TECNICA':
+      return payload.visitCompleted ? 'Realizada' : 'Pendiente';
+    case 'INSTALACION':
+      return payload.status || 'Sin informacion';
+    case 'CONVENIO':
+      return payload.received ? 'Recibido' : 'Pendiente';
+    case 'CIERRE':
+      return payload.closed ? 'Cerrado' : 'Abierto';
+    default:
+      return payload.status || 'Pendiente';
+  }
+}
+
+function resolveCamarasPayloadTextValue_(code, payload) {
+  if (code === 'VISITA_TECNICA') return payload.installationLocations || '';
+  if (code === 'MAIL_SOLICITUD') return payload.subject || '';
+  return payload.status || '';
+}
+
+function resolveCamarasPayloadNumericValue_(code, payload) {
+  if (code === 'VISITA_TECNICA' && payload.cameraCount !== '') {
+    return Number(payload.cameraCount || 0);
+  }
+  return '';
+}
+
+function resolveCamarasPayloadFlagValue_(code, payload) {
+  if (code === 'MAIL_SOLICITUD') return payload.sentDate ? 'Si' : 'No';
+  if (code === 'VISITA_RESPUESTA') return payload.hasResponse ? 'Si' : 'No';
+  if (code === 'VISITA_TECNICA') return payload.visitCompleted ? 'Si' : 'No';
+  if (code === 'CONVENIO') return payload.received ? 'Si' : 'No';
+  if (code === 'CIERRE') return payload.closed ? 'Si' : 'No';
+  return payload.status ? 'Si' : 'No';
+}
+
+function normalizeCamarasChecklistPayload_(value) {
+  const input = Array.isArray(value) ? value : [];
+  const byCode = input.reduce(function(acc, item) {
+    const code = String(item && item.code || '').trim();
+    if (code) acc[code] = item;
+    return acc;
+  }, {});
+  return getCamarasChecklistDefinitions_().map(function(def) {
+    const item = byCode[def.code] || {};
+    return {
+      code: def.code,
+      label: def.label,
+      status: sanitizeCamarasSelect_(item.status, ['Pendiente', 'Disponible', 'En revision'], 'Pendiente'),
+      date: sanitizeCamarasDate_(item.date),
+      observation: sanitizeCamarasText_(item.observation, 500)
+    };
+  });
+}
+
+function normalizeCamarasEmailPayload_(value, defaults) {
+  const input = value || {};
+  return {
+    recipient: sanitizeCamarasText_(input.recipient || defaults.recipient, 200) || defaults.recipient,
+    subject: sanitizeCamarasText_(input.subject || defaults.subject, 250) || defaults.subject,
+    body: sanitizeCamarasText_(input.body || defaults.body, 8000) || defaults.body,
+    prepared: true,
+    preparedDate: sanitizeCamarasDate_(input.preparedDate) || sanitizeCamarasDate_(new Date()),
+    sentDate: sanitizeCamarasDate_(input.sentDate),
+    notes: sanitizeCamarasText_(input.notes, 1000)
+  };
+}
+
+function normalizeCamarasResponsePayload_(value) {
+  const input = value || {};
+  return {
+    hasResponse: toBool_(input.hasResponse),
+    responseDate: sanitizeCamarasDate_(input.responseDate),
+    visitDate: sanitizeCamarasDate_(input.visitDate),
+    observations: sanitizeCamarasText_(input.observations, 1000)
+  };
+}
+
+function normalizeCamarasVisitPayload_(value) {
+  const input = value || {};
+  return {
+    visitCompleted: toBool_(input.visitCompleted),
+    performedDate: sanitizeCamarasDate_(input.performedDate),
+    cameraCount: input.cameraCount === '' || input.cameraCount === null || input.cameraCount === undefined
+      ? ''
+      : Math.max(0, Number(input.cameraCount || 0)),
+    installationLocations: sanitizeCamarasText_(input.installationLocations, 3000),
+    powerPoints: sanitizeCamarasText_(input.powerPoints, 3000),
+    internetPoints: sanitizeCamarasText_(input.internetPoints, 3000),
+    technicalObservations: sanitizeCamarasText_(input.technicalObservations, 3000),
+    observations: sanitizeCamarasText_(input.technicalObservations, 3000)
+  };
+}
+
+function normalizeCamarasInstallationPayload_(value) {
+  const input = value || {};
+  return {
+    status: sanitizeCamarasSelect_(input.status, ['Sin informacion', 'Pendiente', 'En proceso', 'Instalada'], 'Sin informacion'),
+    knownDate: sanitizeCamarasDate_(input.knownDate),
+    observations: sanitizeCamarasText_(input.observations, 2000)
+  };
+}
+
+function normalizeCamarasAgreementPayload_(value) {
+  const input = value || {};
+  return {
+    received: toBool_(input.received),
+    receivedDate: sanitizeCamarasDate_(input.receivedDate),
+    observations: sanitizeCamarasText_(input.observations, 2000)
+  };
+}
+
+function normalizeCamarasClosurePayload_(value) {
+  const input = value || {};
+  return {
+    closed: toBool_(input.closed),
+    closedDate: sanitizeCamarasDate_(input.closedDate),
+    observations: sanitizeCamarasText_(input.observations, 2000)
+  };
+}
+
+function syncFactInstrumentoFromCamaras_(organizacion, assignment, workflow, actorEmail, now) {
+  const org = organizacion || {};
+  const row = {
+    org_instrumento_id: assignment.org_instrumento_id || deterministicId_('INST', ['CAMARAS_1414', assignment.organizacion_id]),
+    organizacion_id: assignment.organizacion_id || '',
+    instrumento_codigo_catalogo: 'CAMARAS_1414',
+    instrumento_nombre_otro: '',
+    instrumento_tipo: 'beneficio_municipal',
+    origen_instrumento: 'municipal',
+    anio_convocatoria: now.getFullYear(),
+    nombre_convocatoria: 'CAMARAS 1414',
+    numero_llamado: '',
+    fecha_inicio_gestion: assignment.fecha_inicio_beneficio || '',
+    fecha_apertura: '',
+    fecha_cierre: '',
+    fecha_habilitacion: '',
+    fecha_postulacion: '',
+    fecha_resultado: '',
+    fecha_cierre_instrumento: assignment.fecha_termino_beneficio || '',
+    estado_instrumento: workflow.status,
+    subestado_instrumento: assignment.proximo_hito_beneficio || workflow.nextStep,
+    avance_instrumento_pct: workflow.progressPct,
+    proximo_hito_instrumento: workflow.nextStep,
+    resultado_instrumento: assignment.resultado_beneficio || '',
+    monto_solicitado: '',
+    monto_adjudicado: '',
+    monto_ejecutado: '',
+    responsable_instrumento: assignment.responsable_beneficio || org.responsable_actual || '',
+    contraparte: 'Seguridad Publica',
+    observacion_instrumento: assignment.observacion_beneficio || '',
+    documento_respaldo_url: '',
+    updated_by: actorEmail,
+    updated_at: now
+  };
+  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'org_instrumento_id', [row], false);
+}
+
+function findLatestCamarasEligibilityHito_(organizacionId) {
+  const rows = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS)
+    .filter(function(row) {
+      return String(row.organizacion_id || '').trim() === String(organizacionId || '').trim() &&
+        String(row.codigo_hito || '').trim().toUpperCase() === 'FOR_04';
+    })
+    .sort(function(a, b) {
+      return new Date(b.fecha_hito || 0).getTime() - new Date(a.fecha_hito || 0).getTime();
+    });
+  return rows[0] || null;
+}
+
+function findCamarasAssignmentByOrgId_(organizacionId) {
+  return getSheetData_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG).find(function(row) {
+    return String(row.beneficio_codigo || '').trim().toUpperCase() === 'CAMARAS_1414' &&
+      String(row.organizacion_id || '').trim() === String(organizacionId || '').trim();
+  }) || null;
+}
+
+function getCamarasDetailRowsByAssignmentId_(beneficioOrgId) {
+  return getSheetData_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG_HITOS)
+    .filter(function(row) {
+      return String(row.beneficio_org_id || '').trim() === String(beneficioOrgId || '').trim();
+    })
+    .sort(function(a, b) {
+      return Number(a.orden_visual || 0) - Number(b.orden_visual || 0);
+    });
+}
+
+function indexCamarasDetailRows_(rows) {
+  return (rows || []).reduce(function(acc, row) {
+    const code = String(row.hito_codigo || '').trim();
+    if (code) acc[code] = row;
+    return acc;
+  }, {});
+}
+
+function parseCamarasDetailPayload_(row) {
+  const raw = row && row.payload_json ? String(row.payload_json || '') : '';
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (err) {
+    return {};
+  }
+}
+
+function getCamarasEligibilityDateFromAssignment_(assignment) {
+  const latest = assignment && assignment.organizacion_id
+    ? findLatestCamarasEligibilityHito_(assignment.organizacion_id)
+    : null;
+  return latest ? latest.fecha_hito : (assignment && assignment.fecha_inicio_beneficio ? assignment.fecha_inicio_beneficio : '');
+}
+
+function sanitizeCamarasText_(value, maxLength) {
+  const text = String(value == null ? '' : value).trim();
+  if (!maxLength) return text;
+  return text.slice(0, maxLength);
+}
+
+function sanitizeCamarasDate_(value) {
+  const parsed = asDateOrBlank_(value);
+  return parsed || '';
+}
+
+function sanitizeCamarasSelect_(value, options, fallback) {
+  const candidate = String(value == null ? '' : value).trim();
+  return options.indexOf(candidate) !== -1 ? candidate : fallback;
+}
+
+function getBeneficiosActorEmail_(actor) {
+  return String(
+    (actor && actor.email) ||
+    (typeof getUsuarioActual === 'function' && getUsuarioActual().email) ||
+    Session.getActiveUser().getEmail() ||
+    'system'
+  ).trim() || 'system';
+}
+
+function stripTimeFromDate_(date) {
+  const value = asDateOrBlank_(date);
+  if (!value) return '';
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+}
+
+function addDays_(date, days) {
+  const base = stripTimeFromDate_(date);
+  if (!base) return '';
+  return new Date(base.getFullYear(), base.getMonth(), base.getDate() + Number(days || 0));
+}
+
+function diffDays_(fromDate, toDate) {
+  const from = stripTimeFromDate_(fromDate);
+  const to = stripTimeFromDate_(toDate);
+  if (!from || !to) return 999999;
+  return Math.round((to.getTime() - from.getTime()) / 86400000);
+}
+
+function formatDateOnlyForMail_(value) {
+  const date = asDateOrBlank_(value);
+  if (!date) return '';
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd-MM-yyyy');
 }

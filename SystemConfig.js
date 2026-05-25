@@ -208,9 +208,27 @@ function getDefaultSystemConfig_() {
       },
       camaras1414: {
         displayName: 'CAMARAS 1414',
-        baseStates: ['Pendiente', 'Visita técnica', 'Instalado'],
+        baseStates: [
+          'Elegible por certificado definitivo',
+          'Gestion pendiente',
+          'Solicitud de visita tecnica preparada',
+          'Solicitud enviada',
+          'En espera de respuesta',
+          'Visita agendada',
+          'Visita realizada',
+          'Instalacion en seguimiento',
+          'Convenio recibido',
+          'Beneficio cerrado'
+        ],
         technicalVisitAlertDays: 7,
-        baseEligibilityCondition: 'Organización validada'
+        baseEligibilityCondition: 'Organizacion con certificado definitivo',
+        reminderDaysFromEligibility: 0,
+        maxDaysToSendRequest: 5,
+        maxDaysWithoutVisitResponse: 10,
+        maxDaysPostVisitFollowup: 7,
+        maxDaysToConvenio: 20,
+        alertHighDays: 3,
+        alertMediumDays: 7
       }
     },
     alertsInicio: {
@@ -471,7 +489,14 @@ function normalizeConfigSectionByName_(section, value, current) {
           displayName: sanitizeConfigText_(input.camaras1414 && input.camaras1414.displayName, previous.camaras1414.displayName),
           baseStates: sanitizeStringList_(input.camaras1414 && input.camaras1414.baseStates, previous.camaras1414.baseStates),
           technicalVisitAlertDays: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.technicalVisitAlertDays, previous.camaras1414.technicalVisitAlertDays, 0, 365),
-          baseEligibilityCondition: sanitizeConfigText_(input.camaras1414 && input.camaras1414.baseEligibilityCondition, previous.camaras1414.baseEligibilityCondition)
+          baseEligibilityCondition: sanitizeConfigText_(input.camaras1414 && input.camaras1414.baseEligibilityCondition, previous.camaras1414.baseEligibilityCondition),
+          reminderDaysFromEligibility: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.reminderDaysFromEligibility, previous.camaras1414.reminderDaysFromEligibility, 0, 365),
+          maxDaysToSendRequest: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.maxDaysToSendRequest, previous.camaras1414.maxDaysToSendRequest, 0, 365),
+          maxDaysWithoutVisitResponse: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.maxDaysWithoutVisitResponse, previous.camaras1414.maxDaysWithoutVisitResponse, 0, 365),
+          maxDaysPostVisitFollowup: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.maxDaysPostVisitFollowup, previous.camaras1414.maxDaysPostVisitFollowup, 0, 365),
+          maxDaysToConvenio: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.maxDaysToConvenio, previous.camaras1414.maxDaysToConvenio, 0, 365),
+          alertHighDays: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.alertHighDays, previous.camaras1414.alertHighDays, 0, 365),
+          alertMediumDays: sanitizeConfigNumber_(input.camaras1414 && input.camaras1414.alertMediumDays, previous.camaras1414.alertMediumDays, 0, 365)
         }
       };
     case 'alertsInicio':

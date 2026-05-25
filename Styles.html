@@ -4795,6 +4795,93 @@
     grid-column: 1 / -1;
   }
 
+  .beneficios-panel--operativo {
+    gap: var(--space-5);
+  }
+
+  .beneficios-layout--camaras {
+    grid-template-columns: minmax(340px, 0.95fr) minmax(0, 1.45fr);
+  }
+
+  .beneficios-block--subtle {
+    background: var(--surface-soft);
+    box-shadow: none;
+  }
+
+  .beneficios-alerts {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .beneficios-alert {
+    display: grid;
+    gap: 4px;
+    padding: var(--space-4);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+  }
+
+  .beneficios-alert strong {
+    color: var(--brand-blue);
+  }
+
+  .beneficios-alert span,
+  .beneficios-alert small {
+    color: var(--text-secondary);
+  }
+
+  .beneficios-checklist {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .beneficios-checklist__item {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xl);
+    background: var(--surface);
+  }
+
+  .beneficios-contact-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .beneficios-contact-grid div {
+    display: grid;
+    gap: 2px;
+  }
+
+  .beneficios-contact-grid strong {
+    color: var(--text-muted);
+    font-size: var(--font-size-xs);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  .beneficios-contact-grid span {
+    color: var(--text-secondary);
+  }
+
+  .beneficios-inline-actions {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .checkbox-row {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-semibold);
+  }
+
   @media (max-width: 1100px) {
     .beneficios-tabs {
       grid-template-columns: 1fr;
@@ -4809,6 +4896,10 @@
     }
 
     .beneficios-summary__metrics {
+      grid-template-columns: 1fr;
+    }
+
+    .beneficios-contact-grid {
       grid-template-columns: 1fr;
     }
 

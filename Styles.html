@@ -4381,7 +4381,7 @@
 
   .organizaciones-detail {
     display: grid;
-    gap: var(--space-5);
+    gap: var(--space-4);
   }
 
   .organizaciones-summary,
@@ -4391,12 +4391,14 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
     box-shadow: var(--shadow-sm);
-    padding: var(--space-6);
+    padding: var(--space-5);
   }
 
   .organizaciones-summary {
     display: flex;
     justify-content: space-between;
+    align-items: stretch;
+    gap: var(--space-4);
   }
 
   .organizaciones-summary h3,
@@ -4409,11 +4411,12 @@
   .organizaciones-metrics {
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: var(--space-4);
+    gap: var(--space-3);
   }
 
   .organizaciones-metric {
     text-align: center;
+    min-height: 100%;
   }
 
   .organizaciones-metric strong {
@@ -4430,33 +4433,46 @@
 
   .organizaciones-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-5);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+    align-items: start;
   }
 
   .organizaciones-block {
     min-width: 0;
   }
 
+  .organizaciones-block--wide {
+    grid-column: span 2;
+  }
+
   .organizaciones-block h4 {
-    margin-bottom: var(--space-4);
+    margin-bottom: var(--space-3);
   }
 
   .organizaciones-kv {
     display: grid;
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
 
   .organizaciones-kv > div {
     display: grid;
-    grid-template-columns: 160px minmax(0, 1fr);
-    gap: var(--space-3);
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 10px;
     align-items: start;
     font-size: var(--font-size-sm);
   }
 
+  .organizaciones-kv strong {
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+
   .organizaciones-kv span {
-    color: var(--text-secondary);
+    color: var(--text);
+    line-height: 1.35;
     overflow-wrap: anywhere;
   }
 
@@ -5362,7 +5378,11 @@
     }
 
     .organizaciones-grid {
-      grid-template-columns: 1fr;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .organizaciones-grid .organizaciones-block--wide {
+      grid-column: span 2;
     }
   }
 
@@ -5419,6 +5439,14 @@
     .organizaciones-metrics,
     .organizaciones-form-grid {
       grid-template-columns: 1fr;
+    }
+
+    .organizaciones-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .organizaciones-grid .organizaciones-block--wide {
+      grid-column: auto;
     }
 
     .organizaciones-kv > div {

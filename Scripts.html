@@ -2049,7 +2049,7 @@
           ['Personalidad jurídica', org.personalidad_juridica_flag],
           ['Certificado provisorio', org.certificado_provisorio_flag],
           ['Certificado definitivo', org.certificado_definitivo_flag]
-        ])}
+        ], 'organizaciones-block--wide')}
         ${organizacionBlockHtml_('Avance y asambleas', [
           ['Estado avance', r.estado_avance],
           ['Último hito', r.ultimo_hito],
@@ -2058,7 +2058,7 @@
         ])}
         ${organizacionBlockHtml_('Observaciones', [
           ['Resumen', org.observacion_resumen]
-        ])}
+        ], 'organizaciones-block--wide')}
       </div>
 
       ${organizacionTableHtml_('Beneficios asociados', data.instrumentos || [], ['org_instrumento_id', 'instrumento_codigo_catalogo', 'estado_instrumento', 'resultado_instrumento'])}
@@ -2073,9 +2073,9 @@
     return `<div class="organizaciones-metric"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
   }
 
-  function organizacionBlockHtml_(title, items) {
+  function organizacionBlockHtml_(title, items, extraClass = '') {
     return `
-      <section class="organizaciones-block">
+      <section class="organizaciones-block ${escapeHtml(extraClass || '')}">
         <h4>${escapeHtml(title)}</h4>
         <div class="organizaciones-kv">
           ${(items || []).map(([k, v]) => `<div><strong>${escapeHtml(k)}</strong><span>${escapeHtml(formatUiValue_(v || 'Sin dato'))}</span></div>`).join('')}

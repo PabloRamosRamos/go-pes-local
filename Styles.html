@@ -4808,7 +4808,10 @@
 
   .beneficios-top-strip > .beneficios-block {
     height: 100%;
+    min-height: 470px;
+    max-height: 470px;
     margin: 0;
+    overflow: hidden;
   }
 
   .beneficios-top-strip__config,
@@ -4820,6 +4823,8 @@
 
   .beneficios-top-strip__config .beneficios-form {
     flex: 1;
+    overflow: auto;
+    min-height: 0;
   }
 
   .beneficios-top-strip__config .beneficios-form__grid {

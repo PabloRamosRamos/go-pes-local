@@ -2005,27 +2005,33 @@
     const r = data.resumen || {};
     detail.className = 'organizaciones-detail';
     detail.innerHTML = `
-      <div class="organizaciones-summary">
-        <div>
-          <p class="eyebrow">Ficha de organización</p>
-          <h3>${escapeHtml(org.nombre_organizacion || 'Sin nombre')}</h3>
-          <p class="muted">${escapeHtml(org.organizacion_id || '')}</p>
-        </div>
-        <div class="organizaciones-age-card">
-          <span>Antigüedad</span>
-          <strong>${escapeHtml(formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}</strong>
+      <div class="organizaciones-top-grid">
+        <section class="organizaciones-summary organizaciones-summary--hero">
+          <div class="organizaciones-summary__identity">
+            <p class="eyebrow">Ficha de organización</p>
+            <h3>${escapeHtml(org.nombre_organizacion || 'Sin nombre')}</h3>
+            <div class="organizaciones-summary__meta">
+              <span>ID ${escapeHtml(org.organizacion_id || 'Sin ID')}</span>
+              <span>Antigüedad ${escapeHtml(formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}</span>
+              <span>Casos ${escapeHtml(String(r.cantidad_casos || 0))}</span>
+              <span>${escapeHtml(org.estado_general_organizacion || 'Sin estado')}</span>
+            </div>
+          </div>
+          <div class="organizaciones-age-card">
+            <span>Estado de constitución</span>
+            <strong>${escapeHtml(formatUiValue_(org.estado_constitucion || 'Sin dato'))}</strong>
+          </div>
+        </section>
+
+        <div class="organizaciones-metrics organizaciones-metrics--compact">
+          ${organizacionMetricHtml_('Socios', r.cantidad_socios || 0)}
+          ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
+          ${organizacionMetricHtml_('Requisitos', r.cantidad_requisitos || 0)}
+          ${organizacionMetricHtml_('Hitos avance', r.cantidad_avance_hitos || 0)}
         </div>
       </div>
 
-      <div class="organizaciones-metrics">
-        ${organizacionMetricHtml_('Socios', r.cantidad_socios || 0)}
-        ${organizacionMetricHtml_('Casos', r.cantidad_casos || 0)}
-        ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
-        ${organizacionMetricHtml_('Requisitos', r.cantidad_requisitos || 0)}
-        ${organizacionMetricHtml_('Hitos avance', r.cantidad_avance_hitos || 0)}
-      </div>
-
-      <div class="organizaciones-grid">
+      <div class="organizaciones-grid organizaciones-grid--profile">
         ${organizacionBlockHtml_('Datos generales', [
           ['ID organización', org.organizacion_id],
           ['Solicitud', org.solicitud_id],
@@ -2040,6 +2046,12 @@
           ['Sector', org.sector],
           ['Dirección', org.direccion_referencia]
         ])}
+        ${organizacionBlockHtml_('Avance y asambleas', [
+          ['Estado avance', r.estado_avance],
+          ['Último hito', r.ultimo_hito],
+          ['Hitos registrados', r.cantidad_avance_hitos],
+          ['Gestiones legacy', r.cantidad_hitos_legacy]
+        ])}
         ${organizacionBlockHtml_('Directiva y constitución', [
           ['Fecha inicio', org.fecha_inicio_acompanamiento],
           ['Asamblea constitución', org.fecha_asamblea_constitucion],
@@ -2049,21 +2061,17 @@
           ['Personalidad jurídica', org.personalidad_juridica_flag],
           ['Certificado provisorio', org.certificado_provisorio_flag],
           ['Certificado definitivo', org.certificado_definitivo_flag]
-        ], 'organizaciones-block--wide')}
-        ${organizacionBlockHtml_('Avance y asambleas', [
-          ['Estado avance', r.estado_avance],
-          ['Último hito', r.ultimo_hito],
-          ['Hitos registrados', r.cantidad_avance_hitos],
-          ['Gestiones legacy', r.cantidad_hitos_legacy]
-        ])}
+        ], 'organizaciones-block--wide', 'organizaciones-kv--double')}
         ${organizacionBlockHtml_('Observaciones', [
           ['Resumen', org.observacion_resumen]
-        ], 'organizaciones-block--wide')}
+        ], 'organizaciones-block--aside')}
       </div>
 
-      ${organizacionTableHtml_('Beneficios asociados', data.instrumentos || [], ['org_instrumento_id', 'instrumento_codigo_catalogo', 'estado_instrumento', 'resultado_instrumento'])}
-      ${organizacionSociosTableHtml_(data.socios || [])}
-      ${organizacionTableHtml_('Historial reciente', data.historial || [], ['timestamp', 'action', 'email', 'result'])}
+      <div class="organizaciones-lower-grid">
+        ${organizacionTableHtml_('Beneficios asociados', data.instrumentos || [], ['org_instrumento_id', 'instrumento_codigo_catalogo', 'estado_instrumento', 'resultado_instrumento'], 'organizaciones-block--table-beneficios')}
+        ${organizacionSociosTableHtml_(data.socios || [], 'organizaciones-block--table-socios')}
+      </div>
+      ${organizacionTableHtml_('Historial reciente', data.historial || [], ['timestamp', 'action', 'email', 'result'], 'organizaciones-block--table-full')}
     `;
 
     bindOrganizacionSocioCargoButtons_();
@@ -2073,21 +2081,21 @@
     return `<div class="organizaciones-metric"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
   }
 
-  function organizacionBlockHtml_(title, items, extraClass = '') {
+  function organizacionBlockHtml_(title, items, extraClass = '', kvClass = '') {
     return `
       <section class="organizaciones-block ${escapeHtml(extraClass || '')}">
         <h4>${escapeHtml(title)}</h4>
-        <div class="organizaciones-kv">
+        <div class="organizaciones-kv ${escapeHtml(kvClass || '')}">
           ${(items || []).map(([k, v]) => `<div><strong>${escapeHtml(k)}</strong><span>${escapeHtml(formatUiValue_(v || 'Sin dato'))}</span></div>`).join('')}
         </div>
       </section>
     `;
   }
 
-  function organizacionTableHtml_(title, rows, fields) {
+  function organizacionTableHtml_(title, rows, fields, extraClass = '') {
     if (!rows || !rows.length) return '';
     return `
-      <section class="organizaciones-block organizaciones-block--wide">
+      <section class="organizaciones-block organizaciones-block--table ${escapeHtml(extraClass || '')}">
         <h4>${escapeHtml(title)}</h4>
         <div class="table-wrap">
           <table class="data-table">
@@ -2101,11 +2109,11 @@
     `;
   }
 
-  function organizacionSociosTableHtml_(rows) {
+  function organizacionSociosTableHtml_(rows, extraClass = '') {
     if (!rows || !rows.length) return '';
 
     return `
-      <section class="organizaciones-block organizaciones-block--wide">
+      <section class="organizaciones-block organizaciones-block--table ${escapeHtml(extraClass || '')}">
         <h4>Últimos socios</h4>
         <div class="table-wrap">
           <table class="data-table">

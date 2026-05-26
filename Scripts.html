@@ -5,6 +5,8 @@
   const TEMPLATE_SYSTEM_CONFIG =
     (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.systemConfig) || {};
   const THEME_STORAGE_KEY = 'goPesTheme';
+  const APP_ZOOM_STORAGE_KEY = 'goPesAppZoom';
+  const APP_ZOOM_OPTIONS = ['1', '0.9', '0.8'];
 
   function normalizeModuleLookupKeyClient_(value) {
     return String(value == null ? '' : value)
@@ -81,6 +83,7 @@
       catalogs: {},
       user: BOOTSTRAP.user || {},
       theme: document.documentElement.dataset.theme || 'light',
+      zoom: '1',
       permissions: BOOTSTRAP.permissions || {},
       systemConfig: BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {},
       moduleDefinitions: BOOTSTRAP.moduleDefinitions || [],
@@ -211,6 +214,7 @@
 
   function init() {
     hydrateTheme_();
+    hydrateAppZoom_();
     if (!APP.state.user || !APP.state.user.canAccess) {
       showAccessDenied_();
       hideAppLoading();
@@ -354,12 +358,63 @@
     applyTheme_(readStoredTheme_() || bootTheme, false);
   }
 
+  function normalizeAppZoom_(zoom) {
+    const normalized = String(zoom == null ? '' : zoom).trim();
+    return APP_ZOOM_OPTIONS.includes(normalized) ? normalized : '1';
+  }
+
+  function readStoredAppZoom_() {
+    try {
+      return normalizeAppZoom_(localStorage.getItem(APP_ZOOM_STORAGE_KEY));
+    } catch (err) {
+      return '1';
+    }
+  }
+
+  function updateZoomMenuUi_() {
+    const activeZoom = normalizeAppZoom_(APP.state.zoom);
+    document.querySelectorAll('.js-app-zoom-option').forEach(button => {
+      const isActive = normalizeAppZoom_(button.dataset.zoom) === activeZoom;
+      button.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      button.classList.toggle('is-active', isActive);
+    });
+  }
+
+  function applyAppZoom_(zoom, persist) {
+    const nextZoom = normalizeAppZoom_(zoom);
+    APP.state.zoom = nextZoom;
+    document.documentElement.style.setProperty('--app-zoom', nextZoom);
+    document.documentElement.style.zoom = nextZoom;
+    document.documentElement.dataset.appZoom = nextZoom;
+    if (persist) {
+      try {
+        localStorage.setItem(APP_ZOOM_STORAGE_KEY, nextZoom);
+      } catch (err) {
+        console.warn('No se pudo persistir el zoom seleccionado.', err);
+      }
+    }
+    updateZoomMenuUi_();
+  }
+
+  function hydrateAppZoom_() {
+    const bootZoom = normalizeAppZoom_(document.documentElement.dataset.appZoom || document.documentElement.style.zoom || '1');
+    applyAppZoom_(readStoredAppZoom_() || bootZoom, false);
+  }
+
   function updateThemeToggleUi_() {
     const label = document.getElementById('theme-toggle-label');
     const icon = document.getElementById('theme-toggle-icon');
     const dark = isDarkTheme_();
     if (label) label.textContent = dark ? 'Ver modo claro' : 'Ver en modo oscuro';
     if (icon) icon.textContent = dark ? 'light_mode' : 'dark_mode';
+  }
+
+  function setUserZoomMenuOpen_(open) {
+    const toggle = document.getElementById('zoom-menu-toggle');
+    const submenu = document.getElementById('zoom-menu-submenu');
+    if (!toggle || !submenu) return;
+    toggle.setAttribute('aria-expanded', String(!!open));
+    submenu.classList.toggle('is-hidden', !open);
   }
 
   function setUserMenuOpen_(open) {
@@ -370,16 +425,21 @@
     trigger.setAttribute('aria-expanded', String(!!open));
     menu.classList.toggle('is-hidden', !open);
     if (chevron) chevron.textContent = open ? 'expand_less' : 'expand_more';
+    if (!open) setUserZoomMenuOpen_(false);
   }
 
   function bindUserMenu_() {
     const trigger = document.getElementById('user-menu-trigger');
     const menu = document.getElementById('user-menu-dropdown');
     const toggleBtn = document.getElementById('theme-toggle-btn');
-    if (!trigger || !menu || !toggleBtn || trigger.dataset.bound === '1') return;
+    const zoomToggle = document.getElementById('zoom-menu-toggle');
+    const zoomSubmenu = document.getElementById('zoom-menu-submenu');
+    const zoomOptions = Array.from(document.querySelectorAll('.js-app-zoom-option'));
+    if (!trigger || !menu || !toggleBtn || !zoomToggle || !zoomSubmenu || !zoomOptions.length || trigger.dataset.bound === '1') return;
 
     trigger.dataset.bound = '1';
     updateThemeToggleUi_();
+    updateZoomMenuUi_();
     setUserMenuOpen_(false);
 
     trigger.addEventListener('click', ev => {
@@ -391,6 +451,20 @@
       ev.preventDefault();
       applyTheme_(isDarkTheme_() ? 'light' : 'dark', true);
       setUserMenuOpen_(false);
+    });
+
+    zoomToggle.addEventListener('click', ev => {
+      ev.preventDefault();
+      const nextOpen = zoomToggle.getAttribute('aria-expanded') !== 'true';
+      setUserZoomMenuOpen_(nextOpen);
+    });
+
+    zoomOptions.forEach(button => {
+      button.addEventListener('click', ev => {
+        ev.preventDefault();
+        applyAppZoom_(button.dataset.zoom, true);
+        setUserMenuOpen_(false);
+      });
     });
 
     document.addEventListener('click', ev => {

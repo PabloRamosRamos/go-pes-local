@@ -10,6 +10,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
     <?!= include('Styles'); ?>
     <?!= include('ThemeDark'); ?>
+    <script>
+      (() => {
+        try {
+          const storedZoom = localStorage.getItem('goPesAppZoom');
+          const zoom = ['1', '0.9', '0.8'].includes(storedZoom) ? storedZoom : '1';
+          document.documentElement.style.setProperty('--app-zoom', zoom);
+          document.documentElement.style.zoom = zoom;
+          document.documentElement.dataset.appZoom = zoom;
+        } catch (err) {
+          document.documentElement.style.setProperty('--app-zoom', '1');
+          document.documentElement.style.zoom = '1';
+          document.documentElement.dataset.appZoom = '1';
+        }
+      })();
+    </script>
   </head>
   <body>
     <?!= include('Splash'); ?>
@@ -40,6 +55,25 @@
                 <span class="material-symbols-outlined" id="theme-toggle-icon">dark_mode</span>
                 <span id="theme-toggle-label">Ver en modo oscuro</span>
               </button>
+              <button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu-toggle" id="zoom-menu-toggle" role="menuitem" aria-haspopup="menu" aria-expanded="false" aria-controls="zoom-menu-submenu">
+                <span class="material-symbols-outlined">zoom_in</span>
+                <span class="user-menu-dropdown__label">Zoom</span>
+                <span class="material-symbols-outlined user-menu-dropdown__submenu-chevron" id="zoom-menu-chevron">chevron_right</span>
+              </button>
+              <div class="user-menu-submenu is-hidden" id="zoom-menu-submenu" role="menu" aria-label="Opciones de zoom">
+                <button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu js-app-zoom-option" data-zoom="1" role="menuitemradio" aria-checked="false">
+                  <span class="user-menu-dropdown__label">100%</span>
+                  <span class="material-symbols-outlined user-menu-dropdown__check" aria-hidden="true">check</span>
+                </button>
+                <button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu js-app-zoom-option" data-zoom="0.9" role="menuitemradio" aria-checked="false">
+                  <span class="user-menu-dropdown__label">90%</span>
+                  <span class="material-symbols-outlined user-menu-dropdown__check" aria-hidden="true">check</span>
+                </button>
+                <button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu js-app-zoom-option" data-zoom="0.8" role="menuitemradio" aria-checked="false">
+                  <span class="user-menu-dropdown__label">80%</span>
+                  <span class="material-symbols-outlined user-menu-dropdown__check" aria-hidden="true">check</span>
+                </button>
+              </div>
             </div>
           </div>
           <div class="pill"><span class="material-symbols-outlined">verified_user</span><span id="user-role">perfil</span></div>

@@ -29,6 +29,17 @@ function validateInstrumentoV2_(p) {
   if (p.avance_instrumento_pct !== '' && p.avance_instrumento_pct !== undefined && !isNumberBetween_(p.avance_instrumento_pct, 0, 100)) {
     throw new Error('El avance del instrumento debe estar entre 0 y 100.');
   }
+  if (p.documento_respaldo_url && !looksLikeUrl_(p.documento_respaldo_url)) throw new Error('La URL de respaldo del instrumento no es válida.');
+}
+
+function validateRequisitoV2_(p) {
+  ['organizacion_id', 'org_instrumento_id', 'estado_requisito'].forEach(f => {
+    if (!String(p[f] || '').trim()) throw new Error(`Falta el campo obligatorio: ${f}`);
+  });
+  if (!String(p.requisito_codigo || p.requisito_nombre_libre || '').trim()) {
+    throw new Error('Debes indicar un requisito del catálogo o un nombre libre.');
+  }
+  if (p.documento_respaldo_url && !looksLikeUrl_(p.documento_respaldo_url)) throw new Error('La URL de respaldo del requisito no es válida.');
 }
 
 function validateSocioRowV2_(row) {

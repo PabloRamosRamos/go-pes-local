@@ -822,6 +822,238 @@ function guardarOrganizacion(payload) {
   return result;
 }
 
+function guardarInstrumento(payload) {
+  const diag = goPesDiagStart_('Services.guardarInstrumento', {});
+  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  ensureSheetsSubset_([
+    GO_PES_V2.SHEETS.RAW_INSTRUMENTOS,
+    GO_PES_V2.SHEETS.FACT_INSTRUMENTOS,
+    GO_PES_V2.SHEETS.MAE_ORGANIZACIONES
+  ]);
+
+  payload = payload || {};
+  validateInstrumentoV2_(payload);
+
+  const organizacionId = String(payload.organizacion_id || '').trim();
+  const organizacion = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (!organizacion) throw new Error('No se encontró la organización indicada para registrar el instrumento.');
+
+  const now = new Date();
+  const orgInstrumentoId = String(payload.org_instrumento_id || '').trim() || nextId_('instrumento', 'OIN');
+  const clean = {
+    org_instrumento_id: orgInstrumentoId,
+    organizacion_id: organizacionId,
+    instrumento_codigo_catalogo: String(payload.instrumento_codigo_catalogo || '').trim(),
+    instrumento_nombre_otro: String(payload.instrumento_nombre_otro || '').trim(),
+    instrumento_tipo: String(payload.instrumento_tipo || '').trim(),
+    origen_instrumento: String(payload.origen_instrumento || '').trim(),
+    anio_convocatoria: String(payload.anio_convocatoria || '').trim(),
+    nombre_convocatoria: String(payload.nombre_convocatoria || '').trim(),
+    numero_llamado: String(payload.numero_llamado || '').trim(),
+    fecha_inicio_gestion: asDateOrBlank_(payload.fecha_inicio_gestion) || now,
+    fecha_apertura: asDateOrBlank_(payload.fecha_apertura),
+    fecha_cierre: asDateOrBlank_(payload.fecha_cierre),
+    fecha_habilitacion: asDateOrBlank_(payload.fecha_habilitacion),
+    fecha_postulacion: asDateOrBlank_(payload.fecha_postulacion),
+    fecha_resultado: asDateOrBlank_(payload.fecha_resultado),
+    fecha_cierre_instrumento: asDateOrBlank_(payload.fecha_cierre_instrumento),
+    estado_instrumento: String(payload.estado_instrumento || '').trim(),
+    subestado_instrumento: String(payload.subestado_instrumento || '').trim(),
+    avance_instrumento_pct: asNumberOrBlank_(payload.avance_instrumento_pct),
+    proximo_hito_instrumento: String(payload.proximo_hito_instrumento || '').trim(),
+    resultado_instrumento: String(payload.resultado_instrumento || '').trim(),
+    monto_solicitado: asNumberOrBlank_(payload.monto_solicitado),
+    monto_adjudicado: asNumberOrBlank_(payload.monto_adjudicado),
+    monto_ejecutado: asNumberOrBlank_(payload.monto_ejecutado),
+    responsable_instrumento: String(payload.responsable_instrumento || organizacion.responsable_actual || user.nombre_visible || user.email || '').trim(),
+    contraparte: String(payload.contraparte || '').trim(),
+    observacion_instrumento: String(payload.observacion_instrumento || '').trim(),
+    documento_respaldo_url: String(payload.documento_respaldo_url || '').trim()
+  };
+
+  appendRowObject_(GO_PES_V2.SHEETS.RAW_INSTRUMENTOS, Object.assign({
+    created_at: now,
+    source: 'WEB_APP',
+    user_email: user.email,
+    legacy_source: '',
+    legacy_key: ''
+  }, clean));
+
+  upsertByKey_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'org_instrumento_id', Object.assign({}, clean, {
+    updated_by: user.email,
+    updated_at: now
+  }), false);
+
+  refreshPartialArtifacts_({
+    masterSolicitudIds: uniqueNonBlank_([organizacion.solicitud_id]),
+    vistaOrganizacionIds: [organizacionId],
+    vistaInstrumentoIds: [orgInstrumentoId],
+    vistaTerritorialPairs: [{ uv: organizacion.uv || '', sector: organizacion.sector || '' }]
+  });
+  logProcessing_('INFO', 'guardarInstrumento', 'instrumento', orgInstrumentoId, user.email, 'OK', {
+    organizacion_id: organizacionId,
+    instrumento_codigo_catalogo: clean.instrumento_codigo_catalogo,
+    estado_instrumento: clean.estado_instrumento
+  });
+  logUserAction_('UPSERT_INSTRUMENTO', 'instrumento', orgInstrumentoId, 'OK', {
+    organizacion_id: organizacionId,
+    instrumento_codigo_catalogo: clean.instrumento_codigo_catalogo,
+    estado_instrumento: clean.estado_instrumento
+  });
+
+  const result = {
+    ok: true,
+    org_instrumento_id: orgInstrumentoId,
+    organizacion_id: organizacionId
+  };
+  goPesDiagEnd_(diag, {
+    ok: true,
+    org_instrumento_id: orgInstrumentoId
+  });
+  return result;
+}
+
+function guardarRequisito(payload) {
+  const diag = goPesDiagStart_('Services.guardarRequisito', {});
+  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  ensureSheetsSubset_([
+    GO_PES_V2.SHEETS.RAW_REQUISITOS,
+    GO_PES_V2.SHEETS.FACT_REQUISITOS,
+    GO_PES_V2.SHEETS.FACT_INSTRUMENTOS,
+    GO_PES_V2.SHEETS.MAE_ORGANIZACIONES
+  ]);
+
+  payload = payload || {};
+  validateRequisitoV2_(payload);
+
+  const organizacionId = String(payload.organizacion_id || '').trim();
+  const orgInstrumentoId = String(payload.org_instrumento_id || '').trim();
+  const organizacion = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (!organizacion) throw new Error('No se encontró la organización indicada para registrar el requisito.');
+
+  const instrumento = findByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'org_instrumento_id', orgInstrumentoId, false);
+  if (!instrumento) throw new Error('No se encontró el instrumento indicado para registrar el requisito.');
+  if (String(instrumento.organizacion_id || '').trim() !== organizacionId) {
+    throw new Error('El instrumento indicado no pertenece a la organización seleccionada.');
+  }
+
+  const now = new Date();
+  const requisitoRegistroId = String(payload.requisito_registro_id || '').trim() || nextId_('requisito', 'REQ');
+  const clean = {
+    requisito_registro_id: requisitoRegistroId,
+    organizacion_id: organizacionId,
+    org_instrumento_id: orgInstrumentoId,
+    instrumento_codigo_catalogo: String(payload.instrumento_codigo_catalogo || instrumento.instrumento_codigo_catalogo || '').trim(),
+    requisito_codigo: String(payload.requisito_codigo || '').trim(),
+    requisito_nombre_libre: String(payload.requisito_nombre_libre || '').trim(),
+    categoria_requisito: String(payload.categoria_requisito || '').trim(),
+    estado_requisito: String(payload.estado_requisito || '').trim(),
+    fecha_solicitud: asDateOrBlank_(payload.fecha_solicitud),
+    fecha_cumplimiento: asDateOrBlank_(payload.fecha_cumplimiento),
+    fecha_vencimiento: asDateOrBlank_(payload.fecha_vencimiento),
+    responsable_requisito: String(payload.responsable_requisito || instrumento.responsable_instrumento || organizacion.responsable_actual || user.nombre_visible || user.email || '').trim(),
+    documento_respaldo_url: String(payload.documento_respaldo_url || '').trim(),
+    observacion_requisito: String(payload.observacion_requisito || '').trim(),
+    vigente_flag: String(payload.vigente_flag || 'Sí').trim()
+  };
+
+  appendRowObject_(GO_PES_V2.SHEETS.RAW_REQUISITOS, Object.assign({
+    created_at: now,
+    source: 'WEB_APP',
+    user_email: user.email,
+    legacy_source: '',
+    legacy_key: ''
+  }, clean));
+
+  upsertByKey_(GO_PES_V2.SHEETS.FACT_REQUISITOS, 'requisito_registro_id', Object.assign({}, clean, {
+    updated_by: user.email,
+    updated_at: now
+  }), false);
+
+  refreshPartialArtifacts_({
+    masterSolicitudIds: uniqueNonBlank_([organizacion.solicitud_id]),
+    vistaOrganizacionIds: [organizacionId],
+    vistaInstrumentoIds: [orgInstrumentoId],
+    vistaTerritorialPairs: [{ uv: organizacion.uv || '', sector: organizacion.sector || '' }]
+  });
+  logProcessing_('INFO', 'guardarRequisito', 'requisito', requisitoRegistroId, user.email, 'OK', {
+    organizacion_id: organizacionId,
+    org_instrumento_id: orgInstrumentoId,
+    estado_requisito: clean.estado_requisito
+  });
+  logUserAction_('UPSERT_REQUISITO', 'requisito', requisitoRegistroId, 'OK', {
+    organizacion_id: organizacionId,
+    org_instrumento_id: orgInstrumentoId,
+    estado_requisito: clean.estado_requisito
+  });
+
+  const result = {
+    ok: true,
+    requisito_registro_id: requisitoRegistroId,
+    org_instrumento_id: orgInstrumentoId,
+    organizacion_id: organizacionId
+  };
+  goPesDiagEnd_(diag, {
+    ok: true,
+    requisito_registro_id: requisitoRegistroId
+  });
+  return result;
+}
+
+function recalcularFicha(payload) {
+  payload = payload || {};
+  const solicitudId = String(payload.solicitud_id || '').trim();
+  let organizacionId = String(payload.organizacion_id || '').trim();
+
+  if (!solicitudId && !organizacionId) {
+    return refrescarVistasYMaster();
+  }
+
+  let caseRow = null;
+  let orgRow = null;
+
+  if (solicitudId) {
+    caseRow = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
+  }
+  if (organizacionId) {
+    orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  }
+  if (!orgRow && caseRow && caseRow.organizacion_id) {
+    organizacionId = String(caseRow.organizacion_id || '').trim();
+    orgRow = organizacionId
+      ? findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false)
+      : null;
+  }
+  if (!caseRow && orgRow && orgRow.solicitud_id) {
+    caseRow = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', orgRow.solicitud_id, false);
+  }
+
+  refreshPartialArtifacts_({
+    masterSolicitudIds: uniqueNonBlank_([solicitudId, caseRow && caseRow.solicitud_id, orgRow && orgRow.solicitud_id]),
+    vistaOrganizacionIds: uniqueNonBlank_([organizacionId, orgRow && orgRow.organizacion_id]),
+    vistaTerritorialPairs: [
+      { uv: orgRow && orgRow.uv || caseRow && caseRow.uv || '', sector: orgRow && orgRow.sector || caseRow && caseRow.sector || '' }
+    ],
+    sugerenciaSolicitudIds: uniqueNonBlank_([solicitudId, caseRow && caseRow.solicitud_id, orgRow && orgRow.solicitud_id]),
+    sugerenciaOrganizacionIds: uniqueNonBlank_([organizacionId, orgRow && orgRow.organizacion_id])
+  });
+
+  return serializeForClient_({
+    ok: true,
+    mode: 'partial',
+    solicitud_id: String(caseRow && caseRow.solicitud_id || solicitudId || '').trim(),
+    organizacion_id: String(orgRow && orgRow.organizacion_id || organizacionId || '').trim()
+  });
+}
+
+function refrescarVistasYMaster() {
+  goPesRefrescarVistasYMaster_();
+  return serializeForClient_({
+    ok: true,
+    mode: 'full'
+  });
+}
+
 function listarHistorial(filters) {
   requireModuleAccess_('historial', ['operador', 'coordinador', 'administrador', 'superuser']);
   const config = filters || {};

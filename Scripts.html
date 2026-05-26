@@ -2374,7 +2374,7 @@
           <div>
             <p class="eyebrow">Beneficios</p>
             <h2>Operacion por organizacion</h2>
-            <p class="muted">Flujo operativo de beneficios con foco inicial en CAMARAS 1414.</p>
+            <p class="muted">Gestion operativa de beneficios por organizacion, con seguimiento de estados y trazabilidad asociada.</p>
           </div>
           <div class="beneficios-actions">
             <button type="button" class="secondary-btn" id="beneficios-reload-btn"><span class="material-symbols-outlined">refresh</span>Recargar</button>
@@ -2574,19 +2574,18 @@
 
     return `
       <article class="beneficios-panel beneficios-panel--operativo" role="tabpanel">
-        <div class="beneficios-panel__head">
-          <div>
+        <div class="beneficios-panel__head beneficios-panel__head--camaras">
+          <div class="beneficios-panel__hero">
             <p class="eyebrow">Beneficio operativo</p>
             <h3>${escapeHtml(activeTab.titulo || '')}</h3>
+            <span class="beneficios-panel__status beneficios-panel__status--inline">${escapeHtml(activeTab.estado || 'Operativo')}</span>
             <p class="muted">${escapeHtml(activeTab.descripcion || '')}</p>
           </div>
-          <span class="beneficios-panel__status">${escapeHtml(activeTab.estado || 'Operativo')}</span>
-        </div>
-
-        <div class="beneficios-summary__metrics">
-          ${renderBeneficiosMetric_('Elegibles', summary.totalEligible || 0, 'groups')}
-          ${renderBeneficiosMetric_('En gestion', summary.totalActive || 0, 'handshake')}
-          ${renderBeneficiosMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active')}
+          <div class="beneficios-summary__metrics beneficios-summary__metrics--compact">
+            ${renderBeneficiosMetric_('Elegibles', summary.totalEligible || 0, 'groups')}
+            ${renderBeneficiosMetric_('En gestion', summary.totalActive || 0, 'handshake')}
+            ${renderBeneficiosMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active')}
+          </div>
         </div>
 
         <section class="beneficios-top-strip">
@@ -2895,19 +2894,18 @@
 
     return `
       <article class="beneficios-panel beneficios-panel--operativo" role="tabpanel">
-        <div class="beneficios-panel__head">
-          <div>
+        <div class="beneficios-panel__head beneficios-panel__head--camaras">
+          <div class="beneficios-panel__hero">
             <p class="eyebrow">Beneficio operativo</p>
             <h3>${escapeHtml(activeTab.titulo || '')}</h3>
+            <span class="beneficios-panel__status beneficios-panel__status--inline">${escapeHtml(activeTab.estado || 'Operativo')}</span>
             <p class="muted">${escapeHtml(activeTab.descripcion || '')}</p>
           </div>
-          <span class="beneficios-panel__status">${escapeHtml(activeTab.estado || 'Operativo')}</span>
-        </div>
-
-        <div class="beneficios-summary__metrics">
-          ${renderBeneficiosMetric_('Elegibles', summary.totalEligible || 0, 'groups')}
-          ${renderBeneficiosMetric_('En gestion', summary.totalActive || 0, 'handshake')}
-          ${renderBeneficiosMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active')}
+          <div class="beneficios-summary__metrics beneficios-summary__metrics--compact">
+            ${renderBeneficiosMetric_('Elegibles', summary.totalEligible || 0, 'groups')}
+            ${renderBeneficiosMetric_('En gestion', summary.totalActive || 0, 'handshake')}
+            ${renderBeneficiosMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active')}
+          </div>
         </div>
 
         <section class="beneficios-top-strip">
@@ -2919,7 +2917,7 @@
               </div>
             </div>
             <form id="camaras1414-config-form" class="beneficios-form" novalidate>
-              <div class="beneficios-form__grid">
+              <div class="beneficios-form__grid beneficios-form__grid--camaras-config">
                 <div class="field">
                   <label>Dias desde hito 11 para recordar inicio</label>
                   <input type="number" min="0" name="reminderDaysFromEligibility" value="${escapeHtml(String(config.reminderDaysFromEligibility || 0))}">

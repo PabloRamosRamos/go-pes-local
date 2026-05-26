@@ -5544,6 +5544,23 @@
     align-items: flex-start;
   }
 
+  .beneficios-panel__hero {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .beneficios-panel__hero .muted {
+    margin: 0;
+  }
+
+  .beneficios-panel__head--camaras {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-5);
+  }
+
   .beneficios-panel__status {
     display: inline-flex;
     align-items: center;
@@ -5555,6 +5572,11 @@
     font-weight: var(--font-weight-bold);
     letter-spacing: .04em;
     text-transform: uppercase;
+  }
+
+  .beneficios-panel__status--inline {
+    justify-self: start;
+    margin-top: 2px;
   }
 
   .beneficios-placeholder-list {
@@ -5759,15 +5781,15 @@
 
   .beneficios-top-strip {
     display: grid;
-    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 2.1fr);
+    grid-template-columns: minmax(0, 1.6fr) minmax(280px, 0.92fr);
     gap: var(--space-4);
     align-items: stretch;
   }
 
   .beneficios-top-strip > .beneficios-block {
     height: 100%;
-    min-height: 560px;
-    max-height: 560px;
+    min-height: 324px;
+    max-height: 324px;
     margin: 0;
     overflow: hidden;
   }
@@ -5781,19 +5803,40 @@
 
   .beneficios-top-strip__config .beneficios-form {
     flex: 1;
-    overflow: auto;
+    overflow: hidden;
     min-height: 0;
   }
 
+  .beneficios-form__grid--camaras-config,
   .beneficios-top-strip__config .beneficios-form__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-3);
     align-content: start;
+    overflow: auto;
+    min-height: 0;
+    padding-right: 4px;
+  }
+
+  .beneficios-top-strip__config .field {
+    display: grid;
+    grid-template-rows: minmax(38px, auto) auto;
+    align-content: start;
+    gap: var(--space-2);
+    margin-bottom: 0;
+  }
+
+  .beneficios-top-strip__config .field label {
+    min-height: 38px;
+    display: flex;
+    align-items: flex-end;
+    line-height: 1.3;
   }
 
   .beneficios-top-strip__config .beneficios-form__actions {
     margin-top: auto;
     justify-content: flex-end;
+    padding-top: var(--space-3);
+    border-top: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
   }
 
   .beneficios-top-strip__alerts .beneficios-alerts,
@@ -5803,14 +5846,54 @@
 
   .beneficios-top-strip__alerts .beneficios-alerts {
     display: grid;
-    gap: var(--space-3);
+    gap: var(--space-2);
     overflow: auto;
     min-height: 0;
     padding-right: 4px;
+    align-content: start;
   }
 
   .beneficios-top-strip__alerts .empty-state {
     min-height: 0;
+  }
+
+  .beneficios-top-strip__alerts .beneficios-alert {
+    padding: var(--space-3);
+    gap: var(--space-3);
+  }
+
+  .beneficios-summary__metrics--compact {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    align-items: stretch;
+    margin-left: auto;
+  }
+
+  .beneficios-summary__metrics--compact .beneficios-metric {
+    flex: 0 0 132px;
+    min-width: 132px;
+    max-width: 148px;
+    display: grid;
+    justify-items: start;
+    align-content: start;
+    gap: 4px;
+    padding: var(--space-4);
+    text-align: left;
+  }
+
+  .beneficios-summary__metrics--compact .beneficios-metric .material-symbols-outlined {
+    font-size: 20px;
+  }
+
+  .beneficios-summary__metrics--compact .beneficios-metric strong {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .beneficios-summary__metrics--compact .beneficios-metric span {
+    line-height: 1.25;
   }
 
   .beneficios-layout--camaras {
@@ -6424,6 +6507,10 @@
       align-items: flex-start;
     }
 
+    .beneficios-panel__head--camaras {
+      grid-template-columns: 1fr;
+    }
+
     .beneficios-summary__main,
     .beneficios-detail__head,
     .beneficios-block__head {
@@ -6441,8 +6528,19 @@
     }
 
     .beneficios-panel--operativo .beneficios-form__grid,
-    .beneficios-top-strip__config .beneficios-form__grid {
+    .beneficios-top-strip__config .beneficios-form__grid,
+    .beneficios-form__grid--camaras-config {
       grid-template-columns: 1fr;
+    }
+
+    .beneficios-summary__metrics--compact {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .beneficios-summary__metrics--compact .beneficios-metric {
+      flex: 1 1 100%;
+      max-width: none;
     }
 
     .beneficios-tab {
@@ -6526,6 +6624,17 @@
     .organizaciones-kv > div {
       grid-template-columns: 1fr;
       gap: 2px;
+    }
+  }
+
+  @media (min-width: 1101px) and (max-width: 1180px) {
+    .beneficios-top-strip {
+      grid-template-columns: minmax(0, 1.28fr) minmax(260px, 0.92fr);
+    }
+
+    .beneficios-form__grid--camaras-config,
+    .beneficios-top-strip__config .beneficios-form__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 

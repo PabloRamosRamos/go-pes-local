@@ -2,7 +2,7 @@ function importarSocios(payload) {
   const diag = goPesDiagStart_('ZZ_SociosBackend.importarSocios', {
     rows_input: payload && Array.isArray(payload.rows) ? payload.rows.length : 0
   });
-  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
   const rows = payload && Array.isArray(payload.rows) ? payload.rows : [];
   const validRows = [];
   const errors = [];
@@ -93,7 +93,7 @@ function importarSocios(payload) {
 }
 
 function getSociosModuloClient() {
-  requireModuleAccess_('socios', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
 
   const socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
   const organizaciones = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES) || [];
@@ -150,7 +150,7 @@ function getSociosModuloClient() {
 }
 
 function actualizarCargoSocioOrganizacion(payload) {
-  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
   const socioId = String(payload && payload.socio_id || '').trim();
   const organizacionId = String(payload && payload.organizacion_id || '').trim();
   const cargo = String(payload && payload.cargo || '').trim();

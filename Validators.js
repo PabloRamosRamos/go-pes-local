@@ -118,7 +118,7 @@ function groupBy_(rows, field) {
 }
 
 function buscarCoincidenciasIngreso(payload) {
-  requireRole_(['operador', 'coordinador', 'administrador', 'superuser']);
+  requireRole_(['operador', 'coordinador', 'superuser']);
 
   payload = payload || {};
 

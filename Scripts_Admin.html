@@ -1,0 +1,1697 @@
+  function loadUsers() {
+    if (!APP.state.permissions.canManageUsers) return Promise.resolve([]);
+
+    showContentLoading('Cargando usuarios...');
+    return api('listUsers').then(rows => {
+      const tbody = document.getElementById('users-results');
+      if (!tbody) return [];
+
+      const moduleLabel = user => user.superuser_flag
+        ? 'Todos'
+        : moduleLabelsFromKeys_(String(user.modulos_permitidos || '').split(','));
+
+      rows = Array.isArray(rows) ? rows : (Array.isArray(rows?.users) ? rows.users : []);
+      if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="muted">No hay usuarios registrados para mostrar.</td></tr>';
+        return rows;
+      }
+      tbody.innerHTML = rows.map(r => `
+        <tr class="${normalizeUiBool_(r.activo_flag, false) ? '' : 'is-inactive'}">
+          <td>${escapeHtml(r.email)}</td>
+          <td>${escapeHtml(r.nombre_visible)}</td>
+          <td>${escapeHtml(getUserRoleLabel_(r.perfil))}</td>
+          <td>${renderUserActiveLabel_(r.activo_flag)}</td>
+          <td>${escapeHtml(moduleLabel(r))}</td>
+          <td>${escapeHtml(formatFechaHoraUi_(r.fecha_ultima_actividad || ''))}</td>
+          <td>
+            <div class="user-row-actions">
+              <button class="table-action-btn js-edit-user" type="button" title="Editar usuario" aria-label="Editar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(normalizeEditableUserProfile_(r.perfil))}" data-active="${normalizeUiBool_(r.activo_flag, false)}" data-modules="${escapeHtml(r.modulos_permitidos || '')}">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+              <button class="table-action-btn table-action-btn--danger js-delete-user" type="button" title="Desactivar usuario" aria-label="Desactivar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible || r.email)}" ${normalizeUiBool_(r.activo_flag, false) ? '' : 'disabled'}>
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('.js-edit-user').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openUserEditModal_(btn);
+        });
+      });
+      tbody.querySelectorAll('.js-delete-user').forEach(btn => {
+        btn.addEventListener('click', () => openUserDeleteModal_(btn));
+      });
+      return rows;
+    }).catch(showError).finally(hideContentLoading);
+  }
+
+  function normalizeUiBool_(value, defaultValue) {
+    if (value === true || value === false) return value;
+    const normalized = String(value ?? '').trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    if (!normalized) return defaultValue;
+    if (['si', 'true', '1', 'activo', 'activa', 'active'].includes(normalized)) return true;
+    if (['no', 'false', '0', 'inactivo', 'inactiva', 'inactive'].includes(normalized)) return false;
+    return defaultValue;
+  }
+
+  function renderUserBooleanLabel_(value) {
+    return normalizeUiBool_(value, false) ? 'S\u00ed' : 'No';
+  }
+
+  function renderUserActiveLabel_(value) {
+    const active = normalizeUiBool_(value, false);
+    return `<span class="user-status-pill ${active ? 'is-active' : 'is-inactive'}">${active ? 'S\u00ed' : 'No'}</span>`;
+  }
+
+  function markUserInactiveInTable_(email) {
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    if (!normalizedEmail) return;
+
+    document.querySelectorAll('#users-results tr').forEach(row => {
+      const firstCell = row.querySelector('td');
+      if (!firstCell || firstCell.textContent.trim().toLowerCase() !== normalizedEmail) return;
+      row.classList.add('is-inactive');
+      const activeCell = row.children[3];
+      if (activeCell) activeCell.innerHTML = renderUserActiveLabel_(false);
+      row.querySelector('.js-delete-user')?.setAttribute('disabled', 'disabled');
+    });
+  }
+
+  function moduleLabelsFromKeys_(keys) {
+    const defs = getAssignableModuleDefinitions_();
+    const byKey = {};
+    const hiddenKeys = new Set((APP.state.moduleDefinitions || [])
+      .filter(module => module.assignable === false)
+      .map(module => module.key));
+    defs.forEach(m => byKey[m.key] = m.label || m.key);
+    return (keys || [])
+      .map(k => String(k || '').trim())
+      .filter(Boolean)
+      .filter(k => !hiddenKeys.has(k))
+      .map(k => byKey[k] || k)
+      .join(', ') || 'Sin módulos';
+  }
+
+  function saveUserFromForm() {
+    const btn = document.getElementById('save-user-btn');
+    let payload;
+    try {
+      const profile = normalizeEditableUserProfile_(document.getElementById('user-role-input')?.value || '');
+      payload = {
+        email: buildProvidenciaEmailFromInput_(),
+        nombre_visible: document.getElementById('user-name-input')?.value.trim() || '',
+        perfil: profile,
+        activo_flag: document.getElementById('user-active-input')?.value === 'true',
+        superuser_flag: false,
+        modulos_permitidos: collectUserModules_('user-modules-input', profile)
+      };
+    } catch (err) {
+      showError(err);
+      return;
+    }
+
+    if (btn) btn.disabled = true;
+    showContentLoading('Guardando usuario...');
+    api('updateUser', payload).then(() => {
+      showSuccess('Usuario actualizado.');
+      const emailInput = document.getElementById('user-email-local');
+      const nameInput = document.getElementById('user-name-input');
+      const roleInput = document.getElementById('user-role-input');
+      if (emailInput) emailInput.value = '';
+      if (nameInput) nameInput.value = '';
+      if (roleInput) roleInput.value = 'operador';
+      renderUserModuleOptions_();
+      syncUserModulesVisibility_('user-role-input', 'user-modules-field', 'user-modules-input');
+      loadUsers();
+    }).catch(showError).finally(() => {
+      if (btn) btn.disabled = false;
+      hideContentLoading();
+    });
+  }
+
+  function collectUserModules_(targetId, roleValue) {
+    const role = normalizeEditableUserProfile_(roleValue || document.getElementById(targetId === 'user-edit-modules-input' ? 'user-edit-role-input' : 'user-role-input')?.value || '');
+    if (!roleAllowsManualModules_(role)) {
+      return ['inicio'];
+    }
+    const selected = getCheckedUserModules_(targetId);
+    getAssignableModuleDefinitions_()
+      .filter(module => module.required)
+      .forEach(module => {
+        if (!selected.includes(module.key)) selected.unshift(module.key);
+      });
+    return selected;
+  }
+
+  function openUserEditModal_(btn) {
+    const modal = document.getElementById('user-edit-modal');
+    if (!modal || !btn) return;
+
+    document.getElementById('user-edit-email').value = btn.dataset.email || '';
+    document.getElementById('user-edit-name-input').value = btn.dataset.name || '';
+    document.getElementById('user-edit-role-input').value = normalizeEditableUserProfile_(btn.dataset.role || '');
+    document.getElementById('user-edit-active-input').value = btn.dataset.active || 'true';
+    renderUserModuleOptions_(btn.dataset.modules || '', 'user-edit-modules-input');
+    syncUserModulesVisibility_('user-edit-role-input', 'user-edit-modules-panel', 'user-edit-modules-input');
+
+    setModalVisibility_(modal, true);
+  }
+
+  function closeUserEditModal_() {
+    setModalVisibility_('user-edit-modal', false);
+  }
+
+  function saveUserEditModal_(ev) {
+    ev.preventDefault();
+    const btn = document.getElementById('user-edit-save-btn');
+    const profile = normalizeEditableUserProfile_(document.getElementById('user-edit-role-input')?.value || '');
+    const payload = {
+      email: document.getElementById('user-edit-email')?.value.trim() || '',
+      nombre_visible: document.getElementById('user-edit-name-input')?.value.trim() || '',
+      perfil: profile,
+      activo_flag: document.getElementById('user-edit-active-input')?.value === 'true',
+      superuser_flag: false,
+      modulos_permitidos: collectUserModules_('user-edit-modules-input', profile)
+    };
+
+    if (btn) btn.disabled = true;
+    closeUserEditModal_();
+    showContentLoading('Guardando usuario...');
+    api('updateUser', payload).then(() => {
+      showSuccess('Usuario actualizado.');
+      loadUsers();
+    }).catch(showError).finally(() => {
+      if (btn) btn.disabled = false;
+      hideContentLoading();
+    });
+  }
+
+  function openUserDeleteModal_(btn) {
+    const modal = document.getElementById('user-delete-modal');
+    if (!modal || !btn) return;
+    document.getElementById('user-delete-email').value = btn.dataset.email || '';
+    document.getElementById('user-delete-label').textContent = btn.dataset.name || btn.dataset.email || '';
+    document.getElementById('user-delete-pin').value = '';
+    setModalVisibility_(modal, true);
+    setTimeout(() => document.getElementById('user-delete-pin')?.focus(), 20);
+  }
+
+  function closeUserDeleteModal_() {
+    setModalVisibility_('user-delete-modal', false);
+  }
+
+  function confirmDeactivateUser_(ev) {
+    ev.preventDefault();
+    const btn = document.getElementById('user-delete-confirm-btn');
+    const payload = {
+      email: document.getElementById('user-delete-email')?.value.trim() || '',
+      pin: document.getElementById('user-delete-pin')?.value.trim() || ''
+    };
+
+    if (!payload.pin) {
+      showError('Debes ingresar la clave de SUPERUSER.');
+      return;
+    }
+
+    if (btn) btn.disabled = true;
+    closeUserDeleteModal_();
+    showContentLoading('Desactivando usuario...');
+    api('deactivateUser', payload).then(() => {
+      markUserInactiveInTable_(payload.email);
+      showSuccess('Usuario desactivado.');
+      return loadUsers();
+    }).catch(showError).finally(() => {
+      if (btn) btn.disabled = false;
+      hideContentLoading();
+    });
+  }
+
+
+  function renderConfiguracionView_() {
+    const root = document.getElementById('configuracion-root');
+    if (!root) return;
+    root.innerHTML = `
+      <div class="config-shell">
+        <div class="section-head config-head">
+          <div>
+            <p class="eyebrow">Administración global</p>
+            <h2>Configuración</h2>
+            <p class="muted">Centraliza parámetros globales y semiglobales del sistema. Este módulo es exclusivo para superuser.</p>
+          </div>
+        </div>
+        <div class="config-layout">
+          <aside class="config-nav" id="config-nav"></aside>
+          <div class="config-content" id="config-content">
+            <div class="empty-state">Cargando configuración...</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function loadConfiguracionView_() {
+    const root = document.getElementById('configuracion-root');
+    if (!root || !APP.state.permissions.canManageConfig) return;
+
+    showContentLoading('Cargando configuración...');
+    api('getSystemConfigClient').then(data => {
+      APP.state.systemConfig = (data && data.config) || APP.state.systemConfig || {};
+      APP.state.moduleDefinitions = (data && data.moduleDefinitions) || APP.state.moduleDefinitions || [];
+      APP.state.configSectionOrder = (data && data.sectionOrder) || CONFIG_SECTIONS.map(section => section.key);
+      APP.state.configLoadedAt = Date.now();
+      APP.state.activeConfigSection = getActiveConfigSectionKey_();
+      applySystemConfigUi_();
+      applyModuleDefinitionsUi_();
+      renderConfiguracionSections_();
+    }).catch(err => {
+      const content = document.getElementById('config-content');
+      if (content) content.innerHTML = '<div class="empty-state">No fue posible cargar la configuración.</div>';
+      showError(err);
+    }).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function renderConfiguracionSections_() {
+    const nav = document.getElementById('config-nav');
+    const content = document.getElementById('config-content');
+    const config = getSystemConfig_();
+    const sections = getOrderedConfigSections_();
+    const activeSection = getActiveConfigSectionKey_();
+    if (!nav || !content) return;
+
+    nav.innerHTML = sections.map(section => `
+      <button type="button" class="config-nav__item ${section.key === activeSection ? 'is-active' : ''}" data-config-anchor="${escapeHtml(section.key)}" aria-pressed="${section.key === activeSection ? 'true' : 'false'}">
+        <span class="material-symbols-outlined">${escapeHtml(section.icon)}</span>
+        <span>${escapeHtml(section.label)}</span>
+      </button>
+    `).join('');
+
+    content.innerHTML = renderConfiguracionSectionByKey_(activeSection, config);
+
+    bindConfiguracionView_();
+  }
+
+  function bindConfiguracionView_() {
+    document.querySelectorAll('[data-config-anchor]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nextSection = String(btn.dataset.configAnchor || '').trim();
+        if (!nextSection || nextSection === APP.state.activeConfigSection) return;
+        APP.state.activeConfigSection = nextSection;
+        renderConfiguracionSections_();
+      });
+    });
+
+    document.querySelectorAll('.config-section form').forEach(form => {
+      if (form.dataset.boundConfigSubmit === '1') return;
+      form.dataset.boundConfigSubmit = '1';
+      form.addEventListener('submit', submitConfiguracionSection_);
+    });
+
+    bindConfiguracionBrandingSection_();
+  }
+
+  function submitConfiguracionSection_(ev) {
+    ev.preventDefault();
+    const form = ev.currentTarget;
+    const section = form.dataset.configSection;
+    if (!section) return;
+
+    if (section === 'branding') {
+      const validation = validateConfiguracionBrandingForm_(form);
+      if (!validation.ok) {
+        showError(validation.message || 'Revisa los datos de branding antes de guardar.');
+        return;
+      }
+    }
+
+    const payload = collectConfiguracionSectionPayload_(section, form);
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
+
+    showContentLoading('Guardando configuración...');
+    api('saveSystemConfigSection', { section, data: payload }).then(res => {
+      APP.state.systemConfig = (res && res.config) || APP.state.systemConfig || {};
+      APP.state.moduleDefinitions = (res && res.moduleDefinitions) || APP.state.moduleDefinitions || [];
+      BOOTSTRAP.systemConfig = (res && res.clientConfig) || BOOTSTRAP.systemConfig || {};
+      APP.state.activeConfigSection = section;
+      applySystemConfigUi_();
+      applyModuleDefinitionsUi_();
+      renderConfiguracionSections_();
+      showSuccess('Configuración guardada.');
+    }).catch(showError).finally(() => {
+      if (submitBtn) submitBtn.disabled = false;
+      hideContentLoading();
+    });
+  }
+
+  function collectConfiguracionSectionPayload_(section, form) {
+    const read = name => {
+      const field = form.querySelector(`[name="${name}"]`);
+      return field ? field.value : '';
+    };
+    const checked = name => !!form.querySelector(`[name="${name}"]`)?.checked;
+
+    switch (section) {
+      case 'general':
+        return {
+          appName: read('appName'),
+          appSubtitle: read('appSubtitle'),
+          programName: read('programName'),
+          environmentLabel: read('environmentLabel'),
+          showVisibleVersion: checked('showVisibleVersion'),
+          loadingText: read('loadingText'),
+          splashMinDurationMs: Number(read('splashMinDurationMs') || 5000)
+        };
+      case 'branding':
+        return {
+          logoLightDataUri: read('logoLightDataUri'),
+          logoDarkDataUri: read('logoDarkDataUri'),
+          primaryColor: read('primaryColor'),
+          secondaryColor: read('secondaryColor'),
+          accentColor: read('accentColor'),
+          lightBackground: read('lightBackground'),
+          darkBackground: read('darkBackground'),
+          loadingProgressColor: read('loadingProgressColor')
+        };
+      case 'accessModules':
+        return {
+          allowedDomain: read('allowedDomain'),
+          primarySuperuserEmail: read('primarySuperuserEmail'),
+          defaultUserProfile: read('defaultUserProfile'),
+          defaultView: read('defaultView'),
+          alwaysVisibleModules: Array.from(form.querySelectorAll('[data-config-always-visible]:checked')).map(input => input.value),
+          modules: Array.from(form.querySelectorAll('[data-config-module-row]')).map(row => ({
+            key: row.dataset.moduleKey,
+            label: row.querySelector('[data-config-module-label]')?.value || '',
+            order: Number(row.querySelector('[data-config-module-order]')?.value || 0),
+            state: row.querySelector('[data-config-module-state]')?.value || 'active'
+          }))
+        };
+      case 'socios':
+        return {
+          addressSuffix: read('addressSuffix'),
+          allowedRoles: splitLines_(read('allowedRoles')),
+          requiredManualFields: splitLines_(read('requiredManualFields')),
+          bulkColumnMap: parseKeyValueText_(read('bulkColumnMap')),
+          dashboardHeight: Number(read('dashboardHeight') || 443)
+        };
+      case 'beneficios':
+        return {
+          capacitaciones: {
+            annualDefaultCount: Number(read('capacitacionesAnnualDefaultCount') || 0),
+            displayName: read('capacitacionesDisplayName'),
+            allowedStates: splitLines_(read('capacitacionesAllowedStates')),
+            baseEligibilityCondition: read('capacitacionesBaseEligibilityCondition')
+          },
+          fondese: {
+            baseYear: Number(read('fondeseBaseYear') || new Date().getFullYear()),
+            callsPerYear: Number(read('fondeseCallsPerYear') || 1),
+            keyDates: parseKeyDateLines_(read('fondeseKeyDates')),
+            alertDaysBefore: Number(read('fondeseAlertDaysBefore') || 0),
+            baseStates: splitLines_(read('fondeseBaseStates'))
+          },
+          camaras1414: {
+            displayName: read('camarasDisplayName'),
+            baseStates: splitLines_(read('camarasBaseStates')),
+            technicalVisitAlertDays: Number(read('camarasTechnicalVisitAlertDays') || 0),
+            baseEligibilityCondition: read('camarasBaseEligibilityCondition'),
+            maxDaysWithoutProgress: Number(read('camarasMaxDaysWithoutProgress') || 0)
+          }
+        };
+      case 'alertsInicio':
+        return {
+          alertHighDays: Number(read('alertHighDays') || 0),
+          alertMediumDays: Number(read('alertMediumDays') || 0),
+          maxVisibleAlerts: Number(read('maxVisibleAlerts') || 0),
+          maxUpcomingAssemblies: Number(read('maxUpcomingAssemblies') || 0),
+          homeBlocksOrder: splitLines_(read('homeBlocksOrder')),
+          homeBlocksVisibility: {
+            quickActions: checked('homeBlocksVisibilityQuickActions'),
+            tiles: checked('homeBlocksVisibilityTiles'),
+            dashboard: checked('homeBlocksVisibilityDashboard')
+          },
+          leftPanelDefaults: splitLines_(read('leftPanelDefaults'))
+        };
+      case 'integrations':
+        return {
+          homeDashboardUrl: read('homeDashboardUrl'),
+          sociosDashboardUrl: read('sociosDashboardUrl'),
+          futureReports: splitLines_(read('futureReports')),
+          googleCalendarId: read('googleCalendarId'),
+          externalLinks: splitLines_(read('externalLinks'))
+        };
+      case 'technical':
+        return {
+          maintenanceMode: checked('maintenanceMode'),
+          demoMode: checked('demoMode'),
+          showExtendedLogs: checked('showExtendedLogs'),
+          enableDataReset: checked('enableDataReset'),
+          resetExclusions: splitLines_(read('resetExclusions'))
+        };
+      default:
+        return {};
+    }
+  }
+
+  function getBrandingColorDefinitions_() {
+    return [
+      { name: 'primaryColor', label: 'Color primario', fallback: '#214E8A', role: 'Color principal para titulos, foco y acentos de marca.' },
+      { name: 'secondaryColor', label: 'Color secundario', fallback: '#007C4A', role: 'Apoyo visual para acciones secundarias y estados positivos.' },
+      { name: 'accentColor', label: 'Color acento', fallback: '#03C2AE', role: 'Resalta detalles, chips y elementos destacados.' },
+      { name: 'loadingProgressColor', label: 'Color de progreso', fallback: '#8CC63F', role: 'Representa barras de carga, progreso y avance.' },
+      { name: 'lightBackground', label: 'Fondo claro', fallback: '#F7FAFC', role: 'Base para superficies claras y fondos administrativos.' },
+      { name: 'darkBackground', label: 'Fondo oscuro', fallback: '#0D2940', role: 'Superficie institucional para contraste alto.' }
+    ];
+  }
+
+  function normalizeHexColor_(value) {
+    const text = String(value == null ? '' : value).trim();
+    if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(text)) return '';
+    const compact = text.length === 4
+      ? `#${text[1]}${text[1]}${text[2]}${text[2]}${text[3]}${text[3]}`
+      : text;
+    return compact.toUpperCase();
+  }
+
+  function normalizeBrandingLogoDataUri_(value) {
+    const text = String(value == null ? '' : value).trim();
+    if (!text) return '';
+    if (/^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+$/i.test(text)) return text.replace(/\s+/g, '');
+    if (/^[A-Za-z0-9+/=\s]+$/.test(text) && text.replace(/\s+/g, '').length > 64) {
+      return `data:image/png;base64,${text.replace(/\s+/g, '')}`;
+    }
+    return '';
+  }
+
+  function renderConfigBrandingLogoCard_(name, label, value, tone) {
+    const previewLabel = tone === 'dark' ? 'Preview en superficie oscura' : 'Preview en superficie clara';
+    return `
+      <article class="config-branding-logo-card" data-branding-logo-card data-logo-input-name="${escapeHtml(name)}" data-logo-label="${escapeHtml(label)}" data-logo-tone="${escapeHtml(tone)}" data-logo-state="empty">
+        <div class="config-branding-card__head">
+          <div>
+            <h4>${escapeHtml(label)}</h4>
+            <p class="muted">${escapeHtml(previewLabel)}</p>
+          </div>
+          <span class="config-branding-state-pill" data-branding-logo-chip>Sin logo</span>
+        </div>
+        <div class="config-branding-logo-preview config-branding-logo-preview--${escapeHtml(tone)}" data-branding-logo-preview aria-label="${escapeHtml(previewLabel)}">
+          <img data-branding-logo-image alt="${escapeHtml(label)}" hidden>
+          <div class="config-branding-logo-empty" data-branding-logo-empty>
+            <span class="material-symbols-outlined">image</span>
+            <strong>Sin logo cargado</strong>
+            <p>Pega un data URI válido para ver la vista previa.</p>
+          </div>
+        </div>
+        <p class="config-branding-logo-status muted" data-branding-logo-status>Se mantiene editable el valor tecnico sin exponerlo como bloque principal.</p>
+        <details class="config-branding-source">
+          <summary>Editar data URI</summary>
+          <div class="config-branding-source__body">
+            <textarea name="${escapeHtml(name)}" rows="4" data-branding-logo-input>${escapeHtml(String(value == null ? '' : value))}</textarea>
+            <p class="muted">Se guarda en la misma configuración actual. Si el valor no es válido, el guardado se bloquea con mensaje explícito.</p>
+          </div>
+        </details>
+      </article>
+    `;
+  }
+
+  function renderConfigBrandingColorCard_(definition, value) {
+    const normalized = normalizeHexColor_(value) || normalizeHexColor_(definition.fallback) || '#000000';
+    const rawValue = String(value == null ? '' : value).trim() || normalized;
+    return `
+      <article class="config-branding-color-card" data-branding-color-card data-color-name="${escapeHtml(definition.name)}" data-color-label="${escapeHtml(definition.label)}" data-color-fallback="${escapeHtml(normalized)}" data-color-role="${escapeHtml(definition.role)}" data-color-valid="true">
+        <div class="config-branding-card__head">
+          <div>
+            <h4>${escapeHtml(definition.label)}</h4>
+            <p class="muted">${escapeHtml(definition.role)}</p>
+          </div>
+          <span class="config-branding-color-card__value" data-branding-color-label>${escapeHtml(normalized)}</span>
+        </div>
+        <div class="config-branding-color-card__swatch" data-branding-color-swatch style="background:${escapeHtml(normalized)};"></div>
+        <div class="config-branding-color-card__controls">
+          <input type="color" value="${escapeHtml(normalized)}" data-branding-color-picker aria-label="${escapeHtml(definition.label)}">
+          <input name="${escapeHtml(definition.name)}" type="text" value="${escapeHtml(rawValue)}" data-branding-color-text spellcheck="false" inputmode="text" maxlength="7" placeholder="${escapeHtml(normalized)}" aria-label="${escapeHtml(definition.label)} hexadecimal">
+        </div>
+        <p class="config-branding-color-card__hint muted" data-branding-color-hint>${escapeHtml(definition.role)}</p>
+      </article>
+    `;
+  }
+
+  function renderConfigBrandingPreviewPanel_(section, appName, subtitle) {
+    const primary = normalizeHexColor_(section.primaryColor) || '#214E8A';
+    const secondary = normalizeHexColor_(section.secondaryColor) || '#007C4A';
+    const accent = normalizeHexColor_(section.accentColor) || '#03C2AE';
+    const progress = normalizeHexColor_(section.loadingProgressColor) || '#8CC63F';
+    const lightBackground = normalizeHexColor_(section.lightBackground) || '#F7FAFC';
+    const darkBackground = normalizeHexColor_(section.darkBackground) || '#0D2940';
+    return `
+      <aside class="config-branding-preview-panel">
+        <div class="config-branding-card__head">
+          <div>
+            <p class="eyebrow">Preview</p>
+            <h4>Identidad aplicada</h4>
+          </div>
+          <span class="config-branding-state-pill config-branding-state-pill--preview">En vivo</span>
+        </div>
+        <div class="config-branding-mini" data-branding-mini-preview style="--branding-primary:${escapeHtml(primary)};--branding-secondary:${escapeHtml(secondary)};--branding-accent:${escapeHtml(accent)};--branding-progress:${escapeHtml(progress)};--branding-light:${escapeHtml(lightBackground)};--branding-dark:${escapeHtml(darkBackground)};">
+          <section class="config-branding-mini__surface config-branding-mini__surface--light">
+            <div class="config-branding-mini__top">
+              <div class="config-branding-mini__logo config-branding-mini__logo--light" data-branding-preview-logo="light">
+                <img data-branding-preview-logo-image alt="Logo claro" hidden>
+                <span data-branding-preview-logo-empty>Logo claro</span>
+              </div>
+              <span class="config-branding-mini__badge">Primario</span>
+            </div>
+            <div class="config-branding-mini__card">
+              <strong>${escapeHtml(appName || 'Gestor Operativo PES')}</strong>
+              <p>${escapeHtml(subtitle || 'Vista rapida de marca')}</p>
+              <div class="config-branding-mini__chips">
+                <span class="config-branding-mini__chip">Acento</span>
+                <span class="config-branding-mini__chip config-branding-mini__chip--soft">Secundario</span>
+              </div>
+              <div class="config-branding-mini__progress"><span></span></div>
+            </div>
+          </section>
+          <section class="config-branding-mini__surface config-branding-mini__surface--dark">
+            <div class="config-branding-mini__top">
+              <div class="config-branding-mini__logo config-branding-mini__logo--dark" data-branding-preview-logo="dark">
+                <img data-branding-preview-logo-image alt="Logo oscuro" hidden>
+                <span data-branding-preview-logo-empty>Logo oscuro</span>
+              </div>
+              <span class="config-branding-mini__badge config-branding-mini__badge--dark">Fondo oscuro</span>
+            </div>
+            <div class="config-branding-mini__card config-branding-mini__card--dark">
+              <strong>Acciones y estados</strong>
+              <p>Combinacion rapida de paleta para validar contraste.</p>
+              <div class="config-branding-mini__chips">
+                <span class="config-branding-mini__chip config-branding-mini__chip--inverse">CTA</span>
+                <span class="config-branding-mini__chip config-branding-mini__chip--outline">Soporte</span>
+              </div>
+            </div>
+          </section>
+          <div class="config-branding-mini__legend">
+            ${getBrandingColorDefinitions_().map(def => `
+              <div class="config-branding-mini__legend-item">
+                <span class="config-branding-mini__legend-dot" data-branding-preview-dot="${escapeHtml(def.name)}" style="background:${escapeHtml(normalizeHexColor_(section[def.name]) || normalizeHexColor_(def.fallback) || '')};"></span>
+                <div>
+                  <strong>${escapeHtml(def.label)}</strong>
+                  <span data-branding-preview-value="${escapeHtml(def.name)}">${escapeHtml(normalizeHexColor_(section[def.name]) || normalizeHexColor_(def.fallback) || '')}</span>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </aside>
+    `;
+  }
+
+  function getBrandingVisualColorDefinitions_() {
+    return [
+      { name: 'Primario', token: '--accent', usage: 'Titulos, foco y acentos principales.' },
+      { name: 'Secundario', token: '--success-accent', usage: 'Acciones positivas y estados OK.' },
+      { name: 'Acento', token: '--highlight-accent', usage: 'Chips, detalles y elementos destacados.' },
+      { name: 'Fondo app', token: '--bg', usage: 'Base general de la interfaz.' },
+      { name: 'Superficie', token: '--surface', usage: 'Cards, paneles y modales.' },
+      { name: 'Superficie suave', token: '--surface-soft', usage: 'Cabeceras, estados y apoyos visuales.' },
+      { name: 'Texto principal', token: '--text', usage: 'Contenido principal de lectura.' },
+      { name: 'Texto secundario', token: '--text-secondary', usage: 'Ayudas, metadatos y subtitulos.' },
+      { name: 'Borde', token: '--border', usage: 'Separacion y contencion de bloques.' },
+      { name: 'Exito', token: '--success', usage: 'Estados cumplidos y confirmaciones.' },
+      { name: 'Advertencia', token: '--warning', usage: 'Seguimientos y alertas medias.' },
+      { name: 'Error', token: '--danger', usage: 'Acciones sensibles y bloqueos.' },
+      { name: 'Informativo', token: '--info', usage: 'Indicadores neutrales y ayudas.' },
+      { name: 'Progreso', token: '--runtime-brand-progress', usage: 'Barras de carga y avance.' }
+    ];
+  }
+
+  function renderConfigVisualKitColorCards_() {
+    return getBrandingVisualColorDefinitions_().map(def => `
+      <article class="config-visual-kit-color-card" data-ui-kit-color-card data-ui-kit-color-var="${escapeHtml(def.token)}">
+        <span class="config-visual-kit-color-card__swatch" data-ui-kit-color-swatch></span>
+        <div>
+          <strong>${escapeHtml(def.name)}</strong>
+          <span>${escapeHtml(def.token)}</span>
+          <small>${escapeHtml(def.usage)}</small>
+        </div>
+        <code data-ui-kit-color-value>--</code>
+      </article>
+    `).join('');
+  }
+
+  function renderConfigVisualKitTypography_() {
+    return `
+      <div class="config-visual-kit-type-grid">
+        <article class="config-visual-kit-typography-card">
+          <p class="eyebrow">Familia tipográfica</p>
+          <h2>Raleway como base institucional</h2>
+          <p>La jerarquía principal usa la misma familia de la app para mantener consistencia ejecutiva.</p>
+          <div class="config-visual-kit-meta-list">
+            <div><strong>Fuente base</strong><span data-ui-kit-font-family="base">--</span></div>
+            <div><strong>Fuente headings</strong><span data-ui-kit-font-family="heading">--</span></div>
+          </div>
+        </article>
+        <div class="config-visual-kit-type-scale">
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-display">--</strong>
+              <span>Display / títulos críticos</span>
+            </div>
+            <p class="config-visual-kit-type-display">Gestor Operativo PES</p>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-2xl">--</strong>
+              <span>H1 / encabezado de módulo</span>
+            </div>
+            <h1 class="config-visual-kit-type-h1">Ficha de organización</h1>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-xl">--</strong>
+              <span>H2 / sección principal</span>
+            </div>
+            <h2 class="config-visual-kit-type-h2">Sistema visual operativo</h2>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-lg">--</strong>
+              <span>H3 / subtítulo y bloque</span>
+            </div>
+            <h3 class="config-visual-kit-type-h3">Cards, formularios y tablas</h3>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-base">--</strong>
+              <span>Texto base</span>
+            </div>
+            <p class="config-visual-kit-type-body">Texto de trabajo para formularios, paneles y lecturas operativas.</p>
+          </div>
+          <div class="config-visual-kit-type-row">
+            <div>
+              <strong data-ui-kit-font-var="--font-size-sm">--</strong>
+              <span>Texto secundario / caption</span>
+            </div>
+            <p class="config-visual-kit-type-caption">Metadatos, ayudas y etiquetas de bajo peso visual.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderConfigVisualKitCards_() {
+    return `
+      <div class="config-visual-kit-card-grid">
+        <article class="panel config-visual-kit-card-sample">
+          <div class="config-visual-kit-card-sample__head">
+            <div>
+              <p class="eyebrow">Card base</p>
+              <h4>Panel estándar</h4>
+            </div>
+            <span class="badge">Operativo</span>
+          </div>
+          <p>Usar para contención general, formularios, bloques de configuración y resúmenes.</p>
+        </article>
+        <article class="beneficios-block config-visual-kit-card-sample">
+          <div class="beneficios-block__head">
+            <div>
+              <h4>Card informativa</h4>
+              <p class="muted">Patrón real del módulo Beneficios.</p>
+            </div>
+          </div>
+          <div class="beneficios-summary__badges">
+            <span class="beneficio-chip beneficio-chip--ok">Cumplido</span>
+            <span class="beneficio-chip beneficio-chip--info">En gestión</span>
+          </div>
+        </article>
+        <article class="organizaciones-metric">
+          <strong>23</strong>
+          <span>Card compacta KPI</span>
+        </article>
+      </div>
+      <div class="config-visual-kit-avance-grid">
+        <button type="button" class="avance-hito-card is-completed" data-estado="Cumplido">
+          <div class="avance-hito-card__head">
+            <div class="avance-hito-card__eyebrow">Hito 4</div>
+            <div class="avance-hito-card__icon" aria-hidden="true"><span class="material-symbols-outlined">check</span></div>
+          </div>
+          <div class="avance-hito-card__body">
+            <div class="avance-hito-card__title">Certificado definitivo obtenido</div>
+            <div class="avance-hito-card__status">Cumplido</div>
+            <div class="avance-hito-card__detail">24-05-2026 20:00</div>
+          </div>
+        </button>
+        <button type="button" class="avance-hito-card is-enabled" data-estado="Disponible">
+          <div class="avance-hito-card__head">
+            <div class="avance-hito-card__eyebrow">Hito 5</div>
+            <div class="avance-hito-card__icon" aria-hidden="true"><span class="material-symbols-outlined">radio_button_unchecked</span></div>
+          </div>
+          <div class="avance-hito-card__body">
+            <div class="avance-hito-card__title">Registro municipal habilitado</div>
+            <div class="avance-hito-card__status">Disponible</div>
+            <div class="avance-hito-card__detail">Clic para registrar</div>
+          </div>
+        </button>
+        <button type="button" class="avance-hito-card is-blocked" data-estado="Bloqueado" disabled>
+          <div class="avance-hito-card__head">
+            <div class="avance-hito-card__eyebrow">Hito 6</div>
+            <div class="avance-hito-card__icon" aria-hidden="true"><span class="material-symbols-outlined">remove</span></div>
+          </div>
+          <div class="avance-hito-card__body">
+            <div class="avance-hito-card__title">Cuenta bancaria habilitada</div>
+            <div class="avance-hito-card__status">Bloqueado</div>
+            <div class="avance-hito-card__detail">Requiere información previa.</div>
+          </div>
+        </button>
+      </div>
+    `;
+  }
+
+  function renderConfigVisualKitCanvas_(theme) {
+    const isDark = theme === 'dark';
+    return `
+      <div class="config-visual-kit-preview ${isDark ? 'theme-dark' : ''}" data-ui-kit-theme-surface="${escapeHtml(theme)}">
+        <div class="config-visual-kit-preview__surface">
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">${isDark ? 'Modo oscuro' : 'Modo claro'}</p>
+                <h4>Tipografía</h4>
+              </div>
+            </div>
+            ${renderConfigVisualKitTypography_()}
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Paleta</p>
+                <h4>Colores del sistema</h4>
+              </div>
+            </div>
+            <div class="config-visual-kit-color-grid">
+              ${renderConfigVisualKitColorCards_()}
+            </div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Acciones</p>
+                <h4>Botones, pills y estados</h4>
+              </div>
+            </div>
+            <div class="config-visual-kit-inline-grid">
+              <div class="config-visual-kit-stack">
+                <div class="config-visual-kit-button-row">
+                  <button type="button" class="primary-btn"><span class="material-symbols-outlined">save</span>Principal</button>
+                  <button type="button" class="secondary-btn"><span class="material-symbols-outlined">tune</span>Secundario</button>
+                  <button type="button" class="danger-btn"><span class="material-symbols-outlined">warning</span>Sensible</button>
+                  <button type="button" class="secondary-btn" disabled>Disabled</button>
+                </div>
+                <div class="config-visual-kit-chip-row">
+                  <span class="badge">Badge base</span>
+                  <span class="pill">Pill informativa</span>
+                  <span class="user-status-pill is-active">Activo</span>
+                  <span class="user-status-pill is-inactive">Inactivo</span>
+                  <span class="beneficio-chip beneficio-chip--ok">OK</span>
+                  <span class="beneficio-chip beneficio-chip--warning">Warning</span>
+                  <span class="beneficio-chip beneficio-chip--info">Info</span>
+                  <span class="beneficio-chip beneficio-chip--muted">Muted</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Formularios</p>
+                <h4>Inputs y controles</h4>
+              </div>
+            </div>
+            <div class="form-grid form-grid--dense config-visual-kit-form-grid">
+              <div class="field">
+                <label>Input texto</label>
+                <input type="text" value="Comité de seguridad Alberto Magno">
+              </div>
+              <div class="field">
+                <label>Select</label>
+                <select>
+                  <option>Providencia</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Checkbox</label>
+                <label class="config-visual-kit-check"><input type="checkbox" checked> Visita técnica realizada</label>
+              </div>
+              <div class="field">
+                <label>Radio</label>
+                <div class="config-visual-kit-radio-row">
+                  <label class="config-visual-kit-check"><input type="radio" name="ui-kit-radio-${escapeHtml(theme)}" checked> Claro</label>
+                  <label class="config-visual-kit-check"><input type="radio" name="ui-kit-radio-${escapeHtml(theme)}"> Oscuro</label>
+                </div>
+              </div>
+              <div class="field field--full" data-span="2">
+                <label>Textarea</label>
+                <textarea rows="3">Observaciones operativas y texto auxiliar del sistema.</textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Cards</p>
+                <h4>Superficies y estados</h4>
+              </div>
+            </div>
+            ${renderConfigVisualKitCards_()}
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Tablas</p>
+                <h4>Listado base</h4>
+              </div>
+            </div>
+            <div class="table-wrap config-visual-kit-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr><th>ID</th><th>Nombre</th><th>Estado</th><th>Acción</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>ORG-000003</td><td>Comité de seguridad Alberto Magno</td><td><span class="beneficio-chip beneficio-chip--info">Activo</span></td><td><button type="button" class="secondary-btn">Ver</button></td></tr>
+                  <tr><td>ORG-000004</td><td>Junta de vecinos UV-3</td><td><span class="beneficio-chip beneficio-chip--ok">Cumplido</span></td><td><button type="button" class="secondary-btn">Editar</button></td></tr>
+                  <tr><td>ORG-000005</td><td>Club deportivo sector norte</td><td><span class="beneficio-chip beneficio-chip--warning">Seguimiento</span></td><td><button type="button" class="secondary-btn">Abrir</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="empty-state">Estado vacío base para tablas, listados y paneles sin información.</div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Alertas</p>
+                <h4>Recordatorios y estados vacíos</h4>
+              </div>
+            </div>
+            <div class="config-visual-kit-alert-grid">
+              <div class="inicio-alert-item inicio-alert-item--danger">
+                <span class="material-symbols-outlined">priority_high</span>
+                <div><small>Alta</small><strong>Solicitud vencida</strong><p>Existe una gestión crítica sin resolución.</p></div>
+              </div>
+              <div class="inicio-alert-item inicio-alert-item--warning">
+                <span class="material-symbols-outlined">schedule</span>
+                <div><small>Media</small><strong>Seguimiento pendiente</strong><p>La visita técnica ya fue realizada y requiere cierre.</p></div>
+              </div>
+              <div class="inicio-alert-item inicio-alert-item--info">
+                <span class="material-symbols-outlined">info</span>
+                <div><small>Informativa</small><strong>Configuración disponible</strong><p>El módulo está listo para revisión operativa.</p></div>
+              </div>
+              <div class="inicio-reminder-item">
+                <span class="material-symbols-outlined">notifications</span>
+                <div><small>Recordatorio</small><strong>Revisar documentación</strong><p>Corresponde validar antecedentes antes del siguiente paso.</p></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="config-visual-kit-section">
+            <div class="config-visual-kit-section__head">
+              <div>
+                <p class="eyebrow">Contenedores</p>
+                <h4>Paneles y bloques de acciones</h4>
+              </div>
+            </div>
+            <div class="config-visual-kit-panel-grid">
+              <div class="panel">
+                <div>
+                  <p class="eyebrow">Panel base</p>
+                  <h4>Sección con título y subtítulo</h4>
+                  <p class="muted">Sirve como referencia para bloques operativos con contenido mixto.</p>
+                </div>
+                <div class="actions actions--start">
+                  <button type="button" class="primary-btn">Guardar</button>
+                  <button type="button" class="secondary-btn">Cancelar</button>
+                </div>
+              </div>
+              <div class="beneficios-block beneficios-block--subtle">
+                <div class="beneficios-block__head">
+                  <div>
+                    <h4>Bloque de formulario</h4>
+                    <p class="muted">Patrón interno para configuración y fichas.</p>
+                  </div>
+                </div>
+                <div class="actions actions--start">
+                  <button type="button" class="secondary-btn">Acción secundaria</button>
+                  <button type="button" class="danger-btn">Acción sensible</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderConfigVisualKitSection_() {
+    return `
+      <section class="config-branding-visual-kit" data-branding-visual-kit data-ui-kit-mode="both">
+        <div class="config-branding-card__head">
+          <div>
+            <p class="eyebrow">Base gráfica</p>
+            <h4>Sistema visual vivo</h4>
+            <p class="muted">Referencia oficial de tipografía, colores, cards, formularios, tablas y estados para futuros desarrollos.</p>
+          </div>
+          <div class="config-visual-kit-toggle" role="tablist" aria-label="Modo de visualización">
+            <button type="button" class="config-visual-kit-toggle__btn" data-ui-kit-mode-btn="light" aria-pressed="false">Claro</button>
+            <button type="button" class="config-visual-kit-toggle__btn" data-ui-kit-mode-btn="dark" aria-pressed="false">Oscuro</button>
+            <button type="button" class="config-visual-kit-toggle__btn is-active" data-ui-kit-mode-btn="both" aria-pressed="true">Ambos</button>
+          </div>
+        </div>
+        <div class="config-visual-kit-stage" data-ui-kit-stage>
+          <div class="config-visual-kit-stage__item" data-ui-kit-canvas="light">${renderConfigVisualKitCanvas_('light')}</div>
+          <div class="config-visual-kit-stage__item" data-ui-kit-canvas="dark">${renderConfigVisualKitCanvas_('dark')}</div>
+        </div>
+      </section>
+    `;
+  }
+
+  function bindConfiguracionBrandingSection_() {
+    const form = document.querySelector('#config-section-branding form[data-config-section="branding"]');
+    if (!form || form.dataset.boundBranding === '1') return;
+    form.dataset.boundBranding = '1';
+
+    form.querySelectorAll('[data-branding-logo-input]').forEach(input => {
+      input.addEventListener('input', () => {
+        updateConfiguracionBrandingLogoCard_(input.closest('[data-branding-logo-card]'), form);
+      });
+    });
+
+    form.querySelectorAll('[data-branding-color-card]').forEach(card => {
+      const textInput = card.querySelector('[data-branding-color-text]');
+      const pickerInput = card.querySelector('[data-branding-color-picker]');
+      if (pickerInput) {
+        pickerInput.addEventListener('input', () => {
+          if (textInput) textInput.value = pickerInput.value.toUpperCase();
+          updateConfiguracionBrandingColorCard_(card, form, true);
+        });
+      }
+      if (textInput) {
+        textInput.addEventListener('input', () => updateConfiguracionBrandingColorCard_(card, form, false));
+        textInput.addEventListener('blur', () => {
+          const normalized = normalizeHexColor_(textInput.value);
+          if (normalized) {
+            textInput.value = normalized;
+            updateConfiguracionBrandingColorCard_(card, form, false);
+          }
+        });
+      }
+      updateConfiguracionBrandingColorCard_(card, form, false);
+    });
+
+    form.querySelectorAll('[data-branding-logo-card]').forEach(card => {
+      updateConfiguracionBrandingLogoCard_(card, form);
+    });
+
+    bindConfiguracionVisualKit_(form);
+    updateConfiguracionBrandingPreviewPanel_(form);
+  }
+
+  function bindConfiguracionVisualKit_(form) {
+    const kit = form.querySelector('[data-branding-visual-kit]');
+    if (!kit || kit.dataset.boundVisualKit === '1') return;
+    kit.dataset.boundVisualKit = '1';
+    kit.querySelectorAll('[data-ui-kit-mode-btn]').forEach(btn => {
+      btn.addEventListener('click', () => setConfiguracionVisualKitMode_(kit, btn.dataset.uiKitModeBtn || 'both'));
+    });
+    setConfiguracionVisualKitMode_(kit, kit.dataset.uiKitMode || 'both');
+  }
+
+  function setConfiguracionVisualKitMode_(kit, mode) {
+    if (!kit) return;
+    const normalized = ['light', 'dark', 'both'].includes(mode) ? mode : 'both';
+    kit.dataset.uiKitMode = normalized;
+    kit.querySelectorAll('[data-ui-kit-mode-btn]').forEach(btn => {
+      const active = (btn.dataset.uiKitModeBtn || '') === normalized;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    kit.querySelectorAll('[data-ui-kit-canvas]').forEach(canvas => {
+      const key = canvas.dataset.uiKitCanvas || '';
+      canvas.classList.toggle('is-hidden', normalized !== 'both' && key !== normalized);
+    });
+  }
+
+  function updateConfiguracionBrandingColorCard_(card, form, fromPicker) {
+    if (!card) return;
+    const textInput = card.querySelector('[data-branding-color-text]');
+    const pickerInput = card.querySelector('[data-branding-color-picker]');
+    const swatch = card.querySelector('[data-branding-color-swatch]');
+    const valueLabel = card.querySelector('[data-branding-color-label]');
+    const hint = card.querySelector('[data-branding-color-hint]');
+    const fallback = card.dataset.colorFallback || '#000000';
+    const role = card.dataset.colorRole || '';
+
+    if (fromPicker && pickerInput && textInput) {
+      textInput.value = pickerInput.value.toUpperCase();
+    }
+
+    const normalized = normalizeHexColor_(textInput ? textInput.value : '');
+    if (normalized) {
+      card.dataset.colorValid = 'true';
+      card.classList.remove('is-invalid');
+      if (pickerInput) pickerInput.value = normalized;
+      if (swatch) swatch.style.background = normalized;
+      if (valueLabel) valueLabel.textContent = normalized;
+      if (hint) hint.textContent = role;
+    } else {
+      card.dataset.colorValid = 'false';
+      card.classList.add('is-invalid');
+      if (swatch) swatch.style.background = 'linear-gradient(135deg, rgba(161,42,42,.14) 0%, rgba(161,42,42,.14) 44%, rgba(255,255,255,.85) 44%, rgba(255,255,255,.85) 56%, rgba(161,42,42,.14) 56%, rgba(161,42,42,.14) 100%)';
+      if (valueLabel) valueLabel.textContent = String((textInput && textInput.value) || fallback || '').trim() || fallback;
+      if (hint) hint.textContent = 'Valor inválido. Usa formato #RRGGBB o #RGB.';
+    }
+
+    updateConfiguracionBrandingPreviewPanel_(form);
+  }
+
+  function updateConfiguracionBrandingLogoCard_(card, form) {
+    if (!card) return;
+    const input = card.querySelector('[data-branding-logo-input]');
+    const preview = card.querySelector('[data-branding-logo-preview]');
+    const image = card.querySelector('[data-branding-logo-image]');
+    const empty = card.querySelector('[data-branding-logo-empty]');
+    const chip = card.querySelector('[data-branding-logo-chip]');
+    const status = card.querySelector('[data-branding-logo-status]');
+    const rawValue = String(input && input.value || '').trim();
+    const normalized = normalizeBrandingLogoDataUri_(rawValue);
+
+    const setState = (state, chipText, title, body) => {
+      card.dataset.logoState = state;
+      if (chip) chip.textContent = chipText;
+      if (status) status.textContent = body;
+      if (preview) preview.dataset.logoState = state;
+      if (empty) {
+        const titleEl = empty.querySelector('strong');
+        const bodyEl = empty.querySelector('p');
+        if (titleEl) titleEl.textContent = title;
+        if (bodyEl) bodyEl.textContent = body;
+      }
+    };
+
+    if (!rawValue) {
+      if (image) {
+        image.hidden = true;
+        image.removeAttribute('src');
+      }
+      if (empty) empty.hidden = false;
+      setState('empty', 'Sin logo', 'Sin logo cargado', 'Pega un data URI válido para ver la vista previa.');
+      updateConfiguracionBrandingPreviewPanel_(form);
+      return;
+    }
+
+    if (!normalized) {
+      if (image) {
+        image.hidden = true;
+        image.removeAttribute('src');
+      }
+      if (empty) empty.hidden = false;
+      setState('invalid', 'Inválido', 'Logo no válido', 'El valor debe ser un data URI de imagen base64 o base64 puro compatible.');
+      updateConfiguracionBrandingPreviewPanel_(form);
+      return;
+    }
+
+    if (!image) return;
+    if (empty) empty.hidden = false;
+    image.hidden = true;
+    setState('loading', 'Validando', 'Validando logo', 'Verificando que la imagen pueda renderizarse sin romper la UI.');
+    image.onload = () => {
+      if (String(input && input.value || '').trim() !== rawValue) return;
+      image.hidden = false;
+      if (empty) empty.hidden = true;
+      setState('valid', 'Valido', 'Logo listo', 'Vista previa cargada correctamente.');
+      updateConfiguracionBrandingPreviewPanel_(form);
+    };
+    image.onerror = () => {
+      if (String(input && input.value || '').trim() !== rawValue) return;
+      image.hidden = true;
+      image.removeAttribute('src');
+      if (empty) empty.hidden = false;
+      setState('invalid', 'Inválido', 'Logo no válido', 'El contenido parece imagen, pero no pudo renderizarse.');
+      updateConfiguracionBrandingPreviewPanel_(form);
+    };
+    image.src = normalized;
+  }
+
+  function updateConfiguracionBrandingPreviewLogo_(slot, sourceCard, fallbackText) {
+    if (!slot) return;
+    const image = slot.querySelector('[data-branding-preview-logo-image]');
+    const empty = slot.querySelector('[data-branding-preview-logo-empty]');
+    const sourceImage = sourceCard ? sourceCard.querySelector('[data-branding-logo-image]') : null;
+    const isValid = sourceCard && sourceCard.dataset.logoState === 'valid' && sourceImage && sourceImage.getAttribute('src');
+
+    if (isValid) {
+      if (image) {
+        image.src = sourceImage.getAttribute('src');
+        image.hidden = false;
+      }
+      if (empty) empty.hidden = true;
+      return;
+    }
+
+    if (image) {
+      image.hidden = true;
+      image.removeAttribute('src');
+    }
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = fallbackText;
+    }
+  }
+
+  function updateConfiguracionBrandingPreviewPanel_(form) {
+    if (!form) return;
+    const preview = form.querySelector('[data-branding-mini-preview]');
+    if (!preview) return;
+
+    const getValue = name => {
+      const field = form.querySelector(`[name="${name}"]`);
+      return field ? field.value : '';
+    };
+
+    const definitions = getBrandingColorDefinitions_();
+    definitions.forEach(def => {
+      const normalized = normalizeHexColor_(getValue(def.name)) || normalizeHexColor_(def.fallback) || '#000000';
+      const previewValue = preview.querySelector(`[data-branding-preview-value="${def.name}"]`);
+      const previewDot = preview.querySelector(`[data-branding-preview-dot="${def.name}"]`);
+      if (previewValue) previewValue.textContent = normalized;
+      if (previewDot) previewDot.style.background = normalized;
+    });
+
+    preview.style.setProperty('--branding-primary', normalizeHexColor_(getValue('primaryColor')) || '#214E8A');
+    preview.style.setProperty('--branding-secondary', normalizeHexColor_(getValue('secondaryColor')) || '#007C4A');
+    preview.style.setProperty('--branding-accent', normalizeHexColor_(getValue('accentColor')) || '#03C2AE');
+    preview.style.setProperty('--branding-progress', normalizeHexColor_(getValue('loadingProgressColor')) || '#8CC63F');
+    preview.style.setProperty('--branding-light', normalizeHexColor_(getValue('lightBackground')) || '#F7FAFC');
+    preview.style.setProperty('--branding-dark', normalizeHexColor_(getValue('darkBackground')) || '#0D2940');
+
+    updateConfiguracionBrandingPreviewLogo_(
+      preview.querySelector('[data-branding-preview-logo="light"]'),
+      form.querySelector('[data-logo-input-name="logoLightDataUri"]'),
+      'Logo claro'
+    );
+    updateConfiguracionBrandingPreviewLogo_(
+      preview.querySelector('[data-branding-preview-logo="dark"]'),
+      form.querySelector('[data-logo-input-name="logoDarkDataUri"]'),
+      'Logo oscuro'
+    );
+
+    updateConfiguracionVisualKitPreview_(form);
+  }
+
+  function updateConfiguracionVisualKitPreview_(form) {
+    if (!form) return;
+    const kit = form.querySelector('[data-branding-visual-kit]');
+    if (!kit) return;
+
+    const getValue = name => {
+      const field = form.querySelector(`[name="${name}"]`);
+      return field ? field.value : '';
+    };
+
+    const tokenMap = {
+      '--runtime-brand-primary': normalizeHexColor_(getValue('primaryColor')) || '#214E8A',
+      '--runtime-brand-secondary': normalizeHexColor_(getValue('secondaryColor')) || '#007C4A',
+      '--runtime-brand-accent': normalizeHexColor_(getValue('accentColor')) || '#03C2AE',
+      '--runtime-brand-progress': normalizeHexColor_(getValue('loadingProgressColor')) || '#8CC63F',
+      '--runtime-brand-light': normalizeHexColor_(getValue('lightBackground')) || '#F7FAFC',
+      '--runtime-brand-dark': normalizeHexColor_(getValue('darkBackground')) || '#0D2940'
+    };
+
+    kit.querySelectorAll('[data-ui-kit-theme-surface]').forEach(surface => {
+      Object.keys(tokenMap).forEach(key => surface.style.setProperty(key, tokenMap[key]));
+    });
+
+    kit.querySelectorAll('[data-ui-kit-font-family]').forEach(node => {
+      const family = node.dataset.uiKitFontFamily === 'heading' ? '--font-heading' : '--font-base';
+      const scope = node.closest('[data-ui-kit-theme-surface]') || kit;
+      const value = getComputedStyle(scope).getPropertyValue(family).trim();
+      node.textContent = value || family;
+    });
+
+    kit.querySelectorAll('[data-ui-kit-font-var]').forEach(node => {
+      const scope = node.closest('[data-ui-kit-theme-surface]') || kit;
+      const value = getComputedStyle(scope).getPropertyValue(node.dataset.uiKitFontVar || '').trim();
+      node.textContent = value || '--';
+    });
+
+    kit.querySelectorAll('[data-ui-kit-color-card]').forEach(card => {
+      const token = card.dataset.uiKitColorVar || '';
+      const scope = card.closest('[data-ui-kit-theme-surface]') || kit;
+      const value = getComputedStyle(scope).getPropertyValue(token).trim();
+      const swatch = card.querySelector('[data-ui-kit-color-swatch]');
+      const label = card.querySelector('[data-ui-kit-color-value]');
+      if (swatch) swatch.style.background = value || '#000000';
+      if (label) label.textContent = value || token;
+    });
+  }
+
+  function validateConfiguracionBrandingForm_(form) {
+    const invalidLogoCard = Array.from(form.querySelectorAll('[data-branding-logo-card]')).find(card => {
+      const input = card.querySelector('[data-branding-logo-input]');
+      return !!String(input && input.value || '').trim() && card.dataset.logoState !== 'valid';
+    });
+    if (invalidLogoCard) {
+      return {
+        ok: false,
+        message: `Revisa ${invalidLogoCard.dataset.logoLabel || 'el logo'}: el data URI no es válido o no pudo renderizarse.`
+      };
+    }
+
+    const invalidColorCard = Array.from(form.querySelectorAll('[data-branding-color-card]')).find(card => card.dataset.colorValid === 'false');
+    if (invalidColorCard) {
+      return {
+        ok: false,
+        message: `Revisa ${invalidColorCard.dataset.colorLabel || 'un color'}: usa un hexadecimal válido como #214E8A.`
+      };
+    }
+
+    return { ok: true };
+  }
+
+  function renderConfigGeneralSection_(section) {
+    return `
+      <section class="config-section" id="config-section-general">
+        <div class="config-section__head"><p class="eyebrow">General</p><h3>Parámetros base del sistema</h3></div>
+        <form class="config-form" data-config-section="general">
+          <div class="config-grid">
+            ${configInput_('appName', 'Nombre de la app', section.appName || '', 'text')}
+            ${configInput_('programName', 'Nombre del programa', section.programName || '', 'text')}
+            ${configInput_('environmentLabel', 'Etiqueta de entorno', section.environmentLabel || '', 'text')}
+            ${configInput_('splashMinDurationMs', 'Splash mínimo (ms)', section.splashMinDurationMs || 5000, 'number')}
+            ${configInput_('appSubtitle', 'Subtítulo de la app', section.appSubtitle || '', 'text', 'field--full')}
+            ${configInput_('loadingText', 'Texto por defecto del loading', section.loadingText || '', 'text', 'field--full')}
+            ${configCheckbox_('showVisibleVersion', 'Mostrar versión visible', section.showVisibleVersion !== false)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar General</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigBrandingSection_(section) {
+    const general = getSystemGeneralConfig_();
+    const colorCards = getBrandingColorDefinitions_().map(def => renderConfigBrandingColorCard_(def, section[def.name])).join('');
+    return `
+      <section class="config-section" id="config-section-branding">
+        <div class="config-section__head">
+          <p class="eyebrow">Branding</p>
+          <h3>Identidad visual global</h3>
+          <p class="muted">Gestiona logos y paleta desde una vista util para validar marca antes de guardar.</p>
+        </div>
+        <form class="config-form" data-config-section="branding">
+          <div class="config-branding-layout">
+            <div class="config-branding-stack">
+              <section class="config-branding-block">
+                <div class="config-branding-card__head">
+                  <div>
+                    <p class="eyebrow">Logos</p>
+                    <h4>Aplicacion institucional</h4>
+                  </div>
+                  <span class="config-branding-state-pill">Editable</span>
+                </div>
+                <div class="config-branding-logo-grid">
+                  ${renderConfigBrandingLogoCard_('logoLightDataUri', 'Logo claro', section.logoLightDataUri || '', 'light')}
+                  ${renderConfigBrandingLogoCard_('logoDarkDataUri', 'Logo oscuro', section.logoDarkDataUri || '', 'dark')}
+                </div>
+              </section>
+              <section class="config-branding-block">
+                <div class="config-branding-card__head">
+                  <div>
+                    <p class="eyebrow">Paleta</p>
+                    <h4>Colores operativos</h4>
+                  </div>
+                  <span class="config-branding-state-pill">6 roles</span>
+                </div>
+                <div class="config-branding-palette-grid">
+                  ${colorCards}
+                </div>
+              </section>
+            </div>
+            ${renderConfigBrandingPreviewPanel_(section, general.appName || '', general.programName || general.appSubtitle || '')}
+          </div>
+          ${renderConfigVisualKitSection_()}
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Branding</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigAccessSection_(section) {
+    const defs = APP.state.moduleDefinitions || [];
+    const alwaysVisible = new Set((section.alwaysVisibleModules || []).concat(defs.filter(item => item.required).map(item => item.key)));
+    return `
+      <section class="config-section" id="config-section-accessModules">
+        <div class="config-section__head"><p class="eyebrow">Acceso y módulos</p><h3>Dominio, defaults y navegación</h3></div>
+        <form class="config-form" data-config-section="accessModules">
+          <div class="config-grid">
+            ${configInput_('allowedDomain', 'Dominio permitido', section.allowedDomain || 'providencia.cl', 'text')}
+            ${configInput_('primarySuperuserEmail', 'Correo del superuser principal', section.primarySuperuserEmail || '', 'email')}
+            ${configSelect_('defaultUserProfile', 'Perfil por defecto', section.defaultUserProfile || 'operador', USER_ROLE_OPTIONS)}
+            ${configSelect_('defaultView', 'Módulo de inicio por defecto', section.defaultView || 'inicio', defs.filter(item => !item.superOnly && item.navVisible !== false && item.enabled !== false).map(item => ({ value: item.view || item.key, label: item.label || item.key })))}
+          </div>
+          <div class="config-table-wrap">
+            <table class="config-table">
+              <thead><tr><th>Módulo</th><th>Nombre visible</th><th>Orden</th><th>Estado</th><th>Siempre visible</th></tr></thead>
+              <tbody>
+                ${defs.map(def => `
+                  <tr data-config-module-row="true" data-module-key="${escapeHtml(def.key)}">
+                    <td><strong>${escapeHtml(def.key)}</strong></td>
+                    <td><input type="text" data-config-module-label value="${escapeHtml(def.label || def.key)}"></td>
+                    <td><input type="number" min="1" data-config-module-order value="${escapeHtml(String(def.order || 0))}"></td>
+                    <td>
+                      <select data-config-module-state>
+                        ${['active', 'hidden', 'development'].map(state => `<option value="${state}" ${state === (def.state || 'active') ? 'selected' : ''}>${state}</option>`).join('')}
+                      </select>
+                    </td>
+                    <td class="config-table__check">
+                      <input type="checkbox" data-config-always-visible value="${escapeHtml(def.key)}" ${alwaysVisible.has(def.key) ? 'checked' : ''} ${def.superOnly ? 'disabled' : ''}>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Acceso y módulos</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigSociosSection_(section) {
+    return `
+      <section class="config-section" id="config-section-socios">
+        <div class="config-section__head"><p class="eyebrow">Socios</p><h3>Defaults del módulo Socios</h3></div>
+        <form class="config-form" data-config-section="socios">
+          <div class="config-grid">
+            ${configInput_('addressSuffix', 'Sufijo automático de dirección', section.addressSuffix || '', 'text')}
+            ${configInput_('dashboardHeight', 'Altura dashboard', section.dashboardHeight || 443, 'number')}
+            ${configTextarea_('allowedRoles', 'Cargos permitidos (uno por línea)', joinLines_(section.allowedRoles), '', 6)}
+            ${configTextarea_('requiredManualFields', 'Campos obligatorios manuales (uno por línea)', joinLines_(section.requiredManualFields), '', 6)}
+            ${configTextarea_('bulkColumnMap', 'Mapeo carga masiva (clave=columna)', joinKeyValueLines_(section.bulkColumnMap), 'field--full', 6)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Socios</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigBeneficiosSection_(section) {
+    const capacitaciones = section.capacitaciones || {};
+    const fondese = section.fondese || {};
+    const camaras = section.camaras1414 || {};
+    return `
+      <section class="config-section" id="config-section-beneficios">
+        <div class="config-section__head"><p class="eyebrow">Beneficios</p><h3>Parámetros base por tipo</h3></div>
+        <form class="config-form" data-config-section="beneficios">
+          <div class="config-subgrid">
+            <article class="config-subcard">
+              <h4>CAPACITACIONES</h4>
+              <div class="config-grid">
+                ${configInput_('capacitacionesDisplayName', 'Nombre visible', capacitaciones.displayName || '', 'text')}
+                ${configInput_('capacitacionesAnnualDefaultCount', 'Cantidad anual por defecto', capacitaciones.annualDefaultCount || 0, 'number')}
+                ${configTextarea_('capacitacionesAllowedStates', 'Estados permitidos', joinLines_(capacitaciones.allowedStates), 'field--full', 5)}
+                ${configTextarea_('capacitacionesBaseEligibilityCondition', 'Condición base de elegibilidad', capacitaciones.baseEligibilityCondition || '', 'field--full', 4)}
+              </div>
+            </article>
+            <article class="config-subcard">
+              <h4>FONDESE</h4>
+              <div class="config-grid">
+                ${configInput_('fondeseBaseYear', 'Año base', fondese.baseYear || new Date().getFullYear(), 'number')}
+                ${configInput_('fondeseCallsPerYear', 'Convocatorias por año', fondese.callsPerYear || 1, 'number')}
+                ${configInput_('fondeseAlertDaysBefore', 'Días de alerta', fondese.alertDaysBefore || 0, 'number')}
+                ${configTextarea_('fondeseBaseStates', 'Estados base', joinLines_(fondese.baseStates), 'field--full', 5)}
+                ${configTextarea_('fondeseKeyDates', 'Fechas clave (clave|etiqueta|fecha)', joinKeyDateLines_(fondese.keyDates), 'field--full', 6)}
+              </div>
+            </article>
+            <article class="config-subcard">
+              <h4>CAMARAS 1414</h4>
+              <div class="config-grid">
+                ${configInput_('camarasDisplayName', 'Nombre visible', camaras.displayName || '', 'text')}
+                ${configInput_('camarasTechnicalVisitAlertDays', 'Días alerta visita técnica', camaras.technicalVisitAlertDays || 0, 'number')}
+                ${configTextarea_('camarasBaseStates', 'Estados base', joinLines_(camaras.baseStates), 'field--full', 5)}
+                ${configTextarea_('camarasBaseEligibilityCondition', 'Condición base de elegibilidad', camaras.baseEligibilityCondition || '', 'field--full', 4)}
+              </div>
+            </article>
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Beneficios</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigBeneficiosSection_(section) {
+    const capacitaciones = section.capacitaciones || {};
+    const fondese = section.fondese || {};
+    const camaras = section.camaras1414 || {};
+    return `
+      <section class="config-section" id="config-section-beneficios">
+        <div class="config-section__head"><p class="eyebrow">Beneficios</p><h3>Parametros base por tipo</h3></div>
+        <form class="config-form" data-config-section="beneficios">
+          <div class="config-subgrid">
+            <article class="config-subcard">
+              <h4>CAPACITACIONES</h4>
+              <div class="config-grid">
+                ${configInput_('capacitacionesDisplayName', 'Nombre visible', capacitaciones.displayName || '', 'text')}
+                ${configInput_('capacitacionesAnnualDefaultCount', 'Cantidad anual por defecto', capacitaciones.annualDefaultCount || 0, 'number')}
+                ${configTextarea_('capacitacionesAllowedStates', 'Estados permitidos', joinLines_(capacitaciones.allowedStates), 'field--full', 5)}
+                ${configTextarea_('capacitacionesBaseEligibilityCondition', 'Condicion base de elegibilidad', capacitaciones.baseEligibilityCondition || '', 'field--full', 4)}
+              </div>
+            </article>
+            <article class="config-subcard">
+              <h4>FONDESE</h4>
+              <div class="config-grid">
+                ${configInput_('fondeseBaseYear', 'Ano base', fondese.baseYear || new Date().getFullYear(), 'number')}
+                ${configInput_('fondeseCallsPerYear', 'Convocatorias por ano', fondese.callsPerYear || 1, 'number')}
+                ${configInput_('fondeseAlertDaysBefore', 'Dias de alerta', fondese.alertDaysBefore || 0, 'number')}
+                ${configTextarea_('fondeseBaseStates', 'Estados base', joinLines_(fondese.baseStates), 'field--full', 5)}
+                ${configTextarea_('fondeseKeyDates', 'Fechas clave (clave|etiqueta|fecha)', joinKeyDateLines_(fondese.keyDates), 'field--full', 6)}
+              </div>
+            </article>
+            <article class="config-subcard">
+              <h4>CAMARAS 1414</h4>
+              <div class="config-grid">
+                ${configInput_('camarasDisplayName', 'Nombre visible', camaras.displayName || '', 'text')}
+                ${configInput_('camarasTechnicalVisitAlertDays', 'Dias alerta visita tecnica', camaras.technicalVisitAlertDays || 0, 'number')}
+                ${configInput_('camarasMaxDaysWithoutProgress', 'Dias sin avance', camaras.maxDaysWithoutProgress || 30, 'number')}
+                ${configTextarea_('camarasBaseStates', 'Estados base', joinLines_(camaras.baseStates), 'field--full', 5)}
+                ${configTextarea_('camarasBaseEligibilityCondition', 'Condicion base de elegibilidad', camaras.baseEligibilityCondition || '', 'field--full', 4)}
+              </div>
+            </article>
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Beneficios</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigAlertsInicioSection_(section) {
+    const visibility = section.homeBlocksVisibility || {};
+    return `
+      <section class="config-section" id="config-section-alertsInicio">
+        <div class="config-section__head"><p class="eyebrow">Alertas e Inicio</p><h3>Defaults del módulo inicial</h3></div>
+        <form class="config-form" data-config-section="alertsInicio">
+          <div class="config-grid">
+            ${configInput_('alertHighDays', 'Días alerta alta', section.alertHighDays || 0, 'number')}
+            ${configInput_('alertMediumDays', 'Días alerta media', section.alertMediumDays || 0, 'number')}
+            ${configInput_('maxVisibleAlerts', 'Máximo de alertas visibles', section.maxVisibleAlerts || 0, 'number')}
+            ${configInput_('maxUpcomingAssemblies', 'Máximo de próximas asambleas', section.maxUpcomingAssemblies || 0, 'number')}
+            ${configTextarea_('homeBlocksOrder', 'Orden de bloques inicio (uno por línea)', joinLines_(section.homeBlocksOrder), '', 5)}
+            ${configTextarea_('leftPanelDefaults', 'Defaults panel izquierdo (uno por línea)', joinLines_(section.leftPanelDefaults), '', 5)}
+          </div>
+          <div class="config-inline-checks">
+            ${configCheckbox_('homeBlocksVisibilityQuickActions', 'Mostrar accesos rápidos', visibility.quickActions !== false)}
+            ${configCheckbox_('homeBlocksVisibilityTiles', 'Mostrar tiles', visibility.tiles !== false)}
+            ${configCheckbox_('homeBlocksVisibilityDashboard', 'Mostrar dashboard', visibility.dashboard !== false)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Alertas e Inicio</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigIntegrationsSection_(section) {
+    return `
+      <section class="config-section" id="config-section-integrations">
+        <div class="config-section__head"><p class="eyebrow">Integraciones</p><h3>URLs y referencias externas</h3></div>
+        <form class="config-form" data-config-section="integrations">
+          <div class="config-grid">
+            ${configInput_('homeDashboardUrl', 'URL dashboard Inicio', section.homeDashboardUrl || '', 'url', 'field--full')}
+            ${configInput_('sociosDashboardUrl', 'URL dashboard Socios', section.sociosDashboardUrl || '', 'url', 'field--full')}
+            ${configInput_('googleCalendarId', 'ID o referencia Google Calendar', section.googleCalendarId || '', 'text', 'field--full')}
+            ${configTextarea_('futureReports', 'Futuras URLs de reportes (una por línea)', joinLines_(section.futureReports), '', 5)}
+            ${configTextarea_('externalLinks', 'URLs externas institucionales (una por línea)', joinLines_(section.externalLinks), '', 5)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Integraciones</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function renderConfigTechnicalSection_(section) {
+    return `
+      <section class="config-section" id="config-section-technical">
+        <div class="config-section__head"><p class="eyebrow">Administración técnica</p><h3>Flags seguros para superuser</h3></div>
+        <form class="config-form" data-config-section="technical">
+          <div class="config-inline-checks">
+            ${configCheckbox_('maintenanceMode', 'Modo mantenimiento', !!section.maintenanceMode)}
+            ${configCheckbox_('demoMode', 'Modo demo', !!section.demoMode)}
+            ${configCheckbox_('showExtendedLogs', 'Logs extendidos', !!section.showExtendedLogs)}
+            ${configCheckbox_('enableDataReset', 'Habilitar botón reset de datos', section.enableDataReset !== false)}
+          </div>
+          <div class="config-grid">
+            ${configTextarea_('resetExclusions', 'Exclusiones del reset (una por línea)', joinLines_(section.resetExclusions), 'field--full', 6)}
+          </div>
+          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Administración técnica</button></div>
+        </form>
+      </section>
+    `;
+  }
+
+  function getOrderedConfigSections_() {
+    const available = new Map(CONFIG_SECTIONS.map(section => [section.key, section]));
+    const orderedKeys = (APP.state.configSectionOrder || []).filter(key => available.has(key));
+    const fallbackKeys = CONFIG_SECTIONS
+      .map(section => section.key)
+      .filter(key => orderedKeys.indexOf(key) === -1);
+
+    return orderedKeys
+      .concat(fallbackKeys)
+      .map(key => available.get(key))
+      .filter(Boolean);
+  }
+
+  function getActiveConfigSectionKey_() {
+    const current = String(APP.state.activeConfigSection || '').trim();
+    const sections = getOrderedConfigSections_();
+    if (current && sections.some(section => section.key === current)) return current;
+    return sections[0] ? sections[0].key : 'general';
+  }
+
+  function renderConfiguracionSectionByKey_(sectionKey, config) {
+    switch (String(sectionKey || '').trim()) {
+      case 'general':
+        return renderConfigGeneralSection_(config.general || {});
+      case 'branding':
+        return renderConfigBrandingSection_(config.branding || {});
+      case 'accessModules':
+        return renderConfigAccessSection_(config.accessModules || {});
+      case 'socios':
+        return renderConfigSociosSection_(config.socios || {});
+      case 'beneficios':
+        return renderConfigBeneficiosSection_(config.beneficios || {});
+      case 'alertsInicio':
+        return renderConfigAlertsInicioSection_(config.alertsInicio || {});
+      case 'integrations':
+        return renderConfigIntegrationsSection_(config.integrations || {});
+      case 'technical':
+        return renderConfigTechnicalSection_(config.technical || {});
+      default:
+        return renderConfigGeneralSection_(config.general || {});
+    }
+  }
+
+  function configInput_(name, label, value, type, extraClass) {
+    return `
+      <div class="field ${extraClass || ''}">
+        <label>${escapeHtml(label)}</label>
+        <input name="${escapeHtml(name)}" type="${escapeHtml(type || 'text')}" value="${escapeHtml(String(value == null ? '' : value))}">
+      </div>
+    `;
+  }
+
+  function configSelect_(name, label, value, options) {
+    return `
+      <div class="field">
+        <label>${escapeHtml(label)}</label>
+        <select name="${escapeHtml(name)}">
+          ${(options || []).map(option => {
+            const optValue = typeof option === 'string' ? option : option.value;
+            const optLabel = typeof option === 'string' ? option : option.label;
+            return `<option value="${escapeHtml(String(optValue || ''))}" ${String(optValue || '') === String(value || '') ? 'selected' : ''}>${escapeHtml(String(optLabel || optValue || ''))}</option>`;
+          }).join('')}
+        </select>
+      </div>
+    `;
+  }
+
+  function configTextarea_(name, label, value, extraClass, rows) {
+    return `
+      <div class="field ${extraClass || ''}">
+        <label>${escapeHtml(label)}</label>
+        <textarea name="${escapeHtml(name)}" rows="${escapeHtml(String(rows || 4))}">${escapeHtml(String(value == null ? '' : value))}</textarea>
+      </div>
+    `;
+  }
+
+  function configCheckbox_(name, label, checked) {
+    return `
+      <label class="config-check">
+        <input name="${escapeHtml(name)}" type="checkbox" ${checked ? 'checked' : ''}>
+        <span>${escapeHtml(label)}</span>
+      </label>
+    `;
+  }
+
+  function splitLines_(value) {
+    return String(value || '')
+      .split(/\r?\n|,/)
+      .map(item => item.trim())
+      .filter(Boolean);
+  }
+
+  function joinLines_(values) {
+    return (values || []).join('\n');
+  }
+
+  function parseKeyValueText_(value) {
+    return String(value || '').split(/\r?\n/).reduce((acc, line) => {
+      const parts = String(line || '').split('=');
+      const key = String(parts.shift() || '').trim();
+      const val = parts.join('=').trim();
+      if (key) acc[key] = val;
+      return acc;
+    }, {});
+  }
+
+  function joinKeyValueLines_(value) {
+    return Object.keys(value || {}).map(key => `${key}=${value[key] || ''}`).join('\n');
+  }
+
+  function parseKeyDateLines_(value) {
+    return String(value || '').split(/\r?\n/).map(line => {
+      const parts = String(line || '').split('|').map(item => item.trim());
+      if (!parts[0] && !parts[1] && !parts[2]) return null;
+      return {
+        key: parts[0] || '',
+        label: parts[1] || parts[0] || '',
+        date: parts[2] || ''
+      };
+    }).filter(Boolean);
+  }
+
+  function joinKeyDateLines_(values) {
+    return (values || []).map(item => [
+      item && item.key || '',
+      item && item.label || '',
+      item && item.date || ''
+    ].join('|')).join('\n');
+  }

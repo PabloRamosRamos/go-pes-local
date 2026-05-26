@@ -1,0 +1,145 @@
+  function renderFicha(data) {
+    const container = document.getElementById('ficha-container');
+    if (!container) return;
+
+    if (!data || !data.summary) {
+      container.innerHTML = '<div class="empty-state">No hay información disponible.</div>';
+      return;
+    }
+
+    const s = data.summary || {};
+    const o = data.organizacion || {};
+    const trazabilidad = data.trazabilidad || [];
+    const instrumentos = data.instrumentos || [];
+    const requisitos = data.requisitos || [];
+    const socios = data.socios || [];
+    const avanceHitos = data.avance_hitos || [];
+    const lastAction = trazabilidad[0] || {};
+    const lastAvanceHito = avanceHitos[0] || {};
+
+    const hasOrg =
+      !!String(s.organizacion_id || '').trim() ||
+      !!String(o.organizacion_id || '').trim() ||
+      !!String(s.nombre_organizacion || '').trim();
+
+    const vecinoBlock = fichaBlock('person', 'Vecino / solicitud', [
+      ['Solicitud', s.solicitud_id],
+      ['Vecino', s.nombre_completo],
+      ['Teléfono', s.telefono_contacto],
+      ['Correo', s.correo_contacto],
+      ['Dirección', s.direccion_original],
+      ['UV', s.uv],
+      ['Sector', s.sector],
+      ['Fecha ingreso', s.fecha_ingreso],
+      ['Medio', s.medio_solicitud],
+      ['Unidad origen', s.unidad_origen],
+      ['Estado actual', s.estado_actual]
+    ]);
+
+    const avanceBlock = fichaBlock('event_note', 'Avance', [
+      ['Última gestión', s.ultima_actualizacion || s.fecha_ingreso],
+      ['Último hito avance', lastAvanceHito.nombre_hito || ''],
+      ['Etapa actual', s.etapa_actual],
+      ['Próximo hito', s.proximo_hito],
+      ['Responsable actual', s.responsable_actual],
+      ['Observación', data.vecino?.observacion_resumen || '']
+    ]);
+
+    const trazabilidadBlock = trazabilidad.length
+      ? fichaBlock('history', 'Trazabilidad', [
+          ['Último usuario', s.ultimo_usuario || lastAction.email || ''],
+          ['Última actualización', s.ultima_actualizacion || lastAction.timestamp || ''],
+          ['Última acción', lastAction.action || '']
+        ])
+      : '';
+
+    const organizacionBlock = hasOrg
+      ? fichaBlock('groups', 'Organización', [
+          ['Antigüedad', formatOrganizacionAntiguedad_(s.fecha_antiguedad_organizacion)]
+        ])
+      : '';
+
+    const instrumentosBlock = hasOrg && instrumentos.length
+      ? fichaBlock('handshake', 'Beneficios', [
+          ['Cantidad', instrumentos.length],
+          ['Último beneficio', friendlyBeneficioLabel_(instrumentos[0]?.instrumento_codigo_catalogo || '')],
+          ['Último estado', instrumentos[0]?.estado_instrumento || ''],
+          ['Resultado', instrumentos[0]?.resultado_instrumento || '']
+        ])
+      : '';
+
+    const requisitosBlock = hasOrg && requisitos.length
+      ? fichaBlock('inventory_2', 'Requisitos', [
+          ['Cantidad', requisitos.length],
+          ['Pendientes', requisitos.filter(r => r.estado_requisito === 'Pendiente').length],
+          ['Validados', requisitos.filter(r => r.estado_requisito === 'Validado').length],
+          ['Observaciones', requisitos[0]?.observacion_requisito || '']
+        ])
+      : '';
+
+    const sociosBlock = hasOrg && socios.length
+      ? fichaBlock('badge', 'Socios', [
+          ['Cantidad cargada', socios.length],
+          ['Último socio', socios[0]?.nombre_socio || '']
+        ])
+      : '';
+
+    const universoVecino = `
+      <section class="ficha-universe">
+        <div class="ficha-universe__head">
+          <p class="eyebrow">Universo 1</p>
+          <h3>Vecino y solicitud</h3>
+        </div>
+        <div class="ficha-grid ficha-grid--main">
+          ${vecinoBlock}
+          ${avanceBlock}
+          ${trazabilidadBlock}
+        </div>
+      </section>
+    `;
+
+    const universoOrganizacion = hasOrg
+      ? `
+        <section class="ficha-universe">
+          <div class="ficha-universe__head">
+            <p class="eyebrow">Universo 2</p>
+            <h3>Organización asociada</h3>
+          </div>
+          <div class="ficha-grid ficha-grid--org">
+            ${organizacionBlock}
+            ${sociosBlock}
+            ${instrumentosBlock}
+            ${requisitosBlock}
+          </div>
+        </section>
+      `
+      : '';
+
+    container.innerHTML = `
+      <div class="ficha-layout-v2">
+        ${universoVecino}
+        ${universoOrganizacion}
+      </div>
+    `;
+  }
+
+  function fichaBlock(icon, title, items) {
+    const cleanItems = (items || []).filter(([_, v]) => String(v || '').trim() !== '');
+    if (!cleanItems.length) return '';
+
+    return `
+      <div class="ficha-block">
+        <h3>
+          <span class="material-symbols-outlined">${icon}</span>
+          ${title}
+        </h3>
+        ${cleanItems.map(([k, v]) => `
+          <div class="kv">
+            <strong>${escapeHtml(k)}</strong>
+            <span>${escapeHtml(formatUiValue_(v || ''))}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+

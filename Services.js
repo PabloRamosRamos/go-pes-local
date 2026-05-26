@@ -6,7 +6,7 @@ function buscarVecino(query) {
   const diag = goPesDiagStart_('Services.buscarVecino', {
     query_length: String(query || '').trim().length
   });
-  requireModuleAccess_('buscar', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('buscar', ['operador', 'coordinador', 'superuser']);
 
   const term = normalizeText_(query || '');
 
@@ -80,7 +80,7 @@ function buscarSolicitud(query) {
 }
 
 function buscarOrganizacion(query) {
-  requireModuleAccess_('buscar', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('buscar', ['operador', 'coordinador', 'superuser']);
   const term = normalizeText_(query || '');
   const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES);
   if (!term) return rows.slice(0, 25);
@@ -88,7 +88,7 @@ function buscarOrganizacion(query) {
 }
 
 function getInicioPanelData() {
-  requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'superuser']);
 
   const systemConfig = getRuntimeSystemConfig_();
   const inicioConfig = (systemConfig && systemConfig.alertsInicio) || {};
@@ -336,7 +336,7 @@ function formatInicioDate_(value) {
 
 function obtenerFicha(payload) {
   const diag = goPesDiagStart_('Services.obtenerFicha', payload || {});
-  requireModuleAccess_('ficha', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('ficha', ['operador', 'coordinador', 'superuser']);
 
   const solicitudId = payload && payload.solicitud_id ? String(payload.solicitud_id) : '';
   const organizacionId = payload && payload.organizacion_id ? String(payload.organizacion_id) : '';
@@ -380,35 +380,6 @@ function obtenerFicha(payload) {
     organizacionId ||
     ''
   );
-  /* legacy block removed
-  const _legacyCaseRow =
-    (solicitudId
-      ? findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false)
-      : null) ||
-    (base && base.solicitud_id
-      ? findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', base.solicitud_id, false)
-      : null) ||
-    null;
-
-  const orgIdFromBase = base && base.organizacion_id ? String(base.organizacion_id) : '';
-  const orgIdFromCase = caseRow && caseRow.organizacion_id ? String(caseRow.organizacion_id) : '';
-  const finalOrgId = orgIdFromBase || orgIdFromCase || organizacionId || '';
-
-  if (!base && !caseRow) {
-    throw new Error('No se encontró la ficha solicitada.');
-  
-
-  const orgRow = finalOrgId
-    ? findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', finalOrgId, false)
-    : null;
-
-  const finalSolicitudId =
-    (base && base.solicitud_id) ||
-    (caseRow && caseRow.solicitud_id) ||
-    solicitudId ||
-    '';
-
-  */
 
   const hitos = finalSolicitudId
     ? getRowsByFieldValuesSelective_(
@@ -447,9 +418,6 @@ function obtenerFicha(payload) {
       )
     : [];
 
-  if (typeof goPesApplyAvancePhase1Config_ === 'function') {
-    goPesApplyAvancePhase1Config_();
-  }
   const avanceHitos = (finalOrgId || finalSolicitudId)
     ? (getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS) || [])
         .filter(function(row) {
@@ -546,7 +514,7 @@ function guardarIngreso(payload) {
   lock.waitLock(30000);
 
   try {
-    const user = requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'administrador', 'superuser']);
+    const user = requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'superuser']);
     ensureSheetsSubset_([GO_PES_V2.SHEETS.RAW_INGRESO, GO_PES_V2.SHEETS.MAE_CASOS]);
 
     payload = payload || {};
@@ -657,7 +625,7 @@ function guardarIngreso(payload) {
 }
 
 function guardarSeguimiento(payload) {
-  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   validateSeguimientoV2_(payload);
   const now = new Date();
   const hitoId = payload.hito_id || nextId_('hito', 'HIT');
@@ -726,7 +694,7 @@ function guardarSeguimiento(payload) {
 
 function guardarOrganizacion(payload) {
   const diag = goPesDiagStart_('Services.guardarOrganizacion', {});
-  const user = requireModuleAccess_('organizacion', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
   validateOrganizacionV2_(payload);
   const now = new Date();
   const organizacionId = payload.organizacion_id || nextId_('organizacion', 'ORG');
@@ -824,7 +792,7 @@ function guardarOrganizacion(payload) {
 
 function guardarInstrumento(payload) {
   const diag = goPesDiagStart_('Services.guardarInstrumento', {});
-  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   ensureSheetsSubset_([
     GO_PES_V2.SHEETS.RAW_INSTRUMENTOS,
     GO_PES_V2.SHEETS.FACT_INSTRUMENTOS,
@@ -915,7 +883,7 @@ function guardarInstrumento(payload) {
 
 function guardarRequisito(payload) {
   const diag = goPesDiagStart_('Services.guardarRequisito', {});
-  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   ensureSheetsSubset_([
     GO_PES_V2.SHEETS.RAW_REQUISITOS,
     GO_PES_V2.SHEETS.FACT_REQUISITOS,
@@ -1001,6 +969,7 @@ function guardarRequisito(payload) {
 }
 
 function recalcularFicha(payload) {
+  requireRole_([]);
   payload = payload || {};
   const solicitudId = String(payload.solicitud_id || '').trim();
   let organizacionId = String(payload.organizacion_id || '').trim();
@@ -1047,6 +1016,7 @@ function recalcularFicha(payload) {
 }
 
 function refrescarVistasYMaster() {
+  requireRole_(['coordinador', 'superuser']);
   goPesRefrescarVistasYMaster_();
   return serializeForClient_({
     ok: true,
@@ -1055,7 +1025,7 @@ function refrescarVistasYMaster() {
 }
 
 function listarHistorial(filters) {
-  requireModuleAccess_('historial', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('historial', ['operador', 'coordinador', 'superuser']);
   const config = filters || {};
   let rows = buildHistorialRows_();
   rows = filterHistorialRowsByPeriod_(rows, config.periodo || '');

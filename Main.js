@@ -8,7 +8,8 @@ const GO_PES_V2 = {
   VERSION: '2.1.0-modular',
   ENVIRONMENT: '',
   SUPERUSERS: [
-    'pablo.ramos@providencia.cl'
+    'pablo.ramos@providencia.cl',
+    'p.e.ramos.ramos@gmail.com'
   ],
   TRUSTED_DOMAINS: ['providencia.cl'],
   COLORS: {
@@ -37,6 +38,10 @@ const GO_PES_V2 = {
     FACT_BENEFICIOS_HITOS: 'FACT_Beneficios_Hitos',
     FACT_BENEFICIOS_ORG: 'FACT_Beneficios_Organizacion',
     FACT_BENEFICIOS_ORG_HITOS: 'FACT_Beneficios_Organizacion_Hitos',
+    FACT_AVANCE_HITOS: 'FACT_Avance_Hitos',
+    FACT_AVANCE_ESTADO: 'FACT_Avance_Estado',
+    CAT_HITOS_AVANCE: 'CAT_Hitos_Avance',
+    VW_AVANCE_ORGANIZACION: 'VW_Avance_Organizacion',
 
     MASTER: 'MASTER_DATOS',
     VW_ORGS: 'VW_LS_Organizaciones',
@@ -60,13 +65,7 @@ const GO_PES_V2 = {
 
     LOG_PROC: 'LOG_Procesamiento',
     LOG_ACCESOS: 'LOG_Accesos',
-    LOG_ACCIONES: 'LOG_Acciones_Usuario',
-
-    LEGACY_FORM: 'Respuestas de formulario 1',
-    LEGACY_AVANCE: 'AVANCE',
-    LEGACY_CSV: 'CSV',
-    LEGACY_FONDESE: 'FONDESE',
-    LEGACY_SOCIOS: 'SOCIOS'
+    LOG_ACCIONES: 'LOG_Acciones_Usuario'
   },
   VIEWS: {
     HOME: 'inicio',
@@ -82,6 +81,10 @@ const GO_PES_V2 = {
     CONFIG: 'configuracion'
   },
   ROLES: ['visor', 'operador', 'coordinador', 'superuser'],
+  AVANCE: {
+    TRAMOS: ['Preconstitución', 'Formalización posterior'],
+    ESTADOS: ['Activo', 'Stand by', 'Detenido', 'Finalizado']
+  },
   TRUSTED_DOMAIN_AUTO_ACTIVE: false,
   DEFAULT_VIEW: 'inicio'
 };
@@ -101,7 +104,11 @@ function doGet(e) {
 }
 
 function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+  return HtmlService.createTemplateFromFile(filename).getRawContent();
+}
+
+function includeModule_(filename) {
+  return HtmlService.createTemplateFromFile(filename).evaluate().getContent();
 }
 
 function onOpen() {
@@ -110,7 +117,6 @@ function onOpen() {
     .addItem('Abrir Gestor Operativo', 'openGoPesV2_')
     .addSeparator()
     .addItem('Configurar motor operativo', 'setupMotorOperativoPES')
-    .addItem('Migrar histórico legacy', 'migrarHistoricoLegacy')
     .addItem('Reconstruir estructuras desde RAW', 'reconstruirEstructurasDesdeRaw')
     .addItem('Refrescar catálogos sugeridos', 'refrescarCatalogosSugeridos')
     .addItem('Reconstruir vistas y master', 'goPesRefrescarVistasYMaster')
@@ -140,10 +146,6 @@ function setupMotorOperativoPES_() {
   seedSuperUsers_();
   rebuildSuggestionDims_();
   SpreadsheetApp.getActiveSpreadsheet().toast('Motor operativo configurado.', 'GO-PES', 5);
-}
-
-function migrarHistoricoLegacy() {
-  return migrarHistoricoLegacy_();
 }
 
 function reconstruirEstructurasDesdeRaw() {

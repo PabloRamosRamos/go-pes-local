@@ -482,44 +482,10 @@ function rebuildSuggestionDims_() {
   const casos = sheetExists_(S.MAE_CASOS) ? getSheetData_(S.MAE_CASOS) : [];
   const orgs = sheetExists_(S.MAE_ORGANIZACIONES) ? getSheetData_(S.MAE_ORGANIZACIONES) : [];
 
-  const vecHeaders = [
-    'vecino_id',
-    'solicitud_id',
-    'nombre_completo',
-    'telefono_contacto',
-    'direccion_original',
-    'uv',
-    'sector',
-    'estado_actual',
-    'organizacion_id',
-    'updated_at'
-  ];
-
-  const solHeaders = [
-    'solicitud_id',
-    'vecino_id',
-    'nombre_completo',
-    'telefono_contacto',
-    'direccion_original',
-    'uv',
-    'sector',
-    'estado_actual',
-    'organizacion_id',
-    'fecha_ingreso',
-    'updated_at'
-  ];
-
-  const orgHeaders = [
-    'organizacion_id',
-    'nombre_organizacion',
-    'tipo_organizacion',
-    'uv',
-    'sector',
-    'estado_constitucion',
-    'estado_general_organizacion',
-    'responsable_actual',
-    'updated_at'
-  ];
+  const defs = buildSheetDefinitions_();
+  const vecHeaders = defs[S.DIM_VEC_SUG];
+  const solHeaders = defs[S.DIM_SOL_SUG];
+  const orgHeaders = defs[S.DIM_ORG_SUG];
 
   const vecMap = {};
   const solMap = {};

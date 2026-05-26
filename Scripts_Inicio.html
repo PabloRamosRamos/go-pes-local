@@ -1,0 +1,79 @@
+  function renderQuickActions() {
+    const container = document.getElementById('quick-actions');
+    if (!container) return;
+
+    const items = [
+      ['person_add', 'Nuevo ingreso', 'Registrar un nuevo vecino o solicitud', 'nuevo-ingreso'],
+      ['search', 'Buscar vecino', 'Encontrar vecinos, solicitudes u organizaciones', 'buscar'],
+      ['event_note', 'Avance', 'Registrar hitos y controlar el proceso de constitución', 'avance'],
+      ['groups', 'Organizaciones', 'Consultar y administrar organizaciones', 'organizacion'],
+      ['badge', 'Socios', 'Visualización y carga de socios', 'socios'],
+      ['handshake', 'Beneficios', 'Revisar la base minima de beneficios por etapas', 'instrumento']
+    ];
+
+    container.innerHTML = items.filter(item => canOpenView_(item[3])).map(item => `
+      <button class="quick-card" data-view="${item[3]}">
+        <span class="material-symbols-outlined">${item[0]}</span>
+        <h3>${item[1]}</h3>
+        <p>${item[2]}</p>
+      </button>
+    `).join('');
+
+    container.querySelectorAll('.quick-card').forEach(btn =>
+      btn.addEventListener('click', () => route(btn.dataset.view))
+    );
+  }
+
+  function renderHomeTiles() {
+    const container = document.getElementById('home-tiles');
+    if (!container) return;
+
+    const tiles = [
+      ['Nuevo ingreso', 'Registrar la solicitud inicial del vecino.', 'person_add', 'nuevo-ingreso'],
+      ['Avance', 'Registrar hitos del proceso de constitución.', 'event_note', 'avance'],
+      ['Organizaciones', 'Consultar y administrar organizaciones.', 'groups', 'organizacion'],
+      ['Socios', 'Visualización y carga manual o masiva.', 'badge', 'socios'],
+      ['Beneficios', 'Revisar la base minima del modulo y sus pestanas operativas.', 'handshake', 'instrumento']
+    ];
+
+    container.innerHTML = tiles.filter(([, , , view]) => canOpenView_(view)).map(([title, text, icon, view]) => `
+      <button class="tile" data-view="${view}">
+        <span class="material-symbols-outlined">${icon}</span>
+        <h3>${title}</h3>
+        <p>${text}</p>
+      </button>
+    `).join('');
+
+    container.querySelectorAll('.tile').forEach(btn =>
+      btn.addEventListener('click', () => route(btn.dataset.view))
+    );
+  }
+
+  function renderInicioView_() {
+    const root = document.getElementById('inicio-root');
+    if (!root || !window.GO_PES_INICIO) return;
+    window.GO_PES_INICIO.render({
+      root,
+      escapeHtml,
+      homeEmbedUrl: getHomeDashboardUrl_(),
+      panelData: APP.state.inicioPanelData || {}
+    });
+  }
+
+  function ensureInicioPanelData_(force) {
+    const now = Date.now();
+    if (
+      !force &&
+      APP.state.inicioPanelData &&
+      APP.state.inicioPanelFetchedAt &&
+      (now - APP.state.inicioPanelFetchedAt) < 30000
+    ) {
+      return null;
+    }
+
+    return api('getInicioPanelData').then(data => {
+      APP.state.inicioPanelData = data || {};
+      APP.state.inicioPanelFetchedAt = Date.now();
+    });
+  }
+

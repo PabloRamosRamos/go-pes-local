@@ -78,12 +78,6 @@ function ensureSheetsSubset_(sheetNames) {
 }
 
 function buildSheetDefinitions_() {
-  if (typeof goPesApplyAvancePhase1Config_ === 'function') {
-    try {
-      goPesApplyAvancePhase1Config_();
-    } catch (err) {}
-  }
-
   const S = GO_PES_V2.SHEETS;
   const defs = {
     [S.RAW_INGRESO]: ['created_at', 'source', 'user_email', 'vecino_id', 'solicitud_id', 'nombre_vecino', 'apellido_vecino', 'rut_vecino', 'telefono_contacto', 'correo_contacto', 'direccion_original', 'uv', 'sector', 'tipo_vivienda', 'requerimiento_inicial', 'medio_solicitud', 'unidad_origen', 'fecha_solicitud', 'observaciones_form', 'estado_vecino', 'legacy_source', 'legacy_key'],
@@ -119,22 +113,20 @@ function buildSheetDefinitions_() {
     [S.DIM_REQUISITOS]: ['instrumento_codigo_catalogo', 'requisito_codigo', 'requisito_nombre', 'categoria_requisito', 'activo_flag'],
     [S.DIM_RESPONSABLES]: ['responsable_id', 'nombre_responsable', 'perfil', 'activo_flag'],
     [S.DIM_CARGOS]: ['cargo_id', 'cargo_nombre', 'activo_flag'],
-    [S.DIM_ORG_SUG]: ['organizacion_id', 'nombre_organizacion', 'uv', 'sector', 'estado_constitucion', 'estado_general_organizacion', 'activo_flag'],
-    [S.DIM_VEC_SUG]: ['vecino_id', 'solicitud_id', 'nombre_completo', 'telefono_contacto', 'direccion_original', 'uv', 'sector', 'estado_actual', 'activo_flag'],
-    [S.DIM_SOL_SUG]: ['solicitud_id', 'vecino_id', 'nombre_completo', 'telefono_contacto', 'direccion_original', 'estado_actual', 'organizacion_id', 'activo_flag'],
+    [S.DIM_VEC_SUG]: ['vecino_id', 'solicitud_id', 'nombre_completo', 'telefono_contacto', 'direccion_original', 'uv', 'sector', 'estado_actual', 'organizacion_id', 'updated_at'],
+    [S.DIM_SOL_SUG]: ['solicitud_id', 'vecino_id', 'nombre_completo', 'telefono_contacto', 'direccion_original', 'uv', 'sector', 'estado_actual', 'organizacion_id', 'fecha_ingreso', 'updated_at'],
+    [S.DIM_ORG_SUG]: ['organizacion_id', 'nombre_organizacion', 'tipo_organizacion', 'uv', 'sector', 'estado_constitucion', 'estado_general_organizacion', 'responsable_actual', 'updated_at'],
     [S.CFG_PARAMETROS]: ['config_section', 'value_json', 'updated_at', 'updated_by'],
 
     [S.LOG_PROC]: ['timestamp', 'nivel', 'accion', 'entidad', 'entidad_id', 'usuario', 'resultado', 'detalle_json'],
     [S.LOG_ACCESOS]: ['timestamp', 'event', 'email', 'payload_json'],
-    [S.LOG_ACCIONES]: ['timestamp', 'email', 'action', 'entity_type', 'entity_id', 'result', 'detail_json']
-  };
+    [S.LOG_ACCIONES]: ['timestamp', 'email', 'action', 'entity_type', 'entity_id', 'result', 'detail_json'],
 
-  if (typeof getGoPesAvanceSheetDefinitions_ === 'function') {
-    const avanceDefs = getGoPesAvanceSheetDefinitions_();
-    Object.keys(avanceDefs || {}).forEach(function(sheetName) {
-      defs[sheetName] = avanceDefs[sheetName];
-    });
-  }
+    [S.CAT_HITOS_AVANCE]: ['codigo_hito', 'tramo', 'orden_hito', 'nombre_hito', 'descripcion', 'codigo_hito_previo', 'permite_saltar', 'activo_flag'],
+    [S.FACT_AVANCE_HITOS]: ['avance_hito_id', 'organizacion_id', 'solicitud_id', 'codigo_hito', 'tramo', 'orden_hito', 'nombre_hito', 'fecha_hito', 'usuario_registro', 'timestamp_registro', 'observacion'],
+    [S.FACT_AVANCE_ESTADO]: ['avance_estado_id', 'organizacion_id', 'solicitud_id', 'estado_avance', 'motivo_estado', 'fecha_estado', 'usuario_estado', 'timestamp_registro', 'activo_flag'],
+    [S.VW_AVANCE_ORGANIZACION]: ['organizacion_id', 'solicitud_id', 'nombre_organizacion', 'estado_avance', 'ultimo_hito_codigo', 'ultimo_hito_nombre', 'ultimo_hito_fecha', 'usuario_ultimo_hito', 'total_hitos_cumplidos', 'total_hitos_tramo_pre', 'total_hitos_tramo_for']
+  };
 
   return defs;
 }

@@ -1,0 +1,1380 @@
+﻿  function renderBeneficiosView_() {
+    const root = document.getElementById('beneficios-root');
+    if (!root) return;
+
+    root.innerHTML = `
+      <div class="beneficios-shell">
+        <div class="section-head beneficios-head">
+          <div>
+            <p class="eyebrow">Beneficios</p>
+            <h2>Operacion por organizacion</h2>
+            <p class="muted">Gestion operativa de beneficios por organizacion, con seguimiento de estados y trazabilidad asociada.</p>
+          </div>
+          <div class="beneficios-actions">
+            <button type="button" class="secondary-btn" id="beneficios-reload-btn"><span class="material-symbols-outlined">refresh</span>Recargar</button>
+          </div>
+        </div>
+        <div id="beneficios-content" class="beneficios-workspace empty-state">Cargando beneficios...</div>
+      </div>
+    `;
+
+    document.getElementById('beneficios-reload-btn')?.addEventListener('click', () => refreshBeneficiosModuloMinimo_());
+    refreshBeneficiosModuloMinimo_();
+  }
+
+  function refreshBeneficiosModuloMinimo_() {
+    showContentLoading('Cargando beneficios...');
+    return api('getBeneficiosModuloPanel', {
+      beneficio_codigo: APP.state.currentBeneficioCodigo || '',
+      organizacion_id: APP.state.currentBeneficioOrganizacionId || ''
+    }).then(data => {
+      APP.state.currentBeneficiosDetalle = data || {};
+      const tabs = (data && data.tabs) || [];
+      if (!APP.state.currentBeneficioCodigo && tabs.length) {
+        APP.state.currentBeneficioCodigo = tabs[0].codigo;
+      }
+      renderBeneficiosPanelMinimo_(APP.state.currentBeneficiosDetalle);
+    }).catch(showError).finally(hideContentLoading);
+  }
+
+  function getBeneficioTabVisual_(codigo) {
+    switch (String(codigo || '').trim().toUpperCase()) {
+      case 'CAMARAS_1414':
+        return { icon: 'videocam', label: 'Camaras 1414' };
+      case 'FONDESE':
+        return { icon: 'savings', label: 'Fondese' };
+      case 'CHARLAS_CAPACITACIONES':
+        return { icon: 'school', label: 'Capacitaciones' };
+      default:
+        return { icon: 'handshake', label: 'Beneficio' };
+    }
+  }
+
+  function renderBeneficiosPanelMinimo_(data) {
+    const host = document.getElementById('beneficios-content');
+    if (!host) return;
+
+    const tabs = (data && data.tabs) || [];
+    const selectedCode = data && data.selected_tab_codigo
+      ? data.selected_tab_codigo
+      : APP.state.currentBeneficioCodigo;
+    const activeTab = tabs.find(tab => tab.codigo === selectedCode) || tabs[0] || null;
+
+    if (!tabs.length || !activeTab) {
+      host.className = 'beneficios-workspace empty-state';
+      host.innerHTML = 'No hay beneficios configurados para este módulo.';
+      return;
+    }
+
+    APP.state.currentBeneficioCodigo = activeTab.codigo;
+    host.className = 'beneficios-workspace';
+    host.innerHTML = `
+      <section class="beneficios-tabs-shell">
+        <div class="beneficios-tabs" role="tablist" aria-label="Pestañas del módulo Beneficios">
+          ${tabs.map(tab => {
+            const visual = getBeneficioTabVisual_(tab.codigo);
+            return `
+            <button
+              type="button"
+              class="beneficios-tab js-beneficio-tab ${tab.codigo === activeTab.codigo ? 'is-active' : ''}"
+              data-beneficio-codigo="${escapeHtml(tab.codigo || '')}"
+              role="tab"
+              aria-selected="${tab.codigo === activeTab.codigo ? 'true' : 'false'}">
+              <span class="beneficios-tab__content">
+                <span class="beneficios-tab__eyebrow">${escapeHtml(visual.label || 'Beneficio')}</span>
+                <strong class="beneficios-tab__title">${escapeHtml(tab.titulo || '')}</strong>
+                <span class="beneficios-tab__desc">${escapeHtml(tab.descripcion_corta || '')}</span>
+              </span>
+              <span class="beneficios-tab__divider" aria-hidden="true"></span>
+              <span class="beneficios-tab__icon" aria-hidden="true">
+                <span class="material-symbols-outlined">${escapeHtml(visual.icon || 'handshake')}</span>
+              </span>
+            </button>
+          `;
+          }).join('')}
+        </div>
+        ${activeTab.codigo === 'CAMARAS_1414'
+          ? renderCamaras1414Panel_(data && data.camaras1414, activeTab)
+          : renderBeneficioPlaceholderPanel_(activeTab)}
+      </section>
+    `;
+
+    host.querySelectorAll('.js-beneficio-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nextCode = btn.dataset.beneficioCodigo || '';
+        if (!nextCode || nextCode === APP.state.currentBeneficioCodigo) return;
+        APP.state.currentBeneficioCodigo = nextCode;
+        APP.state.currentBeneficioOrganizacionId = '';
+        refreshBeneficiosModuloMinimo_();
+      });
+    });
+
+    if (activeTab.codigo === 'CAMARAS_1414') {
+      bindCamaras1414Panel_();
+    }
+  }
+
+
+
+
+  function renderBeneficioPlaceholderPanel_(activeTab) {
+    return `
+      <article class="beneficios-panel" role="tabpanel">
+        <div class="beneficios-panel__head">
+          <div>
+            <p class="eyebrow">Pestaña activa</p>
+            <h3>${escapeHtml(activeTab.titulo || '')}</h3>
+          </div>
+          <span class="beneficios-panel__status">${escapeHtml(activeTab.estado || 'Base mínima')}</span>
+        </div>
+        <p class="muted">${escapeHtml(activeTab.descripcion || '')}</p>
+        <ul class="beneficios-placeholder-list">
+          ${(activeTab.items || []).map(item => `<li>${escapeHtml(item || '')}</li>`).join('')}
+        </ul>
+        <div class="beneficios-panel__note">
+          <span class="material-symbols-outlined" aria-hidden="true">construction</span>
+          <p>${escapeHtml(activeTab.nota || '')}</p>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderBeneficiosMetric_(label, value, icon) {
+    return `
+      <article class="beneficios-metric">
+        <span class="material-symbols-outlined">${escapeHtml(icon || 'insights')}</span>
+        <strong>${escapeHtml(String(value == null ? 0 : value))}</strong>
+        <span>${escapeHtml(label || '')}</span>
+      </article>
+    `;
+  }
+
+  function beneficioAlertClass_(tone) {
+    switch (String(tone || '').trim()) {
+      case 'danger':
+        return 'beneficios-inline-status--danger';
+      case 'warning':
+        return 'beneficios-inline-status--warning';
+      case 'success':
+        return 'beneficios-inline-status--success';
+      default:
+        return 'beneficios-inline-status--info';
+    }
+  }
+
+  function getCamaras1414EligibilityIssue_(row) {
+    const item = row || {};
+    if (!String(item.organizacion_id || '').trim()) return 'La organización no tiene identificador válido para gestionar CAMARAS 1414.';
+    if (!String(item.fecha_hito_11 || '').trim()) return 'La organización no cumple requisitos: falta la fecha del hito 11 / certificado definitivo.';
+    if (String(item.elegible_flag || 'Si').trim().toLowerCase() === 'no') return 'La organización no cumple los requisitos para cargar la ficha operativa.';
+    return '';
+  }
+
+  function renderBeneficiosAlertCard_(alert) {
+    const item = alert || {};
+    const heading = item.nombre_organizacion || item.title || '';
+    const subline = item.nombre_organizacion && item.title ? item.title : '';
+    const iconByTone = {
+      danger: 'warning',
+      warning: 'schedule',
+      success: 'check_circle',
+      info: 'info'
+    };
+    const iconName = iconByTone[String(item.tone || '').trim()] || 'notification_important';
+    return `
+      <article class="beneficios-alert ${beneficioAlertClass_(item.tone)}">
+        <div class="beneficios-alert__body">
+          <strong>${escapeHtml(heading)}</strong>
+          ${subline ? `<span>${escapeHtml(subline)}</span>` : ''}
+        </div>
+        <div class="beneficios-alert__meta">
+          ${item.detail ? `<small>${escapeHtml(item.detail || '')}</small>` : ''}
+          <span class="beneficios-alert__icon" aria-hidden="true">
+            <span class="material-symbols-outlined">${iconName}</span>
+          </span>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderCamaras1414Panel_(panel, activeTab) {
+    const data = panel || {};
+    const summary = data.summary || {};
+    const config = data.config || {};
+    const eligibleRows = data.eligible_rows || [];
+    const activeRows = data.active_rows || [];
+    const detail = data.detail || null;
+    const alerts = data.alerts_preview || [];
+
+    return `
+      <article class="beneficios-panel beneficios-panel--operativo" role="tabpanel">
+        <div class="beneficios-panel__head beneficios-panel__head--camaras">
+          <div class="beneficios-panel__hero">
+            <p class="eyebrow">Beneficio operativo</p>
+            <h3>${escapeHtml(activeTab.titulo || '')}</h3>
+            <span class="beneficios-panel__status beneficios-panel__status--inline">${escapeHtml(activeTab.estado || 'Operativo')}</span>
+            <p class="muted">${escapeHtml(activeTab.descripcion || '')}</p>
+          </div>
+          <div class="beneficios-summary__metrics beneficios-summary__metrics--compact">
+            ${renderBeneficiosMetric_('Elegibles', summary.totalEligible || 0, 'groups')}
+            ${renderBeneficiosMetric_('En gestion', summary.totalActive || 0, 'handshake')}
+            ${renderBeneficiosMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active')}
+          </div>
+        </div>
+
+        <section class="beneficios-top-strip">
+          <section class="beneficios-block beneficios-top-strip__config">
+            <div class="beneficios-block__head">
+              <div>
+                <p class="eyebrow">Configuracion de plazos</p>
+                <h4>Plazos configurables de CAMARAS 1414</h4>
+              </div>
+            </div>
+            <form id="camaras1414-config-form" class="beneficios-form" novalidate>
+              <div class="beneficios-form__grid beneficios-form__grid--camaras-config">
+                <div class="field">
+                  <label>Dias desde hito 11 para recordar inicio</label>
+                  <input type="number" min="0" name="reminderDaysFromEligibility" value="${escapeHtml(String(config.reminderDaysFromEligibility || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias maximos para enviar solicitud</label>
+                  <input type="number" min="0" name="maxDaysToSendRequest" value="${escapeHtml(String(config.maxDaysToSendRequest || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias de espera sin respuesta</label>
+                  <input type="number" min="0" name="maxDaysWithoutVisitResponse" value="${escapeHtml(String(config.maxDaysWithoutVisitResponse || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias posteriores a visita</label>
+                  <input type="number" min="0" name="maxDaysPostVisitFollowup" value="${escapeHtml(String(config.maxDaysPostVisitFollowup || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias hasta convenio</label>
+                  <input type="number" min="0" name="maxDaysToConvenio" value="${escapeHtml(String(config.maxDaysToConvenio || 0))}">
+                </div>
+                <div class="field">
+                  <label>Dias sin avance para alertar</label>
+                  <input type="number" min="0" name="maxDaysWithoutProgress" value="${escapeHtml(String(config.maxDaysWithoutProgress || 0))}">
+                </div>
+                <div class="field">
+                  <label>Alerta alta antes del vencimiento</label>
+                  <input type="number" min="0" name="alertHighDays" value="${escapeHtml(String(config.alertHighDays || 0))}">
+                </div>
+                <div class="field">
+                  <label>Alerta media antes del vencimiento</label>
+                  <input type="number" min="0" name="alertMediumDays" value="${escapeHtml(String(config.alertMediumDays || 0))}">
+                </div>
+              </div>
+              <div class="beneficios-form__actions">
+                <button type="submit" class="primary-btn">
+                  <span class="material-symbols-outlined">save</span>Guardar plazos
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="beneficios-block beneficios-top-strip__alerts">
+            <div class="beneficios-block__head">
+              <div>
+                <p class="eyebrow">Alertas base</p>
+                <h4>Base para inicio y seguimiento operativo</h4>
+              </div>
+            </div>
+            ${alerts.length ? `
+              <div class="beneficios-alerts">
+                ${alerts.map(alert => `
+                  <article class="beneficios-alert">
+                    <strong>${escapeHtml(alert.nombre_organizacion || '')}</strong>
+                    <span>${escapeHtml(alert.title || '')}</span>
+                    <small>${escapeHtml(alert.detail || '')}</small>
+                  </article>
+                `).join('')}
+              </div>
+            ` : '<div class="empty-state">Sin alertas operativas dentro del rango configurado.</div>'}
+          </section>
+        </section>
+
+        <section class="beneficios-layout beneficios-layout--camaras">
+          <div class="beneficios-org-panel">
+            <section class="beneficios-block beneficios-block--wide beneficios-block--eligible">
+              <div class="beneficios-block__head">
+                <div>
+                  <p class="eyebrow">Elegibles</p>
+                  <h4>Organizaciones elegibles</h4>
+                </div>
+              </div>
+              ${renderCamaras1414Table_(eligibleRows, 'elegible')}
+            </section>
+
+            <section class="beneficios-block beneficios-block--wide">
+              <div class="beneficios-block__head">
+                <div>
+                  <p class="eyebrow">En gestion</p>
+                  <h4>Organizaciones en seguimiento</h4>
+                </div>
+              </div>
+              ${renderCamaras1414Table_(activeRows, 'active')}
+            </section>
+          </div>
+
+          <div class="beneficios-org-detail">
+            <section class="beneficios-block beneficios-block--wide">
+              <div class="beneficios-block__head beneficios-block__head--detail">
+                <div>
+                  <p class="eyebrow">Ficha por organizacion</p>
+                  <h4>Detalle operativo CAMARAS 1414</h4>
+                </div>
+                ${detail ? `
+                  <button type="button" class="secondary-btn beneficios-detail__clear-btn" id="camaras1414-clear-selection-btn">
+                    <span class="material-symbols-outlined">close</span>Quitar seleccion
+                  </button>
+                ` : ''}
+              </div>
+              ${detail ? renderCamaras1414Detail_(detail) : '<div class="empty-state">Selecciona una organizacion elegible o en gestion para administrar el beneficio.</div>'}
+            </section>
+          </div>
+        </section>
+      </article>
+    `;
+  }
+
+  function renderCamaras1414Table_(rows, mode) {
+    const list = rows || [];
+    if (!list.length) {
+      return '<div class="empty-state">Sin registros.</div>';
+    }
+
+    const isEligible = mode === 'elegible';
+    return `
+      <div class="table-wrap table-wrap--camaras1414">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Organizacion</th>
+              <th>Fecha hito 11</th>
+              ${isEligible ? '<th>Accion</th>' : '<th>Estado</th><th>Proximo paso</th><th>Accion</th>'}
+            </tr>
+          </thead>
+          <tbody>
+            ${list.map(row => {
+              const issue = isEligible ? getCamaras1414EligibilityIssue_(row) : '';
+              return `
+              <tr
+                class="camaras1414-row ${String(APP.state.currentBeneficioOrganizacionId || '') === String(row.organizacion_id || '') ? 'is-selected' : ''}"
+                data-camaras1414-row="${escapeHtml(row.organizacion_id || '')}"
+                data-camaras1414-row-mode="${escapeHtml(mode)}"
+                data-camaras1414-row-issue="${escapeHtml(issue)}"
+                tabindex="0"
+                role="button"
+                aria-label="Seleccionar organizacion ${escapeHtml(row.nombre_organizacion || '')}"
+              >
+                <td>
+                  <div class="beneficios-table__org-name">${escapeHtml(row.nombre_organizacion || '')}</div>
+                  ${String(APP.state.currentBeneficioOrganizacionId || '') === String(row.organizacion_id || '')
+                    ? '<small class="beneficios-table__meta">Seleccionada</small>'
+                    : `<small class="beneficios-table__meta">${escapeHtml(isEligible ? 'Lista para gestionar' : 'Caso en seguimiento')}</small>`}
+                </td>
+                <td>${escapeHtml(formatFechaHoraUi_(row.fecha_hito_11 || ''))}</td>
+                ${isEligible
+                  ? `<td class="beneficios-table__action-cell">
+                      <button
+                        type="button"
+                        class="secondary-btn js-camaras1414-eligible-action"
+                        data-organizacion-id="${escapeHtml(row.organizacion_id || '')}"
+                        data-eligibility-issue="${escapeHtml(issue)}"
+                      >
+                        <span class="material-symbols-outlined">play_circle</span>Gestionar
+                      </button>
+                    </td>`
+                  : `<td>${escapeHtml(row.estado_beneficio || '')}</td>
+                     <td>${escapeHtml(row.proximo_hito_beneficio || '')}</td>
+                     <td class="beneficios-table__action-cell beneficios-table__action-cell--icon">
+                       <button
+                         type="button"
+                         class="secondary-btn beneficios-table__icon-action js-camaras1414-open-detail"
+                         data-organizacion-id="${escapeHtml(row.organizacion_id || '')}"
+                         title="Ver detalle"
+                         aria-label="Ver detalle de ${escapeHtml(row.nombre_organizacion || '')}"
+                       >
+                         <span class="material-symbols-outlined">search</span>
+                       </button>
+                     </td>`}
+              </tr>
+            `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderCamaras1414Detail_(detail) {
+    const org = detail.organizacion || {};
+    const contacto = detail.contacto || {};
+    const committeeContact = detail.committeeContact || {};
+    const assignment = detail.assignment || {};
+    const workflow = detail.workflow || {};
+    const checklist = detail.checklist || [];
+    const email = detail.email || {};
+    const response = detail.response || {};
+    const visit = detail.visit || {};
+    const installation = detail.installation || {};
+    const agreement = detail.agreement || {};
+    const closure = detail.closure || {};
+    const tracking = detail.tracking || {};
+    const responseWait = tracking.responseWait || null;
+    const inactivity = tracking.inactivity || null;
+    const detailAlerts = detail.alerts || [];
+    const committeeOptions = Array.isArray(committeeContact.options) ? committeeContact.options.slice() : [];
+    if (committeeContact.socio_id && !committeeOptions.some(item => String(item.socio_id || '').trim() === String(committeeContact.socio_id || '').trim())) {
+      committeeOptions.unshift({
+        socio_id: committeeContact.socio_id || '',
+        nombre_socio: committeeContact.nombre_socio || 'Contacto guardado',
+        cargo: committeeContact.cargo || '',
+        telefono_contacto: committeeContact.telefono_contacto || '',
+        correo_contacto: committeeContact.correo_contacto || '',
+        direccion: committeeContact.direccion || '',
+        unavailable: true
+      });
+    }
+
+    return `
+      <form id="camaras1414-detail-form" class="beneficios-form" novalidate>
+        <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">
+        <div class="beneficios-detail__head">
+          <div>
+            <h3>${escapeHtml(org.nombre_organizacion || '')}</h3>
+            <p class="muted">${escapeHtml(org.organizacion_id || '')} · Elegible desde ${escapeHtml(formatFechaHoraUi_(detail.elegibilidad && detail.elegibilidad.fecha_hito_11 || ''))}</p>
+          </div>
+          <div class="beneficios-detail__head-badges">
+            <span class="beneficio-chip ${beneficioBadgeClass_('ok')}">${escapeHtml(assignment.estado_beneficio || workflow.status || '')}</span>
+            <span class="beneficio-chip ${beneficioBadgeClass_('info')}">Avance ${escapeHtml(String(assignment.avance_beneficio_pct || workflow.progressPct || 0))}%</span>
+          </div>
+        </div>
+
+        <section class="beneficios-detail-strip">
+          <section class="beneficios-block beneficios-block--subtle">
+            <h4>Resumen operativo</h4>
+            <div class="beneficios-form__grid">
+              <div class="field">
+                <label>Responsable</label>
+                <input type="text" name="responsable_beneficio" value="${escapeHtml(assignment.responsable_beneficio || '')}">
+              </div>
+              <div class="field">
+                <label>Proximo paso</label>
+                <input type="text" value="${escapeHtml(assignment.proximo_hito_beneficio || workflow.nextStep || '')}" disabled>
+              </div>
+              <div class="field" data-span="2">
+                <label>Contacto del comite</label>
+                <select name="committee_contact_socio_id" data-camaras-contact-select ${committeeOptions.length ? '' : 'disabled'}>
+                  <option value="">${escapeHtml(committeeOptions.length ? 'Seleccionar socio del comite' : 'No hay socios disponibles para seleccionar')}</option>
+                  ${committeeOptions.map(item => `
+                    <option
+                      value="${escapeHtml(item.socio_id || '')}"
+                      data-contact-name="${escapeHtml(item.nombre_socio || '')}"
+                      data-contact-cargo="${escapeHtml(item.cargo || '')}"
+                      data-contact-phone="${escapeHtml(item.telefono_contacto || '')}"
+                      data-contact-email="${escapeHtml(item.correo_contacto || '')}"
+                      data-contact-address="${escapeHtml(item.direccion || '')}"
+                      data-contact-unavailable="${item.unavailable ? '1' : '0'}"
+                      ${String(item.socio_id || '').trim() === String(committeeContact.socio_id || '').trim() ? 'selected' : ''}
+                    >
+                      ${escapeHtml(item.nombre_socio || 'Socio sin nombre')}${item.cargo ? ' · ' + escapeHtml(item.cargo) : ''}${item.unavailable ? ' · No disponible en socios' : ''}
+                    </option>
+                  `).join('')}
+                </select>
+                ${committeeOptions.length
+                  ? '<p class="muted">Selecciona el socio definido por la organizacion como contacto operativo del beneficio.</p>'
+                  : `<p class="muted">${escapeHtml(committeeContact.emptyMessage || 'No hay socios disponibles para seleccionar.')}</p>`}
+              </div>
+              <div class="field" data-span="2">
+                <label>Observacion general</label>
+                <textarea name="observacion_beneficio" rows="3">${escapeHtml(assignment.observacion_beneficio || '')}</textarea>
+              </div>
+            </div>
+            <div class="beneficios-summary-stack">
+            ${(responseWait || inactivity)
+              ? `<div class="beneficios-inline-statuses">
+                  ${responseWait ? `
+                    <article class="beneficios-inline-status ${beneficioAlertClass_(responseWait.tone)}">
+                      <strong>Seguimiento correo</strong>
+                      <span>${escapeHtml(responseWait.label || '')}</span>
+                    </article>
+                  ` : ''}
+                  ${inactivity ? `
+                    <article class="beneficios-inline-status ${beneficioAlertClass_(inactivity.active ? 'danger' : 'info')}">
+                      <strong>Sin avance</strong>
+                      <span>${escapeHtml(inactivity.days + ' dias desde el ultimo hito operativo')}</span>
+                      <small>${escapeHtml(inactivity.label || '')}</small>
+                    </article>
+                  ` : ''}
+                </div>`
+              : ''}
+            ${detailAlerts.length
+              ? `<div class="beneficios-alerts beneficios-alerts--inline">
+                  ${detailAlerts.map(alert => renderBeneficiosAlertCard_(Object.assign({}, alert, { nombre_organizacion: '', title: alert.title || '', detail: alert.detail || '' }))).join('')}
+                </div>`
+              : ''}
+            <div class="beneficios-contact-grid">
+              <div><strong>Contacto</strong><span data-camaras-contact-display="name" data-default-value="${escapeHtml(contacto.contacto_nombre || 'Sin definir')}">${escapeHtml(contacto.contacto_nombre || 'Sin definir')}</span></div>
+              <div><strong>Telefono</strong><span data-camaras-contact-display="phone" data-default-value="${escapeHtml(contacto.telefono_contacto || 'Sin dato')}">${escapeHtml(contacto.telefono_contacto || 'Sin dato')}</span></div>
+              <div><strong>Correo</strong><span data-camaras-contact-display="email" data-default-value="${escapeHtml(contacto.correo_contacto || 'Sin dato')}">${escapeHtml(contacto.correo_contacto || 'Sin dato')}</span></div>
+              <div><strong>Direccion</strong><span data-camaras-contact-display="address" data-default-value="${escapeHtml(contacto.direccion_referencia || 'Sin dato')}">${escapeHtml(contacto.direccion_referencia || 'Sin dato')}</span></div>
+              <div><strong>UV / Sector</strong><span>${escapeHtml([contacto.uv ? 'UV ' + contacto.uv : '', contacto.sector || ''].filter(Boolean).join(' / ') || 'Sin dato')}</span></div>
+            </div>
+            </div>
+          </section>
+
+          <section class="beneficios-block beneficios-block--subtle">
+            <h4>Checklist documental</h4>
+            <div class="beneficios-checklist beneficios-checklist--simple">
+              ${checklist.map(item => {
+                const currentStatus = item.status || '';
+                const isAvailable = currentStatus && currentStatus !== 'Pendiente';
+                return `
+                  <label class="beneficios-checklist__row" data-checklist-code="${escapeHtml(item.code || '')}">
+                    <input type="checkbox" data-doc-toggle ${isAvailable ? 'checked' : ''}>
+                    <span>${escapeHtml(item.label || '')}</span>
+                    <input type="hidden" data-doc-status value="${escapeHtml(currentStatus || (isAvailable ? 'Disponible' : 'Pendiente'))}">
+                    <input type="hidden" data-doc-date value="${escapeHtml(String(item.date || '').slice(0, 10))}">
+                    <textarea data-doc-observation hidden>${escapeHtml(item.observation || '')}</textarea>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+          </section>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <div class="beneficios-block__head">
+            <div>
+              <h4>Correo formal de solicitud</h4>
+              <p class="muted">No envia nada automaticamente. Prepara el borrador y permite copiar o abrir mailto.</p>
+            </div>
+            <div class="beneficios-inline-actions beneficios-inline-actions--mail">
+              <button type="button" class="secondary-btn js-camaras1414-copy-subject"><span class="material-symbols-outlined">content_copy</span>Copiar asunto</button>
+              <button type="button" class="secondary-btn js-camaras1414-copy-body"><span class="material-symbols-outlined">content_copy</span>Copiar cuerpo</button>
+              <button type="button" class="secondary-btn js-camaras1414-mailto"><span class="material-symbols-outlined">mail</span>Abrir mailto</button>
+            </div>
+          </div>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
+              <input type="checkbox" name="email_sent_confirmed" ${email.sentConfirmed ? 'checked' : ''}>
+              <span>Correo enviado</span>
+            </label>
+            <div class="field">
+              <label>Destinatario</label>
+              <input type="email" name="email_recipient" value="${escapeHtml(email.recipient || '')}">
+            </div>
+            <div class="field">
+              <label>Fecha de envio</label>
+              <input type="date" name="email_sent_date" value="${escapeHtml(String(email.sentDate || '').slice(0, 10))}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Asunto</label>
+              <input type="text" name="email_subject" value="${escapeHtml(email.subject || '')}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Cuerpo</label>
+              <textarea rows="7" name="email_body">${escapeHtml(email.body || '')}</textarea>
+            </div>
+            <div class="field" data-span="2">
+              <label>Observaciones del correo</label>
+              <textarea rows="2" name="email_notes">${escapeHtml(email.notes || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Respuesta y coordinacion</h4>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
+              <input type="checkbox" name="response_has_response" ${response.hasResponse ? 'checked' : ''}>
+              <span>Respuesta recibida</span>
+            </label>
+            <div class="field">
+              <label>Fecha de respuesta</label>
+              <input type="date" name="response_date" value="${escapeHtml(String(response.responseDate || '').slice(0, 10))}">
+            </div>
+            <div class="field">
+              <label>Fecha de visita agendada</label>
+              <input type="date" name="response_visit_date" value="${escapeHtml(String(response.visitDate || '').slice(0, 10))}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Observaciones de respuesta</label>
+              <textarea rows="3" name="response_observations">${escapeHtml(response.observations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Resultado de visita tecnica</h4>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
+              <input type="checkbox" name="visit_completed" ${visit.visitCompleted ? 'checked' : ''}>
+              <span>Visita tecnica realizada</span>
+            </label>
+            <div class="field">
+              <label>Fecha visita realizada</label>
+              <input type="date" name="visit_performed_date" value="${escapeHtml(String(visit.performedDate || '').slice(0, 10))}">
+            </div>
+            <div class="field">
+              <label>Cantidad de camaras</label>
+              <input type="number" min="0" name="visit_camera_count" value="${escapeHtml(String(visit.cameraCount === '' ? '' : (visit.cameraCount || '')))}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Observaciones tecnicas</label>
+              <textarea rows="4" name="visit_observations">${escapeHtml(visit.technicalObservations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Seguimiento de instalacion</h4>
+          <div class="beneficios-form__grid">
+            <div class="field">
+              <label>Estado de instalacion</label>
+              <select name="installation_status">
+                ${['Sin informacion', 'Pendiente', 'En proceso', 'Instalada'].map(option => `
+                  <option value="${escapeHtml(option)}" ${String(installation.status || '') === option ? 'selected' : ''}>${escapeHtml(option)}</option>
+                `).join('')}
+              </select>
+            </div>
+            <div class="field">
+              <label>Fecha conocida</label>
+              <input type="date" name="installation_date" value="${escapeHtml(String(installation.knownDate || '').slice(0, 10))}">
+            </div>
+            <div class="field" data-span="2">
+              <label>Observaciones de instalacion</label>
+              <textarea rows="3" name="installation_observations">${escapeHtml(installation.observations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Convenio</h4>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
+              <input type="checkbox" name="agreement_received" ${agreement.received ? 'checked' : ''}>
+              <span>Convenio recibido</span>
+            </label>
+            <div class="field">
+              <label>Fecha convenio recibido</label>
+              <input type="date" name="agreement_received_date" value="${escapeHtml(String(agreement.receivedDate || '').slice(0, 10))}">
+            </div>
+            <div class="field field--hidden-spacer" aria-hidden="true"></div>
+            <div class="field" data-span="2">
+              <label>Observaciones del convenio</label>
+              <textarea rows="3" name="agreement_observations">${escapeHtml(agreement.observations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="beneficios-block beneficios-block--subtle">
+          <h4>Cierre</h4>
+          <p class="muted">El convenio de colaboracion marca el cierre y entrega efectiva del beneficio.</p>
+          <div class="beneficios-form__grid">
+            <label class="checkbox-row checkbox-row--camaras1414 checkbox-row--camaras1414-closure" data-span="2">
+              <input type="checkbox" name="closure_closed" ${closure.closed ? 'checked' : ''}>
+              <span>Beneficio cerrado</span>
+            </label>
+            <div class="field">
+              <label>Fecha de cierre</label>
+              <input type="date" name="closure_closed_date" value="${escapeHtml(String(closure.closedDate || '').slice(0, 10))}">
+            </div>
+            <div class="field field--hidden-spacer" aria-hidden="true"></div>
+            <div class="field" data-span="2">
+              <label>Observaciones de cierre</label>
+              <textarea rows="3" name="closure_observations">${escapeHtml(closure.observations || '')}</textarea>
+            </div>
+          </div>
+        </section>
+
+        <div class="beneficios-form__actions">
+          <button type="submit" class="primary-btn">
+            <span class="material-symbols-outlined">save</span>Guardar gestion CAMARAS 1414
+          </button>
+        </div>
+      </form>
+    `;
+  }
+
+  function bindCamaras1414Panel_() {
+    document.querySelectorAll('[data-camaras1414-row]').forEach(row => {
+      const selectRow = () => {
+        const issue = String(row.dataset.camaras1414RowIssue || '').trim();
+        if (issue) {
+          window.alert(issue);
+          return;
+        }
+        APP.state.currentBeneficioOrganizacionId = row.dataset.camaras1414Row || '';
+        refreshBeneficiosModuloMinimo_();
+      };
+      row.addEventListener('click', selectRow);
+      row.addEventListener('keydown', ev => {
+        if (ev.key !== 'Enter' && ev.key !== ' ') return;
+        ev.preventDefault();
+        selectRow();
+      });
+    });
+
+    document.querySelectorAll('.js-camaras1414-eligible-action').forEach(btn => {
+      btn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        const issue = String(btn.dataset.eligibilityIssue || '').trim();
+        if (issue) {
+          window.alert(issue);
+          return;
+        }
+        APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
+        refreshBeneficiosModuloMinimo_();
+      });
+    });
+
+    document.querySelectorAll('.js-camaras1414-open-detail').forEach(btn => {
+      btn.addEventListener('click', ev => {
+        ev.stopPropagation();
+        APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
+        refreshBeneficiosModuloMinimo_();
+      });
+    });
+
+    document.getElementById('camaras1414-clear-selection-btn')?.addEventListener('click', () => {
+      APP.state.currentBeneficioOrganizacionId = '';
+      refreshBeneficiosModuloMinimo_();
+    });
+
+    const configForm = document.getElementById('camaras1414-config-form');
+    if (configForm) {
+      configForm.addEventListener('submit', ev => {
+        ev.preventDefault();
+        const payload = serializeForm(configForm);
+        showContentLoading('Guardando plazos...');
+        api('guardarConfiguracionCamaras1414', payload).then(res => {
+          APP.state.systemConfig = APP.state.systemConfig || {};
+          APP.state.systemConfig.beneficios = APP.state.systemConfig.beneficios || {};
+          APP.state.systemConfig.beneficios.camaras1414 = res && res.config ? res.config : {};
+          showSuccess('Plazos de CAMARAS 1414 guardados.');
+          return refreshBeneficiosModuloMinimo_();
+        }).catch(showError).finally(hideContentLoading);
+      });
+    }
+
+    const detailForm = document.getElementById('camaras1414-detail-form');
+    if (detailForm) {
+      const committeeContactSelect = detailForm.querySelector('[data-camaras-contact-select]');
+      if (committeeContactSelect) {
+        committeeContactSelect.addEventListener('change', () => syncCamarasCommitteeContactUi_(detailForm));
+        syncCamarasCommitteeContactUi_(detailForm);
+      }
+
+      detailForm.querySelectorAll('[data-doc-toggle]').forEach(toggle => {
+        toggle.addEventListener('change', () => {
+          const card = toggle.closest('[data-checklist-code]');
+          const statusInput = card?.querySelector('[data-doc-status]');
+          if (statusInput) {
+            statusInput.value = toggle.checked ? 'Disponible' : 'Pendiente';
+          }
+        });
+      });
+
+      detailForm.addEventListener('submit', ev => {
+        ev.preventDefault();
+        const validationError = validateCamaras1414DetailForm_(detailForm);
+        if (validationError) {
+          showError(validationError);
+          return;
+        }
+        const payload = collectCamaras1414DetailPayload_(detailForm);
+        APP.state.currentBeneficioOrganizacionId = payload.organizacion_id || APP.state.currentBeneficioOrganizacionId || '';
+        showContentLoading('Guardando gestión CAMARAS 1414...');
+        api('guardarCamaras1414Organizacion', payload).then(() => {
+          showSuccess('Gestión CAMARAS 1414 guardada.');
+          return refreshBeneficiosModuloMinimo_();
+        }).catch(showError).finally(hideContentLoading);
+      });
+    }
+
+    document.querySelector('.js-camaras1414-copy-subject')?.addEventListener('click', () => {
+      copyTextToClipboard_(document.querySelector('[name="email_subject"]')?.value || '', 'Asunto copiado.');
+    });
+    document.querySelector('.js-camaras1414-copy-body')?.addEventListener('click', () => {
+      copyTextToClipboard_(document.querySelector('[name="email_body"]')?.value || '', 'Cuerpo copiado.');
+    });
+    document.querySelector('.js-camaras1414-mailto')?.addEventListener('click', () => {
+      openCamaras1414Mailto_();
+    });
+  }
+
+  function collectCamaras1414DetailPayload_(form) {
+    const selectedContactOption = (() => {
+      const select = form.querySelector('[name="committee_contact_socio_id"]');
+      return select && select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+    })();
+    return {
+      organizacion_id: form.querySelector('[name="organizacion_id"]')?.value || '',
+      responsable_beneficio: form.querySelector('[name="responsable_beneficio"]')?.value || '',
+      observacion_beneficio: form.querySelector('[name="observacion_beneficio"]')?.value || '',
+      checklist: Array.from(form.querySelectorAll('[data-checklist-code]')).map(card => ({
+        code: card.dataset.checklistCode || '',
+        status: card.querySelector('[data-doc-status]')?.value || '',
+        date: card.querySelector('[data-doc-date]')?.value || '',
+        observation: card.querySelector('[data-doc-observation]')?.value || ''
+      })),
+      email: {
+        recipient: form.querySelector('[name="email_recipient"]')?.value || '',
+        subject: form.querySelector('[name="email_subject"]')?.value || '',
+        body: form.querySelector('[name="email_body"]')?.value || '',
+        sentConfirmed: !!form.querySelector('[name="email_sent_confirmed"]')?.checked,
+        sentDate: form.querySelector('[name="email_sent_date"]')?.value || '',
+        notes: form.querySelector('[name="email_notes"]')?.value || ''
+      },
+      committeeContact: {
+        socio_id: form.querySelector('[name="committee_contact_socio_id"]')?.value || '',
+        nombre_socio: selectedContactOption ? selectedContactOption.dataset.contactName || '' : '',
+        cargo: selectedContactOption ? selectedContactOption.dataset.contactCargo || '' : '',
+        telefono_contacto: selectedContactOption ? selectedContactOption.dataset.contactPhone || '' : '',
+        correo_contacto: selectedContactOption ? selectedContactOption.dataset.contactEmail || '' : '',
+        direccion: selectedContactOption ? selectedContactOption.dataset.contactAddress || '' : '',
+        unavailable: selectedContactOption ? selectedContactOption.dataset.contactUnavailable === '1' : false
+      },
+      response: {
+        hasResponse: !!form.querySelector('[name="response_has_response"]')?.checked,
+        responseDate: form.querySelector('[name="response_date"]')?.value || '',
+        visitDate: form.querySelector('[name="response_visit_date"]')?.value || '',
+        observations: form.querySelector('[name="response_observations"]')?.value || ''
+      },
+      visit: {
+        visitCompleted: !!form.querySelector('[name="visit_completed"]')?.checked,
+        performedDate: form.querySelector('[name="visit_performed_date"]')?.value || '',
+        cameraCount: form.querySelector('[name="visit_camera_count"]')?.value || '',
+        installationLocations: form.querySelector('[name="visit_locations"]')?.value || '',
+        powerPoints: form.querySelector('[name="visit_power_points"]')?.value || '',
+        internetPoints: form.querySelector('[name="visit_internet_points"]')?.value || '',
+        technicalObservations: form.querySelector('[name="visit_observations"]')?.value || ''
+      },
+      installation: {
+        status: form.querySelector('[name="installation_status"]')?.value || '',
+        knownDate: form.querySelector('[name="installation_date"]')?.value || '',
+        observations: form.querySelector('[name="installation_observations"]')?.value || ''
+      },
+      agreement: {
+        received: !!form.querySelector('[name="agreement_received"]')?.checked,
+        receivedDate: form.querySelector('[name="agreement_received_date"]')?.value || '',
+        observations: form.querySelector('[name="agreement_observations"]')?.value || ''
+      },
+      closure: {
+        closed: !!form.querySelector('[name="closure_closed"]')?.checked,
+        closedDate: form.querySelector('[name="closure_closed_date"]')?.value || '',
+        observations: form.querySelector('[name="closure_observations"]')?.value || ''
+      }
+    };
+  }
+
+  function validateCamaras1414DetailForm_(form) {
+    const sentConfirmed = !!form.querySelector('[name="email_sent_confirmed"]')?.checked;
+    const sentDate = String(form.querySelector('[name="email_sent_date"]')?.value || '').trim();
+    if (sentConfirmed && !sentDate) {
+      return 'Marca "Correo enviado" solo si registras tambien la fecha de envio.';
+    }
+    if (!sentConfirmed && sentDate) {
+      return 'Si registras fecha de envio, debes marcar tambien "Correo enviado".';
+    }
+    return '';
+  }
+
+  function syncCamarasCommitteeContactUi_(form) {
+    if (!form) return;
+    const select = form.querySelector('[data-camaras-contact-select]');
+    if (!select) return;
+
+    const option = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+    const values = {
+      name: option && select.value ? String(option.dataset.contactName || '').trim() : '',
+      phone: option && select.value ? String(option.dataset.contactPhone || '').trim() : '',
+      email: option && select.value ? String(option.dataset.contactEmail || '').trim() : '',
+      address: option && select.value ? String(option.dataset.contactAddress || '').trim() : ''
+    };
+
+    const setText = (selector, value, fallback) => {
+      const node = form.querySelector(selector);
+      if (node) node.textContent = value || node.dataset.defaultValue || fallback;
+    };
+
+    setText('[data-camaras-contact-display="name"]', values.name, 'Sin definir');
+    setText('[data-camaras-contact-display="phone"]', values.phone, 'Sin dato');
+    setText('[data-camaras-contact-display="email"]', values.email, 'Sin dato');
+    setText('[data-camaras-contact-display="address"]', values.address, 'Sin dato');
+  }
+
+  function copyTextToClipboard_(value, successMessage) {
+    const text = String(value || '');
+    if (!text.trim()) {
+      showError('No hay contenido para copiar.');
+      return;
+    }
+
+    const fallback = () => {
+      const area = document.createElement('textarea');
+      area.value = text;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+      showSuccess(successMessage || 'Contenido copiado.');
+    };
+
+    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
+      fallback();
+      return;
+    }
+
+    navigator.clipboard.writeText(text).then(() => {
+      showSuccess(successMessage || 'Contenido copiado.');
+    }).catch(() => {
+      fallback();
+    });
+  }
+
+  function openCamaras1414Mailto_() {
+    const recipient = document.querySelector('[name="email_recipient"]')?.value || '';
+    const subject = document.querySelector('[name="email_subject"]')?.value || '';
+    const body = document.querySelector('[name="email_body"]')?.value || '';
+    const href = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(href, '_blank');
+  }
+
+  function renderBenefitConfigurationPanel_(benefit, hitos) {
+    const item = benefit || {};
+    if (!item.beneficio_codigo) {
+      return '<div class="empty-state">Selecciona un beneficio para ver su configuración.</div>';
+    }
+
+    return `
+      <form id="beneficio-config-form" class="beneficios-form" novalidate>
+        <div class="beneficios-detail__head">
+          <div>
+            <p class="eyebrow">Configuración del beneficio</p>
+            <h3>${escapeHtml(item.beneficio_nombre || '')}</h3>
+            <p class="muted">${escapeHtml(item.descripcion_beneficio || '')}</p>
+          </div>
+          <div class="beneficios-detail__head-badges">
+            <span class="beneficio-chip ${beneficioBadgeClass_('info')}">${escapeHtml(item.elegibilidad_label || '')}</span>
+          </div>
+        </div>
+        <input type="hidden" name="beneficio_codigo" value="${escapeHtml(item.beneficio_codigo || '')}">
+        ${item.config_mode === 'charlas' ? renderCharlasConfigPanel_(item) : ''}
+        ${item.config_mode === 'fondese' ? renderFondeseConfigPanel_(hitos || []) : ''}
+        ${item.config_mode === 'camaras' ? renderCamarasConfigPanel_(item) : ''}
+        <div class="beneficios-form__actions">
+          <button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar configuración</button>
+        </div>
+      </form>
+    `;
+  }
+
+  function renderCharlasConfigPanel_(benefit) {
+    return `
+      <section class="beneficios-block">
+        <h4>Configuración operativa</h4>
+        <div class="beneficios-form__grid">
+          <div class="field">
+            <label>Cantidad anual de capacitaciones</label>
+            <input name="cantidad_anual_capacitaciones" type="number" min="0" value="${escapeHtml(String(benefit.cantidad_anual_capacitaciones || benefit.cantidad_default_capacitaciones || 4))}">
+          </div>
+          <div class="field">
+            <label>Valor base</label>
+            <input type="text" value="${escapeHtml(String(benefit.cantidad_default_capacitaciones || 4))}" disabled>
+          </div>
+        </div>
+        <p class="muted">Aplica a organizaciones con certificado provisorio. El valor base es 4 y puede ajustarse.</p>
+      </section>
+    `;
+  }
+
+  function renderFondeseConfigPanel_(rows) {
+    return `
+      <section class="beneficios-block">
+        <h4>Calendario editable de Fondese</h4>
+        <p class="muted">Mantiene dos convocatorias fijas y deja las fechas listas para futuras alertas.</p>
+        <div class="beneficios-schedule">
+          ${(rows || []).map((row, index) => renderFondeseConfigRow_(row, index)).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderFondeseConfigRow_(row, index) {
+    const mode = row.modo_fecha || 'fecha';
+    return `
+      <div class="beneficio-schedule-row" data-index="${escapeHtml(String(index))}">
+        <input type="hidden" name="beneficio_hito_base_id" value="${escapeHtml(row.beneficio_hito_base_id || '')}">
+        <input type="hidden" name="convocatoria_codigo" value="${escapeHtml(row.convocatoria_codigo || '')}">
+        <input type="hidden" name="convocatoria_nombre" value="${escapeHtml(row.convocatoria_nombre || '')}">
+        <input type="hidden" name="hito_codigo" value="${escapeHtml(row.hito_codigo || '')}">
+        <input type="hidden" name="hito_nombre" value="${escapeHtml(row.hito_nombre || '')}">
+        <input type="hidden" name="modo_fecha" value="${escapeHtml(mode)}">
+        <input type="hidden" name="alerta_clave_flag" value="${escapeHtml(row.alerta_clave_flag || 'No')}">
+        <input type="hidden" name="orden_visual" value="${escapeHtml(String(row.orden_visual || ((index + 1) * 10)))}">
+        <div class="beneficio-schedule-row__copy">
+          <strong>${escapeHtml(row.hito_nombre || '')}</strong>
+          <span>${escapeHtml((row.convocatoria_nombre || '') + (row.convocatoria_nombre ? ' · ' : '') + beneficioModoFechaLabel_(mode))}</span>
+        </div>
+        <div class="beneficio-schedule-row__inputs">
+          ${mode === 'rango' ? `
+            <div class="field">
+              <label>Fecha inicio</label>
+              <input name="fecha_inicio" type="date" value="${escapeHtml(String(row.fecha_inicio || '').slice(0, 10))}">
+            </div>
+            <div class="field">
+              <label>Fecha fin</label>
+              <input name="fecha_fin" type="date" value="${escapeHtml(String(row.fecha_fin || '').slice(0, 10))}">
+            </div>
+          ` : ''}
+          ${mode === 'fecha' || mode === 'hasta' ? `
+            <div class="field field--grow">
+              <label>${mode === 'hasta' ? 'Fecha limite' : 'Fecha'}</label>
+              <input name="fecha_referencia" type="date" value="${escapeHtml(String(row.fecha_referencia || '').slice(0, 10))}">
+            </div>
+          ` : ''}
+          ${mode === 'texto' ? `
+            <div class="field field--grow">
+              <label>Texto operativo</label>
+              <input name="descripcion_operativa" type="text" value="${escapeHtml(row.descripcion_operativa || '')}">
+            </div>
+          ` : `<input type="hidden" name="descripcion_operativa" value="${escapeHtml(row.descripcion_operativa || '')}">`}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCamarasConfigPanel_(benefit) {
+    return `
+      <section class="beneficios-block">
+        <h4>Configuración operativa</h4>
+        <div class="beneficios-form__grid">
+          <div class="field" data-span="2">
+            <label>Paso inicial del flujo</label>
+            <input name="flujo_inicio_default" type="text" value="${escapeHtml(benefit.flujo_inicio_default || '')}">
+          </div>
+        </div>
+        <p class="muted">Este beneficio requiere certificado definitivo y deja preparada la visita tecnica como alerta futura.</p>
+      </section>
+    `;
+  }
+
+  function renderBenefitOrganizationsPanel_(benefit, panel) {
+    if (!benefit) {
+      return '<div class="empty-state">Selecciona un beneficio para ver organizaciones.</div>';
+    }
+    return `
+      <div class="beneficios-panel-stack">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Organizaciones</p>
+            <h3>Elegibilidad y operacion</h3>
+          </div>
+        </div>
+        ${renderBenefitOrgTable_('Activas en el beneficio', panel.activas || [], 'activas')}
+        ${renderBenefitOrgTable_('Elegibles', panel.elegibles || [], 'elegibles')}
+        ${renderBenefitOrgTable_('No elegibles', panel.no_elegibles || [], 'no_elegibles')}
+      </div>
+    `;
+  }
+
+  function renderBenefitOrgTable_(title, rows, mode) {
+    const cols = mode === 'activas'
+      ? ['Organizacion', 'Estado', 'Avance', 'Proximo hito', 'Acciones']
+      : ['Organizacion', 'Estado constitucion', 'Criterio', 'Detalle', 'Acciones'];
+    return `
+      <section class="beneficios-block beneficios-block--wide">
+        <h4>${escapeHtml(title)}</h4>
+        ${rows && rows.length ? `
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead><tr>${cols.map(col => `<th>${escapeHtml(col)}</th>`).join('')}</tr></thead>
+              <tbody>
+                ${rows.map(row => `
+                  <tr>
+                    <td>${escapeHtml(row.nombre_organizacion || '')}</td>
+                    <td>${escapeHtml(mode === 'activas' ? (row.estado_beneficio || '') : (row.estado_constitucion || ''))}</td>
+                    <td>${escapeHtml(mode === 'activas' ? `${row.avance_beneficio_pct || 0}%` : (row.criterio_elegibilidad || ''))}</td>
+                    <td>${escapeHtml(mode === 'activas' ? (row.proximo_hito_beneficio || '') : (row.detalle_elegibilidad || ''))}</td>
+                    <td>
+                      ${mode === 'activas' ? `
+                        <span class="user-row-actions">
+                          <button type="button" class="table-action-btn js-beneficio-org-manage" data-organizacion-id="${escapeHtml(row.organizacion_id || '')}">
+                            <span class="material-symbols-outlined">edit</span>
+                          </button>
+                          <button type="button" class="table-action-btn table-action-btn--danger js-beneficio-org-remove" data-organizacion-id="${escapeHtml(row.organizacion_id || '')}">
+                            <span class="material-symbols-outlined">close</span>
+                          </button>
+                        </span>
+                      ` : mode === 'elegibles' ? `
+                        <button type="button" class="secondary-btn js-beneficio-org-add" data-organizacion-id="${escapeHtml(row.organizacion_id || '')}">
+                          <span class="material-symbols-outlined">add_task</span>Incorporar
+                        </button>
+                      ` : '<span class="muted">No disponible</span>'}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : '<div class="empty-state">Sin registros.</div>'}
+      </section>
+    `;
+  }
+
+  function renderBenefitOrgDetailPanel_(detail, selectedBenefit) {
+    if (!selectedBenefit) {
+      return '<div class="empty-state">Selecciona un beneficio para gestionar organizaciones.</div>';
+    }
+    if (!detail || !detail.organizacion) {
+      return '<div class="empty-state">Selecciona una organizacion elegible o activa para gestionar su avance.</div>';
+    }
+
+    const org = detail.organizacion || {};
+    const assignment = detail.asignacion || {};
+    const eligibility = detail.elegibilidad || {};
+    const states = detail.status_options || [];
+    const trackingFields = detail.tracking_fields || [];
+
+    return `
+      <form id="beneficio-org-form" class="beneficios-form" novalidate>
+        <div class="beneficios-detail__head">
+          <div>
+            <p class="eyebrow">Seguimiento por organización</p>
+            <h3>${escapeHtml(org.nombre_organizacion || '')}</h3>
+            <p class="muted">${escapeHtml(eligibility.label || '')} · ${escapeHtml(eligibility.detalle || '')}</p>
+          </div>
+          <div class="beneficios-detail__head-badges">
+            <span class="beneficio-chip ${beneficioBadgeClass_(eligibility.cumple_flag ? 'ok' : 'warning')}">${escapeHtml(eligibility.cumple_flag ? 'Elegible' : 'No elegible')}</span>
+            <span class="beneficio-chip ${beneficioBadgeClass_('info')}">Avance ${escapeHtml(String(assignment.avance_beneficio_pct || 0))}%</span>
+          </div>
+        </div>
+        <input type="hidden" name="beneficio_codigo" value="${escapeHtml(selectedBenefit.beneficio_codigo || '')}">
+        <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">
+        <input type="hidden" name="activo_flag" value="${escapeHtml(assignment.activo_flag || 'Si')}">
+        <div class="beneficios-form__grid">
+          <div class="field">
+            <label>Estado en el beneficio</label>
+            <select name="estado_beneficio">${renderSelectOptionsHtml_(states, assignment.estado_beneficio, 'Seleccionar estado')}</select>
+          </div>
+          <div class="field">
+            <label>Responsable</label>
+            <select name="responsable_beneficio">${renderSelectOptionsHtml_(APP.state.catalogs.responsables || [], assignment.responsable_beneficio, 'Seleccionar responsable')}</select>
+          </div>
+          <div class="field">
+            <label>Fecha inicio</label>
+            <input name="fecha_inicio_beneficio" type="date" value="${escapeHtml(String(assignment.fecha_inicio_beneficio || '').slice(0, 10))}">
+          </div>
+          <div class="field">
+            <label>Fecha termino</label>
+            <input name="fecha_termino_beneficio" type="date" value="${escapeHtml(String(assignment.fecha_termino_beneficio || '').slice(0, 10))}">
+          </div>
+          <div class="field">
+            <label>Resultado</label>
+            <input name="resultado_beneficio" type="text" value="${escapeHtml(assignment.resultado_beneficio || '')}">
+          </div>
+          <div class="field">
+            <label>Proximo hito</label>
+            <input type="text" value="${escapeHtml(assignment.proximo_hito_beneficio || '')}" disabled>
+          </div>
+          <div class="field" data-span="2">
+            <label>Observacion</label>
+            <textarea name="observacion_beneficio" rows="3">${escapeHtml(assignment.observacion_beneficio || '')}</textarea>
+          </div>
+        </div>
+        ${trackingFields.length ? renderBenefitTrackingPanel_(trackingFields) : ''}
+        <div class="beneficios-form__actions">
+          <button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar avance</button>
+        </div>
+      </form>
+    `;
+  }
+
+  function renderBenefitTrackingPanel_(fields) {
+    return `
+      <section class="beneficios-block">
+        <h4>Fechas de seguimiento</h4>
+        <div class="beneficios-form__grid">
+          ${fields.map(field => `
+            <div class="field">
+              <label>${escapeHtml(field.hito_nombre || '')}</label>
+              <input
+                type="date"
+                data-tracking-code="${escapeHtml(field.hito_codigo || '')}"
+                data-tracking-name="${escapeHtml(field.hito_nombre || '')}"
+                data-tracking-alert="${escapeHtml(field.alerta_clave_flag || 'No')}"
+                value="${escapeHtml(String(field.fecha_referencia || '').slice(0, 10))}">
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  function bindBeneficioConfigFormLegacyInactive_() {
+    return;
+    const form = document.getElementById('beneficio-config-form');
+    if (!form) return;
+    if (form.dataset.bound === '1') return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', saveBeneficioConfigFromFormLegacyInactive_);
+  }
+
+  function bindBenefitOrganizationsPanelLegacyInactive_() {
+    return;
+    document.querySelectorAll('.js-beneficio-org-add, .js-beneficio-org-manage').forEach(btn => {
+      btn.addEventListener('click', () => {
+        APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
+        showContentLoading('Cargando organizacion...');
+        api('getBeneficioOrganizacionDetalle', {
+          beneficio_codigo: APP.state.currentBeneficioCodigo || '',
+          organizacion_id: APP.state.currentBeneficioOrganizacionId || ''
+        }).then(detail => {
+          const current = APP.state.currentBeneficiosDetalle || {};
+          APP.state.currentBeneficiosDetalle = {
+            ...current,
+            selected_org_detail: detail
+          };
+          renderBeneficiosPanel_(APP.state.currentBeneficiosDetalle);
+        }).catch(showError).finally(hideContentLoading);
+      });
+    });
+
+    document.querySelectorAll('.js-beneficio-org-remove').forEach(btn => {
+      btn.addEventListener('click', () => deactivateBenefitOrgLegacyInactive_(btn.dataset.organizacionId || ''));
+    });
+  }
+
+  function bindBenefitOrgFormLegacyInactive_() {
+    return;
+    const form = document.getElementById('beneficio-org-form');
+    if (!form) return;
+    form.addEventListener('submit', saveBeneficioOrgFromFormLegacyInactive_);
+  }
+
+  function collectFondeseConfigRows_() {
+    return Array.from(document.querySelectorAll('.beneficio-schedule-row')).map(row => ({
+      beneficio_hito_base_id: row.querySelector('input[name="beneficio_hito_base_id"]')?.value || '',
+      convocatoria_codigo: row.querySelector('input[name="convocatoria_codigo"]')?.value || '',
+      convocatoria_nombre: row.querySelector('input[name="convocatoria_nombre"]')?.value || '',
+      hito_codigo: row.querySelector('input[name="hito_codigo"]')?.value || '',
+      hito_nombre: row.querySelector('input[name="hito_nombre"]')?.value || '',
+      modo_fecha: row.querySelector('input[name="modo_fecha"]')?.value || '',
+      fecha_inicio: row.querySelector('input[name="fecha_inicio"]')?.value || '',
+      fecha_fin: row.querySelector('input[name="fecha_fin"]')?.value || '',
+      fecha_referencia: row.querySelector('input[name="fecha_referencia"]')?.value || '',
+      descripcion_operativa: row.querySelector('input[name="descripcion_operativa"]')?.value || '',
+      alerta_clave_flag: row.querySelector('input[name="alerta_clave_flag"]')?.value || 'No',
+      orden_visual: row.querySelector('input[name="orden_visual"]')?.value || ''
+    }));
+  }
+
+  function saveBeneficioConfigFromFormLegacyInactive_(ev) {
+    ev.preventDefault();
+    return;
+    ev.preventDefault();
+    const form = ev.target;
+    const payload = serializeForm(form);
+    if ((APP.state.currentBeneficioCodigo || '') === 'FONDESE') {
+      payload.hitos = collectFondeseConfigRows_();
+    }
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.dataset.originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<span class="material-symbols-outlined">progress_activity</span>Guardando...';
+    }
+
+    api('guardarConfiguracionBeneficio', payload).then(res => {
+      APP.state.currentBeneficioCodigo = res.beneficio_codigo || payload.beneficio_codigo || '';
+      APP.state.currentBeneficioOrganizacionId = '';
+      showSuccess(`Configuración guardada: ${friendlyBeneficioLabel_(APP.state.currentBeneficioCodigo)}`);
+      return Promise.resolve();
+    }).catch(showError).finally(() => {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = submitBtn.dataset.originalText || 'Guardar configuración';
+      }
+    });
+  }
+
+  function saveBeneficioOrgFromFormLegacyInactive_(ev) {
+    ev.preventDefault();
+    return;
+    ev.preventDefault();
+    const form = ev.target;
+    const payload = serializeForm(form);
+    payload.tracking_fields = Array.from(form.querySelectorAll('[data-tracking-code]')).map((input, index) => ({
+      hito_codigo: input.dataset.trackingCode || '',
+      hito_nombre: input.dataset.trackingName || '',
+      alerta_clave_flag: input.dataset.trackingAlert || 'No',
+      fecha_referencia: input.value || '',
+      orden_visual: String((index + 1) * 10)
+    }));
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.dataset.originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<span class="material-symbols-outlined">progress_activity</span>Guardando...';
+    }
+
+    api('guardarBeneficioOrganizacion', payload).then(() => {
+      showSuccess('Avance del beneficio guardado.');
+      APP.state.currentBeneficioOrganizacionId = payload.organizacion_id || '';
+      return Promise.resolve();
+    }).catch(showError).finally(() => {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = submitBtn.dataset.originalText || 'Guardar avance';
+      }
+    });
+  }
+
+  function deactivateBenefitOrgLegacyInactive_(organizacionId) {
+    return;
+    const orgId = String(organizacionId || '').trim();
+    if (!orgId || !APP.state.currentBeneficioCodigo) return;
+    const ok = window.confirm('Se retirará esta organización del beneficio y se conservará su historial. ¿Continuar?');
+    if (!ok) return;
+    api('desactivarBeneficioOrganizacion', {
+      beneficio_codigo: APP.state.currentBeneficioCodigo,
+      organizacion_id: orgId
+    }).then(() => {
+      showSuccess('Organizacion retirada del beneficio.');
+      if (APP.state.currentBeneficioOrganizacionId === orgId) {
+        APP.state.currentBeneficioOrganizacionId = '';
+      }
+      return Promise.resolve();
+    }).catch(showError);
+  }
+
+  function beneficioModoFechaLabel_(mode) {
+    const map = {
+      rango: 'Rango de fechas',
+      hasta: 'Fecha limite',
+      fecha: 'Fecha unica',
+      texto: 'Texto operativo'
+    };
+    return map[mode] || mode;
+  }
+
+  function beneficiosMetricHtml_(label, value) {
+    return `<div class="beneficios-metric"><strong>${escapeHtml(String(value))}</strong><span>${escapeHtml(label)}</span></div>`;
+  }
+
+  function beneficioBadgeClass_(tone) {
+    const map = {
+      ok: 'beneficio-chip--ok',
+      warning: 'beneficio-chip--warning',
+      info: 'beneficio-chip--info',
+      muted: 'beneficio-chip--muted'
+    };
+    return map[tone] || map.muted;
+  }
+

@@ -93,48 +93,12 @@ function getGoPesAvanceSheetDefinitions_() {
   return defs;
 }
 
-/** Aplica en memoria la configuración del módulo Avance sobre GO_PES_V2 */
-function goPesApplyAvancePhase1Config_() {
-  if (typeof GO_PES_V2 === 'undefined' || !GO_PES_V2 || !GO_PES_V2.SHEETS) {
-    throw new Error('GO_PES_V2 no está disponible o no contiene SHEETS.');
-  }
-
-  const extraSheets = getGoPesAvanceSheetMap_();
-  Object.keys(extraSheets).forEach(function(key) {
-    GO_PES_V2.SHEETS[key] = extraSheets[key];
-  });
-
-  if (!GO_PES_V2.AVANCE) {
-    GO_PES_V2.AVANCE = {};
-  }
-
-  GO_PES_V2.AVANCE.TRAMOS = [
-    'Preconstitución',
-    'Formalización posterior'
-  ];
-
-  GO_PES_V2.AVANCE.ESTADOS = [
-    'Activo',
-    'Stand by',
-    'Detenido',
-    'Finalizado'
-  ];
-
-  return {
-    ok: true,
-    sheets: extraSheets,
-    estados: GO_PES_V2.AVANCE.ESTADOS,
-    tramos: GO_PES_V2.AVANCE.TRAMOS
-  };
-}
-
-/** Instala la fase 1: registra config y crea/normaliza hojas */
+/** Instala la fase 1: crea/normaliza hojas del módulo Avance */
 function goPesInstalarModuloAvanceFase1_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('No se encontró el Spreadsheet activo.');
 
-  const applied = goPesApplyAvancePhase1Config_();
-
+  const sheets = getGoPesAvanceSheetMap_();
   const defs = getGoPesAvanceSheetDefinitions_();
   const created = [];
   const updated = [];
@@ -146,32 +110,20 @@ function goPesInstalarModuloAvanceFase1_() {
   });
 
   SpreadsheetApp.getActiveSpreadsheet().toast(
-    'Fase 1 del módulo Avance instalada correctamente.',
+    'Módulo Avance: hojas instaladas correctamente.',
     'GO-PES',
     5
   );
 
-  Logger.log(JSON.stringify({
-    ok: true,
-    applied: applied,
-    created: created,
-    updated: updated
-  }, null, 2));
+  Logger.log(JSON.stringify({ ok: true, created: created, updated: updated }, null, 2));
 
-  return {
-    ok: true,
-    created: created,
-    updated: updated,
-    sheets: applied.sheets
-  };
+  return { ok: true, created: created, updated: updated, sheets: sheets };
 }
 
 /** Diagnóstico rápido de la Fase 1 */
 function goPesDiagnosticarModuloAvanceFase1_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('No se encontró el Spreadsheet activo.');
-
-  goPesApplyAvancePhase1Config_();
 
   const defs = getGoPesAvanceSheetDefinitions_();
   const report = {};

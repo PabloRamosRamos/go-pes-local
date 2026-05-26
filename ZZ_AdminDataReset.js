@@ -18,6 +18,7 @@ function getAdminDataResetPlan() {
   });
 }
 
+
 function limpiarDatosPruebaAdmin(payload) {
   const user = requireRole_(['superuser']);
   goPesAssertAdminResetSuperuser_(user);
@@ -69,7 +70,6 @@ function limpiarDatosPruebaAdmin(payload) {
 }
 
 function goPesGetAdminResetCleanableSheets_() {
-  goPesEnsureAdminResetSheetConfig_();
   const S = GO_PES_V2.SHEETS;
 
   return [
@@ -103,7 +103,6 @@ function goPesGetAdminResetCleanableSheets_() {
 }
 
 function goPesGetAdminResetProtectedSheets_() {
-  goPesEnsureAdminResetSheetConfig_();
   const S = GO_PES_V2.SHEETS;
 
   return [
@@ -120,19 +119,8 @@ function goPesGetAdminResetProtectedSheets_() {
     S.DIM_CARGOS,
     S.LOG_PROC,
     S.LOG_ACCESOS,
-    S.LOG_ACCIONES,
-    S.LEGACY_FORM,
-    S.LEGACY_AVANCE,
-    S.LEGACY_CSV,
-    S.LEGACY_FONDESE,
-    S.LEGACY_SOCIOS
+    S.LOG_ACCIONES
   ].filter(Boolean);
-}
-
-function goPesEnsureAdminResetSheetConfig_() {
-  if (typeof goPesApplyAvancePhase1Config_ === 'function') {
-    goPesApplyAvancePhase1Config_();
-  }
 }
 
 function goPesAssertAdminResetSuperuser_(user) {

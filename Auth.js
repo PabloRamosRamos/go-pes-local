@@ -560,67 +560,9 @@ function isAllowedNativeIdentityEmail_(email) {
   });
 }
 
-function getModuleDefinitionsLegacyUnused_() {
-  return [
-    { key: 'inicio', label: 'Inicio', view: 'inicio', required: true },
-    { key: 'nuevo-ingreso', label: 'Nuevo ingreso', view: 'nuevo-ingreso' },
-    { key: 'buscar', label: 'Buscar vecino', view: 'buscar' },
-    { key: 'ficha', label: 'Ficha', view: 'ficha', assignable: false },
-    { key: 'avance', label: 'Avance', view: 'avance' },
-    { key: 'organizacion', label: 'Organizaciones', view: 'organizacion' },
-    { key: 'socios', label: 'Socios', view: 'socios' },
-    { key: 'instrumento', label: 'Beneficios', view: 'instrumento' },
-    { key: 'historial', label: 'Historial', view: 'historial' },
-    { key: 'usuarios', label: 'Gestión de usuarios', view: 'usuarios', superOnly: true, assignable: false }
-  ];
-}
-
 function defaultModulesForRole_(role) {
   if (normalizeManagedUserProfile_(role) === 'visor') return ['inicio'];
   return ['inicio'];
-}
-
-function parseUserModulesLegacyUnused_(value, role) {
-  if (normalizeManagedUserProfile_(role) === 'visor') return ['inicio'];
-  const raw = String(value || '').trim();
-  if (!raw) return defaultModulesForRole_(role);
-  if (raw === '*') return safeModuleDefinitions_().map(function(m) { return m.key; });
-  const allowedKeys = safeModuleDefinitions_().map(function(m) { return m.key; });
-  return uniqueNonBlank_(raw.split(',').map(function(x) { return String(x || '').trim(); }))
-    .filter(function(key) { return allowedKeys.indexOf(key) !== -1; });
-}
-
-function normalizeModulePermissionsInputLegacyUnused_(value, role) {
-  const normalizedRole = normalizeManagedUserProfile_(role);
-  if (normalizedRole === 'visor') return 'inicio';
-  const modules = Array.isArray(value) ? value : String(value || '').split(',');
-  const defs = safeModuleDefinitions_();
-  const allowedKeys = defs
-    .filter(function(m) { return !m.superOnly && m.assignable !== false; })
-    .map(function(m) { return m.key; });
-  const requiredKeys = defs
-    .filter(function(m) { return m.required; })
-    .map(function(m) { return m.key; });
-  const normalized = uniqueNonBlank_(modules.map(function(x) { return String(x || '').trim(); }))
-    .filter(function(key) { return allowedKeys.indexOf(key) !== -1; });
-  requiredKeys.slice().reverse().forEach(function(key) {
-    if (normalized.indexOf(key) === -1) normalized.unshift(key);
-  });
-  if (normalizedRole !== 'visor' && normalized.indexOf('ficha') === -1) normalized.push('ficha');
-  return normalized.join(',');
-}
-
-function userModuleAllowedLegacyUnused_(user, moduleKey) {
-  if (!user || !user.canAccess) return false;
-  if (user.superuser_flag) return true;
-  const key = String(moduleKey || '').trim();
-  if (!key) return false;
-  const moduleDef = safeModuleDefinitions_().find(function(m) { return m.key === key; });
-  if (moduleDef && moduleDef.superOnly) return false;
-  const modules = Array.isArray(user.modules)
-    ? user.modules
-    : parseUserModules_(user.modulos_permitidos, user.perfil);
-  return modules.indexOf(key) !== -1;
 }
 
 function buildUserModulePermissionMap_(user) {
@@ -633,32 +575,6 @@ function buildUserModulePermissionMap_(user) {
 
 function isConfiguredSuperUserEmail_(email) {
   return getConfiguredSuperUsers_().map(normalizeEmail_).indexOf(normalizeEmail_(email)) !== -1;
-}
-
-function getConfiguredSuperUsersLegacyUnused_() {
-  return Array.isArray(GO_PES_V2.SUPERUSERS) ? GO_PES_V2.SUPERUSERS : [];
-}
-
-function getModuleDefinitionsLegacyConfigUnused_() {
-  const baseDefs = getBaseModuleDefinitions_();
-  const config = getRuntimeSystemConfig_();
-  const moduleConfigMap = ((config.accessModules && config.accessModules.modules) || []).reduce(function(acc, row) {
-    acc[row.key] = row;
-    return acc;
-  }, {});
-  const alwaysVisible = getConfiguredAlwaysVisibleModules_();
-
-  return baseDefs.map(function(base) {
-    const configured = moduleConfigMap[base.key] || {};
-    return Object.assign({}, base, {
-      label: configured.label || base.label,
-      order: Number(configured.order || base.order || 0),
-      state: configured.state || base.state || 'active',
-      required: !!base.required || alwaysVisible.indexOf(base.key) !== -1
-    });
-  }).sort(function(a, b) {
-    return Number(a.order || 0) - Number(b.order || 0);
-  });
 }
 
 function parseUserModules_(value, role) {
@@ -720,10 +636,9 @@ function userModuleAllowed_(user, moduleKey) {
 }
 
 function getConfiguredSuperUsers_() {
-  const canonical = normalizeEmail_(
-    getConfiguredPrimarySuperuserEmail_ ? getConfiguredPrimarySuperuserEmail_() : ''
-  );
-  return canonical ? [canonical] : [];
+  return (Array.isArray(GO_PES_V2.SUPERUSERS) ? GO_PES_V2.SUPERUSERS : [])
+    .map(normalizeEmail_)
+    .filter(Boolean);
 }
 
 function normalizedRoleAllowsFicha_(role, modules) {

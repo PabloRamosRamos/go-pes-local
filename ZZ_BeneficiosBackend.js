@@ -84,7 +84,7 @@ function seedBeneficios_() {
 }
 
 function getBeneficiosModuloPanel(payload) {
-  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   seedBeneficios_();
 
   payload = payload || {};
@@ -119,7 +119,7 @@ function getBeneficiosModuloPanel(payload) {
 }
 
 function guardarConfiguracionCamaras1414(payload) {
-  const actor = requireModuleAccess_('instrumento', ['coordinador', 'administrador', 'superuser']);
+  const actor = requireModuleAccess_('instrumento', ['coordinador', 'superuser']);
   const current = getRuntimeSystemConfig_();
   const beneficios = cloneSystemConfig_(current.beneficios || {});
   beneficios.camaras1414 = Object.assign({}, beneficios.camaras1414 || {}, payload || {});
@@ -139,7 +139,7 @@ function guardarConfiguracionCamaras1414(payload) {
 }
 
 function guardarCamaras1414Organizacion(payload) {
-  const actor = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const actor = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   seedBeneficios_();
   goPesEnsureAvanceBackendReady_();
 

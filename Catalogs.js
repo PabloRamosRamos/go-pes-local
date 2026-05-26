@@ -100,7 +100,7 @@ function seedEstados_() {
 }
 
 function getCatalogosOrganizacionClient() {
-  requireModuleAccess_('organizacion', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
   const cached = getCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.ORGANIZACION_CLIENT);
   if (cached) return cached;
 
@@ -110,7 +110,7 @@ function getCatalogosOrganizacionClient() {
 }
 
 function getOrganizacionClientById(payload) {
-  requireModuleAccess_('organizacion', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
 
   const organizacionId = String(payload && payload.organizacion_id || '').trim();
   if (!organizacionId) throw new Error('Falta organizacion_id.');
@@ -301,7 +301,7 @@ function mergeCatalogRows_(sheetName, headers, newRows, keyFields) {
 }
 
 function getCatalogosNuevoIngresoClient() {
-  requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'superuser']);
   const cached = getCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT);
   if (cached) return cached;
 

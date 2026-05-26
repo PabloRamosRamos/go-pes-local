@@ -1,0 +1,466 @@
+  function renderIngresoPreview() {
+    const payload = getIngresoPayload();
+    const preview = document.getElementById('ingreso-preview');
+    if (!preview) return;
+
+    const summary = [
+      {
+        title: 'Vecino',
+        items: [
+          ['Nombre', buildFullName(payload.nombre_vecino, payload.apellido_vecino)],
+          ['RUT', payload.rut_vecino],
+          ['Teléfono', payload.telefono_contacto],
+          ['Correo', payload.correo_contacto]
+        ]
+      },
+      {
+        title: 'Ubicación',
+        items: [
+          ['Dirección', payload.direccion_original],
+          ['UV', payload.uv],
+          ['Sector', payload.sector],
+          ['Tipo vivienda', payload.tipo_vivienda]
+        ]
+      },
+      {
+        title: 'Solicitud',
+        items: [
+          ['Fecha', payload.fecha_solicitud],
+          ['Medio', payload.medio_solicitud],
+          ['Unidad origen', payload.unidad_origen],
+          ['Requerimiento', payload.requerimiento_inicial]
+        ]
+      }
+    ];
+
+    const hasContent = Object.values(payload).some(v => String(v || '').trim());
+
+    preview.innerHTML = hasContent
+      ? summary.map(block => `
+        <div class="preview-block">
+          <div class="preview-block__title">${escapeHtml(block.title)}</div>
+          <div class="preview-grid">
+            ${block.items.map(([k, v]) => `<div class="preview-item"><strong>${escapeHtml(k)}</strong><span>${escapeHtml(v || 'Sin dato')}</span></div>`).join('')}
+          </div>
+        </div>
+      `).join('')
+      : 'Completa los datos para revisar el resumen antes de guardar.';
+  }
+
+  function validateIngresoField(el) {
+    if (!el) return true;
+
+    el.setCustomValidity('');
+    const value = String(el.value || '').trim();
+
+    if (el.required && !value) el.setCustomValidity('Este campo es obligatorio.');
+    if (el.name === 'correo_contacto' && value && !/^\S+@\S+\.\S+$/.test(value)) {
+      el.setCustomValidity('Ingresa un correo válido.');
+    }
+    if (el.name === 'telefono_contacto' && value && value.replace(/\D/g, '').length < 8) {
+      el.setCustomValidity('Ingresa un teléfono válido.');
+    }
+    if (el.name === 'rut_vecino' && value && !/^[0-9.]+-[0-9kK]$/.test(value)) {
+      el.setCustomValidity('Usa formato 12.345.678-9 o 12345678-9.');
+    }
+
+    el.reportValidity();
+    return !el.validationMessage;
+  }
+
+  function validateIngresoForm() {
+    const form = document.getElementById('form-ingreso');
+    let ok = true;
+
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+      if (!validateIngresoField(el)) ok = false;
+    });
+
+    return ok;
+  }
+
+  function saveIngresoFromForm(ev) {
+    ev.preventDefault();
+
+    if (!validateIngresoForm()) {
+      return showError('Revisa los campos obligatorios antes de guardar.');
+    }
+
+    const payload = getIngresoPayload();
+
+    payload.nombre_vecino = String(payload.nombre_vecino || '').trim();
+    payload.apellido_vecino = String(payload.apellido_vecino || '').trim();
+    payload.rut_vecino = String(payload.rut_vecino || '').trim();
+    payload.telefono_contacto = String(payload.telefono_contacto || '').trim();
+    payload.correo_contacto = String(payload.correo_contacto || '').trim();
+    payload.direccion_original = String(payload.direccion_original || '').trim();
+    payload.uv = String(payload.uv || '').trim();
+    payload.sector = String(payload.sector || '').trim();
+    payload.tipo_vivienda = String(payload.tipo_vivienda || '').trim();
+    payload.fecha_solicitud = String(payload.fecha_solicitud || '').trim();
+    payload.medio_solicitud = String(payload.medio_solicitud || '').trim();
+    payload.unidad_origen = String(payload.unidad_origen || '').trim();
+    payload.requerimiento_inicial = String(payload.requerimiento_inicial || '').trim();
+    payload.observaciones_form = String(payload.observaciones_form || '').trim();
+
+    const btn = ev.submitter || document.querySelector('#form-ingreso button[type="submit"], #form-ingreso .primary-btn');
+    if (btn) {
+      btn.disabled = true;
+      btn.dataset.originalText = btn.innerHTML;
+      btn.innerHTML = '<span class="material-symbols-outlined">progress_activity</span>Guardando...';
+    }
+
+    const proceed = () => {
+      api('guardarIngreso', payload).then(res => {
+        showSuccess(`Solicitud guardada: ${res.solicitud_id}`);
+        clearIngresoForm(false);
+        loadFicha({ solicitud_id: res.solicitud_id, organizacion_id: '' });
+      }).catch(showError).finally(() => {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = btn.dataset.originalText || 'Guardar solicitud';
+        }
+      });
+    };
+
+    if (APP.state.ingresoMatches && APP.state.ingresoMatches.length) {
+      const ok = window.confirm('Se detectaron coincidencias posibles. ¿Deseas guardar igualmente la nueva solicitud?');
+      if (!ok) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = btn.dataset.originalText || 'Guardar solicitud';
+        }
+        return;
+      }
+    }
+
+    proceed();
+  }
+
+  function clearIngresoForm(showMessage = true) {
+    const form = document.getElementById('form-ingreso');
+    if (!form) return;
+
+    form.reset();
+
+    const fecha = document.getElementById('ing-fecha_solicitud');
+    if (fecha) fecha.value = todayISO_();
+
+    syncIngresoSectorOptions();
+    renderIngresoPreview();
+
+    const matches = document.getElementById('ingreso-matches');
+    if (matches) {
+      matches.innerHTML = 'Puedes revisar coincidencias por nombre, teléfono o dirección antes de crear la solicitud.';
+      matches.className = 'ingreso-matches empty-state';
+    }
+
+    if (showMessage) showSuccess('Formulario limpio.');
+  }
+
+  function reviewIngresoMatches() {
+    const payload = getIngresoPayload();
+    const queries = [
+      payload.telefono_contacto,
+      payload.direccion_original,
+      buildFullName(payload.nombre_vecino, payload.apellido_vecino)
+    ].map(v => String(v || '').trim()).filter(Boolean);
+
+    if (!queries.length) {
+      showError('Completa al menos nombre, teléfono o dirección para revisar coincidencias.');
+      return;
+    }
+
+    api('buscarCoincidenciasIngreso', payload).then(rows => {
+      const matches = Array.isArray(rows) ? rows.slice(0, 10) : [];
+
+      APP.state.ingresoMatches = matches;
+      renderIngresoMatches(matches);
+
+      if (matches.length) {
+        showError('Se detectaron coincidencias posibles. Revisa antes de guardar.');
+      } else {
+        showSuccess('No se detectaron coincidencias evidentes. Puedes continuar.');
+      }
+    }).catch(showError);
+  }
+
+  function renderIngresoMatches(rows) {
+    const el = document.getElementById('ingreso-matches');
+    if (!el) return;
+
+    if (!rows || !rows.length) {
+      el.className = 'ingreso-matches empty-state';
+      el.innerHTML = '<div class="empty-state">No se detectaron coincidencias con nombre, teléfono o dirección.</div>';
+      return;
+    }
+
+    el.className = 'ingreso-matches';
+    el.innerHTML = `<div class="matches-list">${rows.map(r => `
+      <div class="match-card">
+        <h4>${escapeHtml(r.nombre_completo || 'Vecino registrado')}</h4>
+        <p><strong>Solicitud:</strong> ${escapeHtml(r.solicitud_id || '')}</p>
+        <p><strong>Teléfono:</strong> ${escapeHtml(r.telefono_contacto || '')}</p>
+        <p><strong>Dirección:</strong> ${escapeHtml(r.direccion_original || '')}</p>
+        <p><strong>Estado actual:</strong> ${escapeHtml(r.estado_actual || '')}</p>
+      </div>
+    `).join('')}</div>`;
+  }
+
+  function saveOrganizacionFromForm(ev) {
+    ev.preventDefault();
+    const payload = serializeForm(ev.target);
+    api('guardarOrganizacion', payload).then(res => {
+      upsertOrganizacionCatalogEntry_(Object.assign({}, payload, {
+        organizacion_id: res.organizacion_id
+      }));
+      showSuccess(`Organización guardada: ${res.organizacion_id}`);
+      if (payload.solicitud_id) loadFicha({ solicitud_id: payload.solicitud_id, organizacion_id: res.organizacion_id });
+    }).catch(showError);
+  }
+
+
+  function renderNuevoIngresoView_() {
+    showContentLoading('Iniciando Gestor Operativo');
+
+    requestAnimationFrame(() => {
+      syncIngresoSectorOptions();
+      renderIngresoPreview();
+
+      setTimeout(() => {
+        document.getElementById('ing-nombre_vecino')?.focus();
+        hideContentLoading();
+      }, 80);
+    });
+  }
+
+  function initOrganizacionForm_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form || form.dataset.orgInit === 'true') return;
+
+    form.dataset.orgInit = 'true';
+
+    const selector = form.querySelector('[name="organizacion_id"]');
+    if (!selector) return;
+
+    initOrganizacionImageField_();
+    toggleOrganizacionFormLock_(true);
+
+    selector.disabled = false;
+
+    selector.addEventListener('change', () => {
+      const orgId = String(selector.value || '').trim();
+
+      if (!orgId) {
+        clearOrganizacionFormExceptSelector_();
+        toggleOrganizacionFormLock_(true);
+        selector.disabled = false;
+        return;
+      }
+
+      toggleOrganizacionFormLock_(true);
+      hydrateOrganizacionForm_(orgId).then(() => {
+        toggleOrganizacionFormLock_(false);
+        selector.disabled = false;
+      }).catch(showError);
+    });
+  }
+
+  function toggleOrganizacionFormLock_(locked) {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return;
+
+    Array.from(form.elements).forEach(el => {
+      if (!el.name && !el.dataset.orgImageAction) return;
+      if (el.name === 'organizacion_id') return;
+
+      const tag = String(el.tagName || '').toLowerCase();
+      const type = String(el.type || '').toLowerCase();
+
+      if (type === 'hidden') return;
+
+      if (tag === 'select' || type === 'file' || tag === 'button' || type === 'submit') {
+        el.disabled = locked;
+      } else {
+        el.readOnly = locked;
+      }
+    });
+
+    form.querySelectorAll('[data-org-image-action]').forEach(btn => {
+      btn.disabled = locked;
+    });
+
+    form.querySelectorAll('.image-upload__file').forEach(input => {
+      input.disabled = locked;
+    });
+  }
+
+  function clearOrganizacionFormExceptSelector_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return;
+
+    Array.from(form.elements).forEach(el => {
+      if (!el.name || el.name === 'organizacion_id') return;
+      setFormFieldValue_(el, '');
+    });
+
+    refreshOrganizacionImageField_();
+  }
+
+  function hydrateOrganizacionForm_(organizacionId) {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return Promise.resolve();
+
+    const data = (APP.state.catalogs.organizacionesById || {})[organizacionId];
+    if (data) {
+      applyOrganizacionFormData_(form, data);
+      return Promise.resolve(data);
+    }
+
+    showContentLoading('Cargando organización...');
+
+    return api('getOrganizacionClientById', { organizacion_id: organizacionId }).then(payload => {
+      const snapshot = payload || {};
+      APP.state.catalogs.organizacionesById = {
+        ...(APP.state.catalogs.organizacionesById || {}),
+        [organizacionId]: snapshot
+      };
+      applyOrganizacionFormData_(form, snapshot);
+      return snapshot;
+    }).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function applyOrganizacionFormData_(form, data) {
+    Array.from(form.elements).forEach(el => {
+      if (!el.name || el.name === 'organizacion_id') return;
+      const value = data[el.name] !== undefined ? data[el.name] : '';
+      setFormFieldValue_(el, value);
+    });
+
+    const uvSelect = form.querySelector('[name="uv"]');
+    const sectorSelect = form.querySelector('[name="sector"]');
+    if (uvSelect && sectorSelect) {
+      syncSectorOptions(sectorSelect, uvSelect.value);
+      if (data.sector) sectorSelect.value = data.sector;
+    }
+
+    refreshOrganizacionImageField_();
+  }
+
+  function upsertOrganizacionCatalogEntry_(record) {
+    if (!record || !record.organizacion_id) return;
+
+    const orgId = String(record.organizacion_id || '').trim();
+    const label = String(record.nombre_organizacion || '').trim();
+    if (!orgId || !label) return;
+
+    const list = Array.isArray(APP.state.catalogs.organizacionesList)
+      ? APP.state.catalogs.organizacionesList.slice()
+      : [];
+
+    const nextEntry = { value: orgId, label: label };
+    const index = list.findIndex(item => String(item && item.value || '') === orgId);
+
+    if (index === -1) {
+      list.push(nextEntry);
+    } else {
+      list[index] = nextEntry;
+    }
+
+    list.sort((a, b) => String(a.label || '').localeCompare(String(b.label || ''), 'es'));
+    APP.state.catalogs.organizacionesList = list;
+    APP.state.catalogs.organizacionesById = {
+      ...(APP.state.catalogs.organizacionesById || {}),
+      [orgId]: {
+        ...((APP.state.catalogs.organizacionesById || {})[orgId] || {}),
+        ...record
+      }
+    };
+
+    const selector = document.querySelector('#form-organizacion [name="organizacion_id"]');
+    if (selector) {
+      const currentValue = String(selector.value || '').trim() || orgId;
+      fillSelect(selector, list, 'Seleccionar organización');
+      selector.value = currentValue;
+    }
+  }
+
+  function setFormFieldValue_(el, value) {
+    if (!el) return;
+
+    let finalValue = value == null ? '' : value;
+
+    if (String(el.type || '').toLowerCase() === 'date' && String(finalValue).trim()) {
+      finalValue = String(finalValue).slice(0, 10);
+    }
+
+    el.value = finalValue;
+  }
+
+  function initOrganizacionImageField_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return;
+
+    const wrapper = form.querySelector('[data-image-field="imagen_logo_base64"]');
+    if (!wrapper || wrapper.dataset.initialized === 'true') return;
+
+    wrapper.dataset.initialized = 'true';
+
+    const hidden = wrapper.querySelector('input[type="hidden"][name="imagen_logo_base64"]');
+    const fileInput = wrapper.querySelector('.image-upload__file');
+    const uploadBtn = wrapper.querySelector('[data-org-image-action="upload"]');
+    const removeBtn = wrapper.querySelector('[data-org-image-action="remove"]');
+
+    if (uploadBtn && fileInput) {
+      uploadBtn.addEventListener('click', () => fileInput.click());
+    }
+
+    if (fileInput && hidden) {
+      fileInput.addEventListener('change', ev => {
+        const file = ev.target.files && ev.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = e => {
+          hidden.value = String(e.target.result || '');
+          refreshOrganizacionImageField_();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if (removeBtn && hidden && fileInput) {
+      removeBtn.addEventListener('click', () => {
+        hidden.value = '';
+        fileInput.value = '';
+        refreshOrganizacionImageField_();
+      });
+    }
+
+    refreshOrganizacionImageField_();
+  }
+
+  function refreshOrganizacionImageField_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form) return;
+
+    const wrapper = form.querySelector('[data-image-field="imagen_logo_base64"]');
+    if (!wrapper) return;
+
+    const hidden = wrapper.querySelector('input[type="hidden"][name="imagen_logo_base64"]');
+    const preview = wrapper.querySelector('.image-upload__preview');
+
+    if (!hidden || !preview) return;
+
+    const value = String(hidden.value || '').trim();
+
+    if (!value) {
+      preview.innerHTML = '<div class="empty-state">Sin imagen</div>';
+      return;
+    }
+
+    preview.innerHTML = `<img src="${escapeHtml(value)}" alt="Imagen organización" class="image-upload__img">`;
+  }
+

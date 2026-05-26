@@ -181,12 +181,6 @@ function goPesSembrarCatalogoAvanceFase2_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('No se encontró el Spreadsheet activo.');
 
-  if (typeof goPesApplyAvancePhase1Config_ !== 'function') {
-    throw new Error('No está disponible la Fase 1. Instala primero ZZ_AvancePhase1.gs.');
-  }
-
-  goPesApplyAvancePhase1Config_();
-
   const defs = getGoPesAvanceSheetDefinitions_();
   const sheetName = GO_PES_V2.SHEETS.CAT_HITOS_AVANCE;
   const headers = defs[sheetName];
@@ -239,12 +233,6 @@ function goPesSembrarCatalogoAvanceFase2_() {
 function goPesDiagnosticarCatalogoAvanceFase2_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('No se encontró el Spreadsheet activo.');
-
-  if (typeof goPesApplyAvancePhase1Config_ !== 'function') {
-    throw new Error('No está disponible la Fase 1. Instala primero ZZ_AvancePhase1.gs.');
-  }
-
-  goPesApplyAvancePhase1Config_();
 
   const sheetName = GO_PES_V2.SHEETS.CAT_HITOS_AVANCE;
   const sh = ss.getSheetByName(sheetName);

@@ -1,5 +1,5 @@
 function getOrganizacionesModuloClient() {
-  requireModuleAccess_('organizacion', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
 
   const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
     .filter(function(r) {
@@ -24,7 +24,7 @@ function getOrganizacionesModuloClient() {
 }
 
 function getOrganizacionModuloDetalle(payload) {
-  requireModuleAccess_('organizacion', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
 
   const organizacionId = String(payload && payload.organizacion_id || '').trim();
   if (!organizacionId) throw new Error('Falta organizacion_id.');
@@ -98,7 +98,7 @@ function eliminarOrganizacion(payload) {
 }
 
 function cambiarEstadoAdministrativoOrganizacion_(payload, estado, action) {
-  const user = requireModuleAccess_('organizacion', ['coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('organizacion', ['coordinador', 'superuser']);
   const organizacionId = String(payload && payload.organizacion_id || '').trim();
   const motivo = String(payload && payload.motivo || '').trim();
   if (!organizacionId) throw new Error('Falta organizacion_id.');

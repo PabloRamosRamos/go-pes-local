@@ -15,10 +15,12 @@
  *  ========================= */
 
 function goPesRefrescarVistaAvanceOrganizacion() {
+  requireRole_(['coordinador', 'superuser']);
   return buildVistaAvanceOrganizacion_();
 }
 
 function goPesDiagnosticarAvanceBackend() {
+  requireRole_(['superuser']);
   return goPesDiagnosticarAvanceBackend_();
 }
 
@@ -27,7 +29,7 @@ function goPesDiagnosticarAvanceBackend() {
  *  ========================= */
 
 function getCatalogosAvanceClient() {
-  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const hitos = goPesGetCatalogoHitosAvance_();
@@ -45,7 +47,7 @@ function getCatalogosAvanceClient() {
 
 function getOrganizacionesAvanceClient() {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getOrganizacionesAvanceClient', {});
-  requireAnyModuleAccess_(['avance', 'socios'], ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireAnyModuleAccess_(['avance', 'socios'], ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const cached = typeof getCatalogCacheJson_ === 'function' &&
@@ -87,7 +89,7 @@ function getOrganizacionesAvanceClient() {
 
 function getGruposVecinosAvanceClient() {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getGruposVecinosAvanceClient', {});
-  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS)
@@ -118,7 +120,7 @@ function getGruposVecinosAvanceClient() {
 }
 
 function getTimelineAvance(payload) {
-  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const ctx = goPesResolveAvanceContext_(payload);
@@ -128,7 +130,7 @@ function getTimelineAvance(payload) {
 }
 
 function getBotonesAvanceEstado(payload) {
-  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const ctx = goPesResolveAvanceContext_(payload);
@@ -139,14 +141,14 @@ function getBotonesAvanceEstado(payload) {
 
 function getAvanceOrganizacion(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getAvanceOrganizacion', payload || {});
-  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const ctx = goPesResolveAvanceContext_(payload);
   const orgId = ctx.organizacion.organizacion_id;
   const solicitudId = ctx.organizacion.solicitud_id || '';
 
-  goPesEnsureEstadoAvanceInicial_(orgId, solicitudId, requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']));
+  goPesEnsureEstadoAvanceInicial_(orgId, solicitudId, user);
 
   const estadoActual = goPesGetEstadoAvanceActual_(orgId, solicitudId);
   const timeline = goPesGetTimelineAvanceRows_(orgId);
@@ -168,7 +170,7 @@ function getAvanceOrganizacion(payload) {
 
 function getAvanceGrupoVecinos(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getAvanceGrupoVecinos', payload || {});
-  requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   const solicitudId = String(payload && payload.solicitud_id || '').trim();
@@ -199,7 +201,7 @@ function getAvanceGrupoVecinos(payload) {
 
 function registrarHitoAvance(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.registrarHitoAvance', payload || {});
-  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   payload = payload || {};
@@ -400,7 +402,7 @@ function registrarHitoAvanceGrupoVecinos_(payload, user, diag) {
 
 function cambiarEstadoAvance(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.cambiarEstadoAvance', payload || {});
-  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'administrador', 'superuser']);
+  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   payload = payload || {};
@@ -597,10 +599,6 @@ function upsertVistaAvanceOrganizacionRowById_(organizacionId) {
  *  ========================= */
 
 function goPesEnsureAvanceBackendReady_() {
-  if (typeof goPesApplyAvancePhase1Config_ === 'function') {
-    goPesApplyAvancePhase1Config_();
-  }
-
   if (typeof GO_PES_V2 === 'undefined' || !GO_PES_V2 || !GO_PES_V2.SHEETS) {
     throw new Error('GO_PES_V2 no está disponible.');
   }
@@ -1337,38 +1335,7 @@ function goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline) {
  *  ========================= */
 
 function goPesGetAvanceHeaders_(sheetName) {
-  if (typeof getGoPesAvanceSheetDefinitions_ === 'function') {
-    const defs = getGoPesAvanceSheetDefinitions_();
-    if (defs[sheetName]) return defs[sheetName];
-  }
-
-  const fallback = {};
-
-  fallback['CAT_Hitos_Avance'] = [
-    'codigo_hito', 'tramo', 'orden_hito', 'nombre_hito', 'descripcion',
-    'codigo_hito_previo', 'permite_saltar', 'activo_flag'
-  ];
-
-  fallback['FACT_Avance_Hitos'] = [
-    'avance_hito_id', 'organizacion_id', 'solicitud_id', 'codigo_hito', 'tramo',
-    'orden_hito', 'nombre_hito', 'fecha_hito', 'usuario_registro',
-    'timestamp_registro', 'observacion'
-  ];
-
-  fallback['FACT_Avance_Estado'] = [
-    'avance_estado_id', 'organizacion_id', 'solicitud_id', 'estado_avance',
-    'motivo_estado', 'fecha_estado', 'usuario_estado', 'timestamp_registro',
-    'activo_flag'
-  ];
-
-  fallback['VW_Avance_Organizacion'] = [
-    'organizacion_id', 'solicitud_id', 'nombre_organizacion', 'estado_avance',
-    'ultimo_hito_codigo', 'ultimo_hito_nombre', 'ultimo_hito_fecha',
-    'usuario_ultimo_hito', 'total_hitos_cumplidos', 'total_hitos_tramo_pre',
-    'total_hitos_tramo_for'
-  ];
-
-  return fallback[sheetName] || [];
+  return buildSheetDefinitions_()[sheetName] || [];
 }
 
 function goPesNextIdSafe_(sequenceKey, prefix) {

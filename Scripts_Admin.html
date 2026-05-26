@@ -462,8 +462,8 @@
 
   function getBrandingColorDefinitions_() {
     return [
-      { name: 'primaryColor', label: 'Color primario', fallback: '#214E8A', role: 'Color principal para titulos, foco y acentos de marca.' },
-      { name: 'secondaryColor', label: 'Color secundario', fallback: '#007C4A', role: 'Apoyo visual para acciones secundarias y estados positivos.' },
+      { name: 'primaryColor', label: 'Color primario', fallback: '#3D96B4', role: 'Color principal para titulos, foco y acentos de marca.' },
+      { name: 'secondaryColor', label: 'Color secundario', fallback: '#8CC63F', role: 'Apoyo visual para acciones secundarias y estados positivos.' },
       { name: 'accentColor', label: 'Color acento', fallback: '#03C2AE', role: 'Resalta detalles, chips y elementos destacados.' },
       { name: 'loadingProgressColor', label: 'Color de progreso', fallback: '#8CC63F', role: 'Representa barras de carga, progreso y avance.' },
       { name: 'lightBackground', label: 'Fondo claro', fallback: '#F7FAFC', role: 'Base para superficies claras y fondos administrativos.' },
@@ -544,8 +544,8 @@
   }
 
   function renderConfigBrandingPreviewPanel_(section, appName, subtitle) {
-    const primary = normalizeHexColor_(section.primaryColor) || '#214E8A';
-    const secondary = normalizeHexColor_(section.secondaryColor) || '#007C4A';
+    const primary = normalizeHexColor_(section.primaryColor) || '#3D96B4';
+    const secondary = normalizeHexColor_(section.secondaryColor) || '#8CC63F';
     const accent = normalizeHexColor_(section.accentColor) || '#03C2AE';
     const progress = normalizeHexColor_(section.loadingProgressColor) || '#8CC63F';
     const lightBackground = normalizeHexColor_(section.lightBackground) || '#F7FAFC';
@@ -1196,8 +1196,8 @@
       if (previewDot) previewDot.style.background = normalized;
     });
 
-    preview.style.setProperty('--branding-primary', normalizeHexColor_(getValue('primaryColor')) || '#214E8A');
-    preview.style.setProperty('--branding-secondary', normalizeHexColor_(getValue('secondaryColor')) || '#007C4A');
+    preview.style.setProperty('--branding-primary', normalizeHexColor_(getValue('primaryColor')) || '#3D96B4');
+    preview.style.setProperty('--branding-secondary', normalizeHexColor_(getValue('secondaryColor')) || '#8CC63F');
     preview.style.setProperty('--branding-accent', normalizeHexColor_(getValue('accentColor')) || '#03C2AE');
     preview.style.setProperty('--branding-progress', normalizeHexColor_(getValue('loadingProgressColor')) || '#8CC63F');
     preview.style.setProperty('--branding-light', normalizeHexColor_(getValue('lightBackground')) || '#F7FAFC');
@@ -1228,8 +1228,8 @@
     };
 
     const tokenMap = {
-      '--runtime-brand-primary': normalizeHexColor_(getValue('primaryColor')) || '#214E8A',
-      '--runtime-brand-secondary': normalizeHexColor_(getValue('secondaryColor')) || '#007C4A',
+      '--runtime-brand-primary': normalizeHexColor_(getValue('primaryColor')) || '#3D96B4',
+      '--runtime-brand-secondary': normalizeHexColor_(getValue('secondaryColor')) || '#8CC63F',
       '--runtime-brand-accent': normalizeHexColor_(getValue('accentColor')) || '#03C2AE',
       '--runtime-brand-progress': normalizeHexColor_(getValue('loadingProgressColor')) || '#8CC63F',
       '--runtime-brand-light': normalizeHexColor_(getValue('lightBackground')) || '#F7FAFC',

@@ -224,7 +224,7 @@
 
   html,
   body {
-    background: var(--splash-backdrop);
+    background: #FFFFFF;
   }
 
   html {
@@ -1632,7 +1632,6 @@
 
   .empty-state:not(.image-upload__preview):not(.inicio-dashboard-empty) {
     display: grid;
-    place-items: center;
     gap: var(--space-2);
     min-height: var(--empty-state-min-height);
     border: 1px dashed var(--border);
@@ -5781,17 +5780,16 @@
 
   .beneficios-top-strip {
     display: grid;
-    grid-template-columns: minmax(0, 0.94fr) minmax(280px, 1.06fr);
+    grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.32fr);
     gap: var(--space-4);
     align-items: stretch;
   }
 
   .beneficios-top-strip > .beneficios-block {
-    height: 100%;
+    height: auto;
     min-height: 324px;
-    max-height: 324px;
     margin: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .beneficios-top-strip__config,

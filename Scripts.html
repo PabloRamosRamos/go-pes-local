@@ -496,12 +496,9 @@
       : path.endsWith('/exec')
         ? 'EXEC'
         : String(BOOTSTRAP.environment || '').trim().toUpperCase();
-    const label = [
-      buildInfo.baseVersion || BOOTSTRAP.version ? `v${buildInfo.baseVersion || BOOTSTRAP.version}` : '',
-      channel,
-      buildInfo.buildHash ? `build ${buildInfo.buildHash}` : '',
-      buildInfo.updatedAtLabel || ''
-    ].filter(Boolean).join(' · ') || BOOTSTRAP.versionLabel || '';
+    const env = String(BOOTSTRAP.environment || '').trim().toUpperCase();
+    const ver = (buildInfo.baseVersion || BOOTSTRAP.version) ? `v${buildInfo.baseVersion || BOOTSTRAP.version}` : '';
+    const label = [ver, env, buildInfo.buildHash ? `build ${buildInfo.buildHash}` : ''].filter(Boolean).join(' · ') || BOOTSTRAP.versionLabel || '';
     el.textContent = label;
     el.title = buildInfo.updatedAtIso
       ? `Versión ${label} · actualizado ${buildInfo.updatedAtIso}`
@@ -1650,8 +1647,8 @@
       ? '#8CC63F'
       : (normalizeHexColor_(branding.accentColor) || '#03C2AE');
     const tokens = {
-      '--runtime-brand-primary': normalizeHexColor_(branding.primaryColor) || '#214E8A',
-      '--runtime-brand-secondary': normalizeHexColor_(branding.secondaryColor) || '#007C4A',
+      '--runtime-brand-primary': normalizeHexColor_(branding.primaryColor) || '#3D96B4',
+      '--runtime-brand-secondary': normalizeHexColor_(branding.secondaryColor) || '#8CC63F',
       '--runtime-brand-accent': runtimeAccent,
       '--runtime-brand-progress': normalizeHexColor_(branding.loadingProgressColor) || '#8CC63F',
       '--runtime-brand-light': normalizeHexColor_(branding.lightBackground) || '#F7FAFC',

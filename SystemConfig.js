@@ -144,8 +144,8 @@ function getDefaultSystemConfig_() {
     branding: {
       logoLightDataUri: '',
       logoDarkDataUri: '',
-      primaryColor: colors.blue || '#214E8A',
-      secondaryColor: colors.green || '#007C4A',
+      primaryColor: '#3D96B4',
+      secondaryColor: '#8CC63F',
       accentColor: '#03C2AE',
       lightBackground: colors.bg || '#F7FAFC',
       darkBackground: '#0D2940',

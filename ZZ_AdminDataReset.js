@@ -48,6 +48,7 @@ function limpiarDatosPruebaAdmin(payload) {
     cleared.push({ sheet: sheetName, rows_cleared: rowsBefore });
   });
 
+  const resetCounters = goPesResetSequenceCounters_();
   goPesRebuildAfterAdminReset_();
 
   const detail = {
@@ -55,7 +56,8 @@ function limpiarDatosPruebaAdmin(payload) {
     rows_cleared: cleared.reduce(function(total, item) {
       return total + Number(item.rows_cleared || 0);
     }, 0),
-    skipped: skipped
+    skipped: skipped,
+    sequences_reset: resetCounters
   };
 
   logProcessing_('WARN', 'limpiarDatosPruebaAdmin', 'admin_reset', '', user.email, 'OK', detail);
@@ -91,6 +93,7 @@ function goPesGetAdminResetCleanableSheets_() {
     S.FACT_BENEFICIOS_ORG_HITOS,
     S.FACT_AVANCE_HITOS,
     S.FACT_AVANCE_ESTADO,
+    S.FACT_FONDESE,
     S.MASTER,
     S.VW_ORGS,
     S.VW_INSTR,
@@ -142,6 +145,10 @@ function goPesHashAdminResetPin_(pin) {
   return Utilities.base64Encode(digest);
 }
 
+function goPesEnsureAdminResetSheetConfig_() {
+  ensureSheetsSubset_(goPesGetAdminResetCleanableSheets_());
+}
+
 function goPesCountDataRows_(sheetName) {
   const sh = getSheet_(sheetName);
   if (!sh) return 0;
@@ -162,4 +169,29 @@ function goPesRebuildAfterAdminReset_() {
   if (typeof buildVistaAvanceOrganizacion_ === 'function') {
     buildVistaAvanceOrganizacion_();
   }
+}
+
+function goPesResetSequenceCounters_() {
+  const NAMESPACES = [
+    'vecino',
+    'solicitud',
+    'organizacion',
+    'socio',
+    'hito',
+    'instrumento',
+    'requisito',
+    'avance_hito',
+    'avance_estado'
+  ];
+
+  const props = PropertiesService.getScriptProperties();
+  const reset = [];
+
+  NAMESPACES.forEach(function(ns) {
+    const key = 'GO_PES_SEQ_' + ns.toUpperCase();
+    props.setProperty(key, '0');
+    reset.push(key);
+  });
+
+  return reset;
 }

@@ -95,7 +95,9 @@
         </div>
         ${activeTab.codigo === 'CAMARAS_1414'
           ? renderCamaras1414Panel_(data && data.camaras1414, activeTab)
-          : renderBeneficioPlaceholderPanel_(activeTab)}
+          : activeTab.codigo === 'FONDESE'
+            ? renderFondesePanel_(activeTab)
+            : renderBeneficioPlaceholderPanel_(activeTab)}
       </section>
     `;
 
@@ -111,6 +113,8 @@
 
     if (activeTab.codigo === 'CAMARAS_1414') {
       bindCamaras1414Panel_();
+    } else if (activeTab.codigo === 'FONDESE') {
+      bindFondesePanel_();
     }
   }
 
@@ -2049,5 +2053,530 @@
         if (m) { m.remove(); document.removeEventListener('keydown', onEscDoc); }
       }
     });
+  }
+
+  /* =========================================================
+     FONDESE styles
+     ========================================================= */
+  (function injectFondeseStyles() {
+    if (document.getElementById('fondese-styles')) return;
+    const s = document.createElement('style');
+    s.id = 'fondese-styles';
+    s.textContent = `
+      /* FONDESE styles */
+      .fnd-header{display:grid;gap:6px;margin-bottom:20px}
+      .fnd-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+      .fnd-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;background:color-mix(in srgb,var(--runtime-brand-primary,#3D96B4) 10%,transparent);color:var(--runtime-brand-primary,#3D96B4);border:1px solid color-mix(in srgb,var(--runtime-brand-primary,#3D96B4) 20%,transparent)}
+      .fnd-chip--cierre{background:color-mix(in srgb,#d93025 8%,transparent);color:#b3261e;border-color:color-mix(in srgb,#d93025 18%,transparent)}
+      .fnd-monto{font-size:0.82rem;color:var(--text-muted,#6b7a8d)}
+      .fnd-monto strong{color:var(--text,#24364B)}
+      .fnd-table-wrap{overflow-x:auto;margin-top:4px}
+      .fnd-table{width:100%;border-collapse:collapse;font-size:0.83rem}
+      .fnd-table th{text-align:left;padding:8px 10px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#6b7a8d);border-bottom:2px solid var(--border,#D6E0EA);white-space:nowrap}
+      .fnd-table td{padding:9px 10px;border-bottom:1px solid var(--border,#D6E0EA);vertical-align:middle}
+      .fnd-table tr:last-child td{border-bottom:none}
+      .fnd-table tr:hover td{background:var(--surface-alt,#f7fafc)}
+      .fnd-doc-bar{display:flex;align-items:center;gap:6px;white-space:nowrap}
+      .fnd-doc-bar__track{flex:1;min-width:60px;height:6px;border-radius:3px;background:var(--border,#D6E0EA);overflow:hidden}
+      .fnd-doc-bar__fill{height:100%;border-radius:3px;transition:width .3s}
+      .fnd-doc-bar__fill--low{background:#d93025}
+      .fnd-doc-bar__fill--mid{background:#f29900}
+      .fnd-doc-bar__fill--ok{background:#1e8e3e}
+      .fnd-doc-bar__label{font-size:0.75rem;color:var(--text-muted,#6b7a8d)}
+      .fnd-estado{display:inline-flex;align-items:center;padding:3px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;white-space:nowrap}
+      .fnd-estado--sin_postular{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
+      .fnd-estado--postulando{background:#e8f0fe;color:#1a73e8}
+      .fnd-estado--en_evaluacion{background:#fff8e1;color:#e37400}
+      .fnd-estado--adjudicado{background:#e6f4ea;color:#1e8e3e}
+      .fnd-estado--firma_convenio{background:#e8f0fe;color:#1a73e8}
+      .fnd-estado--en_ejecucion{background:#e6f4ea;color:#1e8e3e}
+      .fnd-estado--en_rendicion{background:#fff8e1;color:#e37400}
+      .fnd-estado--cerrado{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
+      .fnd-resultado--adjudicado{background:#e6f4ea;color:#1e8e3e}
+      .fnd-resultado--rechazado{background:#fce8e6;color:#b3261e}
+      .fnd-resultado--inadmisible{background:#fff8e1;color:#e37400}
+      .fnd-empty{padding:40px 20px;text-align:center;color:var(--text-muted,#6b7a8d)}
+      .fnd-detail{display:grid;gap:20px}
+      .fnd-detail__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+      .fnd-stepper{display:flex;gap:0;overflow-x:auto;padding-bottom:4px;margin:4px 0 12px}
+      .fnd-step{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;min-width:72px;position:relative}
+      .fnd-step:not(:last-child)::after{content:'';position:absolute;top:11px;left:calc(50% + 11px);right:calc(-50% + 11px);height:2px;background:var(--border,#D6E0EA)}
+      .fnd-step:not(:last-child).fnd-step--done::after{background:var(--runtime-brand-primary,#3D96B4)}
+      .fnd-step__dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--border,#D6E0EA);background:var(--surface,#fff);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;position:relative;z-index:1}
+      .fnd-step--done .fnd-step__dot{background:var(--runtime-brand-primary,#3D96B4);border-color:var(--runtime-brand-primary,#3D96B4);color:#fff}
+      .fnd-step--active .fnd-step__dot{border-color:var(--runtime-brand-primary,#3D96B4);color:var(--runtime-brand-primary,#3D96B4)}
+      .fnd-step__label{font-size:0.62rem;text-align:center;color:var(--text-muted,#6b7a8d);line-height:1.2;max-width:66px}
+      .fnd-step--active .fnd-step__label,.fnd-step--done .fnd-step__label{color:var(--text,#24364B);font-weight:600}
+      .fnd-checklist{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
+      .fnd-doc-item{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:0.81rem;color:var(--text,#24364B)}
+      .fnd-doc-item input[type=checkbox]{width:15px;height:15px;flex-shrink:0;accent-color:var(--runtime-brand-primary,#3D96B4)}
+      .fnd-result-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:20px;font-size:0.9rem;font-weight:700}
+      .fnd-result-badge--adjudicado{background:#e6f4ea;color:#1e8e3e}
+      .fnd-result-badge--rechazado{background:#fce8e6;color:#b3261e}
+      .fnd-result-badge--inadmisible{background:#fff8e1;color:#e37400}
+      .fnd-section{background:var(--surface,#fff);border:1px solid var(--border,#D6E0EA);border-radius:10px;padding:16px 18px}
+      .fnd-section h4{margin:0 0 12px;font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#6b7a8d)}
+      .fnd-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9800;display:flex;align-items:center;justify-content:center;padding:16px}
+      .fnd-modal{background:var(--surface,#fff);border-radius:12px;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.2)}
+      .fnd-modal__head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border,#D6E0EA)}
+      .fnd-modal__title{font-weight:700;font-size:1rem;color:var(--text,#24364B);flex:1}
+      .fnd-modal__close{background:none;border:none;cursor:pointer;color:var(--text-muted,#6b7a8d);display:flex;padding:4px;border-radius:6px}
+      .fnd-modal__body{flex:1;overflow-y:auto;padding:20px}
+      .fnd-modal__foot{padding:14px 20px;border-top:1px solid var(--border,#D6E0EA);display:flex;justify-content:flex-end;gap:8px}
+      html[data-theme="dark"] .fnd-table tr:hover td{background:var(--surface-alt,#182635)}
+      html[data-theme="dark"] .fnd-section{background:var(--surface,#14202d);border-color:var(--border,#294356)}
+      html[data-theme="dark"] .fnd-modal{background:var(--surface,#14202d)}
+      html[data-theme="dark"] .fnd-step__dot{background:var(--surface,#14202d)}
+      @media(max-width:640px){.fnd-checklist{grid-template-columns:1fr}.fnd-stepper{gap:0}}
+    `;
+    document.head.appendChild(s);
+  })();
+
+  /* =========================================================
+     FONDESE — panel principal
+     ========================================================= */
+
+  function renderFondesePanel_(activeTab) {
+    return `
+      <article class="beneficios-panel beneficios-panel--operativo" role="tabpanel">
+        <div class="beneficios-panel__head">
+          <div class="fnd-header">
+            <p class="eyebrow">Beneficio municipal 2026</p>
+            <h3>${escapeHtml(activeTab.titulo || 'FONDESE 2026')}</h3>
+            <p class="muted">Fondo de Seguridad Providencia &mdash; seguimiento de postulaciones por organización</p>
+            <div class="fnd-chips">
+              <span class="fnd-chip">
+                <span class="material-symbols-outlined" style="font-size:13px">event</span>
+                1° Llamado &middot; cierre 27/03/2026
+              </span>
+              <span class="fnd-chip">
+                <span class="material-symbols-outlined" style="font-size:13px">event</span>
+                2° Llamado &middot; cierre 03/08/2026
+              </span>
+            </div>
+            <p class="fnd-monto">
+              Monto total fondo: <strong>$60.000.000</strong>
+              &nbsp;&middot;&nbsp;
+              Cuotas: <strong>2 × $30.000.000</strong>
+            </p>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0">
+            <button type="button" class="primary-btn" id="fnd-nueva-btn">
+              <span class="material-symbols-outlined">add</span>Nueva postulación
+            </button>
+          </div>
+        </div>
+        <div id="fnd-list-container" style="min-height:80px">
+          <div class="empty-state" style="padding:32px 0">Cargando registros FONDESE...</div>
+        </div>
+      </article>
+    `;
+  }
+
+  /* =========================================================
+     FONDESE — tabla de registros
+     ========================================================= */
+
+  function renderFondeseTable_(registros, catalogs) {
+    const rows = registros || [];
+    if (!rows.length) {
+      return `
+        <div class="fnd-empty">
+          <span class="material-symbols-outlined" style="font-size:36px;display:block;margin-bottom:8px;opacity:.4">savings</span>
+          <p>No hay postulaciones registradas aún.</p>
+          <button type="button" class="primary-btn" style="margin-top:12px" id="fnd-nueva-btn-empty">
+            <span class="material-symbols-outlined">add</span>Nueva postulación
+          </button>
+        </div>
+      `;
+    }
+
+    const stateLabel = {
+      sin_postular: 'Sin postular', postulando: 'Postulando', en_evaluacion: 'En evaluación',
+      adjudicado: 'Adjudicado', firma_convenio: 'Firma convenio',
+      en_ejecucion: 'En ejecución', en_rendicion: 'En rendición', cerrado: 'Cerrado'
+    };
+
+    const lineasMap = {};
+    ((catalogs && catalogs.lineasProducto) || []).forEach(function(l) { lineasMap[l.id] = l.nombre; });
+
+    const convLabel = { '1': '1°', '2': '2°', '1,2': '1° y 2°' };
+
+    const rowsHtml = rows.map(function(r) {
+      const pct = Number(r.pct_docs || 0);
+      const fillClass = pct >= 100 ? 'fnd-doc-bar__fill--ok' : pct >= 54 ? 'fnd-doc-bar__fill--mid' : 'fnd-doc-bar__fill--low';
+      const estado = String(r.estado_proceso || 'sin_postular');
+      const resultado = String(r.resultado_adj || '');
+      return `
+        <tr>
+          <td><strong>${escapeHtml(r.nombre_organizacion || r.organizacion_id || '—')}</strong></td>
+          <td style="white-space:nowrap">${escapeHtml(convLabel[r.convocatoria] || r.convocatoria || '—')}</td>
+          <td>${escapeHtml(lineasMap[r.linea_producto] || r.linea_producto || '—')}</td>
+          <td>
+            <div class="fnd-doc-bar">
+              <div class="fnd-doc-bar__track">
+                <div class="fnd-doc-bar__fill ${fillClass}" style="width:${pct}%"></div>
+              </div>
+              <span class="fnd-doc-bar__label">${escapeHtml(String(r.docs_entregados || 0))}/13</span>
+            </div>
+          </td>
+          <td><span class="fnd-estado fnd-estado--${escapeHtml(estado)}">${escapeHtml(stateLabel[estado] || estado)}</span></td>
+          <td>
+            ${resultado
+              ? `<span class="fnd-estado fnd-resultado--${escapeHtml(resultado)}">${escapeHtml(resultado.charAt(0).toUpperCase() + resultado.slice(1))}</span>`
+              : '<span style="color:var(--text-muted,#6b7a8d);font-size:0.8rem">—</span>'}
+          </td>
+          <td>
+            <button type="button" class="secondary-btn js-fnd-detalle-btn" data-id="${escapeHtml(r.fondese_id || '')}" style="padding:4px 10px;font-size:0.78rem">
+              Ver detalle
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <div class="fnd-table-wrap">
+        <table class="fnd-table">
+          <thead>
+            <tr>
+              <th>Organización</th>
+              <th>Conv.</th>
+              <th>Línea producto</th>
+              <th>Documentos</th>
+              <th>Estado</th>
+              <th>Resultado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  /* =========================================================
+     FONDESE — vista detalle
+     ========================================================= */
+
+  function renderFondeseDetalle_(idFondese) {
+    const container = document.getElementById('fnd-list-container');
+    if (!container) return;
+    container.innerHTML = '<div class="empty-state" style="padding:32px 0">Cargando detalle...</div>';
+
+    api('goPesGetFondeseDetalle', idFondese).then(function(data) {
+      const r = data.registro || {};
+      const catalogs = data.catalogs || {};
+      const ESTADOS = catalogs.estadosProceso || [];
+      const estadoIdx = ESTADOS.indexOf(String(r.estado_proceso || 'sin_postular'));
+
+      const stateLabel = {
+        sin_postular: 'Sin postular', postulando: 'Postulando', en_evaluacion: 'En evaluación',
+        adjudicado: 'Adjudicado', firma_convenio: 'Firma convenio',
+        en_ejecucion: 'En ejecución', en_rendicion: 'En rendición', cerrado: 'Cerrado'
+      };
+      const stepperLabels = ['Postulación','Admisibilidad','Evaluación','Adjudicación','Convenio','Ejecución','Rendición','Cerrado'];
+
+      const stepperHtml = ESTADOS.map(function(est, i) {
+        const isDone = i < estadoIdx;
+        const isActive = i === estadoIdx;
+        const cls = isDone ? 'fnd-step--done' : isActive ? 'fnd-step--active' : '';
+        return `
+          <div class="fnd-step ${cls}">
+            <div class="fnd-step__dot">${isDone ? '✓' : String(i + 1)}</div>
+            <span class="fnd-step__label">${escapeHtml(stepperLabels[i] || est)}</span>
+          </div>
+        `;
+      }).join('');
+
+      const DOC_FIELDS = ['doc_01','doc_02','doc_03','doc_04','doc_05','doc_06','doc_07',
+                          'doc_08','doc_09','doc_10','doc_11','doc_12','doc_13'];
+      const docsCount = DOC_FIELDS.filter(function(f) {
+        return String(r[f] || '').trim().toUpperCase() === 'TRUE';
+      }).length;
+      const checklistHtml = (catalogs.documentos || []).map(function(doc) {
+        const checked = String(r[doc.campo] || '').trim().toUpperCase() === 'TRUE';
+        return `
+          <label class="fnd-doc-item">
+            <input type="checkbox" name="${escapeHtml(doc.campo)}" ${checked ? 'checked' : ''}>
+            <span>${escapeHtml(doc.etiqueta)}</span>
+          </label>
+        `;
+      }).join('');
+
+      const lineasMap = {};
+      ((catalogs.lineasProducto) || []).forEach(function(l) { lineasMap[l.id] = l.nombre; });
+      const lineaNombre = lineasMap[r.linea_producto] || r.linea_producto || '—';
+
+      const adjudicadoVisible = estadoIdx >= ESTADOS.indexOf('adjudicado');
+      const ejecucionVisible = String(r.resultado_adj || '') === 'adjudicado';
+      const rendicionVisible = ejecucionVisible && ['en_ejecucion','en_rendicion','cerrado'].indexOf(r.estado_proceso) !== -1;
+
+      container.innerHTML = `
+        <div class="fnd-detail">
+          <div class="fnd-detail__head">
+            <div style="display:grid;gap:4px">
+              <button type="button" class="secondary-btn" id="fnd-volver-btn" style="width:fit-content;margin-bottom:4px">
+                <span class="material-symbols-outlined">arrow_back</span>Volver
+              </button>
+              <p class="eyebrow">Detalle postulación</p>
+              <h3 style="margin:0">${escapeHtml(r.nombre_organizacion || r.organizacion_id || '—')}</h3>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+                <span class="fnd-estado fnd-estado--${escapeHtml(r.estado_proceso || 'sin_postular')}">${escapeHtml(stateLabel[r.estado_proceso] || r.estado_proceso || '—')}</span>
+                <span class="fnd-chip">Conv. ${escapeHtml(r.convocatoria || '—')}</span>
+                <span class="fnd-chip">${escapeHtml(lineaNombre)}</span>
+              </div>
+            </div>
+          </div>
+
+          <form id="fnd-detalle-form" novalidate>
+            <input type="hidden" name="fondese_id" value="${escapeHtml(r.fondese_id || '')}">
+            <input type="hidden" name="organizacion_id" value="${escapeHtml(r.organizacion_id || '')}">
+            <input type="hidden" name="nombre_organizacion" value="${escapeHtml(r.nombre_organizacion || '')}">
+            <input type="hidden" name="convocatoria" value="${escapeHtml(r.convocatoria || '')}">
+            <input type="hidden" name="linea_producto" value="${escapeHtml(r.linea_producto || '')}">
+            <input type="hidden" name="fecha_creacion" value="${escapeHtml(String(r.fecha_creacion || ''))}">
+            <input type="hidden" name="creado_por" value="${escapeHtml(r.creado_por || '')}">
+
+            <div class="fnd-section">
+              <h4>Etapas del proceso</h4>
+              <div class="fnd-stepper">${stepperHtml}</div>
+              <div class="field" style="margin-top:12px">
+                <label>Estado actual</label>
+                <select name="estado_proceso">
+                  ${ESTADOS.map(function(e) {
+                    return `<option value="${escapeHtml(e)}" ${e === r.estado_proceso ? 'selected' : ''}>${escapeHtml(stateLabel[e] || e)}</option>`;
+                  }).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="fnd-section">
+              <h4>Documentos entregados (${escapeHtml(String(docsCount))}/13)</h4>
+              <div class="fnd-checklist">${checklistHtml}</div>
+            </div>
+
+            ${adjudicadoVisible ? `
+            <div class="fnd-section">
+              <h4>Resultado de adjudicación</h4>
+              <div class="field">
+                <label>Resultado</label>
+                <select name="resultado_adj">
+                  <option value="" ${!r.resultado_adj ? 'selected' : ''}>— Sin resultado —</option>
+                  <option value="adjudicado" ${r.resultado_adj === 'adjudicado' ? 'selected' : ''}>Adjudicado ✓</option>
+                  <option value="rechazado" ${r.resultado_adj === 'rechazado' ? 'selected' : ''}>Rechazado ✗</option>
+                  <option value="inadmisible" ${r.resultado_adj === 'inadmisible' ? 'selected' : ''}>Inadmisible</option>
+                </select>
+              </div>
+              ${r.resultado_adj ? `<div style="margin-top:10px"><span class="fnd-result-badge fnd-result-badge--${escapeHtml(r.resultado_adj)}">${r.resultado_adj === 'adjudicado' ? '✓ Adjudicado' : r.resultado_adj === 'rechazado' ? '✗ Rechazado' : '⚠ Inadmisible'}</span></div>` : ''}
+            </div>
+            ` : `<input type="hidden" name="resultado_adj" value="${escapeHtml(r.resultado_adj || '')}">` }
+
+            ${ejecucionVisible ? `
+            <div class="fnd-section">
+              <h4>Estado de ejecución</h4>
+              <div class="field">
+                <select name="estado_ejecucion">
+                  <option value="" ${!r.estado_ejecucion ? 'selected' : ''}>— Sin estado —</option>
+                  <option value="en_ejecucion" ${r.estado_ejecucion === 'en_ejecucion' ? 'selected' : ''}>En ejecución</option>
+                  <option value="completada" ${r.estado_ejecucion === 'completada' ? 'selected' : ''}>Completada</option>
+                </select>
+              </div>
+            </div>
+            ` : `<input type="hidden" name="estado_ejecucion" value="${escapeHtml(r.estado_ejecucion || '')}">` }
+
+            ${rendicionVisible ? `
+            <div class="fnd-section">
+              <h4>Estado de rendición</h4>
+              <div class="field">
+                <select name="estado_rendicion">
+                  <option value="pendiente" ${r.estado_rendicion === 'pendiente' || !r.estado_rendicion ? 'selected' : ''}>Pendiente</option>
+                  <option value="aprobada" ${r.estado_rendicion === 'aprobada' ? 'selected' : ''}>Aprobada</option>
+                  <option value="rechazada" ${r.estado_rendicion === 'rechazada' ? 'selected' : ''}>Rechazada</option>
+                </select>
+              </div>
+            </div>
+            ` : `<input type="hidden" name="estado_rendicion" value="${escapeHtml(r.estado_rendicion || '')}">` }
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
+              <button type="button" class="secondary-btn" id="fnd-volver-btn2">
+                <span class="material-symbols-outlined">arrow_back</span>Volver
+              </button>
+              <button type="submit" class="primary-btn">
+                <span class="material-symbols-outlined">save</span>Guardar cambios
+              </button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      document.getElementById('fnd-volver-btn').addEventListener('click', function() { bindFondesePanel_(); });
+      document.getElementById('fnd-volver-btn2').addEventListener('click', function() { bindFondesePanel_(); });
+
+      document.getElementById('fnd-detalle-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const fd = new FormData(this);
+        const payload = {};
+        fd.forEach(function(v, k) { payload[k] = v; });
+        const DOC_KEYS = ['doc_01','doc_02','doc_03','doc_04','doc_05','doc_06','doc_07',
+                          'doc_08','doc_09','doc_10','doc_11','doc_12','doc_13'];
+        DOC_KEYS.forEach(function(k) { payload[k] = this.querySelector('[name="'+k+'"]:checked') ? 'TRUE' : 'FALSE'; }, document.getElementById('fnd-detalle-form'));
+        const btn = this.querySelector('[type=submit]');
+        btn.disabled = true;
+        btn.textContent = 'Guardando...';
+        api('goPesUpsertFondese', payload).then(function() {
+          showSuccess('Cambios guardados correctamente.');
+          bindFondesePanel_();
+        }).catch(function(err) {
+          showError(err);
+          btn.disabled = false;
+          btn.innerHTML = '<span class="material-symbols-outlined">save</span>Guardar cambios';
+        });
+      });
+
+    }).catch(showError);
+  }
+
+  /* =========================================================
+     FONDESE — formulario nueva postulación
+     ========================================================= */
+
+  function openFondeseForm_() {
+    const existing = document.getElementById('fnd-modal');
+    if (existing) existing.remove();
+
+    api('goPesGetFondeseList', null).then(function(data) {
+      const catalogs = data.catalogs || {};
+      const CONVOCATORIAS = catalogs.convocatorias || [];
+      const LINEAS = catalogs.lineasProducto || [];
+      const DOCUMENTOS = catalogs.documentos || [];
+
+      const html = `
+        <div class="fnd-modal-overlay" id="fnd-modal">
+          <div class="fnd-modal">
+            <div class="fnd-modal__head">
+              <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#3D96B4)">savings</span>
+              <span class="fnd-modal__title">Nueva postulación FONDESE</span>
+              <button type="button" class="fnd-modal__close" id="fnd-modal-close">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div class="fnd-modal__body">
+              <form id="fnd-new-form" novalidate>
+                <div class="field" style="margin-bottom:14px">
+                  <label>Organización <span style="color:#d93025">*</span></label>
+                  <input type="text" name="nombre_organizacion" id="fnd-org-suggest" autocomplete="off" placeholder="Nombre de la organización" required>
+                  <input type="hidden" name="organizacion_id" id="fnd-org-id">
+                </div>
+                <div class="field" style="margin-bottom:14px">
+                  <label>Convocatoria <span style="color:#d93025">*</span></label>
+                  <select name="convocatoria" required>
+                    <option value="">— Seleccionar —</option>
+                    ${CONVOCATORIAS.map(function(c) {
+                      const label = c.cierre ? c.label + ' (cierre ' + c.cierre + ')' : c.label;
+                      return `<option value="${escapeHtml(c.id)}">${escapeHtml(label)}</option>`;
+                    }).join('')}
+                  </select>
+                </div>
+                <div class="field" style="margin-bottom:14px">
+                  <label>Línea de producto <span style="color:#d93025">*</span></label>
+                  <select name="linea_producto" id="fnd-linea-select" required>
+                    <option value="">— Seleccionar —</option>
+                    ${LINEAS.map(function(l) {
+                      return `<option value="${escapeHtml(l.id)}">${escapeHtml(l.nombre)} — $${l.monto.toLocaleString('es-CL')}</option>`;
+                    }).join('')}
+                  </select>
+                </div>
+                <div style="margin-bottom:14px">
+                  <p style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#6b7a8d);margin:0 0 8px">Documentos iniciales (opcional)</p>
+                  <div class="fnd-checklist">
+                    ${DOCUMENTOS.map(function(doc) {
+                      return `
+                        <label class="fnd-doc-item">
+                          <input type="checkbox" name="${escapeHtml(doc.campo)}">
+                          <span style="font-size:0.78rem">${escapeHtml(doc.etiqueta)}</span>
+                        </label>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+                <input type="hidden" name="estado_proceso" value="sin_postular">
+              </form>
+            </div>
+            <div class="fnd-modal__foot">
+              <button type="button" class="secondary-btn" id="fnd-modal-cancel">Cancelar</button>
+              <button type="button" class="primary-btn" id="fnd-modal-submit">
+                <span class="material-symbols-outlined">add</span>Crear postulación
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', html);
+
+      function closeModal() { const m = document.getElementById('fnd-modal'); if (m) m.remove(); }
+      document.getElementById('fnd-modal-close').addEventListener('click', closeModal);
+      document.getElementById('fnd-modal-cancel').addEventListener('click', closeModal);
+      document.getElementById('fnd-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+      });
+      document.addEventListener('keydown', function onEsc(e) {
+        if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEsc); }
+      });
+
+      document.getElementById('fnd-modal-submit').addEventListener('click', function() {
+        const form = document.getElementById('fnd-new-form');
+        if (!form.checkValidity()) { form.reportValidity(); return; }
+        const fd = new FormData(form);
+        const payload = {};
+        fd.forEach(function(v, k) { payload[k] = v; });
+        const DOC_KEYS = ['doc_01','doc_02','doc_03','doc_04','doc_05','doc_06','doc_07',
+                          'doc_08','doc_09','doc_10','doc_11','doc_12','doc_13'];
+        DOC_KEYS.forEach(function(k) {
+          payload[k] = form.querySelector('[name="'+k+'"]:checked') ? 'TRUE' : 'FALSE';
+        });
+        this.disabled = true;
+        this.textContent = 'Creando...';
+        api('goPesUpsertFondese', payload).then(function() {
+          closeModal();
+          showSuccess('Postulación creada correctamente.');
+          bindFondesePanel_();
+        }).catch(function(err) {
+          showError(err);
+          const btn = document.getElementById('fnd-modal-submit');
+          if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined">add</span>Crear postulación'; }
+        });
+      });
+
+    }).catch(showError);
+  }
+
+  /* =========================================================
+     FONDESE — bindings
+     ========================================================= */
+
+  function bindFondesePanel_() {
+    const container = document.getElementById('fnd-list-container');
+    if (!container) return;
+    container.innerHTML = '<div class="empty-state" style="padding:32px 0">Cargando registros FONDESE...</div>';
+
+    api('goPesGetFondeseList', null).then(function(data) {
+      const rows = data.rows || [];
+      const catalogs = data.catalogs || {};
+      container.innerHTML = renderFondeseTable_(rows, catalogs);
+
+      container.querySelectorAll('.js-fnd-detalle-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          renderFondeseDetalle_(this.dataset.id);
+        });
+      });
+
+      const emptyNewBtn = document.getElementById('fnd-nueva-btn-empty');
+      if (emptyNewBtn) emptyNewBtn.addEventListener('click', openFondeseForm_);
+    }).catch(showError);
+
+    const nuevaBtn = document.getElementById('fnd-nueva-btn');
+    if (nuevaBtn) nuevaBtn.addEventListener('click', openFondeseForm_);
   }
 

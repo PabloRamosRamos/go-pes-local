@@ -1355,3 +1355,104 @@ function formatDateOnlyForMail_(value) {
   if (!date) return '';
   return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd-MM-yyyy');
 }
+
+/* =========================================================
+   FONDESE — Fondo de Seguridad Providencia 2026
+   ========================================================= */
+
+function goPesFondeseCatalogs_() {
+  return {
+    lineasProducto: [
+      { id: 'cierre_electrico',   nombre: 'Sistema Cierre Eléctrico', monto: 2500000 },
+      { id: 'videoportero',       nombre: 'Videoportero',              monto: 1500000 },
+      { id: 'focos_led_solar',    nombre: 'Focos Led Solar',           monto: 1500000 },
+      { id: 'dientes_tiburon',    nombre: 'Dientes Tiburón',           monto: 2000000 },
+      { id: 'alarma_sirena_solar',nombre: 'Alarma Sirena Solar',       monto: 1500000 },
+      { id: 'acceso_biometrico',  nombre: 'Acceso Biométrico',         monto: 1500000 },
+      { id: 'camaras_seguridad',  nombre: 'Cámaras de Seguridad',      monto: 1500000 },
+      { id: 'kit_emergencia',     nombre: 'Kit Emergencia Familiar',   monto: 2500000 },
+      { id: 'kit_mascotas',       nombre: 'Kit Mascotas',              monto: 2000000 },
+      { id: 'extintores_pqs',     nombre: 'Extintores PQS',            monto: 1500000 }
+    ],
+    documentos: [
+      { campo: 'doc_01', etiqueta: 'Ficha Única de Postulación (Anexo N°1)' },
+      { campo: 'doc_02', etiqueta: 'Declaración Jurada Simple (Anexo N°2)' },
+      { campo: 'doc_03', etiqueta: 'Carta de Compromiso de Ejecución Directa (Anexo N°3)' },
+      { campo: 'doc_04', etiqueta: 'E-RUT Comité de Seguridad' },
+      { campo: 'doc_05', etiqueta: 'Cédula de identidad Presidente/a' },
+      { campo: 'doc_06', etiqueta: 'Cédula de identidad Secretario/a' },
+      { campo: 'doc_07', etiqueta: 'Cédula de identidad Tesorero/a' },
+      { campo: 'doc_08', etiqueta: 'Certificado de vigencia de la directiva' },
+      { campo: 'doc_09', etiqueta: 'Certificado de personalidad jurídica' },
+      { campo: 'doc_10', etiqueta: 'Cotización Proveedor N°1' },
+      { campo: 'doc_11', etiqueta: 'Cotización Proveedor N°2' },
+      { campo: 'doc_12', etiqueta: 'Cotización Proveedor N°3' },
+      { campo: 'doc_13', etiqueta: 'Copia del libro de socios' }
+    ],
+    estadosProceso: [
+      'sin_postular', 'postulando', 'en_evaluacion', 'adjudicado',
+      'firma_convenio', 'en_ejecucion', 'en_rendicion', 'cerrado'
+    ],
+    convocatorias: [
+      { id: '1',   label: 'Primer Llamado',   cierre: '27/03/2026' },
+      { id: '2',   label: 'Segundo Llamado',  cierre: '03/08/2026' },
+      { id: '1,2', label: 'Ambos llamados',   cierre: '' }
+    ]
+  };
+}
+
+function goPesGetFondeseList() {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  const rows = getSheetData_(GO_PES_V2.SHEETS.FACT_FONDESE);
+  const DOC_FIELDS = ['doc_01','doc_02','doc_03','doc_04','doc_05','doc_06','doc_07',
+                      'doc_08','doc_09','doc_10','doc_11','doc_12','doc_13'];
+  const list = rows.map(function(r) {
+    const docs_entregados = DOC_FIELDS.filter(function(f) {
+      return String(r[f] || '').trim().toUpperCase() === 'TRUE';
+    }).length;
+    return Object.assign({}, r, {
+      docs_entregados: docs_entregados,
+      pct_docs: Math.round(docs_entregados / 13 * 100)
+    });
+  });
+  return serializeForClient_({ rows: list, catalogs: goPesFondeseCatalogs_() });
+}
+
+function goPesGetFondeseDetalle(idFondese) {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  const id = String(idFondese || '').trim();
+  if (!id) throw new Error('Falta ID FONDESE.');
+  const row = getSheetData_(GO_PES_V2.SHEETS.FACT_FONDESE).find(function(r) {
+    return String(r.fondese_id || '').trim() === id;
+  });
+  if (!row) throw new Error('Registro FONDESE no encontrado: ' + id);
+  return serializeForClient_({ registro: row, catalogs: goPesFondeseCatalogs_() });
+}
+
+function goPesUpsertFondese(payload) {
+  const actor = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  const p = payload || {};
+  const email = String((actor && actor.email) || '').trim() || Session.getActiveUser().getEmail();
+  const now = new Date();
+  const id = String(p.fondese_id || '').trim();
+
+  if (id) {
+    const updated = Object.assign({}, p, { fecha_actualizacion: now });
+    upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FONDESE, 'fondese_id', [updated], false);
+    invalidateSheetRuntimeCache_(GO_PES_V2.SHEETS.FACT_FONDESE);
+    logUserAction_('UPSERT_FONDESE', 'fondese', id, 'OK', { organizacion_id: p.organizacion_id });
+    return serializeForClient_({ ok: true, fondese_id: id });
+  }
+
+  const newId = 'FND-' + new Date().getTime();
+  const newRow = Object.assign({}, p, {
+    fondese_id: newId,
+    fecha_creacion: now,
+    fecha_actualizacion: now,
+    creado_por: email
+  });
+  appendRowObjects_(GO_PES_V2.SHEETS.FACT_FONDESE, [newRow]);
+  invalidateSheetRuntimeCache_(GO_PES_V2.SHEETS.FACT_FONDESE);
+  logUserAction_('UPSERT_FONDESE', 'fondese', newId, 'OK', { organizacion_id: p.organizacion_id });
+  return serializeForClient_({ ok: true, fondese_id: newId });
+}

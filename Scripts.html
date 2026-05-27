@@ -92,8 +92,8 @@
       inicioPanelData: null,
       inicioPanelFetchedAt: 0,
       currentFicha: null,
-      currentSearchResults: [],
-      searchRequestSeq: 0,
+      buscarModuleRows: [],
+      buscarModuleFetchedAt: 0,
       currentAvance: null,
       avanceCatalogos: null,
       avanceGrupos: [],
@@ -731,6 +731,21 @@
     });
   }
 
+  function ensureBuscarData_() {
+    const now = Date.now();
+    if (
+      APP.state.buscarModuleRows.length &&
+      APP.state.buscarModuleFetchedAt &&
+      (now - APP.state.buscarModuleFetchedAt) < 60000
+    ) {
+      return null;
+    }
+    return api('getBuscarModuleData').then(function(data) {
+      APP.state.buscarModuleRows = (data && data.rows) || [];
+      APP.state.buscarModuleFetchedAt = Date.now();
+    });
+  }
+
   function ensureOrganizacionesModuloList_() {
     const now = Date.now();
     if (
@@ -763,6 +778,8 @@
       }
       case 'socios':
         return ensureSociosCatalogs_();
+      case 'buscar':
+        return ensureBuscarData_();
       default:
         return null;
     }
@@ -806,6 +823,19 @@
     const userDeleteForm = document.getElementById('user-delete-form');
 
     if (searchBtn) searchBtn.addEventListener('click', runSearch);
+
+    const searchQuery = document.getElementById('search-query');
+    if (searchQuery && !searchQuery.dataset.buscarBound) {
+      searchQuery.dataset.buscarBound = '1';
+      let buscarDebounce = null;
+      searchQuery.addEventListener('input', function() {
+        clearTimeout(buscarDebounce);
+        buscarDebounce = setTimeout(updateBuscarTableView_, 120);
+      });
+      searchQuery.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { clearTimeout(buscarDebounce); updateBuscarTableView_(); }
+      });
+    }
     if (saveUserBtn) saveUserBtn.addEventListener('click', saveUserFromForm);
     if (sociosValidateBtn) sociosValidateBtn.addEventListener('click', validateSociosInput);
     if (sociosSaveBtn) sociosSaveBtn.addEventListener('click', saveSociosInput);
@@ -1255,7 +1285,11 @@
       const totalRows = (res.cleared || []).reduce((sum, item) => sum + Number(item.rows_cleared || 0), 0);
       showSuccess(`Datos de prueba limpiados. Hojas: ${(res.cleared || []).length}. Filas: ${totalRows}.`);
       APP.state.catalogStatus = { app: false, ingreso: false, organizacion: false };
+      APP.state.inicioPanelData = null;
+      APP.state.inicioPanelFetchedAt = 0;
       APP.state.currentFicha = null;
+      APP.state.buscarModuleRows = [];
+      APP.state.buscarModuleFetchedAt = 0;
       APP.state.currentAvance = null;
       APP.state.avanceCatalogos = null;
       APP.state.avanceGrupos = [];
@@ -1268,6 +1302,9 @@
       APP.state.currentBeneficioCodigo = '';
       APP.state.sociosOrganizaciones = [];
       APP.state.sociosOrganizacionesFetchedAt = 0;
+      APP.state.sociosModuleRows = [];
+      APP.state.sociosModuleFetchedAt = 0;
+      APP.state.sociosModuleQuery = '';
       APP.state.renderedViews = {};
       route('inicio');
     }).catch(showError).finally(() => {
@@ -1329,6 +1366,7 @@
         loadSociosModuleData_().catch(() => {});
       }
 
+      if (view === 'buscar') updateBuscarTableView_();
       if (view === 'historial') loadHistorial();
       if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
       if (view === 'configuracion' && APP.state.permissions.canManageConfig) loadConfiguracionView_();
@@ -1349,66 +1387,82 @@
     finalizeRoute();
   }
 
-  function runSearch() {
-    const query = document.getElementById('search-query')?.value.trim() || '';
-    const tbody = document.getElementById('search-results');
-    const btn = document.getElementById('search-btn');
-    const requestSeq = (APP.state.searchRequestSeq || 0) + 1;
-    APP.state.searchRequestSeq = requestSeq;
+  function normalizeBuscarText_(value) {
+    return String(value == null ? '' : value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
 
-    if (tbody) {
-      tbody.innerHTML = '<tr><td colspan="6" class="muted">Buscando...</td></tr>';
-    }
-    if (btn) btn.disabled = true;
-    showContentLoading('Buscando vecino...');
-
-    api('buscarVecino', query).then(rows => {
-      if (requestSeq !== APP.state.searchRequestSeq) return;
-      APP.state.currentSearchResults = Array.isArray(rows) ? rows : [];
-
-      setStatus(`Resultados búsqueda: ${APP.state.currentSearchResults.length}`, true);
-
-      if (!tbody) return;
-
-      if (!APP.state.currentSearchResults.length) {
-        tbody.innerHTML = '<tr><td colspan="6" class="muted">No se encontraron resultados.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = APP.state.currentSearchResults.map(r => `
-        <tr>
-          <td>${escapeHtml(r.solicitud_id || '')}</td>
-          <td>${escapeHtml(r.nombre_completo || '')}</td>
-          <td>${escapeHtml(r.direccion_original || '')}</td>
-          <td><span class="badge">${escapeHtml(r.estado_actual || '')}</span></td>
-          <td>${escapeHtml(r.nombre_organizacion || '')}</td>
-          <td>
-            <button class="secondary-btn js-open-ficha"
-              data-solicitud="${escapeHtml(r.solicitud_id || '')}"
-              data-organizacion="${escapeHtml(r.organizacion_id || '')}">
-              <span class="material-symbols-outlined">open_in_new</span>Ver ficha
-            </button>
-          </td>
-        </tr>
-      `).join('');
-
-      tbody.querySelectorAll('.js-open-ficha').forEach(btn =>
-        btn.addEventListener('click', () => loadFicha({
-          solicitud_id: btn.dataset.solicitud,
-          organizacion_id: btn.dataset.organizacion
-        }))
-      );
-    }).catch(err => {
-      if (requestSeq !== APP.state.searchRequestSeq) return;
-      if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="6" class="muted">Error al buscar.</td></tr>';
-      }
-      showError(err);
-    }).finally(() => {
-      if (requestSeq !== APP.state.searchRequestSeq) return;
-      if (btn) btn.disabled = false;
-      hideContentLoading();
+  function filterBuscarRows_(rows, query) {
+    const term = normalizeBuscarText_(query);
+    if (!term) return rows;
+    return rows.filter(function(r) {
+      const haystack = normalizeBuscarText_([
+        r.nombre_completo,
+        r.rut_vecino,
+        r.telefono_contacto,
+        r.correo_contacto,
+        r.direccion_original,
+        r.solicitud_id,
+        r.organizacion_id,
+        r.nombre_organizacion
+      ].join(' | '));
+      return haystack.includes(term);
     });
+  }
+
+  function updateBuscarTableView_() {
+    const tbody   = document.getElementById('search-results');
+    const countEl = document.getElementById('buscar-count');
+    if (!tbody) return;
+
+    const allRows = APP.state.buscarModuleRows || [];
+    const query   = String((document.getElementById('search-query') || {}).value || '');
+    const rows    = filterBuscarRows_(allRows, query);
+
+    if (countEl) {
+      countEl.textContent = query.trim()
+        ? `${rows.length} de ${allRows.length} vecinos`
+        : `${allRows.length} vecinos`;
+    }
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">${
+        query.trim() ? 'Sin resultados para la búsqueda.' : (allRows.length ? 'Sin resultados.' : 'No hay vecinos registrados.')
+      }</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td>${escapeHtml(r.solicitud_id || '')}</td>
+        <td>${escapeHtml(r.nombre_completo || '')}</td>
+        <td>${escapeHtml(r.direccion_original || '')}</td>
+        <td><span class="badge">${escapeHtml(r.estado_actual || '')}</span></td>
+        <td>${escapeHtml(r.nombre_organizacion || '')}</td>
+        <td>
+          <button class="secondary-btn js-open-ficha"
+            data-solicitud="${escapeHtml(r.solicitud_id || '')}"
+            data-organizacion="${escapeHtml(r.organizacion_id || '')}">
+            <span class="material-symbols-outlined">open_in_new</span>Ver ficha
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('.js-open-ficha').forEach(btn =>
+      btn.addEventListener('click', () => loadFicha({
+        solicitud_id: btn.dataset.solicitud,
+        organizacion_id: btn.dataset.organizacion
+      }))
+    );
+  }
+
+  function runSearch() {
+    updateBuscarTableView_();
   }
 
   function loadFicha(params) {

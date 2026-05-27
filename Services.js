@@ -79,6 +79,39 @@ function buscarSolicitud(query) {
   return buscarVecino(query);
 }
 
+function getBuscarModuleData() {
+  requireModuleAccess_('buscar', ['operador', 'coordinador', 'superuser']);
+
+  const caseRows = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS);
+  const orgRows  = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES);
+
+  const orgBySolicitud = {};
+  orgRows.forEach(function(r) {
+    const key = String(r.solicitud_id || '').trim();
+    if (key && !orgBySolicitud[key]) orgBySolicitud[key] = r;
+  });
+
+  const rows = caseRows.map(function(r) {
+    const key = String(r.solicitud_id || '').trim();
+    const org = orgBySolicitud[key] || {};
+    return {
+      solicitud_id:       String(r.solicitud_id || ''),
+      organizacion_id:    String(r.organizacion_id || org.organizacion_id || ''),
+      nombre_completo:    String(r.nombre_completo || buildFullName_(r.nombre_vecino, r.apellido_vecino) || ''),
+      rut_vecino:         String(r.rut_vecino || ''),
+      telefono_contacto:  String(r.telefono_contacto || ''),
+      correo_contacto:    String(r.correo_contacto || ''),
+      direccion_original: String(r.direccion_original || ''),
+      uv:                 String(r.uv || ''),
+      sector:             String(r.sector || ''),
+      estado_actual:      String(r.estado_actual || ''),
+      nombre_organizacion:String(org.nombre_organizacion || '')
+    };
+  });
+
+  return serializeForClient_({ rows: rows });
+}
+
 function buscarOrganizacion(query) {
   requireModuleAccess_('buscar', ['operador', 'coordinador', 'superuser']);
   const term = normalizeText_(query || '');

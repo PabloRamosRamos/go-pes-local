@@ -230,14 +230,14 @@
             </div>
             <div class="panel search-panel">
               <div class="field field--grow">
-                <label>Nombre, teléfono, dirección, ID de solicitud u organización</label>
-                <input id="search-query" type="text" placeholder="Ej.: María, SOL-000001, ORG-000012, Pedro de Valdivia 1234">
+                <label>Nombre, RUT, teléfono, dirección, ID de solicitud u organización</label>
+                <input id="search-query" type="text" placeholder="Ej.: María, 12.345.678-9, SOL-000001, Pedro de Valdivia 1234" autocomplete="off">
               </div>
-              <div class="field field--auto">
-                <label>&nbsp;</label>
-                <button class="primary-btn" id="search-btn"><span class="material-symbols-outlined">search</span>Buscar</button>
+              <div class="field field--auto" style="align-self:flex-end">
+                <button class="secondary-btn" id="search-btn" style="height:38px"><span class="material-symbols-outlined">filter_list</span>Filtrar</button>
               </div>
             </div>
+            <div style="display:flex;justify-content:flex-end;padding:0 2px 6px"><span id="buscar-count" class="muted" style="font-size:0.82rem"></span></div>
             <div class="table-wrap"><table class="data-table"><thead><tr><th>Solicitud</th><th>Vecino</th><th>Dirección</th><th>Estado actual</th><th>Organización</th><th></th></tr></thead><tbody id="search-results"></tbody></table></div>
           </section>
 

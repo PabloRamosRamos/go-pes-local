@@ -6,7 +6,7 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros Â· Municipalidad de Providencia',
   VERSION: '2.1.3',
-  BUILD: '40e69fe',
+  BUILD: 'c310b4f',
   BUILD_DATE: '20260527',
   ENVIRONMENT: 'DEV',
   SUPERUSERS: [
@@ -42,6 +42,7 @@ const GO_PES_V2 = {
     FACT_BENEFICIOS_ORG_HITOS: 'FACT_Beneficios_Organizacion_Hitos',
     FACT_AVANCE_HITOS: 'FACT_Avance_Hitos',
     FACT_AVANCE_ESTADO: 'FACT_Avance_Estado',
+    FACT_FONDESE: 'FACT_Fondese',
     CAT_HITOS_AVANCE: 'CAT_Hitos_Avance',
     VW_AVANCE_ORGANIZACION: 'VW_Avance_Organizacion',
 

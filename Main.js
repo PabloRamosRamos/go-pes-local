@@ -5,9 +5,9 @@ const GO_PES_V2 = {
   APP_NAME: 'GO-PES',
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros Â· Municipalidad de Providencia',
-  VERSION: '2.1.0-modular',
-  BUILD: '4331eb2',
-  BUILD_DATE: '20260526',
+  VERSION: '2.1.3',
+  BUILD: 'b356530',
+  BUILD_DATE: '20260527',
   ENVIRONMENT: 'DEV',
   SUPERUSERS: [
     'pablo.ramos@providencia.cl',
@@ -97,6 +97,7 @@ function doGet(e) {
   template.bootstrap = JSON.stringify(buildBootstrapForTemplate_(e));
   template.logoDataUri = getConfiguredLogoDataUri_('light');
   template.logoDarkDataUri = getConfiguredLogoDataUri_('dark');
+  template.faviconDataUri = getFaviconDataUri_();
   template.systemConfigJson = JSON.stringify(clientConfig);
 
   return template.evaluate()

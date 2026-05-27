@@ -1539,59 +1539,196 @@
   }
 
   function loadHistorial() {
-    const rangeSelect = document.getElementById('history-range-filter');
-    const tbody = document.getElementById('history-results');
-    if (rangeSelect && !rangeSelect.dataset.bound) {
-      rangeSelect.dataset.bound = 'true';
-      rangeSelect.addEventListener('change', loadHistorial);
+    ['hist-periodo', 'hist-origen'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.bound) {
+        el.dataset.bound = 'true';
+        el.addEventListener('change', loadHistorial);
+      }
+    });
+    ['hist-resultado', 'hist-buscar'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.bound) {
+        el.dataset.bound = 'true';
+        el.addEventListener(id === 'hist-buscar' ? 'input' : 'change', applyHistorialClientFilters_);
+      }
+    });
+    const printBtn = document.getElementById('hist-print-btn');
+    if (printBtn && !printBtn.dataset.bound) {
+      printBtn.dataset.bound = 'true';
+      printBtn.addEventListener('click', printHistorialReport_);
     }
 
-    const selectedPeriod = rangeSelect && rangeSelect.value ? rangeSelect.value : 'last_month';
-    const selectedLabel = rangeSelect && rangeSelect.options && rangeSelect.selectedIndex >= 0
-      ? String(rangeSelect.options[rangeSelect.selectedIndex].text || '').trim()
-      : 'este período';
+    const periodo = (document.getElementById('hist-periodo') || {}).value || 'last_month';
+    const source_key = (document.getElementById('hist-origen') || {}).value || '';
+    const tbody = document.getElementById('hist-tbody');
     const requestSeq = (APP.state.historialRequestSeq || 0) + 1;
     APP.state.historialRequestSeq = requestSeq;
 
-    if (rangeSelect) rangeSelect.disabled = true;
-    if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="8" class="muted">Cargando historial para ${escapeHtml(selectedLabel.toLowerCase())}...</td></tr>`;
-    }
+    ['hist-periodo', 'hist-origen'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.disabled = true;
+    });
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="muted">Cargando historial...</td></tr>';
     showContentLoading('Cargando historial...');
 
-    api('listarHistorial', { periodo: selectedPeriod }).then(rows => {
-      if (requestSeq !== APP.state.historialRequestSeq || !tbody) return;
-
-      rows = Array.isArray(rows) ? rows : [];
-      if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="muted">No hay registros para ${escapeHtml(selectedLabel.toLowerCase())}.</td></tr>`;
-        setStatus(`Historial cargado: 0 registros para ${selectedLabel.toLowerCase()}.`, true);
-        return;
-      }
-
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${escapeHtml(formatFechaHoraUi_(r.timestamp || ''))}</td>
-          <td><span class="badge">${escapeHtml(r.source_label || '')}</span></td>
-          <td>${escapeHtml(r.email || '')}</td>
-          <td>${escapeHtml(r.action || '')}</td>
-          <td>${escapeHtml(r.entity_type || '')}</td>
-          <td>${escapeHtml(r.entity_id || '')}</td>
-          <td>${escapeHtml(r.result || '')}</td>
-          <td class="history-detail-cell">${escapeHtml(r.detail_text || 'Sin detalle')}</td>
-        </tr>
-      `).join('');
-      setStatus(`Historial cargado: ${rows.length} registros para ${selectedLabel.toLowerCase()}.`, true);
-    }).catch(err => {
+    api('listarHistorial', { periodo: periodo, source_key: source_key }).then(function(rows) {
+      if (requestSeq !== APP.state.historialRequestSeq) return;
+      APP.state.historialAllRows = Array.isArray(rows) ? rows : [];
+      applyHistorialClientFilters_();
+    }).catch(function(err) {
       if (requestSeq === APP.state.historialRequestSeq && tbody) {
-        tbody.innerHTML = `<tr><td colspan="8" class="muted">No fue posible cargar el historial para ${escapeHtml(selectedLabel.toLowerCase())}.</td></tr>`;
+        tbody.innerHTML = '<tr><td colspan="8" class="muted">No fue posible cargar el historial.</td></tr>';
       }
       showError(err);
-    }).finally(() => {
+    }).finally(function() {
       if (requestSeq !== APP.state.historialRequestSeq) return;
-      if (rangeSelect) rangeSelect.disabled = false;
+      ['hist-periodo', 'hist-origen'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.disabled = false;
+      });
       hideContentLoading();
     });
+  }
+
+  function applyHistorialClientFilters_() {
+    const allRows = APP.state.historialAllRows || [];
+    const resultado = (document.getElementById('hist-resultado') || {}).value || '';
+    const buscar = ((document.getElementById('hist-buscar') || {}).value || '').trim().toLowerCase();
+    const tbody = document.getElementById('hist-tbody');
+    if (!tbody) return;
+
+    let filtered = allRows;
+    if (resultado) {
+      filtered = filtered.filter(function(r) {
+        const res = (r.result || '').toLowerCase();
+        if (resultado === 'ok') return res === 'ok' || res === 'éxito' || res === 'exito' || res === 'success';
+        if (resultado === 'error') return res === 'error' || res.indexOf('error') !== -1;
+        return true;
+      });
+    }
+    if (buscar) {
+      filtered = filtered.filter(function(r) {
+        return (r.email || '').toLowerCase().indexOf(buscar) !== -1
+          || (r.action || '').toLowerCase().indexOf(buscar) !== -1
+          || (r.entity_type || '').toLowerCase().indexOf(buscar) !== -1
+          || (r.entity_id || '').toLowerCase().indexOf(buscar) !== -1
+          || (r.detail_text || '').toLowerCase().indexOf(buscar) !== -1;
+      });
+    }
+
+    renderHistorialSummaryChips_(allRows, filtered);
+
+    const counterEl = document.getElementById('hist-counter');
+    if (counterEl) {
+      counterEl.textContent = filtered.length === allRows.length
+        ? filtered.length + ' registros'
+        : filtered.length + ' de ' + allRows.length + ' registros';
+    }
+
+    if (!filtered.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="muted">No hay registros para los filtros seleccionados.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(function(r) {
+      const srcCls = histSourceBadgeClass_(r.source_key);
+      const resCls = histResultBadgeClass_(r.result);
+      return '<tr>'
+        + '<td style="white-space:nowrap">' + escapeHtml(formatFechaHoraUi_(r.timestamp || '')) + '</td>'
+        + '<td><span class="hist-badge ' + srcCls + '">' + escapeHtml(r.source_label || r.source_key || '') + '</span></td>'
+        + '<td>' + escapeHtml(r.email || '') + '</td>'
+        + '<td>' + escapeHtml(r.action || '') + '</td>'
+        + '<td>' + escapeHtml(r.entity_type || '') + '</td>'
+        + '<td>' + escapeHtml(r.entity_id || '') + '</td>'
+        + '<td><span class="hist-badge ' + resCls + '">' + escapeHtml(r.result || '') + '</span></td>'
+        + '<td class="hist-detail">' + escapeHtml(r.detail_text || '') + '</td>'
+        + '</tr>';
+    }).join('');
+  }
+
+  function renderHistorialSummaryChips_(allRows, filteredRows) {
+    const chipsEl = document.getElementById('hist-chips');
+    if (!chipsEl) return;
+    const rows = filteredRows || [];
+    const total = rows.length;
+    const acciones = rows.filter(function(r) { return r.source_key === 'accion_usuario'; }).length;
+    const accesos = rows.filter(function(r) { return r.source_key === 'acceso'; }).length;
+    const errors = rows.filter(function(r) { return (r.result || '').toLowerCase().indexOf('error') !== -1; }).length;
+    const chips = [
+      { label: 'Total', value: total, cls: '' },
+      { label: 'Acciones usuario', value: acciones, cls: 'hist-chip--acciones' },
+      { label: 'Accesos', value: accesos, cls: 'hist-chip--accesos' },
+      { label: 'Errores', value: errors, cls: 'hist-chip--errores' }
+    ];
+    chipsEl.innerHTML = chips.map(function(c) {
+      return '<div class="hist-chip ' + c.cls + '">'
+        + '<div class="hist-chip__label">' + c.label + '</div>'
+        + '<div class="hist-chip__value">' + c.value + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function histSourceBadgeClass_(sourceKey) {
+    if (sourceKey === 'accion_usuario') return 'hist-badge--accion';
+    if (sourceKey === 'procesamiento') return 'hist-badge--proc';
+    if (sourceKey === 'acceso') return 'hist-badge--acceso';
+    return '';
+  }
+
+  function histResultBadgeClass_(result) {
+    const r = (result || '').toLowerCase();
+    if (r === 'ok' || r === 'éxito' || r === 'exito' || r === 'success') return 'hist-badge--ok';
+    if (r.indexOf('error') !== -1) return 'hist-badge--error';
+    if (r.indexOf('warn') !== -1 || r.indexOf('skip') !== -1) return 'hist-badge--warn';
+    return '';
+  }
+
+  function printHistorialReport_() {
+    const rows = APP.state.historialAllRows || [];
+    const total = rows.length;
+    const acciones = rows.filter(function(r) { return r.source_key === 'accion_usuario'; }).length;
+    const accesos = rows.filter(function(r) { return r.source_key === 'acceso'; }).length;
+    const proc = rows.filter(function(r) { return r.source_key === 'procesamiento'; }).length;
+    const errors = rows.filter(function(r) { return (r.result || '').toLowerCase().indexOf('error') !== -1; }).length;
+
+    const periodoEl = document.getElementById('hist-periodo');
+    const periodoLabel = periodoEl && periodoEl.options && periodoEl.selectedIndex >= 0
+      ? periodoEl.options[periodoEl.selectedIndex].text : '';
+    const origenEl = document.getElementById('hist-origen');
+    const origenLabel = origenEl && origenEl.options && origenEl.selectedIndex >= 0
+      ? origenEl.options[origenEl.selectedIndex].text : 'Todos';
+    const now = new Date().toLocaleString('es-CL');
+
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Historial GO-PES</title><style>'
+      + 'body{font-family:Arial,sans-serif;padding:32px;color:#24364B}'
+      + 'h1{font-size:1.4rem;margin-bottom:4px}'
+      + '.subtitle{color:#6b7a8d;font-size:0.9rem;margin-bottom:24px}'
+      + '.cards{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px}'
+      + '.card{border:1px solid #D6E0EA;border-radius:10px;padding:16px 24px;min-width:120px}'
+      + '.card__label{font-size:0.72rem;color:#6b7a8d;text-transform:uppercase;letter-spacing:0.05em}'
+      + '.card__value{font-size:2rem;font-weight:700;line-height:1.2}'
+      + '.card--acciones .card__value{color:#214E8A}'
+      + '.card--accesos .card__value{color:#007C4A}'
+      + '.card--proc .card__value{color:#007C4A}'
+      + '.card--errores .card__value{color:#c0392b}'
+      + '.footer{margin-top:32px;font-size:0.75rem;color:#6b7a8d}'
+      + '</style></head><body>'
+      + '<h1>Historial de acciones — GO-PES</h1>'
+      + '<div class="subtitle">Período: ' + periodoLabel + ' · Origen: ' + origenLabel + ' · Generado: ' + now + '</div>'
+      + '<div class="cards">'
+      + '<div class="card"><div class="card__label">Total registros</div><div class="card__value">' + total + '</div></div>'
+      + '<div class="card card--acciones"><div class="card__label">Acciones usuario</div><div class="card__value">' + acciones + '</div></div>'
+      + '<div class="card card--accesos"><div class="card__label">Accesos</div><div class="card__value">' + accesos + '</div></div>'
+      + '<div class="card card--proc"><div class="card__label">Procesamiento</div><div class="card__value">' + proc + '</div></div>'
+      + '<div class="card card--errores"><div class="card__label">Errores</div><div class="card__value">' + errors + '</div></div>'
+      + '</div>'
+      + '<div class="footer">GO-PES v2 · Municipalidad de Providencia · Exportado el ' + now + '</div>'
+      + '<script>window.onload=function(){window.print();}<\/script>'
+      + '</body></html>';
+
+    const win = window.open('', '_blank', 'width=800,height=600');
+    if (win) { win.document.write(html); win.document.close(); }
   }
 
   function showSuccess(message) {

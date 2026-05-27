@@ -1044,7 +1044,14 @@ function listarHistorial(filters) {
     });
   }
 
-  return serializeForClient_(rows.slice(0, 200));
+  if (config.source_key) {
+    const targetSource = String(config.source_key || '').trim();
+    rows = rows.filter(function(row) {
+      return String(row.source_key || '').trim() === targetSource;
+    });
+  }
+
+  return serializeForClient_(rows);
 }
 
 function filterHistorialRowsByPeriod_(rows, periodKey) {

@@ -4,6 +4,7 @@
     <base target="_top">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/png" href="<?!= faviconDataUri ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -16,6 +17,38 @@
       .system-info-label { font-size: 0.8rem; color: var(--color-text-muted, #6b7a8d); min-width: 110px; flex-shrink: 0; }
       .system-info-value { font-size: 0.85rem; font-weight: 500; word-break: break-all; }
       .system-info-ok { color: #007C4A; } .system-info-fail { color: #c0392b; }
+      .hist-filter-bar { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 16px; }
+      .hist-filter-bar .field { margin-bottom: 0; }
+      .hist-chips { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+      .hist-chip { background: var(--surface, #fff); border: 1px solid var(--border, #D6E0EA); border-radius: 10px; padding: 10px 16px; min-width: 110px; }
+      .hist-chip__label { font-size: 0.72rem; color: var(--text-muted, #6b7a8d); text-transform: uppercase; letter-spacing: 0.05em; }
+      .hist-chip__value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; color: var(--text, #24364B); }
+      .hist-chip--acciones .hist-chip__value { color: #214E8A; }
+      .hist-chip--accesos .hist-chip__value { color: #007C4A; }
+      .hist-chip--errores .hist-chip__value { color: #c0392b; }
+      .hist-table-wrap { max-height: 520px; overflow-y: auto; border: 1px solid var(--border, #D6E0EA); border-radius: 8px; }
+      .hist-table-wrap table { width: 100%; border-collapse: collapse; }
+      .hist-table-wrap thead th { position: sticky; top: 0; background: var(--surface-alt, #f7fafc); z-index: 1; padding: 10px 12px; text-align: left; font-size: 0.78rem; font-weight: 600; color: var(--text-muted, #6b7a8d); border-bottom: 1px solid var(--border, #D6E0EA); white-space: nowrap; }
+      .hist-table-wrap tbody td { padding: 8px 12px; font-size: 0.82rem; border-bottom: 1px solid var(--border, #EAF0F5); vertical-align: top; }
+      .hist-table-wrap tbody tr:last-child td { border-bottom: none; }
+      .hist-counter { font-size: 0.8rem; color: var(--text-muted, #6b7a8d); margin-bottom: 8px; }
+      .hist-badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+      .hist-badge--accion { background: #dce8f7; color: #214E8A; }
+      .hist-badge--proc { background: #e8f5e9; color: #007C4A; }
+      .hist-badge--acceso { background: #ede8fb; color: #5c3d99; }
+      .hist-badge--ok { background: #d4edda; color: #155724; }
+      .hist-badge--error { background: #fde8e8; color: #c0392b; }
+      .hist-badge--warn { background: #fff3cd; color: #856404; }
+      .hist-detail { max-width: 240px; white-space: normal; word-break: break-word; color: var(--text-muted, #6b7a8d); }
+      html[data-theme="dark"] .hist-chip--acciones .hist-chip__value { color: var(--info, #74c8e6); }
+      html[data-theme="dark"] .hist-chip--accesos .hist-chip__value { color: var(--success, #9fd85a); }
+      html[data-theme="dark"] .hist-chip--errores .hist-chip__value { color: #f5a3a3; }
+      html[data-theme="dark"] .hist-badge--accion { background: var(--info-soft, #163243); color: var(--info, #74c8e6); }
+      html[data-theme="dark"] .hist-badge--proc { background: var(--success-soft, #21311a); color: var(--success, #9fd85a); }
+      html[data-theme="dark"] .hist-badge--acceso { background: #221c3a; color: #b89af5; }
+      html[data-theme="dark"] .hist-badge--ok { background: var(--success-soft, #21311a); color: var(--success, #9fd85a); }
+      html[data-theme="dark"] .hist-badge--error { background: var(--danger-soft, #311b22); color: var(--alert-danger-fg, #ffd7d2); }
+      html[data-theme="dark"] .hist-badge--warn { background: var(--warning-soft, #352815); color: var(--alert-warning-fg, #ffd98a); }
     </style>
     <script>
       (() => {
@@ -395,17 +428,48 @@
           <section class="view" id="view-historial">
             <div class="section-head">
               <div><p class="eyebrow">Trazabilidad</p><h2>Historial de acciones</h2></div>
-              <div class="field field--auto history-filter">
-                <label for="history-range-filter">Periodo</label>
-                <select id="history-range-filter">
+              <button class="btn btn--secondary" id="hist-print-btn"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px;margin-right:4px">print</span>Exportar PDF</button>
+            </div>
+            <div class="hist-filter-bar">
+              <div class="field field--auto">
+                <label for="hist-periodo">Período</label>
+                <select id="hist-periodo">
                   <option value="last_week">Última semana</option>
                   <option value="last_month" selected>Último mes</option>
                   <option value="last_year">Último año</option>
-                  <option value="all">Todo</option>
+                  <option value="all">Todo el historial</option>
                 </select>
               </div>
+              <div class="field field--auto">
+                <label for="hist-origen">Origen</label>
+                <select id="hist-origen">
+                  <option value="">Todos</option>
+                  <option value="accion_usuario">Acciones usuario</option>
+                  <option value="procesamiento">Procesamiento</option>
+                  <option value="acceso">Accesos</option>
+                </select>
+              </div>
+              <div class="field field--auto">
+                <label for="hist-resultado">Resultado</label>
+                <select id="hist-resultado">
+                  <option value="">Todos</option>
+                  <option value="ok">OK / Éxito</option>
+                  <option value="error">Error</option>
+                </select>
+              </div>
+              <div class="field field--auto">
+                <label for="hist-buscar">Buscar</label>
+                <input type="text" id="hist-buscar" placeholder="Usuario, acción, entidad..." style="min-width:180px">
+              </div>
             </div>
-            <div class="table-wrap"><table class="data-table"><thead><tr><th>Fecha</th><th>Origen</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Resultado</th><th>Detalle</th></tr></thead><tbody id="history-results"></tbody></table></div>
+            <div class="hist-chips" id="hist-chips"></div>
+            <div class="hist-counter" id="hist-counter"></div>
+            <div class="hist-table-wrap">
+              <table class="data-table">
+                <thead><tr><th>Fecha</th><th>Origen</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Resultado</th><th>Detalle</th></tr></thead>
+                <tbody id="hist-tbody"></tbody>
+              </table>
+            </div>
           </section>
 
           <section class="view" id="view-usuarios">

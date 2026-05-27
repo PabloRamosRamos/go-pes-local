@@ -313,6 +313,7 @@
     });
 
     bindConfiguracionBrandingSection_();
+    bindMigracionSection_();
   }
 
   function submitConfiguracionSection_(ev) {
@@ -1604,6 +1605,8 @@
         return renderConfigIntegrationsSection_(config.integrations || {});
       case 'technical':
         return renderConfigTechnicalSection_(config.technical || {});
+      case 'migracion':
+        return renderConfigMigracionSection_();
       default:
         return renderConfigGeneralSection_(config.general || {});
     }
@@ -1694,4 +1697,379 @@
       item && item.label || '',
       item && item.date || ''
     ].join('|')).join('\n');
+  }
+
+  // ============================================================
+  // Migración de datos
+  // ============================================================
+
+  var MIG_INGRESO_FIELD_LABELS_ = {
+    nombre_vecino:         'Nombre',
+    apellido_vecino:       'Apellido',
+    rut_vecino:            'RUT / RUN',
+    telefono_contacto:     'Teléfono',
+    correo_contacto:       'Correo / Email',
+    direccion_original:    'Dirección',
+    uv:                    'Unidad Vecinal',
+    sector:                'Sector',
+    tipo_vivienda:         'Tipo de vivienda',
+    requerimiento_inicial: 'Requerimiento inicial',
+    medio_solicitud:       'Medio de solicitud',
+    unidad_origen:         'Unidad de origen',
+    fecha_solicitud:       'Fecha de solicitud',
+    observaciones_form:    'Observaciones'
+  };
+
+  var MIG_SOCIOS_FIELD_LABELS_ = {
+    organizacion_id:      'ID Organización (si disponible)',
+    nombre_comite_origen: 'Nombre organización (para búsqueda)',
+    run_socio:            'RUT / RUN del socio',
+    numero_registro:      'Número de registro',
+    nombre_socio:         'Nombre del socio',
+    edad:                 'Edad',
+    cargo:                'Cargo',
+    direccion_socio:      'Dirección',
+    ubicacion_socio:      'Ubicación / Sector'
+  };
+
+  function renderConfigMigracionSection_() {
+    return `
+      <section class="config-section" id="config-section-migracion">
+        <div class="config-section__head">
+          <p class="eyebrow">Migración de datos</p>
+          <h3>Importar datos desde hoja de cálculo externa</h3>
+        </div>
+        <div class="config-subcards">
+          <article class="config-subcard" id="mig-step-verify">
+            <h4><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:-2px;margin-right:4px">cloud_sync</span>Paso 1 — Verificar fuente</h4>
+            <p class="muted" style="margin:4px 0 12px;font-size:0.85rem">Conecta con el spreadsheet de origen para verificar el acceso y obtener el mapeo de columnas sugerido. La operación es de solo lectura.</p>
+            <div id="mig-source-info"></div>
+            <div style="margin-top:12px">
+              <button type="button" class="primary-btn" id="mig-btn-verify">
+                <span class="material-symbols-outlined">link</span>Verificar conexión
+              </button>
+            </div>
+          </article>
+
+          <article class="config-subcard is-hidden" id="mig-step-ingresos">
+            <h4><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:-2px;margin-right:4px">person_add</span>Paso 2 — Migrar ingresos</h4>
+            <p class="muted" style="margin:4px 0 12px;font-size:0.85rem">Mapea las columnas del formulario de origen a los campos del sistema. Los registros con el mismo RUT ya existente se omiten como duplicados.</p>
+            <div id="mig-map-ingresos"></div>
+            <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="secondary-btn" id="mig-btn-preview-ingresos">
+                <span class="material-symbols-outlined">preview</span>Vista previa
+              </button>
+              <button type="button" class="primary-btn" id="mig-btn-exec-ingresos">
+                <span class="material-symbols-outlined">upload</span>Ejecutar migración de ingresos
+              </button>
+            </div>
+            <div id="mig-preview-ingresos" style="margin-top:12px"></div>
+            <div id="mig-result-ingresos" style="margin-top:8px"></div>
+          </article>
+
+          <article class="config-subcard is-hidden" id="mig-step-socios">
+            <h4><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:-2px;margin-right:4px">group</span>Paso 3 — Migrar socios</h4>
+            <p class="muted" style="margin:4px 0 12px;font-size:0.85rem">Las organizaciones deben estar cargadas en el sistema antes de importar socios. Un socio puede pertenecer a más de una organización (una fila por combinación socio+org).</p>
+            <div id="mig-map-socios"></div>
+            <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="secondary-btn" id="mig-btn-preview-socios">
+                <span class="material-symbols-outlined">preview</span>Vista previa
+              </button>
+              <button type="button" class="primary-btn" id="mig-btn-exec-socios">
+                <span class="material-symbols-outlined">upload</span>Ejecutar migración de socios
+              </button>
+            </div>
+            <div id="mig-preview-socios" style="margin-top:12px"></div>
+            <div id="mig-result-socios" style="margin-top:8px"></div>
+          </article>
+        </div>
+      </section>
+    `;
+  }
+
+  function bindMigracionSection_() {
+    const btnVerify = document.getElementById('mig-btn-verify');
+    if (!btnVerify || btnVerify.dataset.migBound === '1') return;
+    btnVerify.dataset.migBound = '1';
+
+    btnVerify.addEventListener('click', function() {
+      showContentLoading('Verificando fuente...');
+      btnVerify.disabled = true;
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          hideContentLoading();
+          btnVerify.disabled = false;
+
+          if (!result || !result.ok) {
+            document.getElementById('mig-source-info').innerHTML = renderMigError_(result && result.error || 'Error al conectar con la fuente.');
+            return;
+          }
+
+          APP.state.migracion = result;
+          document.getElementById('mig-source-info').innerHTML = renderMigSourceInfo_(result);
+
+          document.getElementById('mig-map-ingresos').innerHTML =
+            renderMigColumnMap_('ingresos', result.ingresos.headers, result.ingresos.suggestedMap);
+          document.getElementById('mig-step-ingresos').classList.remove('is-hidden');
+
+          document.getElementById('mig-map-socios').innerHTML =
+            renderMigColumnMap_('socios', result.socios.headers, result.socios.suggestedMap);
+          document.getElementById('mig-step-socios').classList.remove('is-hidden');
+
+          bindMigracionStepButtons_();
+        })
+        .withFailureHandler(function(err) {
+          hideContentLoading();
+          btnVerify.disabled = false;
+          document.getElementById('mig-source-info').innerHTML = renderMigError_(String(err && err.message || err || 'Error desconocido'));
+        })
+        .verificarFuenteMigracion();
+    });
+  }
+
+  function bindMigracionStepButtons_() {
+    const btnPreviewIng = document.getElementById('mig-btn-preview-ingresos');
+    if (btnPreviewIng && !btnPreviewIng.dataset.migBound) {
+      btnPreviewIng.dataset.migBound = '1';
+      btnPreviewIng.addEventListener('click', function() {
+        showContentLoading('Cargando vista previa...');
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideContentLoading();
+            document.getElementById('mig-preview-ingresos').innerHTML =
+              result && result.ok ? renderMigPreviewTable_(result.rows) : renderMigError_(result && result.error || 'Error');
+          })
+          .withFailureHandler(function(err) {
+            hideContentLoading();
+            document.getElementById('mig-preview-ingresos').innerHTML = renderMigError_(String(err && err.message || err));
+          })
+          .previewMigracion({ tipo: 'ingresos', columnMap: getMigColumnMap_('ingresos') });
+      });
+    }
+
+    const btnExecIng = document.getElementById('mig-btn-exec-ingresos');
+    if (btnExecIng && !btnExecIng.dataset.migBound) {
+      btnExecIng.dataset.migBound = '1';
+      btnExecIng.addEventListener('click', function() {
+        if (!confirm('¿Confirmas la migración de ingresos?\n\nEsta acción insertará registros en el sistema. Los duplicados (mismo RUT) se omitirán automáticamente.')) return;
+        showContentLoading('Ejecutando migración de ingresos...');
+        btnExecIng.disabled = true;
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideContentLoading();
+            btnExecIng.disabled = false;
+            document.getElementById('mig-result-ingresos').innerHTML = renderMigResult_(result);
+          })
+          .withFailureHandler(function(err) {
+            hideContentLoading();
+            btnExecIng.disabled = false;
+            document.getElementById('mig-result-ingresos').innerHTML = renderMigError_(String(err && err.message || err));
+          })
+          .ejecutarMigracionIngresos({ columnMap: getMigColumnMap_('ingresos') });
+      });
+    }
+
+    const btnPreviewSoc = document.getElementById('mig-btn-preview-socios');
+    if (btnPreviewSoc && !btnPreviewSoc.dataset.migBound) {
+      btnPreviewSoc.dataset.migBound = '1';
+      btnPreviewSoc.addEventListener('click', function() {
+        showContentLoading('Cargando vista previa...');
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideContentLoading();
+            document.getElementById('mig-preview-socios').innerHTML =
+              result && result.ok ? renderMigPreviewTable_(result.rows) : renderMigError_(result && result.error || 'Error');
+          })
+          .withFailureHandler(function(err) {
+            hideContentLoading();
+            document.getElementById('mig-preview-socios').innerHTML = renderMigError_(String(err && err.message || err));
+          })
+          .previewMigracion({ tipo: 'socios', columnMap: getMigColumnMap_('socios') });
+      });
+    }
+
+    const btnExecSoc = document.getElementById('mig-btn-exec-socios');
+    if (btnExecSoc && !btnExecSoc.dataset.migBound) {
+      btnExecSoc.dataset.migBound = '1';
+      btnExecSoc.addEventListener('click', function() {
+        if (!confirm('¿Confirmas la migración de socios?\n\nLas organizaciones deben existir en el sistema. Los socios duplicados (mismo RUT + organización) se omitirán automáticamente.')) return;
+        showContentLoading('Ejecutando migración de socios...');
+        btnExecSoc.disabled = true;
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideContentLoading();
+            btnExecSoc.disabled = false;
+            document.getElementById('mig-result-socios').innerHTML = renderMigResult_(result);
+          })
+          .withFailureHandler(function(err) {
+            hideContentLoading();
+            btnExecSoc.disabled = false;
+            document.getElementById('mig-result-socios').innerHTML = renderMigError_(String(err && err.message || err));
+          })
+          .ejecutarMigracionSocios({ columnMap: getMigColumnMap_('socios') });
+      });
+    }
+  }
+
+  function renderMigSourceInfo_(result) {
+    const ing = result.ingresos;
+    const soc = result.socios;
+    const dst = result.destStats;
+    return `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px">
+        <div style="background:var(--surface-alt,#f4f6f9);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:12px">
+          <p class="eyebrow" style="font-size:0.7rem">Hoja ingresos</p>
+          <p style="font-size:0.85rem;font-weight:500;margin:2px 0">${escapeHtml(ing.sheet)}</p>
+          <p class="muted" style="font-size:0.8rem">${ing.totalRows} filas · ${ing.headers.length} columnas</p>
+        </div>
+        <div style="background:var(--surface-alt,#f4f6f9);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:12px">
+          <p class="eyebrow" style="font-size:0.7rem">Hoja socios</p>
+          <p style="font-size:0.85rem;font-weight:500;margin:2px 0">${escapeHtml(soc.sheet)}</p>
+          <p class="muted" style="font-size:0.8rem">${soc.totalRows} filas · ${soc.headers.length} columnas</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:20px;margin-top:10px;font-size:0.82rem;color:var(--text-muted,#7a8fa6)">
+        <span>Organizaciones en destino: <b style="color:var(--text,#24364B)">${dst.existingOrgs}</b></span>
+        <span>Ingresos en destino: <b style="color:var(--text,#24364B)">${dst.existingCases}</b></span>
+      </div>
+      <p style="color:var(--runtime-brand-secondary,#007C4A);font-size:0.82rem;margin-top:8px;display:flex;align-items:center;gap:4px">
+        <span class="material-symbols-outlined" style="font-size:1rem">check_circle</span>
+        Conexión verificada. Revisa el mapeo de columnas a continuación.
+      </p>
+    `;
+  }
+
+  function renderMigColumnMap_(tipo, headers, suggestedMap) {
+    const labels = tipo === 'ingresos' ? MIG_INGRESO_FIELD_LABELS_ : MIG_SOCIOS_FIELD_LABELS_;
+    const fields = Object.keys(labels);
+
+    const rows = fields.map(function(field) {
+      const selectedHeader = suggestedMap[field] || '';
+      const optionHtml = ['', ...headers].map(function(h) {
+        return `<option value="${escapeHtml(h)}" ${h === selectedHeader ? 'selected' : ''}>${h ? escapeHtml(h) : '— sin mapear —'}</option>`;
+      }).join('');
+
+      return `<tr style="border-bottom:1px solid var(--border,#D6E0EA)">
+        <td style="padding:5px 10px;font-size:0.82rem;white-space:nowrap;color:var(--text,#24364B)">${escapeHtml(labels[field])}</td>
+        <td style="padding:5px 10px">
+          <select name="mig-map-${tipo}-${escapeHtml(field)}" style="width:100%;font-size:0.82rem;padding:4px 6px;border:1px solid var(--border,#D6E0EA);border-radius:4px;background:var(--surface,#fff);color:var(--text,#24364B)">
+            ${optionHtml}
+          </select>
+        </td>
+      </tr>`;
+    }).join('');
+
+    return `
+      <div style="overflow-x:auto;border:1px solid var(--border,#D6E0EA);border-radius:6px;margin-top:8px">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:var(--surface-alt,#f4f6f9)">
+              <th style="padding:6px 10px;font-size:0.75rem;text-align:left;color:var(--text-muted,#7a8fa6);white-space:nowrap;width:200px">Campo destino</th>
+              <th style="padding:6px 10px;font-size:0.75rem;text-align:left;color:var(--text-muted,#7a8fa6)">Columna origen</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function getMigColumnMap_(tipo) {
+    const labels = tipo === 'ingresos' ? MIG_INGRESO_FIELD_LABELS_ : MIG_SOCIOS_FIELD_LABELS_;
+    const map = {};
+    Object.keys(labels).forEach(function(field) {
+      const sel = document.querySelector('select[name="mig-map-' + tipo + '-' + field + '"]');
+      if (sel && sel.value) map[field] = sel.value;
+    });
+    return map;
+  }
+
+  function renderMigPreviewTable_(rows) {
+    if (!rows || !rows.length) return '<p class="muted" style="font-size:0.82rem;margin:8px 0">Sin datos para previsualizar.</p>';
+
+    const fields = Object.keys(rows[0].data || {});
+    if (!fields.length) return '';
+
+    const thead = '<tr>' + fields.map(function(f) {
+      return `<th style="padding:4px 8px;font-size:0.72rem;color:var(--text-muted,#7a8fa6);white-space:nowrap;text-align:left;background:var(--surface-alt,#f4f6f9)">${escapeHtml(f)}</th>`;
+    }).join('') + '<th style="padding:4px 8px;font-size:0.72rem;color:var(--text-muted,#7a8fa6);background:var(--surface-alt,#f4f6f9)">Estado</th></tr>';
+
+    const tbody = rows.map(function(row) {
+      const cells = fields.map(function(f) {
+        return `<td style="padding:4px 8px;font-size:0.78rem;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(String(row.data[f] || ''))}</td>`;
+      }).join('');
+      const status = row.valid
+        ? `<td style="padding:4px 8px"><span style="color:var(--runtime-brand-secondary,#007C4A);font-size:0.75rem">✓ OK</span></td>`
+        : `<td style="padding:4px 8px"><span style="color:#d93025;font-size:0.75rem" title="${escapeHtml(row.error || '')}">✗ ${escapeHtml(row.error || 'Error')}</span></td>`;
+      return `<tr style="border-bottom:1px solid var(--border,#D6E0EA)">${cells}${status}</tr>`;
+    }).join('');
+
+    return `
+      <div style="overflow:auto;border:1px solid var(--border,#D6E0EA);border-radius:6px;max-height:260px">
+        <table style="width:100%;border-collapse:collapse">
+          <thead style="position:sticky;top:0">${thead}</thead>
+          <tbody>${tbody}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function renderMigResult_(result) {
+    if (!result) return renderMigError_('Sin respuesta del servidor.');
+    const ok = !!result.ok;
+    const accentColor = ok ? 'var(--runtime-brand-secondary,#007C4A)' : '#d93025';
+    const icon = ok ? 'check_circle' : 'error';
+    const bgColor = ok ? 'var(--surface-alt,#f4f6f9)' : 'rgba(217,48,37,0.06)';
+    const borderColor = ok ? 'var(--border,#D6E0EA)' : 'rgba(217,48,37,0.3)';
+
+    let html = `
+      <div style="border:1px solid ${borderColor};border-radius:8px;padding:14px;background:${bgColor}">
+        <p style="font-size:0.88rem;font-weight:600;color:${accentColor};display:flex;align-items:center;gap:6px;margin:0 0 10px">
+          <span class="material-symbols-outlined" style="font-size:1.1rem">${icon}</span>
+          ${escapeHtml(result.message || (ok ? 'Completado' : 'Error'))}
+        </p>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.83rem">
+          <span>Total: <b>${result.total || 0}</b></span>
+          <span style="color:var(--runtime-brand-secondary,#007C4A)">Importados: <b>${result.imported || 0}</b></span>
+          <span style="color:#c08800">Duplicados omitidos: <b>${result.duplicates || 0}</b></span>
+          <span style="color:#d93025">Errores: <b>${result.errors || 0}</b></span>
+          ${result.orgsNoEncontradas !== undefined ? `<span style="color:#c05000">Org. no encontradas: <b>${result.orgsNoEncontradas}</b></span>` : ''}
+        </div>
+    `;
+
+    if (result.errorDetails && result.errorDetails.length) {
+      html += `
+        <details style="margin-top:10px">
+          <summary style="font-size:0.78rem;color:var(--text-muted,#7a8fa6);cursor:pointer">Ver errores (${result.errorDetails.length})</summary>
+          <ul style="margin:6px 0 0;padding-left:16px;font-size:0.78rem;color:#d93025;line-height:1.8">
+            ${result.errorDetails.map(function(e) {
+              return `<li>Fila ${e.index}: ${escapeHtml(e.error || '')}${e.rut ? ' — RUT: ' + escapeHtml(e.rut) : ''}${e.nombre ? ' — ' + escapeHtml(String(e.nombre || '').trim()) : ''}</li>`;
+            }).join('')}
+          </ul>
+        </details>
+      `;
+    }
+
+    if (result.orgNotFoundDetails && result.orgNotFoundDetails.length) {
+      html += `
+        <details style="margin-top:10px">
+          <summary style="font-size:0.78rem;color:var(--text-muted,#7a8fa6);cursor:pointer">Organizaciones no encontradas (${result.orgNotFoundDetails.length})</summary>
+          <ul style="margin:6px 0 0;padding-left:16px;font-size:0.78rem;color:#c05000;line-height:1.8">
+            ${result.orgNotFoundDetails.map(function(e) {
+              return `<li>Fila ${e.index}: "${escapeHtml(e.comite || '')}"${e.nombre ? ' — ' + escapeHtml(e.nombre) : ''}</li>`;
+            }).join('')}
+          </ul>
+        </details>
+      `;
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  function renderMigError_(msg) {
+    return `<p style="color:#d93025;font-size:0.83rem;margin:8px 0;display:flex;align-items:center;gap:5px">
+      <span class="material-symbols-outlined" style="font-size:1rem">error</span>${escapeHtml(String(msg || 'Error desconocido'))}
+    </p>`;
   }

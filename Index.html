@@ -49,6 +49,8 @@
       html[data-theme="dark"] .hist-badge--ok { background: var(--success-soft, #21311a); color: var(--success, #9fd85a); }
       html[data-theme="dark"] .hist-badge--error { background: var(--danger-soft, #311b22); color: var(--alert-danger-fg, #ffd7d2); }
       html[data-theme="dark"] .hist-badge--warn { background: var(--warning-soft, #352815); color: var(--alert-warning-fg, #ffd98a); }
+      .panel .user-edit-layout { max-width: none; grid-template-columns: 1fr 2fr; }
+      .module-check__desc { font-size: 0.72rem; color: var(--text-muted, #6b7a8d); margin: 2px 0 4px; line-height: 1.35; }
     </style>
     <script>
       (() => {
@@ -428,7 +430,7 @@
           <section class="view" id="view-historial">
             <div class="section-head">
               <div><p class="eyebrow">Trazabilidad</p><h2>Historial de acciones</h2></div>
-              <button class="btn btn--secondary" id="hist-print-btn"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px;margin-right:4px">print</span>Exportar PDF</button>
+              <button class="btn secondary-btn" id="hist-print-btn"><span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px;margin-right:4px">print</span>Exportar PDF</button>
             </div>
             <div class="hist-filter-bar">
               <div class="field field--auto">
@@ -447,6 +449,12 @@
                   <option value="accion_usuario">Acciones usuario</option>
                   <option value="procesamiento">Procesamiento</option>
                   <option value="acceso">Accesos</option>
+                </select>
+              </div>
+              <div class="field field--auto">
+                <label for="hist-usuario">Usuario</label>
+                <select id="hist-usuario">
+                  <option value="">Todos los usuarios</option>
                 </select>
               </div>
               <div class="field field--auto">
@@ -473,25 +481,41 @@
           </section>
 
           <section class="view" id="view-usuarios">
-            <div class="section-head"><div><p class="eyebrow">Administración</p><h2>Gestión de usuarios</h2><p class="muted">Administra usuarios registrados, estado de acceso y visibilidad por módulo.</p></div></div>
+            <div class="section-head">
+              <div><p class="eyebrow">Administración</p><h2>Gestión de usuarios</h2></div>
+            </div>
             <div class="panel admin-form">
               <div class="admin-form__head">
                 <h3 class="admin-form__title">Nuevo usuario</h3>
                 <p class="muted">Crea usuarios internos y define visibilidad por módulo desde una sola fuente central.</p>
               </div>
-              <div class="field field--half user-email-field">
-                <label for="user-email-local">Email</label>
-                <div class="email-input-group">
-                  <input id="user-email-local" type="text" inputmode="email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="nombre.usuario" aria-describedby="user-email-help">
-                  <span class="email-input-group__suffix">@providencia.cl</span>
+              <div class="user-edit-layout">
+                <div class="user-edit-layout__main">
+                  <div class="user-edit-layout__main-fields">
+                    <div class="field field--full user-email-field">
+                      <label for="user-email-local">Email</label>
+                      <div class="email-input-group">
+                        <input id="user-email-local" type="text" inputmode="email" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="nombre.usuario" aria-describedby="user-email-help">
+                        <span class="email-input-group__suffix">@providencia.cl</span>
+                      </div>
+                      <small id="user-email-help" class="field-help">Ingresa solo la parte anterior al dominio.</small>
+                    </div>
+                    <div class="field field--full"><label>Nombre visible</label><input id="user-name-input" type="text"></div>
+                    <div class="field field--full"><label>Perfil</label><select id="user-role-input"></select></div>
+                    <div class="field field--full"><label>Activo</label><select id="user-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>
+                  </div>
                 </div>
-                <small id="user-email-help" class="field-help">Ingresa solo la parte anterior al dominio.</small>
+                <div class="user-edit-layout__modules" id="user-modules-field">
+                  <div class="user-edit-layout__modules-head">
+                    <label>Módulos visibles</label>
+                    <p class="muted" style="font-size:0.82rem;margin-top:4px;font-weight:400">Elige los módulos a los que el usuario tendrá acceso desde el menú de navegación.</p>
+                  </div>
+                  <div id="user-modules-input" class="module-check-grid"></div>
+                </div>
               </div>
-              <div class="field field--half"><label>Nombre visible</label><input id="user-name-input" type="text"></div>
-              <div class="field field--third"><label>Perfil</label><select id="user-role-input"></select></div>
-              <div class="field field--third"><label>Activo</label><select id="user-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>
-              <div class="field field--full" id="user-modules-field"><label>Módulos visibles</label><div id="user-modules-input" class="module-check-grid"></div></div>
-              <div class="actions"><button type="button" class="primary-btn" id="save-user-btn"><span class="material-symbols-outlined">save</span>Guardar usuario</button></div>
+              <div class="actions" style="justify-content:flex-end;padding-top:16px;border-top:1px solid var(--border,#D6E0EA);margin-top:16px">
+                <button type="button" class="primary-btn" id="save-user-btn"><span class="material-symbols-outlined">save</span>Guardar usuario</button>
+              </div>
             </div>
             <div class="table-wrap"><table class="data-table"><thead><tr><th>Email</th><th>Nombre</th><th>Perfil</th><th>Activo</th><th>Módulos</th><th>Última actividad</th><th>Acciones</th></tr></thead><tbody id="users-results"></tbody></table></div>
           </section>

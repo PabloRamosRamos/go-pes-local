@@ -139,6 +139,17 @@
     coordinador: 'Coordinador'
   };
 
+  const MODULE_DESCRIPTIONS = {
+    'inicio':        'Panel de inicio con estadísticas y accesos rápidos al programa.',
+    'nuevo-ingreso': 'Registro de nuevas solicitudes de vecinos al programa.',
+    'buscar':        'Búsqueda y consulta de fichas de vecinos registrados.',
+    'avance':        'Seguimiento de hitos y progreso de casos activos.',
+    'organizacion':  'Gestión de organizaciones comunitarias y su estado.',
+    'socios':        'Administración de socios y miembros de organizaciones.',
+    'instrumento':   'Consulta y gestión de instrumentos y beneficios aplicados.',
+    'historial':     'Trazabilidad de acciones, accesos y procesamiento del sistema.'
+  };
+
   const ORGANIZACION_SOCIO_CARGOS = [
     'Presidente',
     'Tesorero',
@@ -1099,7 +1110,7 @@
     const layout = container?.closest('.user-edit-layout');
 
     if (container) container.classList.toggle('is-hidden', !allowManual);
-    if (layout && target === 'user-edit-modules-input') {
+    if (layout) {
       layout.classList.toggle('is-single-column', !allowManual);
     }
     if (!allowManual) {
@@ -1182,8 +1193,9 @@
       : String(selectedModules || '').split(',').map(x => x.trim()).filter(Boolean);
     const allowAll = selected.includes('*');
     const defs = getAssignableModuleDefinitions_();
-    root.innerHTML = defs.map(m => `
-      <label class="module-check">
+    root.innerHTML = defs.map(m => {
+      const desc = MODULE_DESCRIPTIONS[m.key] || '';
+      return `<label class="module-check">
         <input
           class="module-check__input"
           type="checkbox"
@@ -1192,10 +1204,11 @@
           ${m.required ? 'disabled' : ''}>
         <span class="module-check__box">
           <span class="module-check__title">${escapeHtml(m.label || m.key)}</span>
+          ${desc ? `<span class="module-check__desc">${escapeHtml(desc)}</span>` : ''}
           <span class="module-check__meta">${escapeHtml(m.required ? 'Siempre visible' : 'Visible en menú')}</span>
         </span>
-      </label>
-    `).join('');
+      </label>`;
+    }).join('');
   }
 
   function openAdminResetModal_() {
@@ -1546,7 +1559,7 @@
         el.addEventListener('change', loadHistorial);
       }
     });
-    ['hist-resultado', 'hist-buscar'].forEach(function(id) {
+    ['hist-usuario', 'hist-resultado', 'hist-buscar'].forEach(function(id) {
       const el = document.getElementById(id);
       if (el && !el.dataset.bound) {
         el.dataset.bound = 'true';
@@ -1557,6 +1570,16 @@
     if (printBtn && !printBtn.dataset.bound) {
       printBtn.dataset.bound = 'true';
       printBtn.addEventListener('click', printHistorialReport_);
+    }
+
+    if (APP.state.historialUsuarios === undefined) {
+      APP.state.historialUsuarios = null;
+      api('getHistorialUsuariosLista').then(function(users) {
+        APP.state.historialUsuarios = Array.isArray(users) ? users : [];
+        populateHistorialUsuarioSelect_();
+      }).catch(function() { APP.state.historialUsuarios = []; });
+    } else if (APP.state.historialUsuarios) {
+      populateHistorialUsuarioSelect_();
     }
 
     const periodo = (document.getElementById('hist-periodo') || {}).value || 'last_month';
@@ -1593,12 +1616,22 @@
 
   function applyHistorialClientFilters_() {
     const allRows = APP.state.historialAllRows || [];
+    const selectedUser = (document.getElementById('hist-usuario') || {}).value || '';
     const resultado = (document.getElementById('hist-resultado') || {}).value || '';
     const buscar = ((document.getElementById('hist-buscar') || {}).value || '').trim().toLowerCase();
     const tbody = document.getElementById('hist-tbody');
     if (!tbody) return;
 
     let filtered = allRows;
+
+    if (selectedUser) {
+      const normalizedUser = selectedUser.toLowerCase().trim();
+      filtered = filtered.filter(function(r) {
+        return (r.email || '').toLowerCase().trim() === normalizedUser;
+      });
+    }
+    const userHasRowsInPeriod = !selectedUser || filtered.length > 0;
+
     if (resultado) {
       filtered = filtered.filter(function(r) {
         const res = (r.result || '').toLowerCase();
@@ -1627,7 +1660,20 @@
     }
 
     if (!filtered.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="muted">No hay registros para los filtros seleccionados.</td></tr>';
+      if (selectedUser && !userHasRowsInPeriod) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted,#6b7a8d)">Verificando historial del usuario...</td></tr>';
+        api('listarHistorial', { periodo: 'all', email: selectedUser }).then(function(allTimeRows) {
+          allTimeRows = Array.isArray(allTimeRows) ? allTimeRows : [];
+          tbody.innerHTML = renderHistorialEmptyUser_(
+            allTimeRows.length === 0 ? 'never' : 'inactive',
+            allTimeRows.length > 0 ? allTimeRows[0].timestamp : null
+          );
+        }).catch(function() {
+          tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center">No se pudo verificar el historial del usuario.</td></tr>';
+        });
+        return;
+      }
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted,#6b7a8d)">No hay registros para los filtros seleccionados.</td></tr>';
       return;
     }
 
@@ -1645,6 +1691,36 @@
         + '<td class="hist-detail">' + escapeHtml(r.detail_text || '') + '</td>'
         + '</tr>';
     }).join('');
+  }
+
+  function populateHistorialUsuarioSelect_() {
+    const sel = document.getElementById('hist-usuario');
+    if (!sel || sel.dataset.populated) return;
+    sel.dataset.populated = 'true';
+    const users = APP.state.historialUsuarios || [];
+    sel.innerHTML = '<option value="">Todos los usuarios</option>'
+      + users.map(function(u) {
+        const label = u.nombre && u.nombre !== u.email
+          ? u.nombre + ' (' + u.email + ')'
+          : u.email;
+        return '<option value="' + escapeHtml(u.email) + '">' + escapeHtml(label) + '</option>';
+      }).join('');
+  }
+
+  function renderHistorialEmptyUser_(type, lastTimestamp) {
+    const icon = type === 'never' ? 'person_off' : 'event_busy';
+    const msg = type === 'never'
+      ? 'Este usuario aún no ha registrado actividad en la aplicación'
+      : 'Sin movimientos registrados en el período seleccionado';
+    const sub = type === 'inactive' && lastTimestamp
+      ? '<br><span style="font-size:0.82rem">Última actividad registrada: <strong>'
+          + escapeHtml(formatFechaHoraUi_(lastTimestamp)) + '</strong></span>'
+      : '';
+    return '<tr><td colspan="8" style="text-align:center;padding:40px 16px">'
+      + '<div style="display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--text-muted,#6b7a8d)">'
+      + '<span class="material-symbols-outlined" style="font-size:40px">' + icon + '</span>'
+      + '<span>' + msg + sub + '</span>'
+      + '</div></td></tr>';
   }
 
   function renderHistorialSummaryChips_(allRows, filteredRows) {

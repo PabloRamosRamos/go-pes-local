@@ -209,11 +209,21 @@
     return `
       <article class="beneficios-panel beneficios-panel--operativo" role="tabpanel">
         <div class="beneficios-panel__head beneficios-panel__head--camaras">
-          <div class="beneficios-panel__hero">
-            <p class="eyebrow">Beneficio operativo</p>
-            <h3>${escapeHtml(activeTab.titulo || '')}</h3>
-            <span class="beneficios-panel__status beneficios-panel__status--inline">${escapeHtml(activeTab.estado || 'Operativo')}</span>
-            <p class="muted">${escapeHtml(activeTab.descripcion || '')}</p>
+          <div class="beneficios-panel__hero" style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px">
+            <div style="display:grid;gap:6px;min-width:0">
+              <p class="eyebrow">Beneficio operativo</p>
+              <h3>${escapeHtml(activeTab.titulo || '')}</h3>
+              <span class="beneficios-panel__status beneficios-panel__status--inline">${escapeHtml(activeTab.estado || 'Operativo')}</span>
+              <p class="muted">${escapeHtml(activeTab.descripcion || '')}</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;min-width:160px">
+              <button type="button" class="secondary-btn js-camaras1414-stepper-btn" style="justify-content:center">
+                <span class="material-symbols-outlined">format_list_numbered</span>Paso a paso
+              </button>
+              <button type="button" class="secondary-btn js-camaras1414-infodoc-btn" style="justify-content:center">
+                <span class="material-symbols-outlined">description</span>Información
+              </button>
+            </div>
           </div>
           <div class="beneficios-summary__metrics beneficios-summary__metrics--compact">
             ${renderBeneficiosMetric_('Elegibles', summary.totalEligible || 0, 'groups')}
@@ -804,6 +814,12 @@
     document.querySelector('.js-camaras1414-mailto')?.addEventListener('click', () => {
       openCamaras1414Mailto_();
     });
+    document.querySelector('.js-camaras1414-stepper-btn')?.addEventListener('click', () => {
+      renderCamaras1414InfoModal_();
+    });
+    document.querySelector('.js-camaras1414-infodoc-btn')?.addEventListener('click', () => {
+      renderCamaras1414InfoDocModal_();
+    });
   }
 
   function collectCamaras1414DetailPayload_(form) {
@@ -1376,5 +1392,662 @@
       muted: 'beneficio-chip--muted'
     };
     return map[tone] || map.muted;
+  }
+
+  function renderCamaras1414InfoModal_() {
+    const STEPS = [
+      {
+        num: 1,
+        title: 'Inicio del proceso',
+        actor: 'mixto',
+        actorLabel: 'Equipo municipal + Organización',
+        body: 'La organización ya cuenta con su certificado definitivo. Esto habilita formalmente la gestión del beneficio Cámaras 1414. Sin este certificado, el proceso no puede comenzar.',
+        items: null,
+        alert: null,
+        decision: null
+      },
+      {
+        num: 2,
+        title: 'Recordatorio de inicio',
+        actor: 'municipal',
+        actorLabel: 'Equipo municipal',
+        body: 'El sistema genera un recordatorio para que el equipo municipal inicie la gestión. El plazo desde que se obtiene el certificado hasta este recordatorio es configurable.',
+        items: null,
+        alert: { type: 'info', text: 'El plazo de recordatorio se configura en el panel "Configuración de plazos".' },
+        decision: null
+      },
+      {
+        num: 3,
+        title: '¿La organización acepta el beneficio?',
+        actor: 'org',
+        actorLabel: 'Organización',
+        body: 'Pregunta clave: ¿la organización quiere recibir las cámaras?',
+        items: null,
+        alert: null,
+        decision: {
+          question: '¿La organización acepta el beneficio?',
+          yes: 'Sí acepta → el proceso continúa al armado de documentos (Paso 4).',
+          no: 'No acepta o suspende → el caso queda en pausa. Puede retomarse más adelante sin perder el historial.'
+        }
+      },
+      {
+        num: 4,
+        title: 'Revisión de antecedentes y checklist',
+        actor: 'mixto',
+        actorLabel: 'Equipo municipal + Organización',
+        body: 'Antes de hacer cualquier solicitud formal, el equipo verifica que todos los documentos estén en orden. No se puede avanzar si el checklist está incompleto.',
+        items: [
+          'Datos de contacto actualizados',
+          'Georreferencia de socios',
+          'Foto libro de socios',
+          'Certificado de vigencia',
+          'Certificado de directorio'
+        ],
+        alert: null,
+        decision: null
+      },
+      {
+        num: 5,
+        title: 'Solicitud formal de visita técnica',
+        actor: 'municipal',
+        actorLabel: 'Equipo municipal',
+        body: 'Se envía un correo formal a Seguridad Pública solicitando una visita técnica e incluyendo todos los documentos del checklist. Se registra la fecha de envío, el asunto y las observaciones.',
+        items: null,
+        alert: { type: 'info', text: 'El plazo máximo para enviar la solicitud es configurable. El sistema alerta si se supera.' },
+        decision: null
+      },
+      {
+        num: 6,
+        title: '¿Seguridad Pública respondió con fecha de visita?',
+        actor: 'seguridad',
+        actorLabel: 'Seguridad Pública',
+        body: '',
+        items: null,
+        alert: null,
+        decision: {
+          question: '¿Seguridad Pública entregó fecha de visita?',
+          yes: 'Sí respondió → se registra la fecha de la visita y el proceso continúa (Paso 7).',
+          no: 'No respondió → el caso queda en espera. Se activa una alerta configurable por días sin respuesta.'
+        }
+      },
+      {
+        num: 7,
+        title: 'Visita técnica',
+        actor: 'seguridad',
+        actorLabel: 'Seguridad Pública + Organización',
+        body: 'Un especialista de Seguridad Pública visita el lugar y define la cantidad de cámaras, las ubicaciones de instalación, los puntos de alimentación eléctrica y los puntos de internet.',
+        items: null,
+        alert: { type: 'info', text: 'Tras la visita se activa un seguimiento configurable. El sistema alertará si no hay avance en el plazo definido.' },
+        decision: null
+      },
+      {
+        num: 8,
+        title: 'Registro de resultado',
+        actor: 'municipal',
+        actorLabel: 'Equipo municipal',
+        body: 'El equipo municipal registra en el sistema los resultados de la visita y deja observaciones para el seguimiento.',
+        items: null,
+        alert: null,
+        decision: null
+      },
+      {
+        num: 9,
+        title: 'Instalación',
+        actor: 'seguridad',
+        actorLabel: 'Seguridad Pública',
+        body: 'Seguridad Pública realiza la instalación. No siempre hay información detallada de esta etapa — el sistema permite registrar estado básico y observaciones aunque la información sea parcial.',
+        items: null,
+        alert: null,
+        decision: null
+      },
+      {
+        num: 10,
+        title: '¿Se recibió el convenio firmado?',
+        actor: 'mixto',
+        actorLabel: 'Equipo municipal + Organización',
+        body: '',
+        items: null,
+        alert: null,
+        decision: {
+          question: '¿Se recibió el convenio firmado por ambas partes?',
+          yes: 'Sí recibido → se registra fecha, observación y documento. El beneficio puede cerrarse (Paso 11).',
+          no: 'No recibido → el beneficio sigue abierto. Se activa un recordatorio configurable hasta que llegue el convenio.'
+        }
+      },
+      {
+        num: 11,
+        title: 'Cierre del beneficio',
+        actor: 'municipal',
+        actorLabel: 'Equipo municipal',
+        body: 'Con el convenio firmado por ambas partes, el beneficio Cámaras 1414 queda entregado y cerrado. El caso queda disponible para reportes y seguimiento posterior desde el módulo.',
+        items: null,
+        alert: null,
+        decision: null
+      }
+    ];
+
+    const CHECKLIST = [
+      'Datos de contacto actualizados',
+      'Georreferencia de socios',
+      'Foto libro de socios',
+      'Certificado de vigencia',
+      'Certificado de directorio'
+    ];
+
+    const ACTORS = [
+      { key: 'municipal', label: 'Equipo municipal', varColor: '--runtime-brand-primary' },
+      { key: 'seguridad', label: 'Seguridad Pública', varColor: '--runtime-brand-secondary' },
+      { key: 'org',       label: 'Organización',      varColor: '--runtime-brand-accent' },
+      { key: 'mixto',     label: 'Varios actores',    varColor: null }
+    ];
+
+    const existing = document.getElementById('c14-info-modal');
+    if (existing) existing.remove();
+
+    let currentStep = 0;
+
+    function actorColor(key) {
+      const a = ACTORS.find(x => x.key === key);
+      return a && a.varColor ? `var(${a.varColor})` : 'var(--text-muted, #6b7a8d)';
+    }
+
+    function renderStepBody(step) {
+      let html = '';
+
+      if (step.body) {
+        html += `<p class="c14-step-body">${escapeHtml(step.body)}</p>`;
+      }
+
+      if (step.items) {
+        html += `<ul class="c14-step-list">${step.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`;
+      }
+
+      if (step.alert) {
+        const alertClass = step.alert.type === 'info' ? 'c14-alert--info' : 'c14-alert--warn';
+        html += `<div class="c14-alert ${alertClass}"><span class="material-symbols-outlined">schedule</span><span>${escapeHtml(step.alert.text)}</span></div>`;
+      }
+
+      if (step.decision) {
+        html += `
+          <div class="c14-decision">
+            <p class="c14-decision__q"><span class="material-symbols-outlined">help</span>${escapeHtml(step.decision.question)}</p>
+            <div class="c14-decision__branches">
+              <div class="c14-branch c14-branch--yes">
+                <span class="material-symbols-outlined">check_circle</span>
+                <span>${escapeHtml(step.decision.yes)}</span>
+              </div>
+              <div class="c14-branch c14-branch--no">
+                <span class="material-symbols-outlined">pause_circle</span>
+                <span>${escapeHtml(step.decision.no)}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      return html;
+    }
+
+    function renderActorBadge(step) {
+      const color = actorColor(step.actor);
+      return `<span class="c14-actor-badge" style="--c14-actor-color:${color}">${escapeHtml(step.actorLabel)}</span>`;
+    }
+
+    function buildModal() {
+      const step = STEPS[currentStep];
+      const isFirst = currentStep === 0;
+      const isLast = currentStep === STEPS.length - 1;
+
+      return `
+        <div class="c14-overlay" id="c14-info-modal" role="dialog" aria-modal="true" aria-label="Guía del proceso Cámaras 1414">
+          <style>
+            .c14-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:9900;display:flex;align-items:center;justify-content:center;padding:16px}
+            .c14-modal{background:var(--surface,#fff);border-radius:12px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.22)}
+            .c14-header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border,#D6E0EA);flex-shrink:0}
+            .c14-header__title{font-weight:700;font-size:1rem;color:var(--text,#24364B);flex:1}
+            .c14-header__step{font-size:0.78rem;color:var(--text-muted,#6b7a8d);white-space:nowrap}
+            .c14-header__close{background:none;border:none;cursor:pointer;color:var(--text-muted,#6b7a8d);display:flex;align-items:center;padding:4px;border-radius:6px}
+            .c14-header__close:hover{background:var(--surface-alt,#f7fafc);color:var(--text,#24364B)}
+            .c14-progress{height:3px;background:var(--border,#D6E0EA);flex-shrink:0}
+            .c14-progress__bar{height:100%;background:var(--runtime-brand-primary,#214E8A);transition:width .25s ease;border-radius:0 2px 2px 0}
+            .c14-body{display:flex;flex:1;overflow:hidden}
+            .c14-main{flex:1;overflow-y:auto;padding:24px 24px 16px}
+            .c14-step-num{font-size:0.72rem;font-weight:700;color:var(--text-muted,#6b7a8d);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+            .c14-step-title{font-size:1.1rem;font-weight:700;color:var(--text,#24364B);margin:0 0 10px}
+            .c14-actor-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:14px;color:var(--c14-actor-color,var(--text-muted));background:color-mix(in srgb,var(--c14-actor-color,#888) 12%,transparent)}
+            .c14-step-body{font-size:0.9rem;line-height:1.6;color:var(--text,#24364B);margin:0 0 12px}
+            .c14-step-list{padding-left:20px;margin:0 0 12px;font-size:0.88rem;line-height:1.7;color:var(--text,#24364B)}
+            .c14-alert{display:flex;align-items:flex-start;gap:8px;background:var(--info-soft,#e8f4fb);border-radius:8px;padding:10px 12px;font-size:0.83rem;color:var(--text,#24364B);margin-top:12px}
+            .c14-alert .material-symbols-outlined{font-size:1rem;color:var(--runtime-brand-primary,#214E8A);flex-shrink:0;margin-top:1px}
+            .c14-alert--warn{background:var(--warning-soft,#fff3cd)}
+            .c14-alert--warn .material-symbols-outlined{color:#856404}
+            .c14-decision{margin-top:14px}
+            .c14-decision__q{display:flex;align-items:center;gap:7px;font-weight:600;font-size:0.9rem;color:var(--text,#24364B);margin-bottom:10px}
+            .c14-decision__q .material-symbols-outlined{font-size:1.1rem;color:var(--runtime-brand-primary,#214E8A)}
+            .c14-decision__branches{display:flex;flex-direction:column;gap:8px}
+            .c14-branch{display:flex;align-items:flex-start;gap:8px;border-radius:8px;padding:10px 12px;font-size:0.85rem;line-height:1.5}
+            .c14-branch .material-symbols-outlined{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+            .c14-branch--yes{background:var(--success-soft,#e8f5e9);color:var(--text,#24364B)}
+            .c14-branch--yes .material-symbols-outlined{color:var(--runtime-brand-secondary,#007C4A)}
+            .c14-branch--no{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
+            .c14-branch--no .material-symbols-outlined{color:var(--text-muted,#6b7a8d)}
+            .c14-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border,#D6E0EA);flex-shrink:0}
+            .c14-footer .secondary-btn:disabled{opacity:.4;cursor:not-allowed}
+            html[data-theme="dark"] .c14-modal{background:var(--surface,#14202d)}
+            html[data-theme="dark"] .c14-branch--no{background:var(--surface-alt,#182635)}
+            html[data-theme="dark"] .c14-alert{background:var(--info-soft,#163243)}
+          </style>
+          <div class="c14-modal">
+            <div class="c14-header">
+              <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#214E8A)">videocam</span>
+              <span class="c14-header__title">Guía del proceso — Cámaras 1414</span>
+              <span class="c14-header__step" id="c14-step-counter">Paso ${currentStep + 1} de ${STEPS.length}</span>
+              <button type="button" class="c14-header__close" id="c14-close-btn" aria-label="Cerrar">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div class="c14-progress">
+              <div class="c14-progress__bar" id="c14-progress-bar" style="width:${Math.round(((currentStep + 1) / STEPS.length) * 100)}%"></div>
+            </div>
+            <div class="c14-body">
+              <div class="c14-main" id="c14-main">
+                <p class="c14-step-num">Paso ${step.num} de ${STEPS.length}</p>
+                <h3 class="c14-step-title">${escapeHtml(step.title)}</h3>
+                ${renderActorBadge(step)}
+                ${renderStepBody(step)}
+              </div>
+            </div>
+            <div class="c14-footer">
+              <button type="button" class="secondary-btn" id="c14-prev-btn" ${isFirst ? 'disabled' : ''}>← Anterior</button>
+              <button type="button" class="primary-btn" id="c14-next-btn">${isLast ? 'Cerrar' : 'Siguiente →'}</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateStep() {
+      const step = STEPS[currentStep];
+      const isFirst = currentStep === 0;
+      const isLast = currentStep === STEPS.length - 1;
+
+      document.getElementById('c14-step-counter').textContent = `Paso ${currentStep + 1} de ${STEPS.length}`;
+      document.getElementById('c14-progress-bar').style.width = Math.round(((currentStep + 1) / STEPS.length) * 100) + '%';
+      document.getElementById('c14-prev-btn').disabled = isFirst;
+      document.getElementById('c14-next-btn').textContent = isLast ? 'Cerrar' : 'Siguiente →';
+
+      const main = document.getElementById('c14-main');
+      main.innerHTML = `
+        <p class="c14-step-num">Paso ${step.num} de ${STEPS.length}</p>
+        <h3 class="c14-step-title">${escapeHtml(step.title)}</h3>
+        ${renderActorBadge(step)}
+        ${renderStepBody(step)}
+      `;
+      main.scrollTop = 0;
+    }
+
+    function closeModal() {
+      const el = document.getElementById('c14-info-modal');
+      if (el) el.remove();
+    }
+
+    document.body.insertAdjacentHTML('beforeend', buildModal());
+
+    document.getElementById('c14-close-btn').addEventListener('click', closeModal);
+
+    document.getElementById('c14-prev-btn').addEventListener('click', () => {
+      if (currentStep > 0) { currentStep--; updateStep(); }
+    });
+
+    document.getElementById('c14-next-btn').addEventListener('click', () => {
+      if (currentStep < STEPS.length - 1) { currentStep++; updateStep(); }
+      else { closeModal(); }
+    });
+
+    document.getElementById('c14-info-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('c14-info-modal')) closeModal();
+    });
+
+    document.addEventListener('keydown', function onEsc(e) {
+      if (e.key === 'Escape') {
+        closeModal();
+        document.removeEventListener('keydown', onEsc);
+      }
+    });
+  }
+
+  function renderCamaras1414InfoDocModal_() {
+    const existing = document.getElementById('c14d-modal');
+    if (existing) existing.remove();
+
+    const html = `
+      <div class="c14d-overlay" id="c14d-modal" role="dialog" aria-modal="true" aria-label="Información Cámaras 1414">
+        <style>
+          .c14d-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:9900;display:flex;align-items:center;justify-content:center;padding:16px}
+          .c14d-modal{background:var(--surface,#fff);border-radius:12px;width:100%;max-width:900px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.22)}
+          .c14d-header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border,#D6E0EA);flex-shrink:0}
+          .c14d-header__title{font-weight:700;font-size:1rem;color:var(--text,#24364B);flex:1}
+          .c14d-header__close{background:none;border:none;cursor:pointer;color:var(--text-muted,#6b7a8d);display:flex;align-items:center;padding:4px;border-radius:6px}
+          .c14d-header__close:hover{background:var(--surface-alt,#f7fafc);color:var(--text,#24364B)}
+          .c14d-body{flex:1;overflow-y:auto;padding:24px}
+          .c14d-hero{background:color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 6%,transparent);border:1px solid color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 14%,transparent);border-radius:10px;padding:20px 24px;margin-bottom:20px}
+          .c14d-hero__eyebrow{font-size:0.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--runtime-brand-primary,#214E8A);margin-bottom:6px}
+          .c14d-hero h2{margin:0 0 6px;font-size:1.15rem;color:var(--text,#24364B)}
+          .c14d-hero p{margin:0;font-size:0.85rem;color:var(--text-muted,#6b7a8d);line-height:1.55}
+          .c14d-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}
+          .c14d-side{display:flex;flex-direction:column;gap:14px}
+          .c14d-card{background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:14px}
+          .c14d-card h4{margin:0 0 10px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#6b7a8d)}
+          .c14d-legend-item{display:flex;gap:8px;align-items:flex-start;font-size:0.8rem;line-height:1.4;color:var(--text-muted,#6b7a8d);margin-bottom:8px}
+          .c14d-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+          .c14d-dot--muni{background:var(--runtime-brand-primary,#214E8A)}
+          .c14d-dot--sp{background:var(--runtime-brand-secondary,#007C4A)}
+          .c14d-dot--org{background:var(--runtime-brand-accent,#03C2AE)}
+          .c14d-dot--mix{background:linear-gradient(135deg,var(--runtime-brand-primary,#214E8A),var(--runtime-brand-secondary,#007C4A))}
+          .c14d-check-item{display:flex;gap:8px;align-items:center;font-size:0.8rem;color:var(--text,#24364B);padding:3px 0}
+          .c14d-check-item::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--runtime-brand-accent,#03C2AE);flex-shrink:0}
+          .c14d-rule-item{display:flex;gap:8px;align-items:flex-start;font-size:0.8rem;color:var(--text-muted,#6b7a8d);padding:3px 0;line-height:1.4}
+          .c14d-rule-item::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--runtime-brand-primary,#214E8A);flex-shrink:0;margin-top:5px}
+          .c14d-flow{display:flex;flex-direction:column;gap:14px}
+          .c14d-step{background:var(--surface,#fff);border:1px solid var(--border,#D6E0EA);border-radius:10px;padding:16px 18px;position:relative}
+          .c14d-step-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+          .c14d-step-title{margin:0;font-size:0.95rem;font-weight:700;color:var(--text,#24364B)}
+          .c14d-step-text{margin:0;font-size:0.83rem;line-height:1.55;color:var(--text-muted,#6b7a8d)}
+          .c14d-badges{display:flex;flex-wrap:wrap;gap:6px}
+          .c14d-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;font-size:0.72rem;font-weight:700;white-space:nowrap}
+          .c14d-badge--muni{background:color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 12%,transparent);color:var(--runtime-brand-primary,#214E8A)}
+          .c14d-badge--sp{background:color-mix(in srgb,var(--runtime-brand-secondary,#007C4A) 12%,transparent);color:var(--runtime-brand-secondary,#007C4A)}
+          .c14d-badge--org{background:color-mix(in srgb,var(--runtime-brand-accent,#03C2AE) 12%,transparent);color:var(--runtime-brand-accent,#03C2AE)}
+          .c14d-badge--mix{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
+          .c14d-badge--deadline{background:var(--warning-soft,#fff3cd);color:#856404}
+          .c14d-badge--state{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
+          .c14d-badge--alert{background:var(--danger-soft,#fdecea);color:#b3261e}
+          .c14d-badge--decision{background:#eef1ff;color:#4757b1}
+          .c14d-mini-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+          .c14d-mini-item{background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:8px 12px;font-size:0.8rem;line-height:1.45;color:var(--text-muted,#6b7a8d)}
+          .c14d-mini-item strong{color:var(--text,#24364B)}
+          .c14d-split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+          .c14d-branch{border:1px solid var(--border,#D6E0EA);border-radius:10px;padding:14px}
+          .c14d-branch--yes{border-color:color-mix(in srgb,var(--runtime-brand-secondary,#007C4A) 28%,transparent)}
+          .c14d-branch--no{border-color:color-mix(in srgb,#f4b400 28%,transparent)}
+          .c14d-branch--danger{border-color:color-mix(in srgb,#d93025 24%,transparent)}
+          .c14d-decision-label{display:inline-flex;padding:4px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:#eef1ff;color:#4757b1;margin-bottom:8px}
+          .c14d-branch-title{margin:0 0 6px;font-size:0.88rem;font-weight:700;color:var(--text,#24364B)}
+          .c14d-branch-text{margin:0;font-size:0.8rem;line-height:1.5;color:var(--text-muted,#6b7a8d)}
+          .c14d-warn-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--warning-soft,#fff3cd);color:#7a5e08;font-size:0.8rem;line-height:1.5;border:1px solid rgba(244,180,0,0.25)}
+          .c14d-danger-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--danger-soft,#fdecea);color:#9d261d;font-size:0.8rem;line-height:1.5;border:1px solid rgba(217,48,37,0.2)}
+          .c14d-connector{width:2px;height:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 35%,transparent),transparent);margin:0 auto}
+          .c14d-footer-note{margin-top:16px;font-size:0.75rem;color:var(--text-muted,#6b7a8d);text-align:center;line-height:1.5}
+          html[data-theme="dark"] .c14d-modal{background:var(--surface,#14202d)}
+          html[data-theme="dark"] .c14d-body{background:var(--surface,#14202d)}
+          html[data-theme="dark"] .c14d-step{background:var(--surface,#14202d);border-color:var(--border,#294356)}
+          html[data-theme="dark"] .c14d-card{background:var(--surface-alt,#182635);border-color:var(--border,#294356)}
+          html[data-theme="dark"] .c14d-mini-item{background:var(--surface-alt,#182635);border-color:var(--border,#294356)}
+          html[data-theme="dark"] .c14d-hero{background:color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 10%,var(--surface,#14202d));border-color:color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 20%,transparent)}
+          html[data-theme="dark"] .c14d-branch{border-color:var(--border,#294356)}
+          html[data-theme="dark"] .c14d-branch--yes{border-color:color-mix(in srgb,var(--runtime-brand-secondary,#007C4A) 30%,transparent)}
+          html[data-theme="dark"] .c14d-branch--no{border-color:color-mix(in srgb,#f4b400 22%,transparent)}
+          html[data-theme="dark"] .c14d-branch--danger{border-color:color-mix(in srgb,#d93025 22%,transparent)}
+          html[data-theme="dark"] .c14d-decision-label{background:rgba(71,87,177,0.25);color:#a0aaee}
+          html[data-theme="dark"] .c14d-badge--decision{background:rgba(71,87,177,0.25);color:#a0aaee}
+          html[data-theme="dark"] .c14d-badge--state{background:var(--surface-alt,#182635);color:var(--text-muted,#8ea2b4)}
+          html[data-theme="dark"] .c14d-badge--mix{background:var(--surface-alt,#182635);color:var(--text-muted,#8ea2b4)}
+          html[data-theme="dark"] .c14d-warn-block{background:var(--warning-soft,#352815);color:var(--alert-warning-fg,#ffd98a);border-color:rgba(244,180,0,0.2)}
+          html[data-theme="dark"] .c14d-danger-block{background:var(--danger-soft,#311b22);color:var(--alert-danger-fg,#ffd7d2);border-color:rgba(217,48,37,0.2)}
+          html[data-theme="dark"] .c14d-header{border-color:var(--border,#294356)}
+          html[data-theme="dark"] .c14d-header__title{color:var(--text,#e8eff6)}
+          @media print{body>*:not(#c14d-modal){display:none!important}.c14d-overlay{position:static!important;background:none!important;display:block!important;padding:0!important}.c14d-modal{max-height:none!important;box-shadow:none!important;border-radius:0!important;border:none!important}.c14d-header{display:none!important}.c14d-body{overflow:visible!important;max-height:none!important;padding:0!important}.c14d-layout{grid-template-columns:220px 1fr!important}.c14d-split{grid-template-columns:1fr 1fr!important}}
+          @media(max-width:680px){.c14d-layout{grid-template-columns:1fr}.c14d-split{grid-template-columns:1fr}}
+        </style>
+        <div class="c14d-modal">
+          <div class="c14d-header">
+            <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#214E8A)">videocam</span>
+            <span class="c14d-header__title">Proceso Cámaras 1414 — Documentación</span>
+            <button type="button" class="secondary-btn" id="c14d-print-btn" style="font-size:0.78rem;padding:5px 10px" aria-label="Exportar PDF">
+              <span class="material-symbols-outlined" style="font-size:1rem">print</span>Exportar PDF
+            </button>
+            <button type="button" class="c14d-header__close" id="c14d-close-btn" aria-label="Cerrar">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="c14d-body">
+            <div class="c14d-hero">
+              <div class="c14d-hero__eyebrow">Flujo operativo · Beneficios</div>
+              <h2>Proceso CÁMARAS 1414</h2>
+              <p>Flujo tipo BPM con ciclo completo del beneficio: actores, excepciones, checklist documental y puntos donde deben activarse plazos configurables y alertas.</p>
+            </div>
+            <div class="c14d-layout">
+              <aside class="c14d-side">
+                <div class="c14d-card">
+                  <h4>Actores</h4>
+                  <div class="c14d-legend-item"><span class="c14d-dot c14d-dot--muni"></span><span><strong>Equipo municipal</strong><br>Activa gestión, revisa antecedentes, genera correo, hace seguimiento y cierra el beneficio.</span></div>
+                  <div class="c14d-legend-item"><span class="c14d-dot c14d-dot--sp"></span><span><strong>Seguridad Pública</strong><br>Recibe solicitud, agenda visita técnica, define cámaras, ubicaciones y puntos de alimentación.</span></div>
+                  <div class="c14d-legend-item"><span class="c14d-dot c14d-dot--org"></span><span><strong>Organización</strong><br>Aporta antecedentes, acepta o suspende el beneficio y participa mediante su representante legal.</span></div>
+                  <div class="c14d-legend-item"><span class="c14d-dot c14d-dot--mix"></span><span><strong>Mixto</strong><br>Etapas donde interactúan equipo municipal, organización y/o Seguridad Pública.</span></div>
+                </div>
+                <div class="c14d-card">
+                  <h4>Checklist documental</h4>
+                  <div class="c14d-check-item">Datos de contacto</div>
+                  <div class="c14d-check-item">Georreferencia de socios</div>
+                  <div class="c14d-check-item">Foto libro de socios</div>
+                  <div class="c14d-check-item">Certificado de vigencia</div>
+                  <div class="c14d-check-item">Certificado de directorio</div>
+                </div>
+                <div class="c14d-card">
+                  <h4>Plazos configurables</h4>
+                  <div class="c14d-rule-item">Días desde certificado definitivo para recordar inicio de gestión.</div>
+                  <div class="c14d-rule-item">Días máximos para enviar solicitud de visita técnica.</div>
+                  <div class="c14d-rule-item">Días de espera sin respuesta con fecha de visita.</div>
+                  <div class="c14d-rule-item">Días posteriores a la visita para seguimiento del caso.</div>
+                  <div class="c14d-rule-item">Días de seguimiento hasta recepción del convenio firmado.</div>
+                </div>
+              </aside>
+              <main class="c14d-flow">
+                <div class="c14d-step">
+                  <div class="c14d-step-top">
+                    <h3 class="c14d-step-title">1. Inicio del proceso</h3>
+                    <div class="c14d-badges">
+                      <span class="c14d-badge c14d-badge--mix">Actor: Mixto</span>
+                      <span class="c14d-badge c14d-badge--state">Disparador</span>
+                    </div>
+                  </div>
+                  <p class="c14d-step-text">La organización obtiene el <strong>certificado definitivo</strong>. Este es el hito habilitante para iniciar la gestión del beneficio CÁMARAS 1414.</p>
+                  <div class="c14d-mini-list">
+                    <div class="c14d-mini-item"><strong>Evento de entrada:</strong> organización con certificado definitivo / hito 11 de Avance cumplido.</div>
+                    <div class="c14d-mini-item"><strong>Resultado:</strong> la organización queda elegible para evaluación del beneficio.</div>
+                  </div>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-step">
+                  <div class="c14d-step-top">
+                    <h3 class="c14d-step-title">2. Recordatorio de inicio de gestión</h3>
+                    <div class="c14d-badges">
+                      <span class="c14d-badge c14d-badge--muni">Actor: Equipo municipal</span>
+                      <span class="c14d-badge c14d-badge--deadline">Plazo configurable</span>
+                    </div>
+                  </div>
+                  <p class="c14d-step-text">Al registrarse el hito 11, el sistema debe mostrar un recordatorio para iniciar la gestión del beneficio CÁMARAS 1414.</p>
+                  <div class="c14d-warn-block">Debe existir un plazo configurable para recordar esta acción desde la obtención del certificado definitivo.</div>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-split">
+                  <div class="c14d-branch c14d-branch--yes">
+                    <span class="c14d-decision-label">¿La organización acepta el beneficio?</span>
+                    <h4 class="c14d-branch-title">Sí, acepta</h4>
+                    <p class="c14d-branch-text">El caso avanza al armado documental y preparación de la solicitud formal de visita técnica.</p>
+                    <div class="c14d-badges" style="margin-top:8px">
+                      <span class="c14d-badge c14d-badge--org">Actor: Organización</span>
+                      <span class="c14d-badge c14d-badge--decision">Continúa flujo</span>
+                    </div>
+                  </div>
+                  <div class="c14d-branch c14d-branch--danger">
+                    <span class="c14d-decision-label">¿La organización acepta el beneficio?</span>
+                    <h4 class="c14d-branch-title">No acepta / Suspende</h4>
+                    <p class="c14d-branch-text">El beneficio puede quedar <strong>suspendido</strong> por decisión de la organización o por otras razones operativas.</p>
+                    <div class="c14d-badges" style="margin-top:8px">
+                      <span class="c14d-badge c14d-badge--org">Actor: Organización</span>
+                      <span class="c14d-badge c14d-badge--alert">Estado: Suspendido</span>
+                    </div>
+                    <div class="c14d-danger-block">El caso debe poder <strong>retomarse</strong> más adelante sin perder trazabilidad previa.</div>
+                  </div>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-step">
+                  <div class="c14d-step-top">
+                    <h3 class="c14d-step-title">3. Revisión de antecedentes y checklist</h3>
+                    <div class="c14d-badges">
+                      <span class="c14d-badge c14d-badge--mix">Actor: Mixto</span>
+                      <span class="c14d-badge c14d-badge--state">Checklist obligatorio</span>
+                    </div>
+                  </div>
+                  <p class="c14d-step-text">Antes de enviar la solicitud, el equipo municipal verifica la disponibilidad de los antecedentes requeridos y marca el checklist documental del beneficio.</p>
+                  <div class="c14d-mini-list">
+                    <div class="c14d-mini-item"><strong>Control:</strong> no debe enviarse solicitud si el checklist está incompleto.</div>
+                    <div class="c14d-mini-item"><strong>Observación:</strong> el checklist debe quedar visible y trazable en la ficha del beneficio.</div>
+                  </div>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-step">
+                  <div class="c14d-step-top">
+                    <h3 class="c14d-step-title">4. Solicitud formal de visita técnica</h3>
+                    <div class="c14d-badges">
+                      <span class="c14d-badge c14d-badge--muni">Actor: Equipo municipal</span>
+                      <span class="c14d-badge c14d-badge--deadline">Plazo configurable</span>
+                    </div>
+                  </div>
+                  <p class="c14d-step-text">Se envía correo formal a Seguridad Pública solicitando la visita técnica e informando que se adjuntan los antecedentes requeridos.</p>
+                  <div class="c14d-mini-list">
+                    <div class="c14d-mini-item"><strong>Destino:</strong> Seguridad Pública.</div>
+                    <div class="c14d-mini-item"><strong>Contenido:</strong> solicitud formal + checklist documental completo.</div>
+                    <div class="c14d-mini-item"><strong>Trazabilidad:</strong> registrar fecha de envío, asunto y observaciones.</div>
+                  </div>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-split">
+                  <div class="c14d-branch c14d-branch--no">
+                    <span class="c14d-decision-label">¿Se recibió respuesta con fecha de visita?</span>
+                    <h4 class="c14d-branch-title">No hay respuesta</h4>
+                    <p class="c14d-branch-text">El flujo no debe avanzar sin una fecha registrada de visita técnica. El caso queda en espera.</p>
+                    <div class="c14d-badges" style="margin-top:8px">
+                      <span class="c14d-badge c14d-badge--sp">Actor: Seguridad Pública</span>
+                      <span class="c14d-badge c14d-badge--alert">Genera alerta</span>
+                    </div>
+                    <div class="c14d-warn-block">Activar recordatorio y alerta configurable por días sin respuesta desde el envío del correo.</div>
+                  </div>
+                  <div class="c14d-branch c14d-branch--yes">
+                    <span class="c14d-decision-label">¿Se recibió respuesta con fecha de visita?</span>
+                    <h4 class="c14d-branch-title">Sí, hay fecha</h4>
+                    <p class="c14d-branch-text">Se registra la fecha de la visita técnica y el caso puede continuar a la siguiente etapa.</p>
+                    <div class="c14d-badges" style="margin-top:8px">
+                      <span class="c14d-badge c14d-badge--sp">Actor: Seguridad Pública</span>
+                      <span class="c14d-badge c14d-badge--state">Fecha obligatoria</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-step">
+                  <div class="c14d-step-top">
+                    <h3 class="c14d-step-title">5. Visita técnica</h3>
+                    <div class="c14d-badges">
+                      <span class="c14d-badge c14d-badge--mix">Actor: Seguridad Pública + Organización</span>
+                      <span class="c14d-badge c14d-badge--deadline">Seguimiento configurable</span>
+                    </div>
+                  </div>
+                  <p class="c14d-step-text">En la visita, el especialista define los elementos técnicos de la futura instalación.</p>
+                  <div class="c14d-mini-list">
+                    <div class="c14d-mini-item"><strong>Define:</strong> cantidad de cámaras a instalar.</div>
+                    <div class="c14d-mini-item"><strong>Define:</strong> ubicaciones de instalación.</div>
+                    <div class="c14d-mini-item"><strong>Define:</strong> puntos de alimentación eléctrica.</div>
+                    <div class="c14d-mini-item"><strong>Define:</strong> puntos de internet para los dispositivos.</div>
+                  </div>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-step">
+                  <div class="c14d-step-top">
+                    <h3 class="c14d-step-title">6. Registro de resultado de visita</h3>
+                    <div class="c14d-badges">
+                      <span class="c14d-badge c14d-badge--muni">Actor: Equipo municipal</span>
+                      <span class="c14d-badge c14d-badge--state">Registro estructurado</span>
+                    </div>
+                  </div>
+                  <p class="c14d-step-text">El equipo municipal registra en la ficha del beneficio los resultados relevantes de la visita técnica y deja observaciones para seguimiento posterior.</p>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-step">
+                  <div class="c14d-step-top">
+                    <h3 class="c14d-step-title">7. Instalación</h3>
+                    <div class="c14d-badges">
+                      <span class="c14d-badge c14d-badge--sp">Actor: Seguridad Pública</span>
+                      <span class="c14d-badge c14d-badge--state">Información parcial posible</span>
+                    </div>
+                  </div>
+                  <p class="c14d-step-text">Se realiza la instalación. Esta etapa se considera parte normal del proceso, pero no siempre existe trazabilidad completa desde el equipo municipal.</p>
+                  <div class="c14d-warn-block">El sistema debe permitir dejar este paso con observación y estado básico, incluso si no se cuenta con toda la información.</div>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-split">
+                  <div class="c14d-branch c14d-branch--no">
+                    <span class="c14d-decision-label">¿Se recibió convenio firmado por ambas partes?</span>
+                    <h4 class="c14d-branch-title">No recibido</h4>
+                    <p class="c14d-branch-text">El beneficio sigue abierto y debe mantenerse en seguimiento hasta que llegue el convenio firmado.</p>
+                    <div class="c14d-badges" style="margin-top:8px">
+                      <span class="c14d-badge c14d-badge--mix">Actor: Mixto</span>
+                      <span class="c14d-badge c14d-badge--alert">Recordatorio activo</span>
+                    </div>
+                    <div class="c14d-warn-block">Activar recordatorio y alerta configurable de seguimiento hasta recepción del convenio.</div>
+                  </div>
+                  <div class="c14d-branch c14d-branch--yes">
+                    <span class="c14d-decision-label">¿Se recibió convenio firmado por ambas partes?</span>
+                    <h4 class="c14d-branch-title">Sí, convenio recibido</h4>
+                    <p class="c14d-branch-text">Se registra fecha de recepción, observación y documento asociado. El beneficio puede cerrarse como entregado.</p>
+                    <div class="c14d-badges" style="margin-top:8px">
+                      <span class="c14d-badge c14d-badge--mix">Actor: Mixto</span>
+                      <span class="c14d-badge c14d-badge--state">Condición de cierre</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="c14d-connector"></div>
+                <div class="c14d-step">
+                  <div class="c14d-step-top">
+                    <h3 class="c14d-step-title">8. Cierre del beneficio</h3>
+                    <div class="c14d-badges">
+                      <span class="c14d-badge c14d-badge--muni">Actor: Equipo municipal</span>
+                      <span class="c14d-badge c14d-badge--state">Beneficio cerrado</span>
+                    </div>
+                  </div>
+                  <p class="c14d-step-text">Con el convenio de colaboración firmado por ambas partes, el beneficio CÁMARAS 1414 queda cerrado y entregado.</p>
+                  <div class="c14d-mini-list">
+                    <div class="c14d-mini-item"><strong>Salida esperada:</strong> beneficio entregado y trazabilidad final registrada.</div>
+                    <div class="c14d-mini-item"><strong>Uso posterior:</strong> el caso debe alimentar recordatorios y alertas configurables desde el módulo.</div>
+                  </div>
+                </div>
+                <p class="c14d-footer-note">Diagrama BPM preparado para operadores. Incluye actores, excepciones, suspensión/retoma del beneficio, checklist documental y puntos con plazos configurables.</p>
+              </main>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    document.getElementById('c14d-close-btn').addEventListener('click', () => {
+      document.getElementById('c14d-modal').remove();
+    });
+
+    document.getElementById('c14d-print-btn').addEventListener('click', () => {
+      window.print();
+    });
+
+    document.getElementById('c14d-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('c14d-modal')) document.getElementById('c14d-modal').remove();
+    });
+
+    document.addEventListener('keydown', function onEscDoc(e) {
+      if (e.key === 'Escape') {
+        const m = document.getElementById('c14d-modal');
+        if (m) { m.remove(); document.removeEventListener('keydown', onEscDoc); }
+      }
+    });
   }
 

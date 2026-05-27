@@ -1054,6 +1054,22 @@ function listarHistorial(filters) {
   return serializeForClient_(rows);
 }
 
+function getHistorialUsuariosLista() {
+  requireModuleAccess_('historial', ['operador', 'coordinador', 'superuser']);
+  const rows = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS) || [];
+  return serializeForClient_(
+    rows
+      .filter(function(r) { return r.email; })
+      .map(function(r) {
+        return {
+          email: String(r.email || '').trim(),
+          nombre: String(r.nombre_visible || r.email || '').trim()
+        };
+      })
+      .sort(function(a, b) { return a.nombre.localeCompare(b.nombre); })
+  );
+}
+
 function filterHistorialRowsByPeriod_(rows, periodKey) {
   const normalizedPeriod = String(periodKey || '').trim().toLowerCase();
   const cutoff = resolveHistorialCutoffDate_(normalizedPeriod);

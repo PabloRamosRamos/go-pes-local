@@ -1,12 +1,14 @@
-/**
+﻿/**
  * Bootstrap y entrypoints principales de la Web App container-bound.
  */
 const GO_PES_V2 = {
   APP_NAME: 'GO-PES',
   PROGRAM_TITLE: 'Gestor Operativo PES',
-  SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
+  SUBTITLE: 'Programa Estamos Seguros Â· Municipalidad de Providencia',
   VERSION: '2.1.0-modular',
-  ENVIRONMENT: '',
+  BUILD: '4331eb2',
+  BUILD_DATE: '20260526',
+  ENVIRONMENT: 'DEV',
   SUPERUSERS: [
     'pablo.ramos@providencia.cl',
     'p.e.ramos.ramos@gmail.com'
@@ -82,7 +84,7 @@ const GO_PES_V2 = {
   },
   ROLES: ['visor', 'operador', 'coordinador', 'superuser'],
   AVANCE: {
-    TRAMOS: ['Preconstitución', 'Formalización posterior'],
+    TRAMOS: ['PreconstituciÃ³n', 'FormalizaciÃ³n posterior'],
     ESTADOS: ['Activo', 'Stand by', 'Detenido', 'Finalizado']
   },
   TRUSTED_DOMAIN_AUTO_ACTIVE: false,
@@ -118,7 +120,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Configurar motor operativo', 'setupMotorOperativoPES')
     .addItem('Reconstruir estructuras desde RAW', 'reconstruirEstructurasDesdeRaw')
-    .addItem('Refrescar catálogos sugeridos', 'refrescarCatalogosSugeridos')
+    .addItem('Refrescar catÃ¡logos sugeridos', 'refrescarCatalogosSugeridos')
     .addItem('Reconstruir vistas y master', 'goPesRefrescarVistasYMaster')
     .addItem('Inicializar superUsers', 'goPesSeedSuperUsers_')
     .addSeparator()
@@ -258,96 +260,28 @@ function getAppVersionLabel_(buildInfo) {
   return [
     info.baseVersion ? `v${info.baseVersion}` : '',
     info.buildHash ? `build ${info.buildHash}` : '',
-    info.updatedAtLabel || ''
-  ].filter(Boolean).join(' · ');
+    info.buildDate || ''
+  ].filter(Boolean).join(' Â· ');
 }
 
 function getAppBuildInfo_() {
-  const updatedAt = getProjectLastUpdated_();
   return {
     baseVersion: String(GO_PES_V2.VERSION || '').trim(),
-    buildHash: buildProjectFingerprint_(),
-    updatedAtIso: updatedAt ? updatedAt.toISOString() : '',
-    updatedAtLabel: updatedAt ? formatBuildTimestamp_(updatedAt) : ''
+    buildHash: String(GO_PES_V2.BUILD || '').trim(),
+    buildDate: String(GO_PES_V2.BUILD_DATE || '').trim(),
+    updatedAtIso: ''
   };
-}
-
-function getProjectLastUpdated_() {
-  try {
-    const scriptId = ScriptApp.getScriptId();
-    if (!scriptId) return null;
-    return DriveApp.getFileById(scriptId).getLastUpdated();
-  } catch (err) {
-    return null;
-  }
-}
-
-function buildProjectFingerprint_() {
-  const payload = [
-    JSON.stringify(GO_PES_V2),
-    getProjectHtmlFingerprintSources_(),
-    getProjectServerFingerprintSources_()
-  ].join('\n---\n');
-  return computeBuildHash_(payload);
-}
-
-function getProjectHtmlFingerprintSources_() {
-  const partials = ['Index', 'Styles', 'ThemeDark', 'Splash', 'Loading', 'Inicio', 'Scripts'];
-  return partials.map(function(name) {
-    try {
-      return `## ${name}\n${HtmlService.createHtmlOutputFromFile(name).getContent()}`;
-    } catch (err) {
-      return `## ${name}\n`;
-    }
-  }).join('\n');
-}
-
-function getProjectServerFingerprintSources_() {
-  const scope = getProjectGlobalScope_();
-  return Object.keys(scope || {})
-    .filter(function(name) {
-      return isProjectFunctionForBuild_(name, scope[name]);
-    })
-    .sort()
-    .map(function(name) {
-      return `## ${name}\n${String(scope[name])}`;
-    })
-    .join('\n');
-}
-
-function getProjectGlobalScope_() {
-  return Function('return this;')();
-}
-
-function isProjectFunctionForBuild_(name, fn) {
-  if (typeof fn !== 'function') return false;
-  if (!/^[A-Za-z0-9_]+$/.test(String(name || ''))) return false;
-  const source = String(fn);
-  return !!source && !/\[native code\]/.test(source);
-}
-
-function computeBuildHash_(value) {
-  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(value || ''), Utilities.Charset.UTF_8);
-  return digest.map(function(byte) {
-    const normalized = byte < 0 ? byte + 256 : byte;
-    return normalized.toString(16).padStart(2, '0');
-  }).join('').slice(0, 8);
-}
-
-function formatBuildTimestamp_(date) {
-  const tz = Session.getScriptTimeZone() || 'America/Santiago';
-  return Utilities.formatDate(date, tz, 'yyyyMMdd-HHmm');
 }
 
 function getAppVersionLabelLegacy_() {
   const version = String(GO_PES_V2.VERSION || '').trim();
   const environment = String(GO_PES_V2.ENVIRONMENT || '').trim().toUpperCase();
-  return [version ? `v${version}` : '', environment].filter(Boolean).join(' · ');
+  return [version ? `v${version}` : '', environment].filter(Boolean).join(' Â· ');
 }
 
 function fijarSpreadsheetPES_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error('Abre el spreadsheet contenedor antes de ejecutar esta función.');
+  if (!ss) throw new Error('Abre el spreadsheet contenedor antes de ejecutar esta funciÃ³n.');
 
   PropertiesService.getScriptProperties().setProperty('GO_PES_SPREADSHEET_ID', ss.getId());
   Logger.log('GO_PES_SPREADSHEET_ID = ' + ss.getId());

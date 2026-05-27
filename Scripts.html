@@ -486,7 +486,7 @@
     const staticHtml =
       row('Versión', escapeHtml(buildInfo.baseVersion ? 'v' + buildInfo.baseVersion : '—')) +
       row('Build', escapeHtml(buildInfo.buildHash || '—')) +
-      row('Actualizado', escapeHtml(buildInfo.updatedAtLabel || '—')) +
+      row('Actualizado', escapeHtml(buildInfo.buildDate || '—')) +
       row('Entorno', escapeHtml(env));
     content.innerHTML = staticHtml + `<p class="muted" style="margin-top:8px;font-size:0.8rem">Consultando servidor…</p>`;
     api('getSystemInfo').then(info => {

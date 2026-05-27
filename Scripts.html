@@ -7,6 +7,7 @@
   const THEME_STORAGE_KEY = 'goPesTheme';
   const APP_ZOOM_STORAGE_KEY = 'goPesAppZoom';
   const APP_ZOOM_OPTIONS = ['1', '0.9', '0.8'];
+  const APP_DEFAULT_MODULE_PREF_KEY = 'goDefaultModule';
 
   function normalizeModuleLookupKeyClient_(value) {
     return String(value == null ? '' : value)
@@ -417,6 +418,100 @@
     submenu.classList.toggle('is-hidden', !open);
   }
 
+  // ── Módulo de inicio por defecto ──────────────────────────────────────────
+
+  function updateDefaultModuleUi_(key) {
+    document.querySelectorAll('.js-default-module-option').forEach(btn => {
+      const isActive = btn.dataset.module === key;
+      btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      btn.classList.toggle('is-active', isActive);
+    });
+  }
+
+  function populateDefaultModuleSubmenu_() {
+    const submenu = document.getElementById('default-module-submenu');
+    if (!submenu || submenu.dataset.populated === '1') return;
+    const perms = (BOOTSTRAP.permissions && BOOTSTRAP.permissions.modules) || {};
+    const defs = (BOOTSTRAP.moduleDefinitions || []).filter(def =>
+      def.navVisible !== false && def.enabled !== false && !def.superOnly && perms[def.view || def.key]
+    );
+    const currentDefault = ((BOOTSTRAP.userPreferences || {})[APP_DEFAULT_MODULE_PREF_KEY]) || '';
+    submenu.innerHTML = defs.map(def => {
+      const key = def.view || def.key;
+      const isActive = key === currentDefault;
+      return `<button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu js-default-module-option" data-module="${escapeHtml(key)}" role="menuitemradio" aria-checked="${isActive ? 'true' : 'false'}">
+        <span class="material-symbols-outlined">${escapeHtml(def.icon || 'circle')}</span>
+        <span class="user-menu-dropdown__label">${escapeHtml(def.label)}</span>
+        <span class="material-symbols-outlined user-menu-dropdown__check" aria-hidden="true">check</span>
+      </button>`;
+    }).join('');
+    submenu.dataset.populated = '1';
+    submenu.querySelectorAll('.js-default-module-option').forEach(btn => {
+      btn.addEventListener('click', ev => {
+        ev.preventDefault();
+        const key = btn.dataset.module;
+        updateDefaultModuleUi_(key);
+        if (!BOOTSTRAP.userPreferences) BOOTSTRAP.userPreferences = {};
+        BOOTSTRAP.userPreferences[APP_DEFAULT_MODULE_PREF_KEY] = key;
+        setUserDefaultModuleMenuOpen_(false);
+        setUserMenuOpen_(false);
+        api('setUserPreference', { key: APP_DEFAULT_MODULE_PREF_KEY, value: key })
+          .then(() => setStatus('Vista inicial guardada.', true))
+          .catch(() => setStatus('No se pudo guardar la preferencia.', false));
+      });
+    });
+  }
+
+  function setUserDefaultModuleMenuOpen_(open) {
+    const toggle = document.getElementById('default-module-menu-toggle');
+    const submenu = document.getElementById('default-module-submenu');
+    if (!toggle || !submenu) return;
+    if (open) populateDefaultModuleSubmenu_();
+    toggle.setAttribute('aria-expanded', String(!!open));
+    submenu.classList.toggle('is-hidden', !open);
+  }
+
+  // ── Información del sistema ───────────────────────────────────────────────
+
+  function openSystemInfoModal_() {
+    const modal = document.getElementById('system-info-modal');
+    if (!modal) return;
+    setModalVisibility_(modal, true);
+    const content = document.getElementById('system-info-content');
+    if (!content) return;
+    const buildInfo = BOOTSTRAP.buildInfo || {};
+    const env = String(BOOTSTRAP.environment || '').trim().toUpperCase() || '—';
+    const row = (label, value, cls) =>
+      `<div class="system-info-row"><span class="system-info-label">${escapeHtml(label)}</span><span class="system-info-value ${cls || ''}">${value}</span></div>`;
+    const staticHtml =
+      row('Versión', escapeHtml(buildInfo.baseVersion ? 'v' + buildInfo.baseVersion : '—')) +
+      row('Build', escapeHtml(buildInfo.buildHash || '—')) +
+      row('Actualizado', escapeHtml(buildInfo.updatedAtLabel || '—')) +
+      row('Entorno', escapeHtml(env));
+    content.innerHTML = staticHtml + `<p class="muted" style="margin-top:8px;font-size:0.8rem">Consultando servidor…</p>`;
+    api('getSystemInfo').then(info => {
+      if (!info) { content.innerHTML = staticHtml; return; }
+      const sheetsHtml = (info.sheets || []).map(s =>
+        row(s.name, s.ok ? '✓ OK' : '✗ Falta', s.ok ? 'system-info-ok' : 'system-info-fail')
+      ).join('');
+      content.innerHTML =
+        staticHtml +
+        (sheetsHtml ? `<p class="eyebrow" style="margin-top:16px;margin-bottom:8px">Hojas críticas</p>${sheetsHtml}` : '');
+    }).catch(err => {
+      content.innerHTML = staticHtml + `<p class="muted" style="margin-top:8px;font-size:0.8rem;color:#c0392b">Error al consultar el servidor.</p>`;
+      console.error('getSystemInfo error:', err);
+    });
+  }
+
+  function bindSystemInfoModal_() {
+    const btn = document.getElementById('system-info-btn');
+    const closeBtn = document.getElementById('system-info-close-btn');
+    const backdrop = document.getElementById('system-info-modal-backdrop');
+    if (btn) btn.addEventListener('click', ev => { ev.preventDefault(); setUserMenuOpen_(false); openSystemInfoModal_(); });
+    if (closeBtn) closeBtn.addEventListener('click', () => setModalVisibility_(document.getElementById('system-info-modal'), false));
+    if (backdrop) backdrop.addEventListener('click', () => setModalVisibility_(document.getElementById('system-info-modal'), false));
+  }
+
   function setUserMenuOpen_(open) {
     const trigger = document.getElementById('user-menu-trigger');
     const menu = document.getElementById('user-menu-dropdown');
@@ -425,7 +520,10 @@
     trigger.setAttribute('aria-expanded', String(!!open));
     menu.classList.toggle('is-hidden', !open);
     if (chevron) chevron.textContent = open ? 'expand_less' : 'expand_more';
-    if (!open) setUserZoomMenuOpen_(false);
+    if (!open) {
+      setUserZoomMenuOpen_(false);
+      setUserDefaultModuleMenuOpen_(false);
+    }
   }
 
   function bindUserMenu_() {
@@ -466,6 +564,18 @@
         setUserMenuOpen_(false);
       });
     });
+
+    const defaultModuleToggle = document.getElementById('default-module-menu-toggle');
+    if (defaultModuleToggle) {
+      defaultModuleToggle.addEventListener('click', ev => {
+        ev.preventDefault();
+        const nextOpen = defaultModuleToggle.getAttribute('aria-expanded') !== 'true';
+        setUserDefaultModuleMenuOpen_(nextOpen);
+        if (nextOpen) { setUserZoomMenuOpen_(false); }
+      });
+    }
+
+    bindSystemInfoModal_();
 
     document.addEventListener('click', ev => {
       if (!menu.contains(ev.target) && !trigger.contains(ev.target)) {

@@ -169,7 +169,17 @@ function buildBootstrapForTemplate_(e) {
   const user = getUsuarioActual();
   const permissions = buildPermissionMap_(user);
   const buildInfo = getAppBuildInfo_();
-  const requestedView = normalizeModuleKey_(params.view || getConfiguredDefaultView_()) || getConfiguredDefaultView_();
+  const userPrefs = getUserPreferences();
+
+  const hasExplicitView = !!(params.view && String(params.view).trim());
+  const explicitOrDefault = normalizeModuleKey_(params.view || getConfiguredDefaultView_()) || getConfiguredDefaultView_();
+  const savedDefault = !hasExplicitView && userPrefs && userPrefs.goDefaultModule
+    ? normalizeModuleKey_(userPrefs.goDefaultModule)
+    : '';
+  const requestedView = (savedDefault && (permissions.modules || {})[savedDefault])
+    ? savedDefault
+    : explicitOrDefault;
+
   const initialView = user.canAccess && (permissions.modules || {})[requestedView]
     ? requestedView
     : getFirstAllowedView_(permissions);
@@ -194,7 +204,8 @@ function buildBootstrapForTemplate_(e) {
     query: params,
     user: user,
     permissions: permissions,
-    moduleDefinitions: getModuleDefinitions_()
+    moduleDefinitions: getModuleDefinitions_(),
+    userPreferences: userPrefs
   };
 }
 
@@ -237,6 +248,7 @@ function getAppBootstrap() {
     permissions: buildPermissionMap_(user),
     views: GO_PES_V2.VIEWS,
     moduleDefinitions: getModuleDefinitions_(),
+    userPreferences: getUserPreferences(),
     catalogs: {}
   });
 }

@@ -705,3 +705,43 @@ function getCurrentUserEmail_() {
 
   return '';
 }
+
+// ─── Preferencias de usuario ────────────────────────────────────────────────
+
+function getUserPreferences() {
+  try {
+    const raw = PropertiesService.getUserProperties().getProperty('goPesUserPrefs');
+    return serializeForClient_(raw ? JSON.parse(raw) : {});
+  } catch (err) {
+    return serializeForClient_({});
+  }
+}
+
+function setUserPreference(payload) {
+  const ALLOWED_KEYS = ['goDefaultModule'];
+  const key = payload && payload.key ? String(payload.key) : '';
+  const value = payload && payload.value !== undefined ? String(payload.value) : '';
+  if (!key || ALLOWED_KEYS.indexOf(key) === -1) throw new Error('Preferencia no permitida: ' + key);
+  const props = PropertiesService.getUserProperties();
+  let current = {};
+  try { current = JSON.parse(props.getProperty('goPesUserPrefs') || '{}'); } catch (e) {}
+  current[key] = value;
+  props.setProperty('goPesUserPrefs', JSON.stringify(current));
+  return serializeForClient_({ ok: true });
+}
+
+function getSystemInfo() {
+  requireRole_(['visor', 'operador', 'coordinador', 'superuser']);
+  const criticalSheets = [
+    GO_PES_V2.SHEETS.MAE_CASOS,
+    GO_PES_V2.SHEETS.DIM_USUARIOS,
+    GO_PES_V2.SHEETS.CFG_PARAMETROS,
+    GO_PES_V2.SHEETS.LOG_ACCESOS,
+    GO_PES_V2.SHEETS.FACT_HITOS
+  ];
+  const ss = getSpreadsheet_();
+  const sheets = criticalSheets.map(function(name) {
+    return { name: name, ok: !!ss.getSheetByName(name) };
+  });
+  return serializeForClient_({ sheets: sheets });
+}

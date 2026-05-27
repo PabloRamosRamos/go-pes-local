@@ -10,6 +10,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
     <?!= include('Styles'); ?>
     <?!= include('ThemeDark'); ?>
+    <style>
+      .system-info-grid { display: flex; flex-direction: column; gap: 8px; }
+      .system-info-row { display: flex; align-items: baseline; gap: 12px; }
+      .system-info-label { font-size: 0.8rem; color: var(--color-text-muted, #6b7a8d); min-width: 110px; flex-shrink: 0; }
+      .system-info-value { font-size: 0.85rem; font-weight: 500; word-break: break-all; }
+      .system-info-ok { color: #007C4A; } .system-info-fail { color: #c0392b; }
+    </style>
     <script>
       (() => {
         try {
@@ -74,6 +81,16 @@
                   <span class="material-symbols-outlined user-menu-dropdown__check" aria-hidden="true">check</span>
                 </button>
               </div>
+<button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu-toggle" id="default-module-menu-toggle" role="menuitem" aria-haspopup="menu" aria-expanded="false" aria-controls="default-module-submenu">
+                <span class="material-symbols-outlined">home_pin</span>
+                <span class="user-menu-dropdown__label">Vista inicial</span>
+                <span class="material-symbols-outlined user-menu-dropdown__submenu-chevron" id="default-module-menu-chevron">chevron_right</span>
+              </button>
+              <div class="user-menu-submenu is-hidden" id="default-module-submenu" role="menu" aria-label="Vista inicial al abrir"></div>
+              <button type="button" class="user-menu-dropdown__item" id="system-info-btn" role="menuitem">
+                <span class="material-symbols-outlined">info</span>
+                <span>Información del sistema</span>
+              </button>
             </div>
           </div>
           <div class="pill"><span class="material-symbols-outlined">verified_user</span><span id="user-role">perfil</span></div>
@@ -120,6 +137,24 @@
             </button>
           </div>
         </form>
+      </div>
+
+      <div id="system-info-modal" class="admin-reset-modal is-hidden" aria-hidden="true">
+        <div class="admin-reset-modal__backdrop" id="system-info-modal-backdrop"></div>
+        <div class="admin-reset-modal__dialog">
+          <div class="admin-reset-modal__head">
+            <div>
+              <p class="eyebrow">Aplicación</p>
+              <h3>Información del sistema</h3>
+            </div>
+            <button type="button" class="secondary-btn" id="system-info-close-btn">
+              <span class="material-symbols-outlined">close</span>Cerrar
+            </button>
+          </div>
+          <div id="system-info-content" class="system-info-grid">
+            <p class="muted">Cargando…</p>
+          </div>
+        </div>
       </div>
 
       <section class="toolbar">

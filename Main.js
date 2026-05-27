@@ -121,6 +121,8 @@ function onOpen() {
     .addItem('Refrescar catálogos sugeridos', 'refrescarCatalogosSugeridos')
     .addItem('Reconstruir vistas y master', 'goPesRefrescarVistasYMaster')
     .addItem('Inicializar superUsers', 'goPesSeedSuperUsers_')
+    .addSeparator()
+    .addItem('Ejecutar tests', 'goPesRunAllTests')
     .addToUi();
 }
 

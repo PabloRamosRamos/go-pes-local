@@ -317,21 +317,7 @@ function ejecutarMigracionIngresos(payload) {
     });
 
     appendRowObjects_(GO_PES_V2.SHEETS.RAW_INGRESO, rawRows);
-    upsertRowsByKey_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', maeRows, false);
-
-    const solicitudIdsImported = maeRows.map(function(r) { return r.solicitud_id; });
-    const uvSectorPairs = uniqueNonBlank_(
-      maeRows.map(function(r) { return r.uv + '||' + r.sector; })
-    ).map(function(pair) {
-      const parts = pair.split('||');
-      return { uv: parts[0] || '', sector: parts[1] || '' };
-    });
-
-    refreshPartialArtifacts_({
-      masterSolicitudIds: solicitudIdsImported,
-      vistaTerritorialPairs: uvSectorPairs,
-      sugerenciaSolicitudIds: solicitudIdsImported
-    });
+    appendRowObjects_(GO_PES_V2.SHEETS.MAE_CASOS, maeRows);
 
     logProcessing_('INFO', 'ejecutarMigracionIngresos', 'migracion', '',
       user.email, errors.length || duplicates.length ? 'PARCIAL' : 'OK',
@@ -348,7 +334,8 @@ function ejecutarMigracionIngresos(payload) {
       errors: errors.length,
       errorDetails: errors.slice(0, 50),
       duplicateDetails: duplicates.slice(0, 50),
-      message: 'Migración completada: ' + toImport.length + ' ingresos importados.'
+      needsRebuild: true,
+      message: 'Migración completada: ' + toImport.length + ' ingresos importados. Reconstruye las vistas para ver los datos en el sistema.'
     });
   } finally {
     lock.releaseLock();
@@ -503,19 +490,7 @@ function ejecutarMigracionSocios(payload) {
     });
 
     appendRowObjects_(GO_PES_V2.SHEETS.RAW_SOCIOS, rawRows);
-    upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', factRows, false);
-
-    const affectedOrgIds = uniqueNonBlank_(factRows.map(function(r) { return r.organizacion_id; }));
-    const solicitudesByOrg = {};
-    existingOrgs.forEach(function(org) {
-      const id = String(org.organizacion_id || '').trim();
-      if (id) solicitudesByOrg[id] = String(org.solicitud_id || '').trim();
-    });
-
-    refreshPartialArtifacts_({
-      masterSolicitudIds: uniqueNonBlank_(affectedOrgIds.map(function(id) { return solicitudesByOrg[id] || ''; })),
-      vistaOrganizacionIds: affectedOrgIds
-    });
+    appendRowObjects_(GO_PES_V2.SHEETS.FACT_SOCIOS, factRows);
 
     logProcessing_('INFO', 'ejecutarMigracionSocios', 'migracion', '',
       user.email, errors.length || orgNotFound.length ? 'PARCIAL' : 'OK',
@@ -534,7 +509,8 @@ function ejecutarMigracionSocios(payload) {
       errorDetails: errors.slice(0, 50),
       duplicateDetails: duplicates.slice(0, 50),
       orgNotFoundDetails: orgNotFound.slice(0, 50),
-      message: 'Migración completada: ' + toImport.length + ' socios importados.'
+      needsRebuild: true,
+      message: 'Migración completada: ' + toImport.length + ' socios importados. Reconstruye las vistas para ver los datos en el sistema.'
     });
   } finally {
     lock.releaseLock();

@@ -1744,11 +1744,15 @@
             <h4><span class="material-symbols-outlined" style="font-size:1.1rem;vertical-align:-2px;margin-right:4px">cloud_sync</span>Paso 1 — Verificar fuente</h4>
             <p class="muted" style="margin:4px 0 12px;font-size:0.85rem">Conecta con el spreadsheet de origen para verificar el acceso y obtener el mapeo de columnas sugerido. La operación es de solo lectura.</p>
             <div id="mig-source-info"></div>
-            <div style="margin-top:12px">
+            <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
               <button type="button" class="primary-btn" id="mig-btn-verify">
                 <span class="material-symbols-outlined">link</span>Verificar conexión
               </button>
+              <button type="button" class="secondary-btn" id="mig-btn-rebuild" title="Reconstruye MASTER_DATOS, vistas derivadas y catálogos de sugerencias. Ejecutar después de cada migración.">
+                <span class="material-symbols-outlined">autorenew</span>Reconstruir vistas
+              </button>
             </div>
+            <div id="mig-result-rebuild" style="margin-top:8px"></div>
           </article>
 
           <article class="config-subcard is-hidden" id="mig-step-ingresos">
@@ -1791,6 +1795,30 @@
     const btnVerify = document.getElementById('mig-btn-verify');
     if (!btnVerify || btnVerify.dataset.migBound === '1') return;
     btnVerify.dataset.migBound = '1';
+
+    const btnRebuild = document.getElementById('mig-btn-rebuild');
+    if (btnRebuild) {
+      btnRebuild.addEventListener('click', function() {
+        if (!confirm('¿Reconstruir todas las vistas derivadas y el MASTER_DATOS?\n\nEsta operación puede tardar varios minutos dependiendo del volumen de datos.')) return;
+        const resultEl = document.getElementById('mig-result-rebuild');
+        showContentLoading('Reconstruyendo vistas...');
+        btnRebuild.disabled = true;
+        google.script.run
+          .withSuccessHandler(function() {
+            hideContentLoading();
+            btnRebuild.disabled = false;
+            resultEl.innerHTML = `<p style="color:var(--runtime-brand-secondary,#007C4A);font-size:0.83rem;display:flex;align-items:center;gap:4px;margin:0">
+              <span class="material-symbols-outlined" style="font-size:1rem">check_circle</span>Vistas reconstruidas correctamente.
+            </p>`;
+          })
+          .withFailureHandler(function(err) {
+            hideContentLoading();
+            btnRebuild.disabled = false;
+            resultEl.innerHTML = renderMigError_(String(err && err.message || err));
+          })
+          .goPesRefrescarVistasYMaster();
+      });
+    }
 
     btnVerify.addEventListener('click', function() {
       showContentLoading('Verificando fuente...');

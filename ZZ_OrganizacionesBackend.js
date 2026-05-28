@@ -37,7 +37,15 @@ function getOrganizacionModuloDetalle(payload) {
   const requisitos = filterByField_(GO_PES_V2.SHEETS.FACT_REQUISITOS, 'organizacion_id', organizacionId, false) || [];
   const casos = filterByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'organizacion_id', organizacionId, false) || [];
   const hitosLegacy = filterByField_(GO_PES_V2.SHEETS.FACT_HITOS, 'organizacion_id', organizacionId, false) || [];
-  const avanceHitos = goPesOrgGetSheetRowsSafe_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'organizacion_id', organizacionId);
+  const _solicitudIdOrg = org ? String(org.solicitud_id || '').trim() : '';
+  const avanceHitos = (getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS) || [])
+    .filter(function(row) {
+      return String(row.organizacion_id || '').trim() === organizacionId
+        || (_solicitudIdOrg && String(row.solicitud_id || '').trim() === _solicitudIdOrg);
+    })
+    .sort(function(a, b) {
+      return new Date(b.timestamp_registro || 0) - new Date(a.timestamp_registro || 0);
+    });
   const avanceEstados = goPesOrgGetSheetRowsSafe_(GO_PES_V2.SHEETS.FACT_AVANCE_ESTADO, 'organizacion_id', organizacionId);
   const avanceVista = goPesOrgGetSheetRowsSafe_(GO_PES_V2.SHEETS.VW_AVANCE_ORGANIZACION, 'organizacion_id', organizacionId)[0] || {};
   const hitoNacimiento = avanceHitos

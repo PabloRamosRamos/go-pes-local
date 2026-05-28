@@ -196,3 +196,67 @@ function goPesResetSequenceCounters_() {
 
   return reset;
 }
+
+/**
+ * Repara hojas FONDESE corrompidas por escrituras sin schema registrado.
+ * - FACT_FONDESE: elimina todas las filas de datos y borra columnas extra.
+ * - CFG_FONDESE_Ediciones: elimina filas con id_edicion o anio corruptos,
+ *   conservando solo filas donde id_edicion ~= /^FONDESE-/ y anio in [2020,2100].
+ *
+ * Ejecutar una sola vez desde el editor Apps Script tras hacer push.
+ */
+function goPesRepararFondeseSheets() {
+  requireRole_(['superuser']);
+
+  const S = GO_PES_V2.SHEETS;
+  const ss = getSpreadsheet_();
+  const reparado = [];
+
+  // --- FACT_FONDESE: limpiar datos + eliminar columnas extra ---
+  const shFact = ss.getSheetByName(S.FACT_FONDESE);
+  if (shFact) {
+    const lastRowFact = shFact.getLastRow();
+    const lastColFact = shFact.getLastColumn();
+    const expectedCols = 14;
+
+    if (lastRowFact > 1) {
+      shFact.getRange(2, 1, lastRowFact - 1, lastColFact).clearContent();
+    }
+    if (lastColFact > expectedCols) {
+      shFact.deleteColumns(expectedCols + 1, lastColFact - expectedCols);
+    }
+    ensureSheetWithHeaders_(S.FACT_FONDESE, [
+      'fondese_id', 'id_edicion', 'organizacion_id', 'nombre_organizacion',
+      'convocatoria_id', 'linea_producto_id', 'estado_proceso', 'resultado_adj',
+      'estado_ejecucion', 'estado_rendicion', 'checklist_docs',
+      'fecha_creacion', 'fecha_actualizacion', 'creado_por'
+    ]);
+    invalidateSheetRuntimeCache_(S.FACT_FONDESE);
+    reparado.push('FACT_FONDESE: datos limpiados, ' + Math.max(0, lastColFact - expectedCols) + ' columna(s) extra eliminada(s)');
+  }
+
+  // --- CFG_FONDESE_Ediciones: conservar solo filas válidas ---
+  const shCfg = ss.getSheetByName(S.CFG_FONDESE_EDICIONES);
+  if (shCfg && shCfg.getLastRow() > 1) {
+    const numDataRows = shCfg.getLastRow() - 1;
+    const numCols = shCfg.getLastColumn();
+    const cfgData = shCfg.getRange(2, 1, numDataRows, numCols).getValues();
+
+    const validRows = cfgData.filter(function(row) {
+      const idEdicion = String(row[0] || '').trim();
+      const anio = Number(row[1]);
+      return /^FONDESE-/.test(idEdicion) && anio >= 2020 && anio <= 2100;
+    });
+
+    shCfg.getRange(2, 1, numDataRows, numCols).clearContent();
+    if (validRows.length > 0) {
+      shCfg.getRange(2, 1, validRows.length, numCols).setValues(validRows);
+    }
+    invalidateSheetRuntimeCache_(S.CFG_FONDESE_EDICIONES);
+    reparado.push('CFG_FONDESE_Ediciones: ' + (numDataRows - validRows.length) + ' fila(s) corrupta(s) eliminada(s), ' + validRows.length + ' conservada(s)');
+  }
+
+  logProcessing_('INFO', 'goPesRepararFondeseSheets', 'fondese', '', '', 'OK', reparado);
+  SpreadsheetApp.getActiveSpreadsheet().toast(reparado.join(' | '), 'GO-PES Reparación FONDESE', 8);
+  return serializeForClient_({ ok: true, detalle: reparado });
+}

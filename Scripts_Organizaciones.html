@@ -230,15 +230,10 @@
           </div>
         </div>
         <div class="organizaciones-hero-card__stats">
-          <div class="organizaciones-age-card">
-            <span>Antigüedad</span>
-            <strong>${escapeHtml(formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}</strong>
-            <small>${escapeHtml(formatUiValue_(r.fecha_antiguedad_organizacion || 'Sin fecha base'))}</small>
-          </div>
           <div class="organizaciones-metrics organizaciones-metrics--compact">
             ${organizacionMetricHtml_('Socios', r.cantidad_socios || 0)}
             ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
-            ${organizacionMetricHtml_('Requisitos', r.cantidad_requisitos || 0)}
+            ${organizacionMetricHtml_('Antigüedad', formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}
             ${organizacionMetricHtml_('Hitos avance', r.cantidad_avance_hitos || 0)}
           </div>
         </div>

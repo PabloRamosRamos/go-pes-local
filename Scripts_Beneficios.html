@@ -2531,19 +2531,12 @@
           </div>
           <div class="field" style="margin-bottom:14px">
             <label>Convocatoria <span style="color:#d93025">*</span></label>
-            <div style="display:grid;gap:8px;margin-top:4px">
+            <select name="convocatoria_id" id="fnd-conv-select" required>
+              <option value="">— Seleccionar convocatoria —</option>
               ${CONVS.map(function(c) {
-                return `
-                  <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:8px 10px;border:1px solid var(--border,#D6E0EA);border-radius:8px">
-                    <input type="radio" name="convocatoria_id" value="${escapeHtml(String(c.id))}" required style="margin-top:2px;flex-shrink:0">
-                    <span>
-                      <strong>${escapeHtml(c.label)}</strong>
-                      <span class="muted" style="font-size:0.78rem;display:block">Cierre: ${escapeHtml(c.fecha_cierre)}</span>
-                    </span>
-                  </label>
-                `;
+                return `<option value="${escapeHtml(String(c.id))}">${escapeHtml(c.label)} — cierre ${escapeHtml(c.fecha_cierre)}</option>`;
               }).join('')}
-            </div>
+            </select>
             <p class="muted" style="font-size:0.75rem;margin-top:6px">Si la organización postula a ambos llamados, crea un registro independiente por cada uno.</p>
           </div>
           <div id="fnd-dup-warning" style="display:none;margin-bottom:14px;padding:10px 12px;border-radius:8px;background:var(--warning-soft,#fff3cd);color:#856404;font-size:0.82rem;border:1px solid rgba(244,180,0,.3)">
@@ -2567,11 +2560,11 @@
       document.getElementById('fnd-modal-cancel').addEventListener('click', closeModal);
 
       function checkDuplicate() {
-        const orgId = (document.getElementById('fnd-org-select') || {}).value || '';
-        const convRadio = document.querySelector('[name="convocatoria_id"]:checked');
-        const conv = convRadio ? convRadio.value : '';
-        const orgNombreEl = document.getElementById('fnd-org-nombre');
         const sel = document.getElementById('fnd-org-select');
+        const orgId = sel ? sel.value : '';
+        const convSel = document.getElementById('fnd-conv-select');
+        const conv = convSel ? convSel.value : '';
+        const orgNombreEl = document.getElementById('fnd-org-nombre');
         if (sel && sel.value && sel.selectedIndex > 0) {
           orgNombreEl.value = sel.options[sel.selectedIndex].dataset.nombre || '';
         }
@@ -2582,9 +2575,7 @@
         if (warn) warn.style.display = isDup ? 'block' : 'none';
       }
       document.getElementById('fnd-org-select').addEventListener('change', checkDuplicate);
-      document.querySelectorAll('[name="convocatoria_id"]').forEach(function(r) {
-        r.addEventListener('change', checkDuplicate);
-      });
+      document.getElementById('fnd-conv-select').addEventListener('change', checkDuplicate);
 
       document.getElementById('fnd-modal-submit').addEventListener('click', function() {
         const form = document.getElementById('fnd-new-form');
@@ -2698,13 +2689,34 @@
       return `
         <div class="fnd-dynamic-item" data-conv-idx="${idx}">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1">
-            <input type="text"   placeholder="Label (ej: Primer Llamado)" value="${escapeHtml(c.label || '')}"                 data-conv-field="label">
-            <input type="number" placeholder="Monto"                       value="${escapeHtml(String(c.monto || ''))}"        data-conv-field="monto" min="0">
-            <input type="date"   title="Apertura"                          value="${escapeHtml(c.fecha_apertura || '')}"        data-conv-field="fecha_apertura">
-            <input type="date"   title="Cierre"                            value="${escapeHtml(c.fecha_cierre || '')}"          data-conv-field="fecha_cierre">
-            <input type="date"   title="Evaluación"                        value="${escapeHtml(c.fecha_evaluacion || '')}"      data-conv-field="fecha_evaluacion">
-            <input type="date"   title="Firma"                             value="${escapeHtml(c.fecha_firma || '')}"           data-conv-field="fecha_firma">
-            <input type="date"   title="Cierre rendición"                  value="${escapeHtml(c.fecha_cierre_rendicion || '')}" data-conv-field="fecha_cierre_rendicion" style="grid-column:span 2">
+            <div class="field" style="margin:0">
+              <label style="font-size:0.74rem">Label (ej: Primer Llamado)</label>
+              <input type="text" value="${escapeHtml(c.label || '')}" data-conv-field="label">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.74rem">Monto</label>
+              <input type="number" value="${escapeHtml(String(c.monto || ''))}" data-conv-field="monto" min="0">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.74rem">Apertura</label>
+              <input type="date" value="${escapeHtml(c.fecha_apertura || '')}" data-conv-field="fecha_apertura">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.74rem">Cierre</label>
+              <input type="date" value="${escapeHtml(c.fecha_cierre || '')}" data-conv-field="fecha_cierre">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.74rem">Evaluación</label>
+              <input type="date" value="${escapeHtml(c.fecha_evaluacion || '')}" data-conv-field="fecha_evaluacion">
+            </div>
+            <div class="field" style="margin:0">
+              <label style="font-size:0.74rem">Firma</label>
+              <input type="date" value="${escapeHtml(c.fecha_firma || '')}" data-conv-field="fecha_firma">
+            </div>
+            <div class="field" style="margin:0;grid-column:span 2">
+              <label style="font-size:0.74rem">Cierre rendición</label>
+              <input type="date" value="${escapeHtml(c.fecha_cierre_rendicion || '')}" data-conv-field="fecha_cierre_rendicion">
+            </div>
           </div>
           <button type="button" class="fnd-remove-btn"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
         </div>

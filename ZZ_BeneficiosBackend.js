@@ -1621,8 +1621,28 @@ function goPesGetOrgsElegiblesFondese() {
     }
   });
 
+  var activaEdicion = getSheetData_(GO_PES_V2.SHEETS.CFG_FONDESE_EDICIONES).filter(function(r) {
+    return String(r.estado || '').trim() === 'activa';
+  })[0] || null;
+  var activaEdicionId = activaEdicion ? String(activaEdicion.id_edicion || '').trim() : '';
+
+  var fondeseRows = getSheetData_(GO_PES_V2.SHEETS.FACT_FONDESE);
+
+  var orgsConActivaPostulacion = {};
+  fondeseRows.forEach(function(r) {
+    var edId = String(r.id_edicion || '').trim();
+    var estado = String(r.estado_proceso || '').trim();
+    if ((!activaEdicionId || edId === activaEdicionId) && estado !== 'cerrado') {
+      var orgId = String(r.organizacion_id || '').trim();
+      if (orgId) orgsConActivaPostulacion[orgId] = true;
+    }
+  });
+
   var orgs = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
-    .filter(function(r) { return eligibleOrgIds[String(r.organizacion_id || '').trim()]; })
+    .filter(function(r) {
+      var orgId = String(r.organizacion_id || '').trim();
+      return eligibleOrgIds[orgId] && !orgsConActivaPostulacion[orgId];
+    })
     .map(function(r) {
       return {
         organizacion_id:     String(r.organizacion_id || ''),
@@ -1634,10 +1654,11 @@ function goPesGetOrgsElegiblesFondese() {
       return a.nombre_organizacion.localeCompare(b.nombre_organizacion, 'es');
     });
 
-  var existingFondese = getSheetData_(GO_PES_V2.SHEETS.FACT_FONDESE).map(function(r) {
+  var existingFondese = fondeseRows.map(function(r) {
     return {
       organizacion_id: String(r.organizacion_id || ''),
-      convocatoria_id: String(r.convocatoria_id || '')
+      convocatoria_id: String(r.convocatoria_id || ''),
+      estado_proceso:  String(r.estado_proceso || '')
     };
   });
 

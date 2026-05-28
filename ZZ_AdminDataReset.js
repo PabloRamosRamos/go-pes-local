@@ -110,6 +110,7 @@ function goPesGetAdminResetProtectedSheets_() {
 
   return [
     S.CAT_HITOS_AVANCE,
+    S.CFG_FONDESE_EDICIONES,
     S.DIM_USUARIOS,
     S.DIM_TERRITORIO,
     S.DIM_ESTADOS,

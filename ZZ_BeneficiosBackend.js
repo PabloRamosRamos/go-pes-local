@@ -1357,102 +1357,289 @@ function formatDateOnlyForMail_(value) {
 }
 
 /* =========================================================
-   FONDESE — Fondo de Seguridad Providencia 2026
+   FONDESE — Fondo de Seguridad Providencia
+   Modelo de dos capas: CFG_FONDESE_Ediciones + FACT_FONDESE
    ========================================================= */
 
-function goPesFondeseCatalogs_() {
-  return {
-    lineasProducto: [
-      { id: 'cierre_electrico',   nombre: 'Sistema Cierre Eléctrico', monto: 2500000 },
-      { id: 'videoportero',       nombre: 'Videoportero',              monto: 1500000 },
-      { id: 'focos_led_solar',    nombre: 'Focos Led Solar',           monto: 1500000 },
-      { id: 'dientes_tiburon',    nombre: 'Dientes Tiburón',           monto: 2000000 },
-      { id: 'alarma_sirena_solar',nombre: 'Alarma Sirena Solar',       monto: 1500000 },
-      { id: 'acceso_biometrico',  nombre: 'Acceso Biométrico',         monto: 1500000 },
-      { id: 'camaras_seguridad',  nombre: 'Cámaras de Seguridad',      monto: 1500000 },
-      { id: 'kit_emergencia',     nombre: 'Kit Emergencia Familiar',   monto: 2500000 },
-      { id: 'kit_mascotas',       nombre: 'Kit Mascotas',              monto: 2000000 },
-      { id: 'extintores_pqs',     nombre: 'Extintores PQS',            monto: 1500000 }
-    ],
-    documentos: [
-      { campo: 'doc_01', etiqueta: 'Ficha Única de Postulación (Anexo N°1)' },
-      { campo: 'doc_02', etiqueta: 'Declaración Jurada Simple (Anexo N°2)' },
-      { campo: 'doc_03', etiqueta: 'Carta de Compromiso de Ejecución Directa (Anexo N°3)' },
-      { campo: 'doc_04', etiqueta: 'E-RUT Comité de Seguridad' },
-      { campo: 'doc_05', etiqueta: 'Cédula de identidad Presidente/a' },
-      { campo: 'doc_06', etiqueta: 'Cédula de identidad Secretario/a' },
-      { campo: 'doc_07', etiqueta: 'Cédula de identidad Tesorero/a' },
-      { campo: 'doc_08', etiqueta: 'Certificado de vigencia de la directiva' },
-      { campo: 'doc_09', etiqueta: 'Certificado de personalidad jurídica' },
-      { campo: 'doc_10', etiqueta: 'Cotización Proveedor N°1' },
-      { campo: 'doc_11', etiqueta: 'Cotización Proveedor N°2' },
-      { campo: 'doc_12', etiqueta: 'Cotización Proveedor N°3' },
-      { campo: 'doc_13', etiqueta: 'Copia del libro de socios' }
-    ],
-    estadosProceso: [
-      'sin_postular', 'postulando', 'en_evaluacion', 'adjudicado',
-      'firma_convenio', 'en_ejecucion', 'en_rendicion', 'cerrado'
-    ],
-    convocatorias: [
-      { id: '1',   label: 'Primer Llamado',   cierre: '27/03/2026' },
-      { id: '2',   label: 'Segundo Llamado',  cierre: '03/08/2026' },
-      { id: '1,2', label: 'Ambos llamados',   cierre: '' }
-    ]
-  };
+function goPesEnsureFondeseSheets_() {
+  var S = GO_PES_V2.SHEETS;
+  ensureSheetWithHeaders_(S.CFG_FONDESE_EDICIONES, [
+    'id_edicion', 'anio', 'nombre', 'presupuesto_total', 'estado',
+    'convocatorias', 'lineas_producto', 'documentos', 'fecha_creacion', 'creado_por'
+  ]);
+  ensureSheetWithHeaders_(S.FACT_FONDESE, [
+    'fondese_id', 'id_edicion', 'organizacion_id', 'nombre_organizacion',
+    'convocatoria_id', 'linea_producto_id', 'estado_proceso', 'resultado_adj',
+    'estado_ejecucion', 'estado_rendicion', 'checklist_docs',
+    'fecha_creacion', 'fecha_actualizacion', 'creado_por'
+  ]);
 }
 
-function goPesGetFondeseList() {
+function goPesParseFondeseEdicion_(row) {
+  if (!row) return null;
+  var parsed = Object.assign({}, row);
+  try { parsed.convocatorias   = JSON.parse(String(row.convocatorias   || '[]')); } catch(e) { parsed.convocatorias   = []; }
+  try { parsed.lineas_producto = JSON.parse(String(row.lineas_producto || '[]')); } catch(e) { parsed.lineas_producto = []; }
+  try { parsed.documentos      = JSON.parse(String(row.documentos      || '[]')); } catch(e) { parsed.documentos      = []; }
+  return parsed;
+}
+
+function goPesSeedFondese2026_() {
+  var S = GO_PES_V2.SHEETS;
+  goPesEnsureFondeseSheets_();
+  var rows = getSheetData_(S.CFG_FONDESE_EDICIONES);
+  if (rows.some(function(r) { return String(r.id_edicion || '').trim() === 'FONDESE-2026'; })) return;
+
+  appendRowObjects_(S.CFG_FONDESE_EDICIONES, [{
+    id_edicion:        'FONDESE-2026',
+    anio:              2026,
+    nombre:            'Fondo de Seguridad Providencia 2026',
+    presupuesto_total: 60000000,
+    estado:            'activa',
+    convocatorias: JSON.stringify([
+      { id:'1', label:'Primer Llamado',  fecha_apertura:'2026-01-29', fecha_cierre:'2026-03-27',
+        fecha_evaluacion:'2026-04-06', fecha_firma:'2026-04-17', fecha_cierre_rendicion:'2026-06-30', monto:30000000 },
+      { id:'2', label:'Segundo Llamado', fecha_apertura:'2026-07-01', fecha_cierre:'2026-08-03',
+        fecha_evaluacion:'2026-08-21', fecha_firma:'2026-08-28', fecha_cierre_rendicion:'2026-11-30', monto:30000000 }
+    ]),
+    lineas_producto: JSON.stringify([
+      { id:'LP01', nombre:'Sistema Cierre Eléctrico', monto_max:2500000 },
+      { id:'LP02', nombre:'Videoportero',              monto_max:1500000 },
+      { id:'LP03', nombre:'Focos Led Solar',           monto_max:1500000 },
+      { id:'LP04', nombre:'Dientes Tiburón',           monto_max:2000000 },
+      { id:'LP05', nombre:'Alarma Sirena Solar',       monto_max:1500000 },
+      { id:'LP06', nombre:'Acceso Biométrico',         monto_max:1500000 },
+      { id:'LP07', nombre:'Cámaras de Seguridad',      monto_max:1500000 },
+      { id:'LP08', nombre:'Kit Emergencia Familiar',   monto_max:2500000 },
+      { id:'LP09', nombre:'Kit Mascotas',              monto_max:2000000 },
+      { id:'LP10', nombre:'Extintores PQS',            monto_max:1500000 }
+    ]),
+    documentos: JSON.stringify([
+      { id:'D01', etiqueta:'Ficha Única de Postulación (Anexo N°1)' },
+      { id:'D02', etiqueta:'Declaración Jurada Simple (Anexo N°2)' },
+      { id:'D03', etiqueta:'Carta Compromiso de Ejecución Directa (Anexo N°3)' },
+      { id:'D04', etiqueta:'Estatutos y sus modificaciones en el que conste su objeto' },
+      { id:'D05', etiqueta:'Acta de Asamblea o Sesión en la que se acuerde postular el proyecto con su respectivo registro de asistencia' },
+      { id:'D06', etiqueta:'E-RUT de la Organización' },
+      { id:'D07', etiqueta:'Certificado de Vigencia Cta. Bancaria' },
+      { id:'D08', etiqueta:'Certificado de Personalidad Jurídica sin fines de lucro' },
+      { id:'D09', etiqueta:'Copia C.I Representante Legal, Presidente, Tesorero y Secretario' },
+      { id:'D10', etiqueta:'Decreto Registro Municipal de Personas Jurídicas Receptoras de Fondos Públicos' },
+      { id:'D11', etiqueta:'Certificado Registro Central de Colaboradores del Estado y Municipalidades Ley N°19.862' },
+      { id:'D12', etiqueta:'Tres Cotizaciones que respalden cada gasto que generará el proyecto' },
+      { id:'D13', etiqueta:'Copia del libro de socios' }
+    ]),
+    fecha_creacion: new Date(),
+    creado_por:     'sistema'
+  }]);
+  invalidateSheetRuntimeCache_(S.CFG_FONDESE_EDICIONES);
+}
+
+function goPesGetFondeseEdiciones() {
   requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
-  const rows = getSheetData_(GO_PES_V2.SHEETS.FACT_FONDESE);
-  const DOC_FIELDS = ['doc_01','doc_02','doc_03','doc_04','doc_05','doc_06','doc_07',
-                      'doc_08','doc_09','doc_10','doc_11','doc_12','doc_13'];
-  const list = rows.map(function(r) {
-    const docs_entregados = DOC_FIELDS.filter(function(f) {
-      return String(r[f] || '').trim().toUpperCase() === 'TRUE';
-    }).length;
-    return Object.assign({}, r, {
-      docs_entregados: docs_entregados,
-      pct_docs: Math.round(docs_entregados / 13 * 100)
-    });
+  goPesEnsureFondeseSheets_();
+  var rows = getSheetData_(GO_PES_V2.SHEETS.CFG_FONDESE_EDICIONES);
+  var parsed = rows.map(goPesParseFondeseEdicion_).filter(Boolean);
+  parsed.sort(function(a, b) { return Number(b.anio || 0) - Number(a.anio || 0); });
+  return serializeForClient_({ ediciones: parsed });
+}
+
+function goPesGetFondeseEdicionActiva() {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  goPesEnsureFondeseSheets_();
+  goPesSeedFondese2026_();
+  var activa = getSheetData_(GO_PES_V2.SHEETS.CFG_FONDESE_EDICIONES).find(function(r) {
+    return String(r.estado || '').trim() === 'activa';
   });
-  return serializeForClient_({ rows: list, catalogs: goPesFondeseCatalogs_() });
+  return serializeForClient_({ edicion: activa ? goPesParseFondeseEdicion_(activa) : null });
+}
+
+function goPesUpsertFondeseEdicion(payload) {
+  var actor = requireRole_(['superuser']);
+  var p = payload || {};
+  var email = String((actor && actor.email) || '').trim() || Session.getActiveUser().getEmail();
+  var S = GO_PES_V2.SHEETS;
+  goPesEnsureFondeseSheets_();
+
+  var id = String(p.id_edicion || '').trim();
+  if (!id) throw new Error('id_edicion es requerido.');
+
+  if (String(p.estado || '').trim() === 'activa') {
+    var toDeactivate = getSheetData_(S.CFG_FONDESE_EDICIONES).filter(function(r) {
+      return String(r.id_edicion || '').trim() !== id && String(r.estado || '').trim() === 'activa';
+    });
+    if (toDeactivate.length) {
+      toDeactivate.forEach(function(r) {
+        upsertRowsByKey_(S.CFG_FONDESE_EDICIONES, 'id_edicion',
+          [Object.assign({}, r, { estado: 'cerrada' })], false);
+      });
+      invalidateSheetRuntimeCache_(S.CFG_FONDESE_EDICIONES);
+    }
+  }
+
+  var now = new Date();
+  var existing = getSheetData_(S.CFG_FONDESE_EDICIONES).find(function(r) {
+    return String(r.id_edicion || '').trim() === id;
+  });
+  if (existing) {
+    upsertRowsByKey_(S.CFG_FONDESE_EDICIONES, 'id_edicion', [Object.assign({}, p)], false);
+  } else {
+    appendRowObjects_(S.CFG_FONDESE_EDICIONES, [Object.assign({}, p, {
+      fecha_creacion: now,
+      creado_por: email
+    })]);
+  }
+
+  invalidateSheetRuntimeCache_(S.CFG_FONDESE_EDICIONES);
+  logUserAction_('UPSERT_FONDESE_EDICION', 'fondese_edicion', id, 'OK', {});
+  var saved = getSheetData_(S.CFG_FONDESE_EDICIONES).find(function(r) {
+    return String(r.id_edicion || '').trim() === id;
+  });
+  return serializeForClient_({ ok: true, edicion: goPesParseFondeseEdicion_(saved || p) });
+}
+
+function goPesGetFondeseList(idEdicion) {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  goPesEnsureFondeseSheets_();
+  var S = GO_PES_V2.SHEETS;
+
+  var edicionId = String(idEdicion || '').trim();
+  if (!edicionId) {
+    goPesSeedFondese2026_();
+    var activaRow = getSheetData_(S.CFG_FONDESE_EDICIONES).find(function(r) {
+      return String(r.estado || '').trim() === 'activa';
+    });
+    edicionId = activaRow ? String(activaRow.id_edicion || '').trim() : '';
+  }
+
+  var edicionRow = edicionId ? getSheetData_(S.CFG_FONDESE_EDICIONES).find(function(r) {
+    return String(r.id_edicion || '').trim() === edicionId;
+  }) : null;
+  var edicion = goPesParseFondeseEdicion_(edicionRow);
+  var totalDocs = edicion ? (edicion.documentos || []).length : 0;
+
+  var rows = getSheetData_(S.FACT_FONDESE)
+    .filter(function(r) {
+      return !edicionId || String(r.id_edicion || '').trim() === edicionId;
+    })
+    .map(function(r) {
+      var checklist = {};
+      try { checklist = JSON.parse(String(r.checklist_docs || '{}')); } catch(e) {}
+      var docsEntregados = Object.keys(checklist).filter(function(k) { return checklist[k]; }).length;
+      return Object.assign({}, r, {
+        checklist_docs:  checklist,
+        docs_entregados: docsEntregados,
+        total_docs:      totalDocs,
+        pct_docs:        totalDocs > 0 ? Math.round(docsEntregados / totalDocs * 100) : 0
+      });
+    });
+
+  return serializeForClient_({ rows: rows, edicion: edicion });
 }
 
 function goPesGetFondeseDetalle(idFondese) {
   requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
-  const id = String(idFondese || '').trim();
+  var id = String(idFondese || '').trim();
   if (!id) throw new Error('Falta ID FONDESE.');
-  const row = getSheetData_(GO_PES_V2.SHEETS.FACT_FONDESE).find(function(r) {
+  goPesEnsureFondeseSheets_();
+  var S = GO_PES_V2.SHEETS;
+
+  var row = getSheetData_(S.FACT_FONDESE).find(function(r) {
     return String(r.fondese_id || '').trim() === id;
   });
   if (!row) throw new Error('Registro FONDESE no encontrado: ' + id);
-  return serializeForClient_({ registro: row, catalogs: goPesFondeseCatalogs_() });
+
+  var checklist = {};
+  try { checklist = JSON.parse(String(row.checklist_docs || '{}')); } catch(e) {}
+  var registro = Object.assign({}, row, { checklist_docs: checklist });
+
+  var edicionRow = getSheetData_(S.CFG_FONDESE_EDICIONES).find(function(r) {
+    return String(r.id_edicion || '').trim() === String(row.id_edicion || '').trim();
+  });
+  var edicion = goPesParseFondeseEdicion_(edicionRow);
+
+  return serializeForClient_({ registro: registro, edicion: edicion });
 }
 
 function goPesUpsertFondese(payload) {
-  const actor = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
-  const p = payload || {};
-  const email = String((actor && actor.email) || '').trim() || Session.getActiveUser().getEmail();
-  const now = new Date();
-  const id = String(p.fondese_id || '').trim();
+  var actor = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  var p = payload || {};
+  var email = String((actor && actor.email) || '').trim() || Session.getActiveUser().getEmail();
+  var now = new Date();
+  var S = GO_PES_V2.SHEETS;
+  goPesEnsureFondeseSheets_();
 
+  var checklistRaw = p.checklist_docs;
+  if (checklistRaw && typeof checklistRaw === 'object') {
+    checklistRaw = JSON.stringify(checklistRaw);
+  } else {
+    checklistRaw = String(checklistRaw || '{}');
+  }
+
+  var id = String(p.fondese_id || '').trim();
   if (id) {
-    const updated = Object.assign({}, p, { fecha_actualizacion: now });
-    upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FONDESE, 'fondese_id', [updated], false);
-    invalidateSheetRuntimeCache_(GO_PES_V2.SHEETS.FACT_FONDESE);
+    upsertRowsByKey_(S.FACT_FONDESE, 'fondese_id',
+      [Object.assign({}, p, { checklist_docs: checklistRaw, fecha_actualizacion: now })], false);
+    invalidateSheetRuntimeCache_(S.FACT_FONDESE);
     logUserAction_('UPSERT_FONDESE', 'fondese', id, 'OK', { organizacion_id: p.organizacion_id });
     return serializeForClient_({ ok: true, fondese_id: id });
   }
 
-  const newId = 'FND-' + new Date().getTime();
-  const newRow = Object.assign({}, p, {
-    fondese_id: newId,
-    fecha_creacion: now,
+  var edicionId = String(p.id_edicion || '').trim();
+  if (!edicionId) {
+    var activa = getSheetData_(S.CFG_FONDESE_EDICIONES).find(function(r) {
+      return String(r.estado || '').trim() === 'activa';
+    });
+    if (!activa) throw new Error('No hay una edición de FONDESE activa. Configure una edición antes de crear postulaciones.');
+    edicionId = String(activa.id_edicion || '').trim();
+  }
+
+  var newId = 'FND-' + new Date().getTime();
+  appendRowObjects_(S.FACT_FONDESE, [Object.assign({}, p, {
+    fondese_id:          newId,
+    id_edicion:          edicionId,
+    checklist_docs:      checklistRaw,
+    fecha_creacion:      now,
     fecha_actualizacion: now,
-    creado_por: email
-  });
-  appendRowObjects_(GO_PES_V2.SHEETS.FACT_FONDESE, [newRow]);
-  invalidateSheetRuntimeCache_(GO_PES_V2.SHEETS.FACT_FONDESE);
+    creado_por:          email
+  })]);
+  invalidateSheetRuntimeCache_(S.FACT_FONDESE);
   logUserAction_('UPSERT_FONDESE', 'fondese', newId, 'OK', { organizacion_id: p.organizacion_id });
   return serializeForClient_({ ok: true, fondese_id: newId });
+}
+
+function goPesGetOrgsElegiblesFondese() {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  goPesEnsureFondeseSheets_();
+
+  var avanceHitos = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS);
+  var eligibleOrgIds = {};
+  avanceHitos.forEach(function(h) {
+    if (String(h.codigo_hito || '').trim().toUpperCase() === 'FOR_04') {
+      var orgId = String(h.organizacion_id || '').trim();
+      if (orgId) eligibleOrgIds[orgId] = true;
+    }
+  });
+
+  var orgs = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
+    .filter(function(r) { return eligibleOrgIds[String(r.organizacion_id || '').trim()]; })
+    .map(function(r) {
+      return {
+        organizacion_id:     String(r.organizacion_id || ''),
+        nombre_organizacion: String(r.nombre_organizacion || ''),
+        solicitud_id:        String(r.solicitud_id || '')
+      };
+    })
+    .sort(function(a, b) {
+      return a.nombre_organizacion.localeCompare(b.nombre_organizacion, 'es');
+    });
+
+  var existingFondese = getSheetData_(GO_PES_V2.SHEETS.FACT_FONDESE).map(function(r) {
+    return {
+      organizacion_id: String(r.organizacion_id || ''),
+      convocatoria_id: String(r.convocatoria_id || '')
+    };
+  });
+
+  return serializeForClient_({ orgs: orgs, existingFondese: existingFondese });
 }

@@ -2084,7 +2084,6 @@
       .fnd-doc-bar__fill--ok{background:#1e8e3e}
       .fnd-doc-bar__label{font-size:0.75rem;color:var(--text-muted,#6b7a8d)}
       .fnd-estado{display:inline-flex;align-items:center;padding:3px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;white-space:nowrap}
-      .fnd-estado--sin_postular{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
       .fnd-estado--postulando{background:#e8f0fe;color:#1a73e8}
       .fnd-estado--en_evaluacion{background:#fff8e1;color:#e37400}
       .fnd-estado--adjudicado{background:#e6f4ea;color:#1e8e3e}
@@ -2105,7 +2104,7 @@
       .fnd-step__dot{width:22px;height:22px;border-radius:50%;border:2px solid var(--border,#D6E0EA);background:var(--surface,#fff);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;position:relative;z-index:1}
       .fnd-step--done .fnd-step__dot{background:var(--runtime-brand-primary,#3D96B4);border-color:var(--runtime-brand-primary,#3D96B4);color:#fff}
       .fnd-step--active .fnd-step__dot{border-color:var(--runtime-brand-primary,#3D96B4);color:var(--runtime-brand-primary,#3D96B4)}
-      .fnd-step__label{font-size:0.62rem;text-align:center;color:var(--text-muted,#6b7a8d);line-height:1.2;max-width:66px}
+      .fnd-step__label{font-size:0.9rem;text-align:center;color:var(--text-muted,#6b7a8d);line-height:1.2;max-width:66px}
       .fnd-step--active .fnd-step__label,.fnd-step--done .fnd-step__label{color:var(--text,#24364B);font-weight:600}
       .fnd-checklist{display:grid;grid-template-columns:1fr 1fr;gap:4px 16px}
       .fnd-doc-item{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:0.81rem;color:var(--text,#24364B)}
@@ -2118,11 +2117,23 @@
       .fnd-section h4{margin:0 0 12px;font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#6b7a8d)}
       .fnd-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9800;display:flex;align-items:center;justify-content:center;padding:16px}
       .fnd-modal{background:var(--surface,#fff);border-radius:12px;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.2)}
+      .fnd-modal--wide{max-width:720px}
       .fnd-modal__head{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border,#D6E0EA)}
       .fnd-modal__title{font-weight:700;font-size:1rem;color:var(--text,#24364B);flex:1}
       .fnd-modal__close{background:none;border:none;cursor:pointer;color:var(--text-muted,#6b7a8d);display:flex;padding:4px;border-radius:6px}
       .fnd-modal__body{flex:1;overflow-y:auto;padding:20px}
       .fnd-modal__foot{padding:14px 20px;border-top:1px solid var(--border,#D6E0EA);display:flex;justify-content:flex-end;gap:8px}
+      .fnd-dynamic-list{display:grid;gap:8px;margin-top:8px}
+      .fnd-dynamic-item{display:flex;gap:6px;align-items:flex-start}
+      .fnd-dynamic-item input,.fnd-dynamic-item select{flex:1;min-width:0}
+      .fnd-dynamic-item .fnd-remove-btn{flex-shrink:0;padding:6px;border:1px solid var(--border,#D6E0EA);border-radius:6px;background:none;cursor:pointer;color:var(--text-muted,#6b7a8d);line-height:1}
+      .fnd-editions-table{width:100%;border-collapse:collapse;font-size:0.83rem;margin-top:8px}
+      .fnd-editions-table th{text-align:left;padding:7px 10px;font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted,#6b7a8d);border-bottom:2px solid var(--border,#D6E0EA)}
+      .fnd-editions-table td{padding:8px 10px;border-bottom:1px solid var(--border,#D6E0EA);vertical-align:middle}
+      .fnd-editions-table tr:last-child td{border-bottom:none}
+      .fnd-status--activa{background:#e6f4ea;color:#1e8e3e}
+      .fnd-status--borrador{background:#fff8e1;color:#e37400}
+      .fnd-status--cerrada{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
       html[data-theme="dark"] .fnd-table tr:hover td{background:var(--surface-alt,#182635)}
       html[data-theme="dark"] .fnd-section{background:var(--surface,#14202d);border-color:var(--border,#294356)}
       html[data-theme="dark"] .fnd-modal{background:var(--surface,#14202d)}
@@ -2133,41 +2144,24 @@
   })();
 
   /* =========================================================
-     FONDESE — panel principal
+     FONDESE — panel principal (shell sincrónico, datos cargados en bindFondesePanel_)
      ========================================================= */
 
   function renderFondesePanel_(activeTab) {
     return `
       <article class="beneficios-panel beneficios-panel--operativo" role="tabpanel">
         <div class="beneficios-panel__head">
-          <div class="fnd-header">
-            <p class="eyebrow">Beneficio municipal 2026</p>
-            <h3>${escapeHtml(activeTab.titulo || 'FONDESE 2026')}</h3>
+          <div class="fnd-header" id="fnd-panel-header">
+            <p class="eyebrow">Beneficio municipal</p>
+            <h3 id="fnd-panel-title">${escapeHtml(activeTab.titulo || 'FONDESE')}</h3>
             <p class="muted">Fondo de Seguridad Providencia &mdash; seguimiento de postulaciones por organización</p>
-            <div class="fnd-chips">
-              <span class="fnd-chip">
-                <span class="material-symbols-outlined" style="font-size:13px">event</span>
-                1° Llamado &middot; cierre 27/03/2026
-              </span>
-              <span class="fnd-chip">
-                <span class="material-symbols-outlined" style="font-size:13px">event</span>
-                2° Llamado &middot; cierre 03/08/2026
-              </span>
-            </div>
-            <p class="fnd-monto">
-              Monto total fondo: <strong>$60.000.000</strong>
-              &nbsp;&middot;&nbsp;
-              Cuotas: <strong>2 × $30.000.000</strong>
-            </p>
+            <div class="fnd-chips" id="fnd-panel-chips"></div>
+            <p class="fnd-monto" id="fnd-panel-monto"></p>
           </div>
-          <div style="display:flex;gap:8px;flex-shrink:0">
-            <button type="button" class="primary-btn" id="fnd-nueva-btn">
-              <span class="material-symbols-outlined">add</span>Nueva postulación
-            </button>
-          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;align-items:flex-start" id="fnd-panel-actions"></div>
         </div>
         <div id="fnd-list-container" style="min-height:80px">
-          <div class="empty-state" style="padding:32px 0">Cargando registros FONDESE...</div>
+          <div class="empty-state" style="padding:32px 0">Cargando...</div>
         </div>
       </article>
     `;
@@ -2177,8 +2171,14 @@
      FONDESE — tabla de registros
      ========================================================= */
 
-  function renderFondeseTable_(registros, catalogs) {
+  function renderFondeseTable_(registros, edicion) {
     const rows = registros || [];
+    const convMap = {};
+    ((edicion && edicion.convocatorias) || []).forEach(function(c) { convMap[String(c.id)] = c.label; });
+    const lineasMap = {};
+    ((edicion && edicion.lineas_producto) || []).forEach(function(l) { lineasMap[l.id] = l.nombre; });
+    const anioLabel = edicion ? String(edicion.anio || '') : '';
+
     if (!rows.length) {
       return `
         <div class="fnd-empty">
@@ -2192,32 +2192,32 @@
     }
 
     const stateLabel = {
-      sin_postular: 'Sin postular', postulando: 'Postulando', en_evaluacion: 'En evaluación',
+      postulando: 'Postulando', en_evaluacion: 'En evaluación',
       adjudicado: 'Adjudicado', firma_convenio: 'Firma convenio',
       en_ejecucion: 'En ejecución', en_rendicion: 'En rendición', cerrado: 'Cerrado'
     };
 
-    const lineasMap = {};
-    ((catalogs && catalogs.lineasProducto) || []).forEach(function(l) { lineasMap[l.id] = l.nombre; });
-
-    const convLabel = { '1': '1°', '2': '2°', '1,2': '1° y 2°' };
-
     const rowsHtml = rows.map(function(r) {
       const pct = Number(r.pct_docs || 0);
-      const fillClass = pct >= 100 ? 'fnd-doc-bar__fill--ok' : pct >= 54 ? 'fnd-doc-bar__fill--mid' : 'fnd-doc-bar__fill--low';
-      const estado = String(r.estado_proceso || 'sin_postular');
+      const total = Number(r.total_docs || 0);
+      const entregados = Number(r.docs_entregados || 0);
+      const fillClass = pct >= 100 ? 'fnd-doc-bar__fill--ok' : pct >= 50 ? 'fnd-doc-bar__fill--mid' : 'fnd-doc-bar__fill--low';
+      const estado = String(r.estado_proceso || 'postulando');
       const resultado = String(r.resultado_adj || '');
+      const convLabel = convMap[String(r.convocatoria_id || '')] || r.convocatoria_id || '—';
+      const lineaNombre = lineasMap[String(r.linea_producto_id || '')] || r.linea_producto_id || '—';
       return `
         <tr>
           <td><strong>${escapeHtml(r.nombre_organizacion || r.organizacion_id || '—')}</strong></td>
-          <td style="white-space:nowrap">${escapeHtml(convLabel[r.convocatoria] || r.convocatoria || '—')}</td>
-          <td>${escapeHtml(lineasMap[r.linea_producto] || r.linea_producto || '—')}</td>
+          <td><span class="fnd-chip" style="font-size:0.7rem">${escapeHtml(anioLabel)}</span></td>
+          <td style="white-space:nowrap">${escapeHtml(convLabel)}</td>
+          <td>${escapeHtml(lineaNombre)}</td>
           <td>
             <div class="fnd-doc-bar">
               <div class="fnd-doc-bar__track">
                 <div class="fnd-doc-bar__fill ${fillClass}" style="width:${pct}%"></div>
               </div>
-              <span class="fnd-doc-bar__label">${escapeHtml(String(r.docs_entregados || 0))}/13</span>
+              <span class="fnd-doc-bar__label">${escapeHtml(String(entregados))}/${escapeHtml(String(total))}</span>
             </div>
           </td>
           <td><span class="fnd-estado fnd-estado--${escapeHtml(estado)}">${escapeHtml(stateLabel[estado] || estado)}</span></td>
@@ -2241,7 +2241,8 @@
           <thead>
             <tr>
               <th>Organización</th>
-              <th>Conv.</th>
+              <th>Edición</th>
+              <th>Convocatoria</th>
               <th>Línea producto</th>
               <th>Documentos</th>
               <th>Estado</th>
@@ -2266,16 +2267,16 @@
 
     api('goPesGetFondeseDetalle', idFondese).then(function(data) {
       const r = data.registro || {};
-      const catalogs = data.catalogs || {};
-      const ESTADOS = catalogs.estadosProceso || [];
-      const estadoIdx = ESTADOS.indexOf(String(r.estado_proceso || 'sin_postular'));
+      const edicion = data.edicion || {};
+      const ESTADOS = ['postulando','en_evaluacion','adjudicado','firma_convenio','en_ejecucion','en_rendicion','cerrado'];
+      const estadoIdx = ESTADOS.indexOf(String(r.estado_proceso || 'postulando'));
 
       const stateLabel = {
-        sin_postular: 'Sin postular', postulando: 'Postulando', en_evaluacion: 'En evaluación',
+        postulando: 'Postulando', en_evaluacion: 'En evaluación',
         adjudicado: 'Adjudicado', firma_convenio: 'Firma convenio',
         en_ejecucion: 'En ejecución', en_rendicion: 'En rendición', cerrado: 'Cerrado'
       };
-      const stepperLabels = ['Postulación','Admisibilidad','Evaluación','Adjudicación','Convenio','Ejecución','Rendición','Cerrado'];
+      const stepperLabels = ['Postulación','Evaluación','Adjudicación','Firma convenio','Ejecución','Rendición','Cerrado'];
 
       const stepperHtml = ESTADOS.map(function(est, i) {
         const isDone = i < estadoIdx;
@@ -2289,28 +2290,29 @@
         `;
       }).join('');
 
-      const DOC_FIELDS = ['doc_01','doc_02','doc_03','doc_04','doc_05','doc_06','doc_07',
-                          'doc_08','doc_09','doc_10','doc_11','doc_12','doc_13'];
-      const docsCount = DOC_FIELDS.filter(function(f) {
-        return String(r[f] || '').trim().toUpperCase() === 'TRUE';
-      }).length;
-      const checklistHtml = (catalogs.documentos || []).map(function(doc) {
-        const checked = String(r[doc.campo] || '').trim().toUpperCase() === 'TRUE';
+      const documentos = (edicion && edicion.documentos) || [];
+      const checklist = (typeof r.checklist_docs === 'object' && r.checklist_docs) || {};
+      const docsCount = documentos.filter(function(d) { return checklist[d.id]; }).length;
+
+      const checklistHtml = documentos.map(function(doc) {
         return `
           <label class="fnd-doc-item">
-            <input type="checkbox" name="${escapeHtml(doc.campo)}" ${checked ? 'checked' : ''}>
+            <input type="checkbox" data-doc-id="${escapeHtml(doc.id)}" ${checklist[doc.id] ? 'checked' : ''}>
             <span>${escapeHtml(doc.etiqueta)}</span>
           </label>
         `;
       }).join('');
 
+      const convMap = {};
+      ((edicion && edicion.convocatorias) || []).forEach(function(c) { convMap[String(c.id)] = c.label; });
       const lineasMap = {};
-      ((catalogs.lineasProducto) || []).forEach(function(l) { lineasMap[l.id] = l.nombre; });
-      const lineaNombre = lineasMap[r.linea_producto] || r.linea_producto || '—';
+      ((edicion && edicion.lineas_producto) || []).forEach(function(l) { lineasMap[l.id] = l.nombre; });
+      const lineaNombre = lineasMap[r.linea_producto_id] || r.linea_producto_id || '—';
+      const convNombre  = convMap[String(r.convocatoria_id || '')] || r.convocatoria_id || '—';
 
       const adjudicadoVisible = estadoIdx >= ESTADOS.indexOf('adjudicado');
-      const ejecucionVisible = String(r.resultado_adj || '') === 'adjudicado';
-      const rendicionVisible = ejecucionVisible && ['en_ejecucion','en_rendicion','cerrado'].indexOf(r.estado_proceso) !== -1;
+      const ejecucionVisible  = String(r.resultado_adj || '') === 'adjudicado';
+      const rendicionVisible  = ejecucionVisible && ['en_ejecucion','en_rendicion','cerrado'].indexOf(r.estado_proceso) !== -1;
 
       container.innerHTML = `
         <div class="fnd-detail">
@@ -2319,24 +2321,25 @@
               <button type="button" class="secondary-btn" id="fnd-volver-btn" style="width:fit-content;margin-bottom:4px">
                 <span class="material-symbols-outlined">arrow_back</span>Volver
               </button>
-              <p class="eyebrow">Detalle postulación</p>
+              <p class="eyebrow">Detalle postulación · ${escapeHtml(String(edicion.anio || edicion.nombre || ''))}</p>
               <h3 style="margin:0">${escapeHtml(r.nombre_organizacion || r.organizacion_id || '—')}</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-                <span class="fnd-estado fnd-estado--${escapeHtml(r.estado_proceso || 'sin_postular')}">${escapeHtml(stateLabel[r.estado_proceso] || r.estado_proceso || '—')}</span>
-                <span class="fnd-chip">Conv. ${escapeHtml(r.convocatoria || '—')}</span>
+                <span class="fnd-estado fnd-estado--${escapeHtml(r.estado_proceso || 'postulando')}">${escapeHtml(stateLabel[r.estado_proceso] || r.estado_proceso || '—')}</span>
+                <span class="fnd-chip">${escapeHtml(convNombre)}</span>
                 <span class="fnd-chip">${escapeHtml(lineaNombre)}</span>
               </div>
             </div>
           </div>
 
           <form id="fnd-detalle-form" novalidate>
-            <input type="hidden" name="fondese_id" value="${escapeHtml(r.fondese_id || '')}">
-            <input type="hidden" name="organizacion_id" value="${escapeHtml(r.organizacion_id || '')}">
+            <input type="hidden" name="fondese_id"          value="${escapeHtml(r.fondese_id || '')}">
+            <input type="hidden" name="organizacion_id"     value="${escapeHtml(r.organizacion_id || '')}">
             <input type="hidden" name="nombre_organizacion" value="${escapeHtml(r.nombre_organizacion || '')}">
-            <input type="hidden" name="convocatoria" value="${escapeHtml(r.convocatoria || '')}">
-            <input type="hidden" name="linea_producto" value="${escapeHtml(r.linea_producto || '')}">
-            <input type="hidden" name="fecha_creacion" value="${escapeHtml(String(r.fecha_creacion || ''))}">
-            <input type="hidden" name="creado_por" value="${escapeHtml(r.creado_por || '')}">
+            <input type="hidden" name="convocatoria_id"     value="${escapeHtml(r.convocatoria_id || '')}">
+            <input type="hidden" name="linea_producto_id"   value="${escapeHtml(r.linea_producto_id || '')}">
+            <input type="hidden" name="id_edicion"          value="${escapeHtml(r.id_edicion || '')}">
+            <input type="hidden" name="fecha_creacion"      value="${escapeHtml(String(r.fecha_creacion || ''))}">
+            <input type="hidden" name="creado_por"          value="${escapeHtml(r.creado_por || '')}">
 
             <div class="fnd-section">
               <h4>Etapas del proceso</h4>
@@ -2352,7 +2355,7 @@
             </div>
 
             <div class="fnd-section">
-              <h4>Documentos entregados (${escapeHtml(String(docsCount))}/13)</h4>
+              <h4>Documentos entregados (${escapeHtml(String(docsCount))}/${escapeHtml(String(documentos.length))})</h4>
               <div class="fnd-checklist">${checklistHtml}</div>
             </div>
 
@@ -2363,8 +2366,8 @@
                 <label>Resultado</label>
                 <select name="resultado_adj">
                   <option value="" ${!r.resultado_adj ? 'selected' : ''}>— Sin resultado —</option>
-                  <option value="adjudicado" ${r.resultado_adj === 'adjudicado' ? 'selected' : ''}>Adjudicado ✓</option>
-                  <option value="rechazado" ${r.resultado_adj === 'rechazado' ? 'selected' : ''}>Rechazado ✗</option>
+                  <option value="adjudicado"  ${r.resultado_adj === 'adjudicado'  ? 'selected' : ''}>Adjudicado ✓</option>
+                  <option value="rechazado"   ${r.resultado_adj === 'rechazado'   ? 'selected' : ''}>Rechazado ✗</option>
                   <option value="inadmisible" ${r.resultado_adj === 'inadmisible' ? 'selected' : ''}>Inadmisible</option>
                 </select>
               </div>
@@ -2379,7 +2382,7 @@
                 <select name="estado_ejecucion">
                   <option value="" ${!r.estado_ejecucion ? 'selected' : ''}>— Sin estado —</option>
                   <option value="en_ejecucion" ${r.estado_ejecucion === 'en_ejecucion' ? 'selected' : ''}>En ejecución</option>
-                  <option value="completada" ${r.estado_ejecucion === 'completada' ? 'selected' : ''}>Completada</option>
+                  <option value="completada"   ${r.estado_ejecucion === 'completada'   ? 'selected' : ''}>Completada</option>
                 </select>
               </div>
             </div>
@@ -2391,7 +2394,7 @@
               <div class="field">
                 <select name="estado_rendicion">
                   <option value="pendiente" ${r.estado_rendicion === 'pendiente' || !r.estado_rendicion ? 'selected' : ''}>Pendiente</option>
-                  <option value="aprobada" ${r.estado_rendicion === 'aprobada' ? 'selected' : ''}>Aprobada</option>
+                  <option value="aprobada"  ${r.estado_rendicion === 'aprobada'  ? 'selected' : ''}>Aprobada</option>
                   <option value="rechazada" ${r.estado_rendicion === 'rechazada' ? 'selected' : ''}>Rechazada</option>
                 </select>
               </div>
@@ -2418,9 +2421,12 @@
         const fd = new FormData(this);
         const payload = {};
         fd.forEach(function(v, k) { payload[k] = v; });
-        const DOC_KEYS = ['doc_01','doc_02','doc_03','doc_04','doc_05','doc_06','doc_07',
-                          'doc_08','doc_09','doc_10','doc_11','doc_12','doc_13'];
-        DOC_KEYS.forEach(function(k) { payload[k] = this.querySelector('[name="'+k+'"]:checked') ? 'TRUE' : 'FALSE'; }, document.getElementById('fnd-detalle-form'));
+        const checklistObj = {};
+        documentos.forEach(function(doc) {
+          const cb = document.querySelector('[data-doc-id="' + doc.id + '"]');
+          checklistObj[doc.id] = cb ? cb.checked : false;
+        });
+        payload.checklist_docs = checklistObj;
         const btn = this.querySelector('[type=submit]');
         btn.disabled = true;
         btn.textContent = 'Guardando...';
@@ -2441,88 +2447,143 @@
      FONDESE — formulario nueva postulación
      ========================================================= */
 
-  function openFondeseForm_() {
-    const existing = document.getElementById('fnd-modal');
-    if (existing) existing.remove();
+  function openFondeseForm_(edicion) {
+    const existingModal = document.getElementById('fnd-modal');
+    if (existingModal) existingModal.remove();
 
-    api('goPesGetFondeseList', null).then(function(data) {
-      const catalogs = data.catalogs || {};
-      const CONVOCATORIAS = catalogs.convocatorias || [];
-      const LINEAS = catalogs.lineasProducto || [];
-      const DOCUMENTOS = catalogs.documentos || [];
-
-      const html = `
-        <div class="fnd-modal-overlay" id="fnd-modal">
-          <div class="fnd-modal">
-            <div class="fnd-modal__head">
-              <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#3D96B4)">savings</span>
-              <span class="fnd-modal__title">Nueva postulación FONDESE</span>
-              <button type="button" class="fnd-modal__close" id="fnd-modal-close">
-                <span class="material-symbols-outlined">close</span>
-              </button>
-            </div>
-            <div class="fnd-modal__body">
-              <form id="fnd-new-form" novalidate>
-                <div class="field" style="margin-bottom:14px">
-                  <label>Organización <span style="color:#d93025">*</span></label>
-                  <input type="text" name="nombre_organizacion" id="fnd-org-suggest" autocomplete="off" placeholder="Nombre de la organización" required>
-                  <input type="hidden" name="organizacion_id" id="fnd-org-id">
-                </div>
-                <div class="field" style="margin-bottom:14px">
-                  <label>Convocatoria <span style="color:#d93025">*</span></label>
-                  <select name="convocatoria" required>
-                    <option value="">— Seleccionar —</option>
-                    ${CONVOCATORIAS.map(function(c) {
-                      const label = c.cierre ? c.label + ' (cierre ' + c.cierre + ')' : c.label;
-                      return `<option value="${escapeHtml(c.id)}">${escapeHtml(label)}</option>`;
-                    }).join('')}
-                  </select>
-                </div>
-                <div class="field" style="margin-bottom:14px">
-                  <label>Línea de producto <span style="color:#d93025">*</span></label>
-                  <select name="linea_producto" id="fnd-linea-select" required>
-                    <option value="">— Seleccionar —</option>
-                    ${LINEAS.map(function(l) {
-                      return `<option value="${escapeHtml(l.id)}">${escapeHtml(l.nombre)} — $${l.monto.toLocaleString('es-CL')}</option>`;
-                    }).join('')}
-                  </select>
-                </div>
-                <div style="margin-bottom:14px">
-                  <p style="font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#6b7a8d);margin:0 0 8px">Documentos iniciales (opcional)</p>
-                  <div class="fnd-checklist">
-                    ${DOCUMENTOS.map(function(doc) {
-                      return `
-                        <label class="fnd-doc-item">
-                          <input type="checkbox" name="${escapeHtml(doc.campo)}">
-                          <span style="font-size:0.78rem">${escapeHtml(doc.etiqueta)}</span>
-                        </label>
-                      `;
-                    }).join('')}
-                  </div>
-                </div>
-                <input type="hidden" name="estado_proceso" value="sin_postular">
-              </form>
-            </div>
-            <div class="fnd-modal__foot">
-              <button type="button" class="secondary-btn" id="fnd-modal-cancel">Cancelar</button>
-              <button type="button" class="primary-btn" id="fnd-modal-submit">
-                <span class="material-symbols-outlined">add</span>Crear postulación
-              </button>
-            </div>
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="fnd-modal-overlay" id="fnd-modal">
+        <div class="fnd-modal">
+          <div class="fnd-modal__head">
+            <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#3D96B4)">savings</span>
+            <span class="fnd-modal__title">Nueva postulación FONDESE</span>
+            <button type="button" class="fnd-modal__close" id="fnd-modal-close">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="fnd-modal__body" id="fnd-modal-body">
+            <div class="empty-state" style="padding:32px 0">Cargando organizaciones elegibles...</div>
+          </div>
+          <div class="fnd-modal__foot" id="fnd-modal-foot" style="display:none">
+            <button type="button" class="secondary-btn" id="fnd-modal-cancel">Cancelar</button>
+            <button type="button" class="primary-btn" id="fnd-modal-submit">
+              <span class="material-symbols-outlined">add</span>Crear postulación
+            </button>
           </div>
         </div>
+      </div>
+    `);
+
+    function closeModal() { const m = document.getElementById('fnd-modal'); if (m) m.remove(); }
+    document.getElementById('fnd-modal-close').addEventListener('click', closeModal);
+    document.getElementById('fnd-modal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+    document.addEventListener('keydown', function onEsc(e) {
+      if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEsc); }
+    });
+
+    api('goPesGetOrgsElegiblesFondese', null).then(function(data) {
+      const orgs = data.orgs || [];
+      const existingFondese = data.existingFondese || [];
+      const CONVS  = (edicion && edicion.convocatorias)   || [];
+      const LINEAS = (edicion && edicion.lineas_producto)  || [];
+
+      const body = document.getElementById('fnd-modal-body');
+      const foot = document.getElementById('fnd-modal-foot');
+      if (!body) return;
+
+      if (!orgs.length) {
+        body.innerHTML = `
+          <div class="empty-state" style="padding:32px 0">
+            <span class="material-symbols-outlined" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4">info</span>
+            <p>No hay organizaciones con Tramo 2 completado disponibles para postular.</p>
+            <p class="muted" style="margin-top:6px;font-size:0.82rem">Una organización puede postular a FONDESE cuando ha completado la formalización en el módulo Avance.</p>
+          </div>
+        `;
+        if (foot) {
+          foot.style.display = 'flex';
+          const cancelBtn = document.getElementById('fnd-modal-cancel');
+          if (cancelBtn) cancelBtn.style.display = 'none';
+          const submitBtn = document.getElementById('fnd-modal-submit');
+          if (submitBtn) submitBtn.style.display = 'none';
+          const closeBtn2 = document.createElement('button');
+          closeBtn2.type = 'button';
+          closeBtn2.className = 'secondary-btn';
+          closeBtn2.textContent = 'Cerrar';
+          closeBtn2.addEventListener('click', closeModal);
+          foot.appendChild(closeBtn2);
+        }
+        return;
+      }
+
+      body.innerHTML = `
+        <form id="fnd-new-form" novalidate>
+          <div class="field" style="margin-bottom:14px">
+            <label>Organización <span style="color:#d93025">*</span></label>
+            <select name="organizacion_id" id="fnd-org-select" required>
+              <option value="">— Seleccionar organización —</option>
+              ${orgs.map(function(o) {
+                return `<option value="${escapeHtml(o.organizacion_id)}" data-nombre="${escapeHtml(o.nombre_organizacion)}">${escapeHtml(o.nombre_organizacion)}</option>`;
+              }).join('')}
+            </select>
+            <input type="hidden" name="nombre_organizacion" id="fnd-org-nombre">
+          </div>
+          <div class="field" style="margin-bottom:14px">
+            <label>Convocatoria <span style="color:#d93025">*</span></label>
+            <div style="display:grid;gap:8px;margin-top:4px">
+              ${CONVS.map(function(c) {
+                return `
+                  <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:8px 10px;border:1px solid var(--border,#D6E0EA);border-radius:8px">
+                    <input type="radio" name="convocatoria_id" value="${escapeHtml(String(c.id))}" required style="margin-top:2px;flex-shrink:0">
+                    <span>
+                      <strong>${escapeHtml(c.label)}</strong>
+                      <span class="muted" style="font-size:0.78rem;display:block">Cierre: ${escapeHtml(c.fecha_cierre)}</span>
+                    </span>
+                  </label>
+                `;
+              }).join('')}
+            </div>
+            <p class="muted" style="font-size:0.75rem;margin-top:6px">Si la organización postula a ambos llamados, crea un registro independiente por cada uno.</p>
+          </div>
+          <div id="fnd-dup-warning" style="display:none;margin-bottom:14px;padding:10px 12px;border-radius:8px;background:var(--warning-soft,#fff3cd);color:#856404;font-size:0.82rem;border:1px solid rgba(244,180,0,.3)">
+            <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;margin-right:4px">warning</span>
+            Ya existe un registro para esta organización y convocatoria. Puedes continuar si deseas crear un duplicado.
+          </div>
+          <div class="field" style="margin-bottom:14px">
+            <label>Línea de producto <span style="color:#d93025">*</span></label>
+            <select name="linea_producto_id" required>
+              <option value="">— Seleccionar —</option>
+              ${LINEAS.map(function(l) {
+                return `<option value="${escapeHtml(l.id)}">${escapeHtml(l.nombre)} — $${Number(l.monto_max || 0).toLocaleString('es-CL')}</option>`;
+              }).join('')}
+            </select>
+          </div>
+          <input type="hidden" name="estado_proceso" value="postulando">
+        </form>
       `;
 
-      document.body.insertAdjacentHTML('beforeend', html);
-
-      function closeModal() { const m = document.getElementById('fnd-modal'); if (m) m.remove(); }
-      document.getElementById('fnd-modal-close').addEventListener('click', closeModal);
+      if (foot) foot.style.display = 'flex';
       document.getElementById('fnd-modal-cancel').addEventListener('click', closeModal);
-      document.getElementById('fnd-modal').addEventListener('click', function(e) {
-        if (e.target === this) closeModal();
-      });
-      document.addEventListener('keydown', function onEsc(e) {
-        if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEsc); }
+
+      function checkDuplicate() {
+        const orgId = (document.getElementById('fnd-org-select') || {}).value || '';
+        const convRadio = document.querySelector('[name="convocatoria_id"]:checked');
+        const conv = convRadio ? convRadio.value : '';
+        const orgNombreEl = document.getElementById('fnd-org-nombre');
+        const sel = document.getElementById('fnd-org-select');
+        if (sel && sel.value && sel.selectedIndex > 0) {
+          orgNombreEl.value = sel.options[sel.selectedIndex].dataset.nombre || '';
+        }
+        const isDup = orgId && conv && existingFondese.some(function(e) {
+          return String(e.organizacion_id) === orgId && String(e.convocatoria_id) === conv;
+        });
+        const warn = document.getElementById('fnd-dup-warning');
+        if (warn) warn.style.display = isDup ? 'block' : 'none';
+      }
+      document.getElementById('fnd-org-select').addEventListener('change', checkDuplicate);
+      document.querySelectorAll('[name="convocatoria_id"]').forEach(function(r) {
+        r.addEventListener('change', checkDuplicate);
       });
 
       document.getElementById('fnd-modal-submit').addEventListener('click', function() {
@@ -2531,13 +2592,11 @@
         const fd = new FormData(form);
         const payload = {};
         fd.forEach(function(v, k) { payload[k] = v; });
-        const DOC_KEYS = ['doc_01','doc_02','doc_03','doc_04','doc_05','doc_06','doc_07',
-                          'doc_08','doc_09','doc_10','doc_11','doc_12','doc_13'];
-        DOC_KEYS.forEach(function(k) {
-          payload[k] = form.querySelector('[name="'+k+'"]:checked') ? 'TRUE' : 'FALSE';
-        });
+        const initChecklist = {};
+        ((edicion && edicion.documentos) || []).forEach(function(d) { initChecklist[d.id] = false; });
+        payload.checklist_docs = initChecklist;
         this.disabled = true;
-        this.textContent = 'Creando...';
+        this.innerHTML = 'Creando...';
         api('goPesUpsertFondese', payload).then(function() {
           closeModal();
           showSuccess('Postulación creada correctamente.');
@@ -2549,34 +2608,352 @@
         });
       });
 
+    }).catch(function(err) {
+      const body = document.getElementById('fnd-modal-body');
+      if (body) body.innerHTML = '<div class="empty-state" style="padding:24px;color:#d93025">' + escapeHtml(String(err && err.message || err || 'Error al cargar')) + '</div>';
+      showError(err);
+    });
+  }
+
+  /* =========================================================
+     FONDESE — gestión de ediciones (superuser)
+     ========================================================= */
+
+  function renderFondeseEdicionesAdmin_() {
+    const container = document.getElementById('fnd-list-container');
+    if (!container) return;
+    container.innerHTML = '<div class="empty-state" style="padding:32px 0">Cargando ediciones...</div>';
+
+    api('goPesGetFondeseEdiciones', null).then(function(data) {
+      const ediciones = data.ediciones || [];
+      const statusLabel = { activa: 'Activa', borrador: 'Borrador', cerrada: 'Cerrada' };
+
+      const rowsHtml = ediciones.map(function(ed) {
+        const estado = String(ed.estado || 'borrador');
+        return `
+          <tr>
+            <td><strong>${escapeHtml(String(ed.anio || ''))}</strong></td>
+            <td>${escapeHtml(ed.nombre || '—')}</td>
+            <td><span class="fnd-estado fnd-status--${escapeHtml(estado)}">${escapeHtml(statusLabel[estado] || estado)}</span></td>
+            <td style="white-space:nowrap">$${Number(ed.presupuesto_total || 0).toLocaleString('es-CL')}</td>
+            <td>
+              <button type="button" class="secondary-btn js-fnd-edit-edition" data-eid="${escapeHtml(ed.id_edicion || '')}" style="padding:4px 10px;font-size:0.78rem">
+                Editar
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h4 style="margin:0;font-size:0.9rem">Ediciones FONDESE</h4>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="secondary-btn" id="fnd-volver-ediciones-btn">
+              <span class="material-symbols-outlined">arrow_back</span>Volver
+            </button>
+            <button type="button" class="primary-btn" id="fnd-nueva-edicion-btn">
+              <span class="material-symbols-outlined">add</span>Nueva edición
+            </button>
+          </div>
+        </div>
+        <div class="fnd-table-wrap">
+          <table class="fnd-editions-table">
+            <thead><tr>
+              <th>Año</th><th>Nombre</th><th>Estado</th><th>Presupuesto</th><th></th>
+            </tr></thead>
+            <tbody>${rowsHtml || '<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-muted)">Sin ediciones registradas</td></tr>'}</tbody>
+          </table>
+        </div>
+      `;
+
+      document.getElementById('fnd-volver-ediciones-btn').addEventListener('click', function() { bindFondesePanel_(); });
+      document.getElementById('fnd-nueva-edicion-btn').addEventListener('click', function() { openFondeseEdicionForm_(null); });
+
+      container.querySelectorAll('.js-fnd-edit-edition').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          const eid = this.dataset.eid;
+          const ed = ediciones.find(function(e) { return e.id_edicion === eid; });
+          if (ed) openFondeseEdicionForm_(ed);
+        });
+      });
     }).catch(showError);
   }
 
   /* =========================================================
-     FONDESE — bindings
+     FONDESE — formulario crear/editar edición (superuser)
+     ========================================================= */
+
+  function openFondeseEdicionForm_(edicion) {
+    const existingModal = document.getElementById('fnd-edicion-modal');
+    if (existingModal) existingModal.remove();
+
+    const isNew = !edicion;
+    const ed    = edicion || {};
+    const CONVS  = ed.convocatorias  || [{ id:'1', label:'', fecha_apertura:'', fecha_cierre:'', fecha_evaluacion:'', fecha_firma:'', fecha_cierre_rendicion:'', monto:0 }];
+    const LINEAS = ed.lineas_producto || [];
+    const DOCS   = ed.documentos     || [];
+
+    function buildConvRow(c, idx) {
+      return `
+        <div class="fnd-dynamic-item" data-conv-idx="${idx}">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;flex:1">
+            <input type="text"   placeholder="Label (ej: Primer Llamado)" value="${escapeHtml(c.label || '')}"                 data-conv-field="label">
+            <input type="number" placeholder="Monto"                       value="${escapeHtml(String(c.monto || ''))}"        data-conv-field="monto" min="0">
+            <input type="date"   title="Apertura"                          value="${escapeHtml(c.fecha_apertura || '')}"        data-conv-field="fecha_apertura">
+            <input type="date"   title="Cierre"                            value="${escapeHtml(c.fecha_cierre || '')}"          data-conv-field="fecha_cierre">
+            <input type="date"   title="Evaluación"                        value="${escapeHtml(c.fecha_evaluacion || '')}"      data-conv-field="fecha_evaluacion">
+            <input type="date"   title="Firma"                             value="${escapeHtml(c.fecha_firma || '')}"           data-conv-field="fecha_firma">
+            <input type="date"   title="Cierre rendición"                  value="${escapeHtml(c.fecha_cierre_rendicion || '')}" data-conv-field="fecha_cierre_rendicion" style="grid-column:span 2">
+          </div>
+          <button type="button" class="fnd-remove-btn"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+        </div>
+      `;
+    }
+    function buildLineaRow(l, idx) {
+      return `
+        <div class="fnd-dynamic-item" data-linea-idx="${idx}">
+          <input type="text"   placeholder="ID (LP01)" value="${escapeHtml(l.id || '')}"              style="max-width:70px"  data-linea-field="id">
+          <input type="text"   placeholder="Nombre"    value="${escapeHtml(l.nombre || '')}"          data-linea-field="nombre">
+          <input type="number" placeholder="Monto máx" value="${escapeHtml(String(l.monto_max||''))}" style="max-width:110px" data-linea-field="monto_max" min="0">
+          <button type="button" class="fnd-remove-btn"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+        </div>
+      `;
+    }
+    function buildDocRow(d, idx) {
+      return `
+        <div class="fnd-dynamic-item" data-doc-idx="${idx}">
+          <input type="text" placeholder="ID (D01)"               value="${escapeHtml(d.id || '')}"       style="max-width:60px" data-doc-field="id">
+          <input type="text" placeholder="Etiqueta del documento"  value="${escapeHtml(d.etiqueta || '')}" data-doc-field="etiqueta">
+          <button type="button" class="fnd-remove-btn"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+        </div>
+      `;
+    }
+
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="fnd-modal-overlay" id="fnd-edicion-modal">
+        <div class="fnd-modal fnd-modal--wide">
+          <div class="fnd-modal__head">
+            <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#3D96B4)">edit_calendar</span>
+            <span class="fnd-modal__title">${isNew ? 'Nueva edición FONDESE' : 'Editar edición ' + escapeHtml(String(ed.anio || ''))}</span>
+            <button type="button" class="fnd-modal__close" id="fnd-edicion-close"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <div class="fnd-modal__body">
+            <form id="fnd-edicion-form" novalidate>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div class="field">
+                  <label>ID Edición</label>
+                  <input type="text" name="id_edicion" value="${escapeHtml(ed.id_edicion || '')}" placeholder="FONDESE-2027" ${isNew ? '' : 'readonly'} required>
+                </div>
+                <div class="field">
+                  <label>Año</label>
+                  <input type="number" name="anio" value="${escapeHtml(String(ed.anio || ''))}" placeholder="2027" required min="2000">
+                </div>
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label>Nombre</label>
+                <input type="text" name="nombre" value="${escapeHtml(ed.nombre || '')}" placeholder="Fondo de Seguridad Providencia 2027" required>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div class="field">
+                  <label>Presupuesto total ($)</label>
+                  <input type="number" name="presupuesto_total" value="${escapeHtml(String(ed.presupuesto_total || ''))}" min="0">
+                </div>
+                <div class="field">
+                  <label>Estado</label>
+                  <select name="estado">
+                    <option value="borrador" ${ed.estado === 'borrador' ? 'selected' : ''}>Borrador</option>
+                    <option value="activa"   ${ed.estado === 'activa'   ? 'selected' : ''}>Activa</option>
+                    <option value="cerrada"  ${ed.estado === 'cerrada'  ? 'selected' : ''}>Cerrada</option>
+                  </select>
+                </div>
+              </div>
+              <div class="fnd-section" style="margin-bottom:14px">
+                <h4>Convocatorias</h4>
+                <div class="fnd-dynamic-list" id="fnd-convs-list">${CONVS.map(buildConvRow).join('')}</div>
+                <button type="button" class="secondary-btn" id="fnd-add-conv-btn" style="margin-top:8px;font-size:0.8rem">
+                  <span class="material-symbols-outlined" style="font-size:14px">add</span>Agregar convocatoria
+                </button>
+              </div>
+              <div class="fnd-section" style="margin-bottom:14px">
+                <h4>Líneas de producto</h4>
+                <div class="fnd-dynamic-list" id="fnd-lineas-list">${LINEAS.map(buildLineaRow).join('')}</div>
+                <button type="button" class="secondary-btn" id="fnd-add-linea-btn" style="margin-top:8px;font-size:0.8rem">
+                  <span class="material-symbols-outlined" style="font-size:14px">add</span>Agregar línea
+                </button>
+              </div>
+              <div class="fnd-section">
+                <h4>Documentos requeridos</h4>
+                <div class="fnd-dynamic-list" id="fnd-docs-list">${DOCS.map(buildDocRow).join('')}</div>
+                <button type="button" class="secondary-btn" id="fnd-add-doc-btn" style="margin-top:8px;font-size:0.8rem">
+                  <span class="material-symbols-outlined" style="font-size:14px">add</span>Agregar documento
+                </button>
+              </div>
+            </form>
+          </div>
+          <div class="fnd-modal__foot">
+            <button type="button" class="secondary-btn" id="fnd-edicion-cancel">Cancelar</button>
+            <button type="button" class="primary-btn" id="fnd-edicion-submit">
+              <span class="material-symbols-outlined">save</span>Guardar edición
+            </button>
+          </div>
+        </div>
+      </div>
+    `);
+
+    function closeEdModal() { const m = document.getElementById('fnd-edicion-modal'); if (m) m.remove(); }
+    document.getElementById('fnd-edicion-close').addEventListener('click', closeEdModal);
+    document.getElementById('fnd-edicion-cancel').addEventListener('click', closeEdModal);
+    document.getElementById('fnd-edicion-modal').addEventListener('click', function(e) { if (e.target === this) closeEdModal(); });
+
+    function delegateRemove(listId, itemSel) {
+      document.getElementById(listId).addEventListener('click', function(e) {
+        const btn = e.target.closest('.fnd-remove-btn');
+        if (!btn) return;
+        const item = btn.closest(itemSel);
+        if (item && this.children.length > 1) item.remove();
+      });
+    }
+    delegateRemove('fnd-convs-list',  '[data-conv-idx]');
+    delegateRemove('fnd-lineas-list', '[data-linea-idx]');
+    delegateRemove('fnd-docs-list',   '[data-doc-idx]');
+
+    document.getElementById('fnd-add-conv-btn').addEventListener('click', function() {
+      const list = document.getElementById('fnd-convs-list');
+      list.insertAdjacentHTML('beforeend', buildConvRow({ id: String(list.children.length + 1), label:'', monto:0 }, list.children.length));
+    });
+    document.getElementById('fnd-add-linea-btn').addEventListener('click', function() {
+      const list = document.getElementById('fnd-lineas-list');
+      list.insertAdjacentHTML('beforeend', buildLineaRow({ id:'', nombre:'', monto_max:0 }, list.children.length));
+    });
+    document.getElementById('fnd-add-doc-btn').addEventListener('click', function() {
+      const list = document.getElementById('fnd-docs-list');
+      list.insertAdjacentHTML('beforeend', buildDocRow({ id:'', etiqueta:'' }, list.children.length));
+    });
+
+    document.getElementById('fnd-edicion-submit').addEventListener('click', function() {
+      const form = document.getElementById('fnd-edicion-form');
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+      const fd = new FormData(form);
+      const payload = {};
+      fd.forEach(function(v, k) { payload[k] = v; });
+
+      const convs = Array.from(document.querySelectorAll('#fnd-convs-list [data-conv-idx]')).map(function(item, i) {
+        const obj = { id: String(i + 1) };
+        item.querySelectorAll('[data-conv-field]').forEach(function(inp) { obj[inp.dataset.convField] = inp.value; });
+        obj.monto = Number(obj.monto) || 0;
+        return obj;
+      });
+      payload.convocatorias = JSON.stringify(convs);
+
+      const lineas = Array.from(document.querySelectorAll('#fnd-lineas-list [data-linea-idx]')).map(function(item) {
+        const obj = {};
+        item.querySelectorAll('[data-linea-field]').forEach(function(inp) { obj[inp.dataset.lineaField] = inp.value; });
+        obj.monto_max = Number(obj.monto_max) || 0;
+        return obj;
+      });
+      payload.lineas_producto = JSON.stringify(lineas);
+
+      const docs = Array.from(document.querySelectorAll('#fnd-docs-list [data-doc-idx]')).map(function(item) {
+        const obj = {};
+        item.querySelectorAll('[data-doc-field]').forEach(function(inp) { obj[inp.dataset.docField] = inp.value; });
+        return obj;
+      });
+      payload.documentos = JSON.stringify(docs);
+
+      const btn = document.getElementById('fnd-edicion-submit');
+      btn.disabled = true;
+      btn.textContent = 'Guardando...';
+      api('goPesUpsertFondeseEdicion', payload).then(function() {
+        closeEdModal();
+        showSuccess('Edición guardada correctamente.');
+        renderFondeseEdicionesAdmin_();
+      }).catch(function(err) {
+        showError(err);
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined">save</span>Guardar edición';
+      });
+    });
+  }
+
+  /* =========================================================
+     FONDESE — bindings principales
      ========================================================= */
 
   function bindFondesePanel_() {
     const container = document.getElementById('fnd-list-container');
+    const chipsEl   = document.getElementById('fnd-panel-chips');
+    const montoEl   = document.getElementById('fnd-panel-monto');
+    const titleEl   = document.getElementById('fnd-panel-title');
+    const actionsEl = document.getElementById('fnd-panel-actions');
     if (!container) return;
-    container.innerHTML = '<div class="empty-state" style="padding:32px 0">Cargando registros FONDESE...</div>';
+    container.innerHTML = '<div class="empty-state" style="padding:32px 0">Cargando...</div>';
 
-    api('goPesGetFondeseList', null).then(function(data) {
-      const rows = data.rows || [];
-      const catalogs = data.catalogs || {};
-      container.innerHTML = renderFondeseTable_(rows, catalogs);
+    api('goPesGetFondeseEdicionActiva', null).then(function(data) {
+      const edicion     = data.edicion;
+      const isSuperuser = APP && APP.state && APP.state.user && APP.state.user.superuser_flag;
 
-      container.querySelectorAll('.js-fnd-detalle-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          renderFondeseDetalle_(this.dataset.id);
+      if (edicion) {
+        if (titleEl) titleEl.textContent = edicion.nombre || 'FONDESE';
+        if (chipsEl) {
+          chipsEl.innerHTML = (edicion.convocatorias || []).map(function(c) {
+            return `<span class="fnd-chip"><span class="material-symbols-outlined" style="font-size:13px">event</span>${escapeHtml(c.label + ' · cierre ' + c.fecha_cierre)}</span>`;
+          }).join('');
+        }
+        if (montoEl) {
+          const totalFmt  = '$' + Number(edicion.presupuesto_total || 0).toLocaleString('es-CL');
+          const cuotasFmt = (edicion.convocatorias || []).map(function(c) { return '$' + Number(c.monto || 0).toLocaleString('es-CL'); }).join(' + ');
+          montoEl.innerHTML = `Monto total fondo: <strong>${escapeHtml(totalFmt)}</strong>&nbsp;&middot;&nbsp;Cuotas: <strong>${escapeHtml(cuotasFmt)}</strong>`;
+        }
+      } else {
+        if (chipsEl) chipsEl.innerHTML = '';
+        if (montoEl) montoEl.innerHTML = '';
+      }
+
+      if (actionsEl) {
+        let html = '';
+        if (edicion && edicion.estado === 'activa') {
+          html += `<button type="button" class="primary-btn" id="fnd-nueva-btn"><span class="material-symbols-outlined">add</span>Nueva postulación</button>`;
+        }
+        if (isSuperuser) {
+          html += `<button type="button" class="secondary-btn" id="fnd-gestionar-btn"><span class="material-symbols-outlined">settings</span>Ediciones</button>`;
+        }
+        actionsEl.innerHTML = html;
+      }
+
+      const nuevaBtn = document.getElementById('fnd-nueva-btn');
+      if (nuevaBtn) nuevaBtn.addEventListener('click', function() { openFondeseForm_(edicion); });
+
+      const gestionarBtn = document.getElementById('fnd-gestionar-btn');
+      if (gestionarBtn) gestionarBtn.addEventListener('click', renderFondeseEdicionesAdmin_);
+
+      if (!edicion) {
+        container.innerHTML = `
+          <div class="fnd-empty">
+            <span class="material-symbols-outlined" style="font-size:36px;display:block;margin-bottom:8px;opacity:.4">info</span>
+            <p>No hay una edición de FONDESE activa.</p>
+            <p class="muted" style="font-size:0.82rem;margin-top:4px">${isSuperuser ? 'Usa "Ediciones" para configurar o activar una edición.' : 'Un administrador debe configurar y activar una edición.'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      APP.state = APP.state || {};
+      APP.state.fondeseEdicionActiva = edicion;
+
+      api('goPesGetFondeseList', null).then(function(listData) {
+        const rows      = listData.rows    || [];
+        const listEdicion = listData.edicion || edicion;
+        container.innerHTML = renderFondeseTable_(rows, listEdicion);
+
+        container.querySelectorAll('.js-fnd-detalle-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() { renderFondeseDetalle_(this.dataset.id); });
         });
-      });
 
-      const emptyNewBtn = document.getElementById('fnd-nueva-btn-empty');
-      if (emptyNewBtn) emptyNewBtn.addEventListener('click', openFondeseForm_);
+        const emptyNewBtn = document.getElementById('fnd-nueva-btn-empty');
+        if (emptyNewBtn) emptyNewBtn.addEventListener('click', function() { openFondeseForm_(edicion); });
+      }).catch(showError);
+
     }).catch(showError);
-
-    const nuevaBtn = document.getElementById('fnd-nueva-btn');
-    if (nuevaBtn) nuevaBtn.addEventListener('click', openFondeseForm_);
   }
 

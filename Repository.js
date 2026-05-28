@@ -125,8 +125,7 @@ function buildSheetDefinitions_() {
     [S.CAT_HITOS_AVANCE]: ['codigo_hito', 'tramo', 'orden_hito', 'nombre_hito', 'descripcion', 'codigo_hito_previo', 'permite_saltar', 'activo_flag'],
     [S.FACT_AVANCE_HITOS]: ['avance_hito_id', 'organizacion_id', 'solicitud_id', 'codigo_hito', 'tramo', 'orden_hito', 'nombre_hito', 'fecha_hito', 'usuario_registro', 'timestamp_registro', 'observacion'],
     [S.FACT_AVANCE_ESTADO]: ['avance_estado_id', 'organizacion_id', 'solicitud_id', 'estado_avance', 'motivo_estado', 'fecha_estado', 'usuario_estado', 'timestamp_registro', 'activo_flag'],
-    [S.VW_AVANCE_ORGANIZACION]: ['organizacion_id', 'solicitud_id', 'nombre_organizacion', 'estado_avance', 'ultimo_hito_codigo', 'ultimo_hito_nombre', 'ultimo_hito_fecha', 'usuario_ultimo_hito', 'total_hitos_cumplidos', 'total_hitos_tramo_pre', 'total_hitos_tramo_for'],
-    [S.FACT_FONDESE]: ['fondese_id', 'organizacion_id', 'nombre_organizacion', 'convocatoria', 'linea_producto', 'estado_proceso', 'resultado_adj', 'estado_ejecucion', 'estado_rendicion', 'doc_01', 'doc_02', 'doc_03', 'doc_04', 'doc_05', 'doc_06', 'doc_07', 'doc_08', 'doc_09', 'doc_10', 'doc_11', 'doc_12', 'doc_13', 'fecha_creacion', 'fecha_actualizacion', 'creado_por']
+    [S.VW_AVANCE_ORGANIZACION]: ['organizacion_id', 'solicitud_id', 'nombre_organizacion', 'estado_avance', 'ultimo_hito_codigo', 'ultimo_hito_nombre', 'ultimo_hito_fecha', 'usuario_ultimo_hito', 'total_hitos_cumplidos', 'total_hitos_tramo_pre', 'total_hitos_tramo_for']
   };
 
   return defs;

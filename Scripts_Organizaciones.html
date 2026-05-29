@@ -215,14 +215,9 @@
 
     const hitosHtml = HITOS_DISPLAY.map(n => {
       const isOk = done(n);
-      return `<span
-        title="Hito ${n}"
-        style="width:22px;height:22px;border-radius:50%;
-          background:${isOk ? '#8CC63F' : 'var(--border,#e5e7eb)'};
-          color:${isOk ? '#fff' : '#9ca3af'};
-          font-size:10px;font-weight:700;
-          display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;"
-      >${n}</span>`;
+      const bg = isOk ? '#8CC63F' : 'var(--border,#e5e7eb)';
+      const color = isOk ? '#fff' : '#9ca3af';
+      return '<span title="Hito ' + n + '" style="width:22px;height:22px;border-radius:50%;background:' + bg + ';color:' + color + ';font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' + n + '</span>';
     }).join('');
 
     return `
@@ -356,7 +351,7 @@
   // -- LISTA (compatibilidad con Scripts.html) --
 
   function fillOrganizacionesSelect_() {
-    /* La vista de lista ya no usa un <select>; función conservada por compatibilidad. */
+    /* La vista de lista ya no usa un select; función conservada por compatibilidad. */
   }
 
   function refreshOrganizacionesModuloList_() {
@@ -493,7 +488,7 @@
       'Chile'
     ].filter(Boolean);
     const query = encodeURIComponent(parts.join(', '));
-    const src   = 'https://maps.google.com/maps?q=' + query + '&output=embed&z=15&hl=es';
+    const mapUrl = 'https://maps.google.com/maps?q=' + query + '&z=15&hl=es';
 
     const sociosConUbicacion = (socios || []).filter(s =>
       String(s.ubicacion_socio || '').trim() || String(s.direccion_socio || '').trim()
@@ -501,24 +496,18 @@
 
     const nota = sociosConUbicacion.length > 0
       ? escapeHtml(String(sociosConUbicacion.length) + ' de ' + String((socios || []).length) + ' socio(s) con ubicación registrada')
-      : 'Mapa centrado en la dirección de referencia de la organización.';
+      : 'Ubicación de referencia de la organización.';
 
     return `
       <section class="organizaciones-block" style="grid-column:1/-1;margin-top:1.25rem;">
         <h4>Georeferencia de socios</h4>
-        <div style="border-radius:8px;overflow:hidden;border:1px solid var(--border,#e5e7eb);">
-          <iframe
-            src="${src}"
-            width="100%"
-            height="360"
-            style="border:0;display:block;"
-            allowfullscreen=""
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-            title="Mapa georeferencia organización">
-          </iframe>
+        <div style="padding:0.75rem;background:var(--surface-alt,#f7fafc);border-radius:8px;border:1px solid var(--border,#e5e7eb);display:flex;align-items:center;gap:0.75rem;">
+          <span class="material-symbols-outlined" style="color:var(--text-muted,#6b7280);font-size:1.4rem;">location_on</span>
+          <span style="font-size:0.85rem;color:var(--text-muted,#6b7280);flex:1;">${nota}</span>
+          <a href="${mapUrl}" target="_blank" rel="noopener noreferrer" class="secondary-btn" style="text-decoration:none;">
+            <span class="material-symbols-outlined">open_in_new</span>Ver en mapa
+          </a>
         </div>
-        <p style="margin:0.4rem 0 0;font-size:0.8rem;color:var(--text-muted,#6b7280);">${nota}</p>
       </section>
     `;
   }
@@ -529,27 +518,30 @@
     return `<div class="organizaciones-metric"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
   }
 
-  function organizacionBlockHtml_(title, items, extraClass = '', kvClass = '') {
+  function organizacionBlockHtml_(title, items, extraClass, kvClass) {
+    extraClass = extraClass || '';
+    kvClass = kvClass || '';
     return `
-      <section class="organizaciones-block ${escapeHtml(extraClass || '')}">
+      <section class="organizaciones-block ${escapeHtml(extraClass)}">
         <h4>${escapeHtml(title)}</h4>
-        <div class="organizaciones-kv ${escapeHtml(kvClass || '')}">
-          ${(items || []).map(([k, v]) => `<div><strong>${escapeHtml(k)}</strong><span>${escapeHtml(formatUiValue_(v || 'Sin dato'))}</span></div>`).join('')}
+        <div class="organizaciones-kv ${escapeHtml(kvClass)}">
+          ${(items || []).map(function(pair) { return '<div><strong>' + escapeHtml(pair[0]) + '</strong><span>' + escapeHtml(formatUiValue_(pair[1] || 'Sin dato')) + '</span></div>'; }).join('')}
         </div>
       </section>
     `;
   }
 
-  function organizacionTableHtml_(title, rows, fields, extraClass = '') {
+  function organizacionTableHtml_(title, rows, fields, extraClass) {
+    extraClass = extraClass || '';
     if (!rows || !rows.length) return '';
     return `
-      <section class="organizaciones-block organizaciones-block--table ${escapeHtml(extraClass || '')}">
+      <section class="organizaciones-block organizaciones-block--table ${escapeHtml(extraClass)}">
         <h4>${escapeHtml(title)}</h4>
         <div class="table-wrap">
           <table class="data-table">
-            <thead><tr>${fields.map(f => `<th>${escapeHtml(f)}</th>`).join('')}</tr></thead>
+            <thead><tr>${fields.map(f => '<th>' + escapeHtml(f) + '</th>').join('')}</tr></thead>
             <tbody>
-              ${rows.map(row => `<tr>${fields.map(f => `<td>${escapeHtml(formatUiValue_(row[f] || ''))}</td>`).join('')}</tr>`).join('')}
+              ${rows.map(row => '<tr>' + fields.map(f => '<td>' + escapeHtml(formatUiValue_(row[f] || '')) + '</td>').join('') + '</tr>').join('')}
             </tbody>
           </table>
         </div>
@@ -557,11 +549,12 @@
     `;
   }
 
-  function organizacionSociosTableHtml_(rows, extraClass = '') {
+  function organizacionSociosTableHtml_(rows, extraClass) {
+    extraClass = extraClass || '';
     if (!rows || !rows.length) return '';
 
     return `
-      <section class="organizaciones-block organizaciones-block--table ${escapeHtml(extraClass || '')}">
+      <section class="organizaciones-block organizaciones-block--table ${escapeHtml(extraClass)}">
         <h4>Últimos socios</h4>
         <div class="table-wrap">
           <table class="data-table">
@@ -608,7 +601,8 @@
 
   // -- MODALES ACCIONES --
 
-  function openOrganizacionEditModal_(data = {}) {
+  function openOrganizacionEditModal_(data) {
+    data = data || {};
     const modal = document.getElementById('org-edit-modal');
     const form  = document.getElementById('org-edit-form');
     const title = document.getElementById('org-edit-title');
@@ -707,7 +701,7 @@
       return;
     }
     api('guardarOrganizacion', payload).then(res => {
-      showSuccess(`Organización guardada: ${res.organizacion_id}`);
+      showSuccess('Organización guardada: ' + res.organizacion_id);
       closeOrganizacionEditModal_();
       APP.state.organizacionesModuloFetchedAt = 0;
       return ensureOrganizacionesModuloList_().then(() => {
@@ -721,11 +715,11 @@
     const org = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.organizacion;
     if (!org || !org.organizacion_id) return;
 
-    const motivo = window.prompt(`Indica el motivo para ${actionLabel} la organización:`, '');
+    const motivo = window.prompt('Indica el motivo para ' + actionLabel + ' la organización:', '');
     if (motivo === null) return;
 
     api(fn, { organizacion_id: org.organizacion_id, motivo }).then(res => {
-      showSuccess(`Organización actualizada: ${res.estado_general_organizacion}`);
+      showSuccess('Organización actualizada: ' + res.estado_general_organizacion);
       APP.state.organizacionesModuloFetchedAt = 0;
       return ensureOrganizacionesModuloList_().then(() => {
         renderOrganizacionesGridFromState_();

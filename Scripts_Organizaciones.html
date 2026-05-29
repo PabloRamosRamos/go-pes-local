@@ -52,9 +52,6 @@
               <button type="button" class="secondary-btn" id="org-suspend-btn" disabled>
                 <span class="material-symbols-outlined">pause_circle</span>Suspender
               </button>
-              <button type="button" class="secondary-btn" id="org-delete-btn" disabled>
-                <span class="material-symbols-outlined">delete</span>Eliminar
-              </button>
               <button type="button" class="secondary-btn" data-org-detalle-close="true">
                 <span class="material-symbols-outlined">close</span>Cerrar
               </button>
@@ -88,21 +85,14 @@
 
           <div class="form-grid organizaciones-form-grid">
             <div class="field field--full"><label>Nombre organización</label><input name="nombre_organizacion" type="text" required></div>
-            <div class="field field--half"><label>Tipo organización</label><input name="tipo_organizacion" type="text"></div>
-            <div class="field field--half"><label>Estado general</label><select name="estado_general_organizacion" data-options-key="estado_general_organizacion"></select></div>
-            <div class="field field--half"><label>Estado constitución</label><select name="estado_constitucion" data-options-key="estado_constitucion"></select></div>
-            <div class="field field--half"><label>Responsable actual</label><select name="responsable_actual" data-options-key="responsables"></select></div>
             <div class="field field--half"><label>UV</label><select name="uv" data-options-key="uvList"></select></div>
             <div class="field field--half"><label>Sector</label><select name="sector" data-options-key="sectorByUv"></select></div>
             <div class="field field--full"><label>Dirección referencia</label><input name="direccion_referencia" type="text"></div>
             <div class="field field--half"><label>Fecha inicio acompañamiento</label><input name="fecha_inicio_acompanamiento" type="date"></div>
-            <div class="field field--half"><label>Cantidad socios declarada</label><input name="cantidad_socios_declarada" type="number"></div>
             <div class="field field--half"><label>Fecha asamblea constitución</label><input name="fecha_asamblea_constitucion" type="date"></div>
             <div class="field field--half"><label>Fecha ratificación</label><input name="fecha_ratificacion" type="date"></div>
             <div class="field field--half"><label>Vigencia directiva hasta</label><input name="vigencia_directiva_hasta" type="date"></div>
             <div class="field field--half"><label>Personalidad jurídica</label><select name="personalidad_juridica_flag"><option value="">Seleccionar</option><option>Sí</option><option>No</option></select></div>
-            <div class="field field--half"><label>Certificado provisorio</label><select name="certificado_provisorio_flag"><option value="">Seleccionar</option><option>Sí</option><option>No</option></select></div>
-            <div class="field field--half"><label>Certificado definitivo</label><select name="certificado_definitivo_flag"><option value="">Seleccionar</option><option>Sí</option><option>No</option></select></div>
             <div class="field field--half"><label>Directiva vigente</label><select name="directiva_vigente_flag"><option value="">Seleccionar</option><option>Sí</option><option>No</option></select></div>
             <div class="field field--half"><label>Organización constituida</label><select name="organizacion_constituida_flag"><option value="">Seleccionar</option><option>Sí</option><option>No</option></select></div>
             <div class="field field--full"><label>Observaciones</label><textarea name="observacion_resumen" rows="4"></textarea></div>
@@ -167,31 +157,32 @@
   // -- STATS HEADER --
 
   function renderOrganizacionesStatsHtml_(orgs) {
-    let certDef = 0, asamblea = 0, certProv = 0, cuentaBancaria = 0;
-    (orgs || []).forEach(function(org) {
-      const cd = String(org.certificado_definitivo_flag || '').toLowerCase();
-      if (cd === 'sí' || cd === 'si') certDef++;
-      const cp = String(org.certificado_provisorio_flag || '').toLowerCase();
-      if (cp === 'sí' || cp === 'si') certProv++;
-      if (String(org.fecha_asamblea_constitucion || '').trim()) asamblea++;
-      if ((org.hitos_cumplidos || []).indexOf(14) !== -1) cuentaBancaria++;
-    });
-
     const cards = [
-      { count: certDef,        label: 'Cert. definitivo', hito: 'Hito 11', icon: 'verified',        color: '#22c55e' },
-      { count: asamblea,       label: 'Asamblea',          hito: 'Hito 2',  icon: 'groups',           color: '#3D96B4' },
-      { count: certProv,       label: 'Cert. provisorio',  hito: 'Hito 9',  icon: 'pending_actions',  color: '#f59e0b' },
-      { count: cuentaBancaria, label: 'Cta. bancaria',     hito: 'Hito 14', icon: 'account_balance',  color: '#8CC63F' }
+      { n: 2,  label: 'Asamblea',         icon: 'groups',          color: '#3D96B4' },
+      { n: 9,  label: 'Cert. provisorio', icon: 'pending_actions', color: '#f59e0b' },
+      { n: 11, label: 'Cert. definitivo', icon: 'verified',        color: '#22c55e' },
+      { n: 14, label: 'Cta. bancaria',    icon: 'account_balance', color: '#8CC63F' }
     ];
+
+    const counts = {};
+    cards.forEach(function(c) { counts[c.n] = 0; });
+    (orgs || []).forEach(function(org) {
+      const hitos = org.hitos_cumplidos || [];
+      const maxLineal = Math.max.apply(null, [0].concat(hitos.filter(function(n) { return n >= 1 && n <= 11; })));
+      cards.forEach(function(c) {
+        const isDone = (c.n <= 11 && c.n <= maxLineal) || hitos.indexOf(c.n) !== -1;
+        if (isDone) counts[c.n]++;
+      });
+    });
 
     return `
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1rem;">
         ${cards.map(c => `
           <div class="panel" style="padding:1.25rem 1rem;text-align:center;border-top:3px solid ${c.color};display:flex;flex-direction:column;align-items:center;gap:0.3rem;">
             <span class="material-symbols-outlined" style="font-size:1.75rem;color:${c.color};">${escapeHtml(c.icon)}</span>
-            <div style="font-size:2.2rem;font-weight:700;line-height:1;">${c.count}</div>
+            <div style="font-size:2.2rem;font-weight:700;line-height:1;">${counts[c.n]}</div>
             <div style="font-size:0.85rem;font-weight:600;">${escapeHtml(c.label)}</div>
-            <span style="font-size:0.72rem;background:var(--bg,#f5f5f5);padding:2px 8px;border-radius:10px;color:var(--text-muted,#666);">${escapeHtml(c.hito)}</span>
+            <span style="font-size:0.72rem;background:var(--bg,#f5f5f5);padding:2px 8px;border-radius:10px;color:var(--text-muted,#666);">Hito ${c.n}</span>
           </div>
         `).join('')}
       </div>
@@ -201,9 +192,12 @@
   // -- TARJETA ORGANIZACION --
 
   function renderOrganizacionCardHtml_(org) {
-    const HITOS_DISPLAY = [1, 2, 4, 7, 9, 11, 12, 13, 14, 15];
+    const HITOS_DISPLAY = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
     const hitosCumplidos = org.hitos_cumplidos || [];
-    const done = n => hitosCumplidos.indexOf(n) !== -1;
+    // Hitos 1-11 son lineales: si llegó al N, los anteriores están implícitos.
+    // Hitos 12-15 tienen permite_saltar y se cuentan solo si están explícitos.
+    const maxLineal = Math.max.apply(null, [0].concat(hitosCumplidos.filter(n => n >= 1 && n <= 11)));
+    const done = n => (n <= 11 && n <= maxLineal) || hitosCumplidos.indexOf(n) !== -1;
     const countDone = HITOS_DISPLAY.filter(n => done(n)).length;
 
     const estadoBg   = org.estado_general_organizacion === 'Activo'     ? '#dcfce7'
@@ -225,7 +219,7 @@
 
         <div style="padding:1rem 1rem 0.75rem;">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;">
-            <h4 style="margin:0;font-size:0.95rem;line-height:1.4;flex:1;">${escapeHtml(org.label || 'Sin nombre')}</h4>
+            <h4 style="margin:0;font-size:0.95rem;line-height:1.4;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(org.label || 'Sin nombre')}</h4>
             ${org.estado_general_organizacion ? `
               <span style="font-size:0.68rem;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;flex-shrink:0;background:${estadoBg};color:${estadoTxt};">
                 ${escapeHtml(org.estado_general_organizacion)}
@@ -320,7 +314,6 @@
       if (data) openOrganizacionEditModal_(data);
     });
     document.getElementById('org-suspend-btn')?.addEventListener('click', () => cambiarEstadoOrganizacionUi_('suspenderOrganizacion', 'suspender'));
-    document.getElementById('org-delete-btn')?.addEventListener('click',  () => cambiarEstadoOrganizacionUi_('eliminarOrganizacion',  'eliminar'));
     document.getElementById('org-edit-form')?.addEventListener('submit', saveOrganizacionDesdeModulo_);
     document.getElementById('org-socio-cargo-form')?.addEventListener('submit', saveOrganizacionSocioCargo_);
 
@@ -389,7 +382,7 @@
   }
 
   function setOrganizacionesActionState_(enabled) {
-    ['org-edit-btn', 'org-suspend-btn', 'org-delete-btn'].forEach(id => {
+    ['org-edit-btn', 'org-suspend-btn'].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) btn.disabled = !enabled;
     });
@@ -405,7 +398,7 @@
     const r   = data.resumen     || {};
 
     detail.innerHTML = `
-      <section class="organizaciones-hero-card">
+      <section class="organizaciones-hero-card" style="grid-template-columns:88px minmax(0,1.1fr) minmax(0,0.9fr);">
         <div class="organizaciones-hero-card__icon" aria-hidden="true">
           <span class="material-symbols-outlined">apartment</span>
         </div>
@@ -418,12 +411,11 @@
             <span>${escapeHtml(formatUiValue_(org.estado_constitucion || 'Sin dato'))}</span>
           </div>
         </div>
-        <div class="organizaciones-hero-card__stats">
-          <div class="organizaciones-metrics organizaciones-metrics--compact">
-            ${organizacionMetricHtml_('Socios',       r.cantidad_socios      || 0)}
-            ${organizacionMetricHtml_('Beneficios',   r.cantidad_instrumentos || 0)}
-            ${organizacionMetricHtml_('Antigüedad',   formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}
-            ${organizacionMetricHtml_('Hitos avance', r.cantidad_avance_hitos || 0)}
+        <div class="organizaciones-hero-card__stats" style="grid-column:auto;grid-template-columns:1fr;padding-left:var(--space-5);border-left:1px solid color-mix(in srgb, var(--border) 76%, transparent);">
+          <div class="organizaciones-metrics organizaciones-metrics--compact" style="grid-template-columns:repeat(3,minmax(0,1fr));align-self:center;gap:10px;">
+            ${organizacionMetricHtml_('Socios',     r.cantidad_socios      || 0)}
+            ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
+            ${organizacionMetricHtml_('Antigüedad', formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}
           </div>
         </div>
       </section>
@@ -449,6 +441,9 @@
           ['Hitos registrados',  r.cantidad_avance_hitos],
           ['Gestiones legacy',   r.cantidad_hitos_legacy]
         ])}
+        ${organizacionBlockHtml_('Observaciones', [
+          ['Resumen', org.observacion_resumen]
+        ])}
         ${organizacionBlockHtml_('Directiva y constitución', [
           ['Fecha inicio',           org.fecha_inicio_acompanamiento],
           ['Asamblea constitución',  org.fecha_asamblea_constitucion],
@@ -459,9 +454,6 @@
           ['Certificado provisorio', org.certificado_provisorio_flag],
           ['Certificado definitivo', org.certificado_definitivo_flag]
         ], 'organizaciones-block--wide', 'organizaciones-kv--double')}
-        ${organizacionBlockHtml_('Observaciones', [
-          ['Resumen', org.observacion_resumen]
-        ], 'organizaciones-block--aside')}
       </div>
 
       <div class="organizaciones-lower-grid">

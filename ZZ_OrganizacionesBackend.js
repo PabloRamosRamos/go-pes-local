@@ -1,7 +1,7 @@
 function getOrganizacionesModuloClient() {
   requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
 
-  const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
+  var rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
     .filter(function(r) {
       return String(r.organizacion_id || '').trim() && String(r.nombre_organizacion || '').trim();
     })
@@ -9,15 +9,39 @@ function getOrganizacionesModuloClient() {
       return String(a.nombre_organizacion || '').localeCompare(String(b.nombre_organizacion || ''), 'es');
     });
 
+  var hitosByOrg = {};
+  try {
+    var avanceHitos = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS) || [];
+    avanceHitos.forEach(function(h) {
+      var orgId = String(h.organizacion_id || '').trim();
+      if (!orgId) return;
+      if (!hitosByOrg[orgId]) hitosByOrg[orgId] = [];
+      var orden = Number(h.orden_hito || 0);
+      if (orden > 0 && hitosByOrg[orgId].indexOf(orden) === -1) {
+        hitosByOrg[orgId].push(orden);
+      }
+    });
+  } catch (e) {}
+
   return serializeForClient_({
     organizaciones: rows.map(function(r) {
+      var orgId = String(r.organizacion_id || '').trim();
       return {
-        value: String(r.organizacion_id || '').trim(),
+        value: orgId,
         label: String(r.nombre_organizacion || '').trim(),
         estado_general_organizacion: String(r.estado_general_organizacion || ''),
         estado_constitucion: String(r.estado_constitucion || ''),
         uv: String(r.uv || ''),
-        sector: String(r.sector || '')
+        sector: String(r.sector || ''),
+        tipo_organizacion: String(r.tipo_organizacion || ''),
+        responsable_actual: String(r.responsable_actual || ''),
+        certificado_definitivo_flag: String(r.certificado_definitivo_flag || ''),
+        certificado_provisorio_flag: String(r.certificado_provisorio_flag || ''),
+        personalidad_juridica_flag: String(r.personalidad_juridica_flag || ''),
+        directiva_vigente_flag: String(r.directiva_vigente_flag || ''),
+        organizacion_constituida_flag: String(r.organizacion_constituida_flag || ''),
+        fecha_asamblea_constitucion: String(r.fecha_asamblea_constitucion || ''),
+        hitos_cumplidos: hitosByOrg[orgId] || []
       };
     })
   });

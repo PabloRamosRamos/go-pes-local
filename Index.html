@@ -122,6 +122,10 @@
                 <span class="material-symbols-outlined user-menu-dropdown__submenu-chevron" id="default-module-menu-chevron">chevron_right</span>
               </button>
               <div class="user-menu-submenu is-hidden" id="default-module-submenu" role="menu" aria-label="Vista inicial al abrir"></div>
+              <button type="button" class="user-menu-dropdown__item" id="manual-open-btn" role="menuitem">
+                <span class="material-symbols-outlined">menu_book</span>
+                <span>Manual de usuario</span>
+              </button>
               <button type="button" class="user-menu-dropdown__item" id="system-info-btn" role="menuitem">
                 <span class="material-symbols-outlined">info</span>
                 <span>Información del sistema</span>
@@ -611,6 +615,7 @@
     </script>
 
     <?!= include('Inicio'); ?>
+    <?!= include('Manual'); ?>
     <?!= includeModule_('Scripts'); ?>
   </body>
 </html>

@@ -128,7 +128,9 @@ function buildSheetDefinitions_() {
     [S.VW_AVANCE_ORGANIZACION]: ['organizacion_id', 'solicitud_id', 'nombre_organizacion', 'estado_avance', 'ultimo_hito_codigo', 'ultimo_hito_nombre', 'ultimo_hito_fecha', 'usuario_ultimo_hito', 'total_hitos_cumplidos', 'total_hitos_tramo_pre', 'total_hitos_tramo_for'],
 
     [S.CFG_FONDESE_EDICIONES]: ['id_edicion', 'anio', 'nombre', 'presupuesto_total', 'estado', 'convocatorias', 'lineas_producto', 'documentos', 'fecha_creacion', 'creado_por'],
-    [S.FACT_FONDESE]: ['fondese_id', 'id_edicion', 'organizacion_id', 'nombre_organizacion', 'convocatoria_id', 'linea_producto_id', 'estado_proceso', 'resultado_adj', 'estado_ejecucion', 'estado_rendicion', 'checklist_docs', 'fecha_creacion', 'fecha_actualizacion', 'creado_por']
+    [S.FACT_FONDESE]: ['fondese_id', 'id_edicion', 'organizacion_id', 'nombre_organizacion', 'convocatoria_id', 'linea_producto_id', 'estado_proceso', 'resultado_adj', 'estado_ejecucion', 'estado_rendicion', 'checklist_docs', 'fecha_creacion', 'fecha_actualizacion', 'creado_por'],
+    [S.FACT_FORM_EVENTOS]: ['evento_id', 'tipo', 'titulo', 'descripcion', 'fecha_evento', 'hora_inicio', 'hora_fin', 'lugar', 'tipo_inscripcion', 'cupo_maximo', 'estado', 'created_by', 'created_at', 'updated_by', 'updated_at'],
+    [S.FACT_FORM_INSCRIPCIONES]: ['inscripcion_id', 'evento_id', 'tipo_inscrito', 'socio_id', 'rut', 'nombre', 'telefono', 'correo', 'organizacion_vinculada', 'estado_inscripcion', 'created_by', 'created_at', 'updated_by', 'updated_at']
   };
 
   return defs;

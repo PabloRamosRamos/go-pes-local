@@ -515,6 +515,15 @@
     });
   }
 
+  function bindManualBtn_() {
+    const btn = document.getElementById('manual-open-btn');
+    if (btn) btn.addEventListener('click', ev => {
+      ev.preventDefault();
+      setUserMenuOpen_(false);
+      if (typeof window.openUserManual === 'function') window.openUserManual();
+    });
+  }
+
   function bindSystemInfoModal_() {
     const btn = document.getElementById('system-info-btn');
     const closeBtn = document.getElementById('system-info-close-btn');
@@ -588,6 +597,7 @@
     }
 
     bindSystemInfoModal_();
+    bindManualBtn_();
 
     document.addEventListener('click', ev => {
       if (!menu.contains(ev.target) && !trigger.contains(ev.target)) {
@@ -1354,6 +1364,8 @@
       }
 
       if (view === 'instrumento' && wasRendered) {
+        APP.state.currentBeneficioCodigo = '';
+        APP.state.currentBeneficioOrganizacionId = '';
         refreshBeneficiosModuloMinimo_();
       }
 

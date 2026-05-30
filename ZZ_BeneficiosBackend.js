@@ -1664,3 +1664,295 @@ function goPesGetOrgsElegiblesFondese() {
 
   return serializeForClient_({ orgs: orgs, existingFondese: existingFondese });
 }
+
+/* ============================================================
+   FORMACIÓN PERMANENTE — Capacitaciones, Certificaciones, Charlas
+   ============================================================ */
+
+function ensureFormacion_() {
+  ensureSheetsSubset_([
+    GO_PES_V2.SHEETS.FACT_FORM_EVENTOS,
+    GO_PES_V2.SHEETS.FACT_FORM_INSCRIPCIONES
+  ]);
+}
+
+function normalizeFormRut_(rut) {
+  return String(rut || '').replace(/[.\- ]/g, '').toUpperCase().trim();
+}
+
+function autoCloseFormEventos_() {
+  var now = new Date();
+  var rows = getSheetData_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS);
+  var toClose = rows.filter(function(ev) {
+    if (String(ev.estado || '') !== 'activo') return false;
+    if (!ev.fecha_evento) return false;
+
+    var fechaRaw = ev.fecha_evento;
+    var d = fechaRaw instanceof Date
+      ? new Date(fechaRaw.getFullYear(), fechaRaw.getMonth(), fechaRaw.getDate())
+      : (function() {
+          var p = String(fechaRaw).substring(0, 10).split('-');
+          return p.length === 3 ? new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10)) : null;
+        })();
+    if (!d || isNaN(d.getTime())) return false;
+
+    var horaFin = String(ev.hora_fin || '23:59').trim();
+    var tm = horaFin.match(/^(\d{1,2}):(\d{2})/);
+    d.setHours(tm ? parseInt(tm[1], 10) : 23, tm ? parseInt(tm[2], 10) : 59, 0, 0);
+
+    return now >= new Date(d.getTime() + 24 * 60 * 60 * 1000);
+  });
+
+  if (!toClose.length) return 0;
+
+  toClose.forEach(function(ev) {
+    upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS, 'evento_id',
+      [Object.assign({}, ev, { estado: 'cerrado', updated_by: 'sistema', updated_at: now })], false);
+  });
+
+  logProcessing_('AUTO_CLOSE_FORM_EVENTOS', { cerrados: toClose.length });
+  return toClose.length;
+}
+
+function goPesAutoCloseFormEventos() {
+  autoCloseFormEventos_();
+}
+
+function goPesGetFormEventos() {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  ensureFormacion_();
+  autoCloseFormEventos_();
+
+  const S = GO_PES_V2.SHEETS;
+  const eventos = getSheetData_(S.FACT_FORM_EVENTOS)
+    .filter(function(e) { return String(e.estado || '') !== 'cancelado'; });
+  const inscripciones = getSheetData_(S.FACT_FORM_INSCRIPCIONES);
+
+  var countByEvento = {};
+  inscripciones.forEach(function(i) {
+    if (String(i.estado_inscripcion || '') !== 'cancelado') {
+      var id = String(i.evento_id || '');
+      countByEvento[id] = (countByEvento[id] || 0) + 1;
+    }
+  });
+
+  var result = eventos.map(function(e) {
+    return Object.assign({}, e, { cantidad_inscritos: countByEvento[String(e.evento_id || '')] || 0 });
+  });
+
+  result.sort(function(a, b) {
+    var da = a.fecha_evento ? new Date(a.fecha_evento) : new Date(0);
+    var db = b.fecha_evento ? new Date(b.fecha_evento) : new Date(0);
+    return db - da;
+  });
+
+  return serializeForClient_({ eventos: result });
+}
+
+function goPesUpsertFormEvento(payload) {
+  var actor = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  ensureFormacion_();
+  payload = payload || {};
+
+  var tipoInscripcion = String(payload.tipo_inscripcion || '').toLowerCase().trim();
+  if (tipoInscripcion === 'abierta') {
+    if (!payload.pin) throw new Error('Se requiere la clave de SUPERUSER para crear eventos con inscripción abierta.');
+    goPesValidateAdminResetPin_(payload.pin);
+  }
+
+  var tipo = String(payload.tipo || '').toLowerCase().trim();
+  if (['capacitacion', 'certificacion', 'charla'].indexOf(tipo) === -1) {
+    throw new Error('Tipo de evento inválido. Debe ser: capacitacion, certificacion o charla.');
+  }
+  var titulo = String(payload.titulo || '').trim();
+  if (!titulo) throw new Error('El título del evento es obligatorio.');
+  if (!payload.fecha_evento) throw new Error('La fecha del evento es obligatoria.');
+  if (['exclusiva', 'abierta'].indexOf(tipoInscripcion) === -1) {
+    throw new Error('Tipo de inscripción inválido. Debe ser: exclusiva o abierta.');
+  }
+
+  var actorEmail = getBeneficiosActorEmail_(actor);
+  var now = new Date();
+  var isNew = !String(payload.evento_id || '').trim();
+  var eventoId = isNew ? goPesNextIdSafe_('form_evento', 'EVT') : String(payload.evento_id).trim();
+
+  var row = {
+    evento_id:        eventoId,
+    tipo:             tipo,
+    titulo:           titulo,
+    descripcion:      String(payload.descripcion || '').trim(),
+    fecha_evento:     payload.fecha_evento,
+    hora_inicio:      String(payload.hora_inicio || '').trim(),
+    hora_fin:         String(payload.hora_fin || '').trim(),
+    lugar:            String(payload.lugar || '').trim(),
+    tipo_inscripcion: tipoInscripcion,
+    cupo_maximo:      parseInt(payload.cupo_maximo || 0, 10) || 0,
+    estado:           String(payload.estado || 'activo').toLowerCase().trim(),
+    updated_by:       actorEmail,
+    updated_at:       now
+  };
+
+  if (isNew) {
+    row.created_by = actorEmail;
+    row.created_at = now;
+  }
+
+  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS, 'evento_id', [row], false);
+  logUserAction_('UPSERT_FORM_EVENTO', 'form_evento', eventoId, 'OK', { actor: actorEmail, tipo: tipo, nuevo: isNew });
+
+  return serializeForClient_({ ok: true, evento_id: eventoId });
+}
+
+function goPesDeleteFormEvento(payload) {
+  var actor = requireRole_(['superuser']);
+  ensureFormacion_();
+  payload = payload || {};
+  var eventoId = String(payload.evento_id || '').trim();
+  if (!eventoId) throw new Error('Falta evento_id.');
+
+  var actorEmail = getBeneficiosActorEmail_(actor);
+  var now = new Date();
+  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS, 'evento_id', [{
+    evento_id: eventoId, estado: 'cancelado', updated_by: actorEmail, updated_at: now
+  }], false);
+
+  return serializeForClient_({ ok: true });
+}
+
+function goPesGetFormInscripciones(payload) {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  ensureFormacion_();
+  payload = payload || {};
+  var eventoId = String(payload.evento_id || '').trim();
+  if (!eventoId) throw new Error('Falta evento_id.');
+
+  var evento = findByField_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS, 'evento_id', eventoId, false);
+  if (!evento) throw new Error('Evento no encontrado.');
+
+  var inscripciones = getSheetData_(GO_PES_V2.SHEETS.FACT_FORM_INSCRIPCIONES).filter(function(i) {
+    return String(i.evento_id || '') === eventoId && String(i.estado_inscripcion || '') !== 'cancelado';
+  });
+
+  return serializeForClient_({ evento: evento, inscripciones: inscripciones });
+}
+
+function goPesUpsertFormInscripcion(payload) {
+  var actor = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  ensureFormacion_();
+  payload = payload || {};
+
+  var eventoId = String(payload.evento_id || '').trim();
+  if (!eventoId) throw new Error('Falta evento_id.');
+
+  var evento = findByField_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS, 'evento_id', eventoId, false);
+  if (!evento) throw new Error('Evento no encontrado.');
+  if (String(evento.estado || '') === 'cerrado')   throw new Error('El evento está cerrado. No se aceptan nuevas inscripciones.');
+  if (String(evento.estado || '') === 'cancelado') throw new Error('El evento fue cancelado.');
+
+  var rut    = String(payload.rut    || '').trim();
+  var nombre = String(payload.nombre || '').trim();
+  if (!rut)    throw new Error('El RUT es obligatorio.');
+  if (!nombre) throw new Error('El nombre es obligatorio.');
+
+  var socioId = '';
+  if (String(evento.tipo_inscripcion || '') === 'exclusiva') {
+    var socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS);
+    var socio  = socios.find ? socios.find(function(s) {
+      return normalizeFormRut_(s.run_socio) === normalizeFormRut_(rut);
+    }) : null;
+    if (!socio) {
+      throw new Error('Inscripción exclusiva: el RUT ingresado no corresponde a un socio registrado en el sistema.');
+    }
+    socioId = String(socio.socio_id || '');
+  }
+
+  var cupoMax = parseInt(evento.cupo_maximo || 0, 10);
+  if (cupoMax > 0) {
+    var countActivos = getSheetData_(GO_PES_V2.SHEETS.FACT_FORM_INSCRIPCIONES).filter(function(i) {
+      return String(i.evento_id || '') === eventoId && String(i.estado_inscripcion || '') !== 'cancelado';
+    }).length;
+    if (countActivos >= cupoMax) throw new Error('El evento ya alcanzó su cupo máximo (' + cupoMax + ' inscripciones).');
+  }
+
+  var existing = getSheetData_(GO_PES_V2.SHEETS.FACT_FORM_INSCRIPCIONES).filter(function(i) {
+    return String(i.evento_id || '') === eventoId &&
+           normalizeFormRut_(i.rut) === normalizeFormRut_(rut) &&
+           String(i.estado_inscripcion || '') !== 'cancelado';
+  })[0];
+  if (existing) throw new Error('Ya existe una inscripción activa con ese RUT para este evento.');
+
+  var actorEmail   = getBeneficiosActorEmail_(actor);
+  var now          = new Date();
+  var inscripcionId = goPesNextIdSafe_('form_inscripcion', 'INS');
+
+  var row = {
+    inscripcion_id:        inscripcionId,
+    evento_id:             eventoId,
+    tipo_inscrito:         socioId ? 'socio' : 'externo',
+    socio_id:              socioId,
+    rut:                   rut,
+    nombre:                nombre,
+    telefono:              String(payload.telefono || '').trim(),
+    correo:                String(payload.correo || '').trim(),
+    organizacion_vinculada: String(payload.organizacion_vinculada || '').trim(),
+    estado_inscripcion:    'activo',
+    created_by:            actorEmail,
+    created_at:            now,
+    updated_by:            actorEmail,
+    updated_at:            now
+  };
+
+  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FORM_INSCRIPCIONES, 'inscripcion_id', [row], false);
+  logUserAction_('UPSERT_FORM_INSCRIPCION', 'form_inscripcion', inscripcionId, 'OK', { actor: actorEmail, evento_id: eventoId });
+
+  return serializeForClient_({ ok: true, inscripcion_id: inscripcionId });
+}
+
+function goPesGetFormSocioByRut(payload) {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  payload = payload || {};
+  var rut = String(payload.rut || '').trim();
+  if (!rut) return serializeForClient_({ socio: null });
+
+  var socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS);
+  var socio  = socios.filter ? socios.filter(function(s) {
+    return normalizeFormRut_(s.run_socio) === normalizeFormRut_(rut);
+  })[0] : null;
+
+  return serializeForClient_({ socio: socio || null });
+}
+
+function goPesGetOrganizacionesConHito5() {
+  requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  var rows = getSheetData_(GO_PES_V2.SHEETS.VW_AVANCE_ORGANIZACION);
+  var orgs = rows
+    .filter(function(r) {
+      return parseInt(r.total_hitos_cumplidos || 0, 10) >= 5 && String(r.nombre_organizacion || '').trim();
+    })
+    .map(function(r) {
+      return { id: String(r.organizacion_id || '').trim(), nombre: String(r.nombre_organizacion || '').trim() };
+    })
+    .sort(function(a, b) { return a.nombre.localeCompare(b.nombre, 'es'); });
+  return serializeForClient_({ orgs: orgs });
+}
+
+function goPesCancelFormInscripcion(payload) {
+  var actor = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
+  ensureFormacion_();
+  payload = payload || {};
+  var inscripcionId = String(payload.inscripcion_id || '').trim();
+  if (!inscripcionId) throw new Error('Falta inscripcion_id.');
+
+  var actorEmail = getBeneficiosActorEmail_(actor);
+  var now        = new Date();
+
+  var found = getSheetData_(GO_PES_V2.SHEETS.FACT_FORM_INSCRIPCIONES).filter(function(i) {
+    return String(i.inscripcion_id || '') === inscripcionId;
+  })[0];
+  if (!found) throw new Error('Inscripción no encontrada.');
+
+  var merged = Object.assign({}, found, { estado_inscripcion: 'cancelado', updated_by: actorEmail, updated_at: now });
+  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FORM_INSCRIPCIONES, 'inscripcion_id', [merged], false);
+
+  return serializeForClient_({ ok: true });
+}

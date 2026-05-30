@@ -6,7 +6,7 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros Â· Municipalidad de Providencia',
   VERSION: '2.1.3',
-  BUILD: 'be90adc',
+  BUILD: 'bd25925',
   BUILD_DATE: '20260529',
   ENVIRONMENT: 'DEV',
   SUPERUSERS: [
@@ -44,6 +44,8 @@ const GO_PES_V2 = {
     FACT_AVANCE_ESTADO: 'FACT_Avance_Estado',
     FACT_FONDESE: 'FACT_Fondese',
     CFG_FONDESE_EDICIONES: 'CFG_FONDESE_Ediciones',
+    FACT_FORM_EVENTOS: 'FACT_Form_Eventos',
+    FACT_FORM_INSCRIPCIONES: 'FACT_Form_Inscripciones',
     CAT_HITOS_AVANCE: 'CAT_Hitos_Avance',
     VW_AVANCE_ORGANIZACION: 'VW_Avance_Organizacion',
 
@@ -152,7 +154,21 @@ function setupMotorOperativoPES_() {
   seedGoPesV2Catalogs_();
   seedSuperUsers_();
   rebuildSuggestionDims_();
+  goPesSetupFormacionAutoCloseTrigger_();
   SpreadsheetApp.getActiveSpreadsheet().toast('Motor operativo configurado.', 'GO-PES', 5);
+}
+
+function goPesSetupFormacionAutoCloseTrigger_() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var exists = triggers.some(function(t) {
+    return t.getHandlerFunction() === 'goPesAutoCloseFormEventos';
+  });
+  if (!exists) {
+    ScriptApp.newTrigger('goPesAutoCloseFormEventos')
+      .timeBased()
+      .everyHours(1)
+      .create();
+  }
 }
 
 function reconstruirEstructurasDesdeRaw() {

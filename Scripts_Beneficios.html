@@ -29,10 +29,6 @@
       organizacion_id: APP.state.currentBeneficioOrganizacionId || ''
     }).then(data => {
       APP.state.currentBeneficiosDetalle = data || {};
-      const tabs = (data && data.tabs) || [];
-      if (!APP.state.currentBeneficioCodigo && tabs.length) {
-        APP.state.currentBeneficioCodigo = tabs[0].codigo;
-      }
       renderBeneficiosPanelMinimo_(APP.state.currentBeneficiosDetalle);
     }).catch(showError).finally(hideContentLoading);
   }
@@ -55,14 +51,19 @@
     if (!host) return;
 
     const tabs = (data && data.tabs) || [];
-    const selectedCode = data && data.selected_tab_codigo
-      ? data.selected_tab_codigo
-      : APP.state.currentBeneficioCodigo;
-    const activeTab = tabs.find(tab => tab.codigo === selectedCode) || tabs[0] || null;
-
-    if (!tabs.length || !activeTab) {
+    if (!tabs.length) {
       host.className = 'beneficios-workspace empty-state';
       host.innerHTML = 'No hay beneficios configurados para este módulo.';
+      return;
+    }
+
+    const selectedCode = data && data.selected_tab_codigo && APP.state.currentBeneficioCodigo
+      ? APP.state.currentBeneficioCodigo
+      : (APP.state.currentBeneficioCodigo || '');
+    const activeTab = selectedCode ? tabs.find(tab => tab.codigo === selectedCode) : null;
+
+    if (!activeTab) {
+      renderBeneficiosLandingScreen_(host, tabs);
       return;
     }
 
@@ -83,7 +84,6 @@
               <span class="beneficios-tab__content">
                 <span class="beneficios-tab__eyebrow">${escapeHtml(visual.label || 'Beneficio')}</span>
                 <strong class="beneficios-tab__title">${escapeHtml(tab.titulo || '')}</strong>
-                <span class="beneficios-tab__desc">${escapeHtml(tab.descripcion_corta || '')}</span>
               </span>
               <span class="beneficios-tab__divider" aria-hidden="true"></span>
               <span class="beneficios-tab__icon" aria-hidden="true">
@@ -97,7 +97,9 @@
           ? renderCamaras1414Panel_(data && data.camaras1414, activeTab)
           : activeTab.codigo === 'FONDESE'
             ? renderFondesePanel_(activeTab)
-            : renderBeneficioPlaceholderPanel_(activeTab)}
+            : activeTab.codigo === 'CHARLAS_CAPACITACIONES'
+              ? renderCapacitacionesPanel_(activeTab)
+              : renderBeneficioPlaceholderPanel_(activeTab)}
       </section>
     `;
 
@@ -115,6 +117,8 @@
       bindCamaras1414Panel_();
     } else if (activeTab.codigo === 'FONDESE') {
       bindFondesePanel_();
+    } else if (activeTab.codigo === 'CHARLAS_CAPACITACIONES') {
+      bindCapacitacionesPanel_();
     }
   }
 
@@ -2158,7 +2162,17 @@
             <div class="fnd-chips" id="fnd-panel-chips"></div>
             <p class="fnd-monto" id="fnd-panel-monto"></p>
           </div>
-          <div style="display:flex;gap:8px;flex-shrink:0;align-items:flex-start" id="fnd-panel-actions"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0;align-items:start;">
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <button type="button" class="secondary-btn js-fnd-stepper-btn" style="justify-content:center">
+                <span class="material-symbols-outlined">format_list_numbered</span>Paso a paso
+              </button>
+              <button type="button" class="secondary-btn js-fnd-infodoc-btn" style="justify-content:center">
+                <span class="material-symbols-outlined">info</span>Información
+              </button>
+            </div>
+            <div id="fnd-panel-actions" style="display:flex;flex-direction:column;gap:8px;"></div>
+          </div>
         </div>
         <div id="fnd-list-container" style="min-height:80px">
           <div class="empty-state" style="padding:32px 0">Cargando...</div>
@@ -2901,6 +2915,9 @@
     if (!container) return;
     container.innerHTML = '<div class="empty-state" style="padding:32px 0">Cargando...</div>';
 
+    document.querySelector('.js-fnd-stepper-btn')?.addEventListener('click', () => { renderFondeseInfoModal_(); });
+    document.querySelector('.js-fnd-infodoc-btn')?.addEventListener('click', () => { renderFondeseInfoDocModal_(); });
+
     api('goPesGetFondeseEdicionActiva', null).then(function(data) {
       const edicion     = data.edicion;
       const isSuperuser = APP && APP.state && APP.state.user && APP.state.user.superuser_flag;
@@ -2967,5 +2984,1244 @@
       }).catch(showError);
 
     }).catch(showError);
+  }
+
+  /* =========================================================
+     FONDESE — modal "Paso a paso"
+     ========================================================= */
+
+  function renderFondeseInfoModal_() {
+    const STEPS = [
+      {
+        num: 1,
+        title: 'Requisito previo',
+        actor: 'mixto',
+        actorLabel: 'Equipo GO-PES + Organización',
+        body: 'La organización debe tener completado el Tramo 2 de Avance del programa GO-PES. Este hito habilitante es condición indispensable para acceder al fondo FONDESE. Sin este requisito el proceso no puede comenzar.',
+        items: null,
+        alert: { type: 'info', text: 'El sistema verifica automáticamente el cumplimiento del Tramo 2 (mixto/habilitante) como condición de elegibilidad.' },
+        decision: null
+      },
+      {
+        num: 2,
+        title: 'Apertura de convocatoria',
+        actor: 'go_pes',
+        actorLabel: 'Equipo GO-PES',
+        body: 'El equipo GO-PES publica y comunica la apertura de la convocatoria a las organizaciones elegibles, informando fechas, montos disponibles y bases del concurso.',
+        items: [
+          'Fecha de apertura y cierre de la convocatoria',
+          'Monto disponible por organización',
+          'Bases y condiciones del fondo',
+          'Líneas de producto habilitadas (10 líneas)'
+        ],
+        alert: { type: 'info', text: 'El fondo cuenta con 2 convocatorias por edición con un presupuesto total de $60.000.000.' },
+        decision: null
+      },
+      {
+        num: 3,
+        title: 'Postulación — Armado del expediente',
+        actor: 'mixto',
+        actorLabel: 'Equipo GO-PES + Organización',
+        body: 'La organización, con apoyo del equipo GO-PES, arma el expediente de postulación con los 13 documentos requeridos. El expediente debe estar completo antes de su ingreso formal.',
+        items: [
+          'Personalidad jurídica vigente',
+          'Certificado de directiva vigente',
+          'RUT de la organización',
+          'Cédula de identidad del representante legal',
+          'Certificado de cuenta bancaria',
+          'Formulario de postulación (proyecto ejecutivo)',
+          'Presupuesto detallado',
+          'Cotizaciones (mínimo 2 por ítem de compra)',
+          'Carta de compromiso de la directiva',
+          'Registro de socios activos',
+          'Acta de asamblea que aprueba el proyecto',
+          'Declaración jurada sin deuda municipal',
+          'Certificado de domicilio de la organización'
+        ],
+        alert: null,
+        decision: null
+      },
+      {
+        num: 4,
+        title: 'Admisibilidad',
+        actor: 'municipal',
+        actorLabel: 'Municipalidad',
+        body: 'La municipalidad realiza una revisión formal del expediente: verifica que todos los documentos estén presentes, sean correctos y que la postulación se haya presentado dentro del plazo de la convocatoria.',
+        items: null,
+        alert: { type: 'info', text: 'La admisibilidad es una revisión formal. No evalúa la calidad del proyecto, solo la completitud del expediente.' },
+        decision: null
+      },
+      {
+        num: 5,
+        title: 'Evaluación',
+        actor: 'municipal',
+        actorLabel: 'Municipalidad — Comisión evaluadora',
+        body: 'La comisión evaluadora revisa el fondo técnico de cada postulación: pertinencia del proyecto, coherencia presupuestaria, capacidad de ejecución y alineación con las líneas del fondo.',
+        items: null,
+        alert: null,
+        decision: null
+      },
+      {
+        num: 6,
+        title: 'Resultado de adjudicación',
+        actor: 'municipal',
+        actorLabel: 'Municipalidad',
+        body: 'La comisión emite el resultado formal de la evaluación. Existen tres posibles resultados que determinan el camino de cada postulación.',
+        items: null,
+        alert: null,
+        decision: {
+          question: '¿Cuál es el resultado de la adjudicación?',
+          branches: [
+            { type: 'yes',     icon: 'check_circle',  text: 'Adjudicado → la organización recibe financiamiento y avanza a firma de convenio (Paso 7).' },
+            { type: 'no',      icon: 'cancel',         text: 'Rechazado → la postulación no cumple criterios de evaluación. Se notifica a la organización y el proceso finaliza.' },
+            { type: 'neutral', icon: 'block',          text: 'Inadmisible → documentación incompleta o fuera de plazo. No ingresó a evaluación. Puede repostular en próxima convocatoria.' }
+          ]
+        }
+      },
+      {
+        num: 7,
+        title: 'Firma de convenio',
+        actor: 'mixto',
+        actorLabel: 'Municipalidad + Organización',
+        body: 'La organización adjudicada y la municipalidad firman el convenio de transferencia de recursos. El convenio establece compromisos de ejecución, plazos y condiciones de rendición.',
+        items: null,
+        alert: { type: 'info', text: 'El convenio debe ser firmado por el representante legal de la organización y el funcionario municipal competente.' },
+        decision: null
+      },
+      {
+        num: 8,
+        title: 'Ejecución',
+        actor: 'org',
+        actorLabel: 'Organización',
+        body: 'La organización ejecuta el proyecto financiado según lo establecido en el convenio. El equipo GO-PES realiza seguimiento del avance durante esta etapa.',
+        items: null,
+        alert: { type: 'info', text: 'La organización debe conservar todos los comprobantes y documentos de gasto para la rendición de cuentas.' },
+        decision: null
+      },
+      {
+        num: 9,
+        title: 'Rendición de cuentas',
+        actor: 'mixto',
+        actorLabel: 'Equipo GO-PES + Organización',
+        body: 'La organización presenta la rendición de cuentas: documentos que acreditan el gasto efectivo de los recursos recibidos conforme al convenio. El equipo GO-PES revisa y valida.',
+        items: null,
+        alert: null,
+        decision: {
+          question: '¿La rendición de cuentas es aprobada?',
+          yes: 'Aprobada → la rendición cumple con todos los requisitos. El expediente avanza al cierre (Paso 10).',
+          no: 'Rechazada → existen observaciones o documentos faltantes. La organización debe subsanar y re-presentar la rendición.'
+        }
+      },
+      {
+        num: 10,
+        title: 'Cierre del expediente',
+        actor: 'go_pes',
+        actorLabel: 'Equipo GO-PES',
+        body: 'Con la rendición aprobada, el equipo GO-PES cierra formalmente el expediente FONDESE. El caso queda disponible para reportes y como antecedente para futuras convocatorias.',
+        items: null,
+        alert: null,
+        decision: null
+      }
+    ];
+
+    const ACTORS = [
+      { key: 'go_pes',   label: 'Equipo GO-PES', varColor: '--runtime-brand-primary' },
+      { key: 'municipal', label: 'Municipalidad',  varColor: '--runtime-brand-secondary' },
+      { key: 'org',       label: 'Organización',   varColor: '--runtime-brand-accent' },
+      { key: 'mixto',     label: 'Varios actores', varColor: null }
+    ];
+
+    const existing = document.getElementById('fnd-info-modal');
+    if (existing) existing.remove();
+
+    let currentStep = 0;
+
+    function actorColor(key) {
+      const a = ACTORS.find(x => x.key === key);
+      return a && a.varColor ? `var(${a.varColor})` : 'var(--text-muted, #6b7a8d)';
+    }
+
+    function renderStepBody(step) {
+      let html = '';
+      if (step.body) {
+        html += `<p class="fnd-step-body">${escapeHtml(step.body)}</p>`;
+      }
+      if (step.items) {
+        html += `<ul class="fnd-step-list">${step.items.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`;
+      }
+      if (step.alert) {
+        const alertClass = step.alert.type === 'info' ? 'fnd-alert--info' : 'fnd-alert--warn';
+        html += `<div class="fnd-alert ${alertClass}"><span class="material-symbols-outlined">schedule</span><span>${escapeHtml(step.alert.text)}</span></div>`;
+      }
+      if (step.decision) {
+        if (step.decision.branches) {
+          const branchClass = { yes: 'fnd-branch--yes', no: 'fnd-branch--no', neutral: 'fnd-branch--neutral' };
+          html += `
+            <div class="fnd-decision">
+              <p class="fnd-decision__q"><span class="material-symbols-outlined">help</span>${escapeHtml(step.decision.question)}</p>
+              <div class="fnd-decision__branches">
+                ${step.decision.branches.map(b => `
+                  <div class="fnd-branch ${branchClass[b.type] || ''}">
+                    <span class="material-symbols-outlined">${b.icon}</span>
+                    <span>${escapeHtml(b.text)}</span>
+                  </div>`).join('')}
+              </div>
+            </div>`;
+        } else {
+          html += `
+            <div class="fnd-decision">
+              <p class="fnd-decision__q"><span class="material-symbols-outlined">help</span>${escapeHtml(step.decision.question)}</p>
+              <div class="fnd-decision__branches">
+                <div class="fnd-branch fnd-branch--yes">
+                  <span class="material-symbols-outlined">check_circle</span>
+                  <span>${escapeHtml(step.decision.yes)}</span>
+                </div>
+                <div class="fnd-branch fnd-branch--no">
+                  <span class="material-symbols-outlined">pause_circle</span>
+                  <span>${escapeHtml(step.decision.no)}</span>
+                </div>
+              </div>
+            </div>`;
+        }
+      }
+      return html;
+    }
+
+    function renderActorBadge(step) {
+      const color = actorColor(step.actor);
+      return `<span class="fnd-actor-badge" style="--fnd-actor-color:${color}">${escapeHtml(step.actorLabel)}</span>`;
+    }
+
+    function buildModal() {
+      const step = STEPS[currentStep];
+      const isFirst = currentStep === 0;
+      const isLast = currentStep === STEPS.length - 1;
+      return `
+        <div class="fnd-overlay" id="fnd-info-modal" role="dialog" aria-modal="true" aria-label="Guía del proceso FONDESE">
+          <style>
+            .fnd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:9900;display:flex;align-items:center;justify-content:center;padding:16px}
+            .fnd-modal{background:var(--surface,#fff);border-radius:12px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.22)}
+            .fnd-header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border,#D6E0EA);flex-shrink:0}
+            .fnd-header__title{font-weight:700;font-size:1rem;color:var(--text,#24364B);flex:1}
+            .fnd-header__step{font-size:0.78rem;color:var(--text-muted,#6b7a8d);white-space:nowrap}
+            .fnd-header__close{background:none;border:none;cursor:pointer;color:var(--text-muted,#6b7a8d);display:flex;align-items:center;padding:4px;border-radius:6px}
+            .fnd-header__close:hover{background:var(--surface-alt,#f7fafc);color:var(--text,#24364B)}
+            .fnd-progress{height:3px;background:var(--border,#D6E0EA);flex-shrink:0}
+            .fnd-progress__bar{height:100%;background:var(--runtime-brand-primary,#214E8A);transition:width .25s ease;border-radius:0 2px 2px 0}
+            .fnd-body{display:flex;flex:1;overflow:hidden}
+            .fnd-main{flex:1;overflow-y:auto;padding:24px 24px 16px}
+            .fnd-step-num{font-size:0.72rem;font-weight:700;color:var(--text-muted,#6b7a8d);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+            .fnd-step-title{font-size:1.1rem;font-weight:700;color:var(--text,#24364B);margin:0 0 10px}
+            .fnd-actor-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:14px;color:var(--fnd-actor-color,var(--text-muted));background:color-mix(in srgb,var(--fnd-actor-color,#888) 12%,transparent)}
+            .fnd-step-body{font-size:0.9rem;line-height:1.6;color:var(--text,#24364B);margin:0 0 12px}
+            .fnd-step-list{padding-left:20px;margin:0 0 12px;font-size:0.88rem;line-height:1.7;color:var(--text,#24364B)}
+            .fnd-alert{display:flex;align-items:flex-start;gap:8px;background:var(--info-soft,#e8f4fb);border-radius:8px;padding:10px 12px;font-size:0.83rem;color:var(--text,#24364B);margin-top:12px}
+            .fnd-alert .material-symbols-outlined{font-size:1rem;color:var(--runtime-brand-primary,#214E8A);flex-shrink:0;margin-top:1px}
+            .fnd-alert--warn{background:var(--warning-soft,#fff3cd)}
+            .fnd-alert--warn .material-symbols-outlined{color:#856404}
+            .fnd-decision{margin-top:14px}
+            .fnd-decision__q{display:flex;align-items:center;gap:7px;font-weight:600;font-size:0.9rem;color:var(--text,#24364B);margin-bottom:10px}
+            .fnd-decision__q .material-symbols-outlined{font-size:1.1rem;color:var(--runtime-brand-primary,#214E8A)}
+            .fnd-decision__branches{display:flex;flex-direction:column;gap:8px}
+            .fnd-branch{display:flex;align-items:flex-start;gap:8px;border-radius:8px;padding:10px 12px;font-size:0.85rem;line-height:1.5}
+            .fnd-branch .material-symbols-outlined{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+            .fnd-branch--yes{background:var(--success-soft,#e8f5e9);color:var(--text,#24364B)}
+            .fnd-branch--yes .material-symbols-outlined{color:var(--runtime-brand-secondary,#007C4A)}
+            .fnd-branch--no{background:var(--danger-soft,#fdecea);color:var(--text,#24364B)}
+            .fnd-branch--no .material-symbols-outlined{color:#b3261e}
+            .fnd-branch--neutral{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
+            .fnd-branch--neutral .material-symbols-outlined{color:var(--text-muted,#6b7a8d)}
+            .fnd-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border,#D6E0EA);flex-shrink:0}
+            .fnd-footer .secondary-btn:disabled{opacity:.4;cursor:not-allowed}
+            html[data-theme="dark"] .fnd-modal{background:var(--surface,#14202d)}
+            html[data-theme="dark"] .fnd-branch--neutral{background:var(--surface-alt,#182635)}
+            html[data-theme="dark"] .fnd-alert{background:var(--info-soft,#163243)}
+          </style>
+          <div class="fnd-modal">
+            <div class="fnd-header">
+              <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#214E8A)">shield</span>
+              <span class="fnd-header__title">Guía del proceso — FONDESE</span>
+              <span class="fnd-header__step" id="fnd-step-counter">Paso ${currentStep + 1} de ${STEPS.length}</span>
+              <button type="button" class="fnd-header__close" id="fnd-close-btn" aria-label="Cerrar">
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+            <div class="fnd-progress">
+              <div class="fnd-progress__bar" id="fnd-progress-bar" style="width:${Math.round(((currentStep + 1) / STEPS.length) * 100)}%"></div>
+            </div>
+            <div class="fnd-body">
+              <div class="fnd-main" id="fnd-main">
+                <p class="fnd-step-num">Paso ${step.num} de ${STEPS.length}</p>
+                <h3 class="fnd-step-title">${escapeHtml(step.title)}</h3>
+                ${renderActorBadge(step)}
+                ${renderStepBody(step)}
+              </div>
+            </div>
+            <div class="fnd-footer">
+              <button type="button" class="secondary-btn" id="fnd-prev-btn" ${isFirst ? 'disabled' : ''}>← Anterior</button>
+              <button type="button" class="primary-btn" id="fnd-next-btn">${isLast ? 'Cerrar' : 'Siguiente →'}</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateStep() {
+      const step = STEPS[currentStep];
+      const isFirst = currentStep === 0;
+      const isLast = currentStep === STEPS.length - 1;
+      document.getElementById('fnd-step-counter').textContent = `Paso ${currentStep + 1} de ${STEPS.length}`;
+      document.getElementById('fnd-progress-bar').style.width = Math.round(((currentStep + 1) / STEPS.length) * 100) + '%';
+      document.getElementById('fnd-prev-btn').disabled = isFirst;
+      document.getElementById('fnd-next-btn').textContent = isLast ? 'Cerrar' : 'Siguiente →';
+      const main = document.getElementById('fnd-main');
+      main.innerHTML = `
+        <p class="fnd-step-num">Paso ${step.num} de ${STEPS.length}</p>
+        <h3 class="fnd-step-title">${escapeHtml(step.title)}</h3>
+        ${renderActorBadge(step)}
+        ${renderStepBody(step)}
+      `;
+      main.scrollTop = 0;
+    }
+
+    function closeModal() {
+      const el = document.getElementById('fnd-info-modal');
+      if (el) el.remove();
+    }
+
+    document.body.insertAdjacentHTML('beforeend', buildModal());
+
+    document.getElementById('fnd-close-btn').addEventListener('click', closeModal);
+    document.getElementById('fnd-prev-btn').addEventListener('click', () => {
+      if (currentStep > 0) { currentStep--; updateStep(); }
+    });
+    document.getElementById('fnd-next-btn').addEventListener('click', () => {
+      if (currentStep < STEPS.length - 1) { currentStep++; updateStep(); }
+      else { closeModal(); }
+    });
+    document.getElementById('fnd-info-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('fnd-info-modal')) closeModal();
+    });
+    document.addEventListener('keydown', function onEsc(e) {
+      if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEsc); }
+    });
+  }
+
+  /* =========================================================
+     FONDESE — modal "Información" (BPM)
+     ========================================================= */
+
+  function renderFondeseInfoDocModal_() {
+    const existing = document.getElementById('fnd-doc-modal');
+    if (existing) existing.remove();
+
+    const html = `
+      <div class="fndd-overlay" id="fnd-doc-modal" role="dialog" aria-modal="true" aria-label="Información FONDESE">
+        <style>
+          .fndd-overlay{position:fixed;inset:0;background:rgba(0,0,0,.48);z-index:9900;display:flex;align-items:center;justify-content:center;padding:16px}
+          .fndd-modal{background:var(--surface,#fff);border-radius:12px;width:100%;max-width:900px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.22)}
+          .fndd-header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border,#D6E0EA);flex-shrink:0}
+          .fndd-header__title{font-weight:700;font-size:1rem;color:var(--text,#24364B);flex:1}
+          .fndd-header__close{background:none;border:none;cursor:pointer;color:var(--text-muted,#6b7a8d);display:flex;align-items:center;padding:4px;border-radius:6px}
+          .fndd-header__close:hover{background:var(--surface-alt,#f7fafc);color:var(--text,#24364B)}
+          .fndd-body{flex:1;overflow-y:auto;padding:24px}
+          .fndd-hero{background:color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 6%,transparent);border:1px solid color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 14%,transparent);border-radius:10px;padding:20px 24px;margin-bottom:20px}
+          .fndd-hero__eyebrow{font-size:0.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--runtime-brand-primary,#214E8A);margin-bottom:6px}
+          .fndd-hero h2{margin:0 0 6px;font-size:1.15rem;color:var(--text,#24364B)}
+          .fndd-hero p{margin:0;font-size:0.85rem;color:var(--text-muted,#6b7a8d);line-height:1.55}
+          .fndd-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:20px;align-items:start}
+          .fndd-side{display:flex;flex-direction:column;gap:14px}
+          .fndd-card{background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:14px}
+          .fndd-card h4{margin:0 0 10px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#6b7a8d)}
+          .fndd-legend-item{display:flex;gap:8px;align-items:flex-start;font-size:0.8rem;line-height:1.4;color:var(--text-muted,#6b7a8d);margin-bottom:8px}
+          .fndd-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+          .fndd-dot--go{background:var(--runtime-brand-primary,#214E8A)}
+          .fndd-dot--muni{background:var(--runtime-brand-secondary,#007C4A)}
+          .fndd-dot--org{background:var(--runtime-brand-accent,#03C2AE)}
+          .fndd-dot--mix{background:linear-gradient(135deg,var(--runtime-brand-primary,#214E8A),var(--runtime-brand-secondary,#007C4A))}
+          .fndd-check-item{display:flex;gap:8px;align-items:center;font-size:0.8rem;color:var(--text,#24364B);padding:3px 0}
+          .fndd-check-item::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--runtime-brand-accent,#03C2AE);flex-shrink:0}
+          .fndd-prod-item{display:flex;gap:8px;align-items:flex-start;font-size:0.8rem;color:var(--text-muted,#6b7a8d);padding:3px 0;line-height:1.4}
+          .fndd-prod-item::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--runtime-brand-primary,#214E8A);flex-shrink:0;margin-top:5px}
+          .fndd-flow{display:flex;flex-direction:column;gap:14px}
+          .fndd-step{background:var(--surface,#fff);border:1px solid var(--border,#D6E0EA);border-radius:10px;padding:16px 18px;position:relative}
+          .fndd-step-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px;flex-wrap:wrap}
+          .fndd-step-title{margin:0;font-size:0.95rem;font-weight:700;color:var(--text,#24364B)}
+          .fndd-step-text{margin:0;font-size:0.83rem;line-height:1.55;color:var(--text-muted,#6b7a8d)}
+          .fndd-badges{display:flex;flex-wrap:wrap;gap:6px}
+          .fndd-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:20px;font-size:0.72rem;font-weight:700;white-space:nowrap}
+          .fndd-badge--go{background:color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 12%,transparent);color:var(--runtime-brand-primary,#214E8A)}
+          .fndd-badge--muni{background:color-mix(in srgb,var(--runtime-brand-secondary,#007C4A) 12%,transparent);color:var(--runtime-brand-secondary,#007C4A)}
+          .fndd-badge--org{background:color-mix(in srgb,var(--runtime-brand-accent,#03C2AE) 12%,transparent);color:var(--runtime-brand-accent,#03C2AE)}
+          .fndd-badge--mix{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
+          .fndd-badge--state{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
+          .fndd-badge--decision{background:#eef1ff;color:#4757b1}
+          .fndd-badge--alert{background:var(--danger-soft,#fdecea);color:#b3261e}
+          .fndd-badge--ok{background:var(--success-soft,#e8f5e9);color:#1b6b2f}
+          .fndd-mini-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+          .fndd-mini-item{background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:8px 12px;font-size:0.8rem;line-height:1.45;color:var(--text-muted,#6b7a8d)}
+          .fndd-mini-item strong{color:var(--text,#24364B)}
+          .fndd-split3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+          .fndd-split{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+          .fndd-branch{border:1px solid var(--border,#D6E0EA);border-radius:10px;padding:14px}
+          .fndd-branch--yes{border-color:color-mix(in srgb,var(--runtime-brand-secondary,#007C4A) 28%,transparent)}
+          .fndd-branch--no{border-color:color-mix(in srgb,#d93025 24%,transparent)}
+          .fndd-branch--neutral{border-color:color-mix(in srgb,#f4b400 28%,transparent)}
+          .fndd-decision-label{display:inline-flex;padding:4px 9px;border-radius:20px;font-size:0.68rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;background:#eef1ff;color:#4757b1;margin-bottom:8px}
+          .fndd-branch-title{margin:0 0 6px;font-size:0.88rem;font-weight:700;color:var(--text,#24364B)}
+          .fndd-branch-text{margin:0;font-size:0.8rem;line-height:1.5;color:var(--text-muted,#6b7a8d)}
+          .fndd-warn-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--warning-soft,#fff3cd);color:#7a5e08;font-size:0.8rem;line-height:1.5;border:1px solid rgba(244,180,0,0.25)}
+          .fndd-danger-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--danger-soft,#fdecea);color:#9d261d;font-size:0.8rem;line-height:1.5;border:1px solid rgba(217,48,37,0.2)}
+          .fndd-connector{width:2px;height:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 35%,transparent),transparent);margin:0 auto}
+          .fndd-footer-note{margin-top:16px;font-size:0.75rem;color:var(--text-muted,#6b7a8d);text-align:center;line-height:1.5}
+          html[data-theme="dark"] .fndd-modal{background:var(--surface,#14202d)}
+          html[data-theme="dark"] .fndd-body{background:var(--surface,#14202d)}
+          html[data-theme="dark"] .fndd-step{background:var(--surface,#14202d);border-color:var(--border,#294356)}
+          html[data-theme="dark"] .fndd-card{background:var(--surface-alt,#182635);border-color:var(--border,#294356)}
+          html[data-theme="dark"] .fndd-mini-item{background:var(--surface-alt,#182635);border-color:var(--border,#294356)}
+          html[data-theme="dark"] .fndd-hero{background:color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 10%,var(--surface,#14202d));border-color:color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 20%,transparent)}
+          html[data-theme="dark"] .fndd-branch{border-color:var(--border,#294356)}
+          html[data-theme="dark"] .fndd-branch--yes{border-color:color-mix(in srgb,var(--runtime-brand-secondary,#007C4A) 30%,transparent)}
+          html[data-theme="dark"] .fndd-branch--no{border-color:color-mix(in srgb,#d93025 22%,transparent)}
+          html[data-theme="dark"] .fndd-branch--neutral{border-color:color-mix(in srgb,#f4b400 22%,transparent)}
+          html[data-theme="dark"] .fndd-decision-label{background:rgba(71,87,177,0.25);color:#a0aaee}
+          html[data-theme="dark"] .fndd-badge--decision{background:rgba(71,87,177,0.25);color:#a0aaee}
+          html[data-theme="dark"] .fndd-badge--state{background:var(--surface-alt,#182635);color:var(--text-muted,#8ea2b4)}
+          html[data-theme="dark"] .fndd-badge--mix{background:var(--surface-alt,#182635);color:var(--text-muted,#8ea2b4)}
+          html[data-theme="dark"] .fndd-warn-block{background:var(--warning-soft,#352815);color:var(--alert-warning-fg,#ffd98a);border-color:rgba(244,180,0,0.2)}
+          html[data-theme="dark"] .fndd-danger-block{background:var(--danger-soft,#311b22);color:var(--alert-danger-fg,#ffd7d2);border-color:rgba(217,48,37,0.2)}
+          html[data-theme="dark"] .fndd-header{border-color:var(--border,#294356)}
+          html[data-theme="dark"] .fndd-header__title{color:var(--text,#e8eff6)}
+          @media print{body>*:not(#fnd-doc-modal){display:none!important}.fndd-overlay{position:static!important;background:none!important;display:block!important;padding:0!important}.fndd-modal{max-height:none!important;box-shadow:none!important;border-radius:0!important;border:none!important}.fndd-header{display:none!important}.fndd-body{overflow:visible!important;max-height:none!important;padding:0!important}.fndd-layout{grid-template-columns:220px 1fr!important}.fndd-split{grid-template-columns:1fr 1fr!important}.fndd-split3{grid-template-columns:1fr 1fr 1fr!important}}
+          @media(max-width:680px){.fndd-layout{grid-template-columns:1fr}.fndd-split{grid-template-columns:1fr}.fndd-split3{grid-template-columns:1fr}}
+        </style>
+        <div class="fndd-modal">
+          <div class="fndd-header">
+            <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#214E8A)">shield</span>
+            <span class="fndd-header__title">Proceso FONDESE — Documentación</span>
+            <button type="button" class="secondary-btn" id="fnd-doc-print-btn" style="font-size:0.78rem;padding:5px 10px" aria-label="Exportar PDF">
+              <span class="material-symbols-outlined" style="font-size:1rem">print</span>Exportar PDF
+            </button>
+            <button type="button" class="fndd-header__close" id="fnd-doc-close-btn" aria-label="Cerrar">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="fndd-body">
+            <div class="fndd-hero">
+              <div class="fndd-hero__eyebrow">Flujo operativo · Beneficios</div>
+              <h2>Proceso FONDESE</h2>
+              <p>Fondo de Seguridad Providencia — flujo tipo BPM con ciclo completo: actores, requisitos documentales, puntos de decisión y condiciones de cierre del expediente.</p>
+            </div>
+            <div class="fndd-layout">
+              <aside class="fndd-side">
+                <div class="fndd-card">
+                  <h4>Actores</h4>
+                  <div class="fndd-legend-item"><span class="fndd-dot fndd-dot--go"></span><span><strong>Equipo GO-PES</strong><br>Abre convocatoria, apoya postulación, acompaña ejecución y cierra el expediente.</span></div>
+                  <div class="fndd-legend-item"><span class="fndd-dot fndd-dot--muni"></span><span><strong>Municipalidad</strong><br>Evalúa admisibilidad y mérito, emite resultado de adjudicación y firma convenio.</span></div>
+                  <div class="fndd-legend-item"><span class="fndd-dot fndd-dot--org"></span><span><strong>Organización</strong><br>Arma el expediente, ejecuta el proyecto y presenta la rendición de cuentas.</span></div>
+                  <div class="fndd-legend-item"><span class="fndd-dot fndd-dot--mix"></span><span><strong>Mixto</strong><br>Etapas con participación conjunta de dos o más actores.</span></div>
+                </div>
+                <div class="fndd-card">
+                  <h4>Checklist documental (13)</h4>
+                  <div class="fndd-check-item">Personalidad jurídica vigente</div>
+                  <div class="fndd-check-item">Certificado de directiva vigente</div>
+                  <div class="fndd-check-item">RUT de la organización</div>
+                  <div class="fndd-check-item">Cédula de identidad representante legal</div>
+                  <div class="fndd-check-item">Certificado de cuenta bancaria</div>
+                  <div class="fndd-check-item">Formulario de postulación</div>
+                  <div class="fndd-check-item">Presupuesto detallado</div>
+                  <div class="fndd-check-item">Cotizaciones (mín. 2 por ítem)</div>
+                  <div class="fndd-check-item">Carta de compromiso directiva</div>
+                  <div class="fndd-check-item">Registro de socios activos</div>
+                  <div class="fndd-check-item">Acta de asamblea aprobatoria</div>
+                  <div class="fndd-check-item">Declaración jurada sin deuda</div>
+                  <div class="fndd-check-item">Certificado de domicilio</div>
+                </div>
+                <div class="fndd-card">
+                  <h4>Líneas de producto (10)</h4>
+                  <div class="fndd-prod-item">Equipamiento para sede</div>
+                  <div class="fndd-prod-item">Mobiliario comunitario</div>
+                  <div class="fndd-prod-item">Infraestructura menor</div>
+                  <div class="fndd-prod-item">Materiales de capacitación</div>
+                  <div class="fndd-prod-item">Equipamiento tecnológico</div>
+                  <div class="fndd-prod-item">Señalética e imagen</div>
+                  <div class="fndd-prod-item">Seguridad y emergencias</div>
+                  <div class="fndd-prod-item">Accesibilidad universal</div>
+                  <div class="fndd-prod-item">Gestión ambiental</div>
+                  <div class="fndd-prod-item">Actividades comunitarias</div>
+                </div>
+              </aside>
+              <main class="fndd-flow">
+                <div class="fndd-step">
+                  <div class="fndd-step-top">
+                    <h3 class="fndd-step-title">1. Requisito previo</h3>
+                    <div class="fndd-badges">
+                      <span class="fndd-badge fndd-badge--mix">Actor: Mixto</span>
+                      <span class="fndd-badge fndd-badge--state">Habilitante</span>
+                    </div>
+                  </div>
+                  <p class="fndd-step-text">La organización debe tener completado el <strong>Tramo 2 de Avance</strong> del programa GO-PES. Este hito es condición indispensable para acceder al fondo FONDESE.</p>
+                  <div class="fndd-mini-list">
+                    <div class="fndd-mini-item"><strong>Evento de entrada:</strong> organización con Tramo 2 de Avance (mixto/habilitante) completado.</div>
+                    <div class="fndd-mini-item"><strong>Resultado:</strong> la organización queda elegible para participar en la convocatoria FONDESE.</div>
+                  </div>
+                </div>
+                <div class="fndd-connector"></div>
+                <div class="fndd-step">
+                  <div class="fndd-step-top">
+                    <h3 class="fndd-step-title">2. Apertura de convocatoria</h3>
+                    <div class="fndd-badges">
+                      <span class="fndd-badge fndd-badge--go">Actor: Equipo GO-PES</span>
+                      <span class="fndd-badge fndd-badge--state">2 convocatorias/edición</span>
+                    </div>
+                  </div>
+                  <p class="fndd-step-text">El equipo GO-PES publica y comunica la apertura de la convocatoria, informando fechas, montos y bases. El fondo total es de <strong>$60.000.000</strong> por edición con <strong>2 convocatorias en 2026</strong>.</p>
+                </div>
+                <div class="fndd-connector"></div>
+                <div class="fndd-step">
+                  <div class="fndd-step-top">
+                    <h3 class="fndd-step-title">3. Postulación — Armado del expediente</h3>
+                    <div class="fndd-badges">
+                      <span class="fndd-badge fndd-badge--mix">Actor: Mixto</span>
+                      <span class="fndd-badge fndd-badge--state">13 documentos requeridos</span>
+                    </div>
+                  </div>
+                  <p class="fndd-step-text">La organización, con apoyo del equipo GO-PES, arma el expediente de postulación. Todos los documentos del checklist son obligatorios. Se acepta financiamiento en <strong>10 líneas de producto</strong>.</p>
+                  <div class="fndd-mini-list">
+                    <div class="fndd-mini-item"><strong>Control:</strong> el expediente debe estar completo antes de su ingreso formal para admisibilidad.</div>
+                  </div>
+                </div>
+                <div class="fndd-connector"></div>
+                <div class="fndd-step">
+                  <div class="fndd-step-top">
+                    <h3 class="fndd-step-title">4. Admisibilidad</h3>
+                    <div class="fndd-badges">
+                      <span class="fndd-badge fndd-badge--muni">Actor: Municipalidad</span>
+                      <span class="fndd-badge fndd-badge--state">Revisión formal</span>
+                    </div>
+                  </div>
+                  <p class="fndd-step-text">La municipalidad verifica que todos los documentos estén presentes, sean correctos y que la postulación se haya ingresado dentro del plazo. La admisibilidad no evalúa la calidad del proyecto.</p>
+                  <div class="fndd-mini-list">
+                    <div class="fndd-mini-item"><strong>Criterio:</strong> expediente completo, documentos vigentes y postulación en plazo.</div>
+                    <div class="fndd-mini-item"><strong>Resultado:</strong> admisible (avanza a evaluación) o inadmisible (fuera del proceso).</div>
+                  </div>
+                </div>
+                <div class="fndd-connector"></div>
+                <div class="fndd-step">
+                  <div class="fndd-step-top">
+                    <h3 class="fndd-step-title">5. Evaluación</h3>
+                    <div class="fndd-badges">
+                      <span class="fndd-badge fndd-badge--muni">Actor: Municipalidad</span>
+                      <span class="fndd-badge fndd-badge--state">Comisión evaluadora</span>
+                    </div>
+                  </div>
+                  <p class="fndd-step-text">La comisión evaluadora revisa el fondo técnico de cada postulación: pertinencia del proyecto, coherencia presupuestaria, capacidad de ejecución y alineación con las líneas del fondo.</p>
+                </div>
+                <div class="fndd-connector"></div>
+                <div class="fndd-split3">
+                  <div class="fndd-branch fndd-branch--yes">
+                    <span class="fndd-decision-label">Resultado adjudicación</span>
+                    <h4 class="fndd-branch-title">Adjudicado</h4>
+                    <p class="fndd-branch-text">La organización cumple criterios y recibe financiamiento. Avanza a firma de convenio.</p>
+                    <div class="fndd-badges" style="margin-top:8px">
+                      <span class="fndd-badge fndd-badge--ok">Continúa flujo</span>
+                    </div>
+                  </div>
+                  <div class="fndd-branch fndd-branch--no">
+                    <span class="fndd-decision-label">Resultado adjudicación</span>
+                    <h4 class="fndd-branch-title">Rechazado</h4>
+                    <p class="fndd-branch-text">No cumple criterios de evaluación. Se notifica a la organización y el proceso finaliza.</p>
+                    <div class="fndd-badges" style="margin-top:8px">
+                      <span class="fndd-badge fndd-badge--alert">Cierre proceso</span>
+                    </div>
+                  </div>
+                  <div class="fndd-branch fndd-branch--neutral">
+                    <span class="fndd-decision-label">Resultado adjudicación</span>
+                    <h4 class="fndd-branch-title">Inadmisible</h4>
+                    <p class="fndd-branch-text">Documentación incompleta o fuera de plazo. No ingresó a evaluación. Puede repostular.</p>
+                    <div class="fndd-badges" style="margin-top:8px">
+                      <span class="fndd-badge fndd-badge--state">Próxima convocatoria</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="fndd-connector"></div>
+                <div class="fndd-step">
+                  <div class="fndd-step-top">
+                    <h3 class="fndd-step-title">7. Firma de convenio</h3>
+                    <div class="fndd-badges">
+                      <span class="fndd-badge fndd-badge--mix">Actor: Mixto</span>
+                      <span class="fndd-badge fndd-badge--state">Documento vinculante</span>
+                    </div>
+                  </div>
+                  <p class="fndd-step-text">La organización adjudicada y la municipalidad firman el convenio de transferencia de recursos. El convenio establece compromisos, plazos y condiciones de rendición.</p>
+                  <div class="fndd-mini-list">
+                    <div class="fndd-mini-item"><strong>Firmantes:</strong> representante legal de la organización + funcionario municipal competente.</div>
+                  </div>
+                </div>
+                <div class="fndd-connector"></div>
+                <div class="fndd-step">
+                  <div class="fndd-step-top">
+                    <h3 class="fndd-step-title">8. Ejecución</h3>
+                    <div class="fndd-badges">
+                      <span class="fndd-badge fndd-badge--org">Actor: Organización</span>
+                      <span class="fndd-badge fndd-badge--state">Seguimiento GO-PES</span>
+                    </div>
+                  </div>
+                  <p class="fndd-step-text">La organización ejecuta el proyecto financiado según lo establecido en el convenio. El equipo GO-PES realiza seguimiento del avance durante esta etapa.</p>
+                  <div class="fndd-warn-block">La organización debe conservar todos los comprobantes y documentos de gasto para la rendición de cuentas.</div>
+                </div>
+                <div class="fndd-connector"></div>
+                <div class="fndd-split">
+                  <div class="fndd-branch fndd-branch--yes">
+                    <span class="fndd-decision-label">Rendición de cuentas</span>
+                    <h4 class="fndd-branch-title">Aprobada</h4>
+                    <p class="fndd-branch-text">La rendición cumple todos los requisitos documentales y de gasto. El expediente avanza al cierre.</p>
+                    <div class="fndd-badges" style="margin-top:8px">
+                      <span class="fndd-badge fndd-badge--mix">Actor: Equipo GO-PES + Organización</span>
+                    </div>
+                    <div class="fndd-badges" style="margin-top:6px">
+                      <span class="fndd-badge fndd-badge--ok">Continúa al cierre</span>
+                    </div>
+                  </div>
+                  <div class="fndd-branch fndd-branch--no">
+                    <span class="fndd-decision-label">Rendición de cuentas</span>
+                    <h4 class="fndd-branch-title">Rechazada</h4>
+                    <p class="fndd-branch-text">Existen observaciones o documentos faltantes. La organización debe subsanar y volver a presentar.</p>
+                    <div class="fndd-badges" style="margin-top:8px">
+                      <span class="fndd-badge fndd-badge--mix">Actor: Equipo GO-PES + Organización</span>
+                    </div>
+                    <div class="fndd-danger-block">El proceso no puede cerrarse hasta que la rendición sea aprobada.</div>
+                  </div>
+                </div>
+                <div class="fndd-connector"></div>
+                <div class="fndd-step">
+                  <div class="fndd-step-top">
+                    <h3 class="fndd-step-title">10. Cierre del expediente</h3>
+                    <div class="fndd-badges">
+                      <span class="fndd-badge fndd-badge--go">Actor: Equipo GO-PES</span>
+                      <span class="fndd-badge fndd-badge--state">Fin del proceso</span>
+                    </div>
+                  </div>
+                  <p class="fndd-step-text">Con la rendición aprobada, el equipo GO-PES cierra formalmente el expediente FONDESE. El caso queda disponible para reportes y como antecedente para futuras convocatorias.</p>
+                </div>
+                <div class="fndd-footer-note">Fondo de Seguridad Providencia &middot; $60.000.000 por edición &middot; 2 convocatorias 2026 &middot; 10 líneas de producto</div>
+              </main>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', html);
+
+    document.getElementById('fnd-doc-close-btn').addEventListener('click', () => {
+      const el = document.getElementById('fnd-doc-modal');
+      if (el) el.remove();
+    });
+    document.getElementById('fnd-doc-print-btn').addEventListener('click', () => { window.print(); });
+    document.getElementById('fnd-doc-modal').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('fnd-doc-modal')) {
+        const el = document.getElementById('fnd-doc-modal');
+        if (el) el.remove();
+      }
+    });
+    document.addEventListener('keydown', function onEsc(e) {
+      if (e.key === 'Escape') {
+        const el = document.getElementById('fnd-doc-modal');
+        if (el) el.remove();
+        document.removeEventListener('keydown', onEsc);
+      }
+    });
+  }
+
+  /* =========================================================
+     BENEFICIOS — pantalla de landing (sin tab seleccionada)
+     ========================================================= */
+
+  function renderBeneficiosLandingScreen_(host, tabs) {
+    host.className = 'beneficios-workspace';
+    host.innerHTML = `
+      <section class="beneficios-tabs-shell">
+        <div class="beneficios-tabs" role="tablist" aria-label="Beneficios municipales">
+          ${tabs.map(tab => {
+            const visual = getBeneficioTabVisual_(tab.codigo);
+            return `
+            <button
+              type="button"
+              class="beneficios-tab js-beneficio-tab"
+              data-beneficio-codigo="${escapeHtml(tab.codigo || '')}"
+              role="tab"
+              aria-selected="false">
+              <span class="beneficios-tab__content">
+                <span class="beneficios-tab__eyebrow">${escapeHtml(visual.label || 'Beneficio')}</span>
+                <strong class="beneficios-tab__title">${escapeHtml(tab.titulo || '')}</strong>
+                <span class="beneficios-tab__desc">${escapeHtml(tab.descripcion_corta || tab.descripcion || '')}</span>
+              </span>
+              <span class="beneficios-tab__divider" aria-hidden="true"></span>
+              <span class="beneficios-tab__icon" aria-hidden="true">
+                <span class="material-symbols-outlined">${escapeHtml(visual.icon || 'handshake')}</span>
+              </span>
+            </button>`;
+          }).join('')}
+        </div>
+      </section>
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:56px 16px">
+        <span class="material-symbols-outlined" style="font-size:2.2rem;color:var(--border,#D6E0EA)">touch_app</span>
+        <p style="margin:0;font-size:0.9rem;color:var(--text-muted,#6b7a8d)">Selecciona un beneficio para administrar</p>
+      </div>`;
+
+    host.querySelectorAll('.js-beneficio-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        APP.state.currentBeneficioCodigo = btn.dataset.beneficioCodigo || '';
+        APP.state.currentBeneficioOrganizacionId = '';
+        refreshBeneficiosModuloMinimo_();
+      });
+    });
+  }
+
+  /* =========================================================
+     CAPACITACIONES — panel principal
+     ========================================================= */
+
+  function renderCapacitacionesPanel_(activeTab) {
+    return `
+      <article class="beneficios-panel beneficios-panel--operativo" role="tabpanel">
+        <div class="beneficios-panel__head">
+          <div class="cap-header">
+            <p class="eyebrow">Beneficio municipal</p>
+            <h3>${escapeHtml(activeTab.titulo || 'Capacitaciones')}</h3>
+            <p class="muted">Formación permanente para comités de seguridad — gestión de eventos y participantes.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-shrink:0;align-items:flex-start;">
+            <button type="button" class="primary-btn js-cap-nuevo-btn">
+              <span class="material-symbols-outlined">add</span>Crear evento
+            </button>
+          </div>
+        </div>
+        <div id="cap-list-container" style="min-height:80px">
+          <div class="empty-state" style="padding:32px 0">Cargando eventos...</div>
+        </div>
+      </article>`;
+  }
+
+  /* tipo visual helpers */
+  function capTipoVisual_(tipo) {
+    switch (String(tipo || '').toLowerCase()) {
+      case 'capacitacion': return { icon: 'school',              label: 'Capacitación',  color: '#3D96B4' };
+      case 'certificacion': return { icon: 'workspace_premium',  label: 'Certificación', color: '#8CC63F' };
+      case 'charla':        return { icon: 'mic',                label: 'Charla',        color: '#f59e0b' };
+      default:              return { icon: 'event',              label: tipo || 'Evento', color: '#6b7a8d' };
+    }
+  }
+
+  function capEstadoBadge_(estado) {
+    switch (String(estado || '').toLowerCase()) {
+      case 'activo':   return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--success-soft,#e8f5e9);color:#1b6b2f">Activo</span>`;
+      case 'cerrado':  return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)">Cerrado</span>`;
+      case 'cancelado':return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--danger-soft,#fdecea);color:#b3261e">Cancelado</span>`;
+      default:         return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)">${escapeHtml(estado)}</span>`;
+    }
+  }
+
+  function capInscripcionBadge_(tipo) {
+    if (String(tipo || '') === 'abierta') {
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,#f59e0b 12%,transparent);color:#92400e"><span class="material-symbols-outlined" style="font-size:0.8rem">lock_open</span>Abierta</span>`;
+    }
+    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,#3D96B4 12%,transparent);color:#1e5f7a"><span class="material-symbols-outlined" style="font-size:0.8rem">lock</span>Exclusiva</span>`;
+  }
+
+  function renderCapacitacionesListHtml_(eventos) {
+    if (!eventos || !eventos.length) {
+      return `<div class="empty-state" style="padding:48px 0">
+        <span class="material-symbols-outlined" style="font-size:2.5rem;display:block;margin:0 auto 10px;opacity:.35">event_busy</span>
+        <p>No hay eventos creados aún.</p>
+        <p class="muted" style="font-size:0.82rem;margin-top:4px">Usa "Crear evento" para registrar capacitaciones, certificaciones y charlas.</p>
+      </div>`;
+    }
+
+    const rows = eventos.map(ev => {
+      const tv = capTipoVisual_(ev.tipo);
+      const cupoMax = parseInt(ev.cupo_maximo || 0, 10);
+      const inscritos = parseInt(ev.cantidad_inscritos || 0, 10);
+      const cupoTxt = cupoMax > 0
+        ? `<span style="font-size:0.78rem;color:var(--text-muted,#6b7a8d)">${inscritos}/${cupoMax} inscritos</span>`
+        : `<span style="font-size:0.78rem;color:var(--text-muted,#6b7a8d)">${inscritos} inscrito${inscritos !== 1 ? 's' : ''}</span>`;
+
+      const fechaTxt = ev.fecha_evento
+        ? new Date(ev.fecha_evento).toLocaleDateString('es-CL', { weekday:'short', day:'numeric', month:'short', year:'numeric' })
+        : '—';
+      const horaTxt = ev.hora_inicio ? `${ev.hora_inicio}${ev.hora_fin ? ' – ' + ev.hora_fin : ''}` : '';
+
+      return `
+        <div class="cap-event-card" style="background:var(--surface,#fff);border:1px solid var(--border,#D6E0EA);border-radius:10px;padding:16px 18px;display:flex;align-items:flex-start;gap:14px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:color-mix(in srgb,${tv.color} 12%,transparent);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span class="material-symbols-outlined" style="color:${tv.color};font-size:1.3rem">${tv.icon}</span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+              <strong style="font-size:0.92rem;color:var(--text,#24364B);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:320px">${escapeHtml(ev.titulo || '')}</strong>
+              <span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,${tv.color} 12%,transparent);color:${tv.color}">${tv.label}</span>
+              ${capInscripcionBadge_(ev.tipo_inscripcion)}
+              ${capEstadoBadge_(ev.estado)}
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:0.8rem;color:var(--text-muted,#6b7a8d);margin-bottom:6px">
+              <span style="display:flex;align-items:center;gap:3px"><span class="material-symbols-outlined" style="font-size:0.85rem">calendar_month</span>${escapeHtml(fechaTxt)}</span>
+              ${horaTxt ? `<span style="display:flex;align-items:center;gap:3px"><span class="material-symbols-outlined" style="font-size:0.85rem">schedule</span>${escapeHtml(horaTxt)}</span>` : ''}
+              ${ev.lugar ? `<span style="display:flex;align-items:center;gap:3px"><span class="material-symbols-outlined" style="font-size:0.85rem">location_on</span>${escapeHtml(ev.lugar)}</span>` : ''}
+              ${cupoTxt}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+            <button type="button" class="secondary-btn js-cap-inscritos-btn" data-id="${escapeHtml(ev.evento_id)}" style="font-size:0.78rem;padding:5px 10px">
+              <span class="material-symbols-outlined" style="font-size:1rem">group</span>Inscritos
+            </button>
+            <button type="button" class="secondary-btn js-cap-edit-btn" data-id="${escapeHtml(ev.evento_id)}" style="font-size:0.78rem;padding:5px 10px">
+              <span class="material-symbols-outlined" style="font-size:1rem">edit</span>
+            </button>
+          </div>
+        </div>`;
+    });
+
+    return `<div style="display:flex;flex-direction:column;gap:10px;padding:4px 0">${rows.join('')}</div>`;
+  }
+
+  /* =========================================================
+     CAPACITACIONES — bind
+     ========================================================= */
+
+  function bindCapacitacionesPanel_() {
+    const container = document.getElementById('cap-list-container');
+    if (!container) return;
+
+    function loadEventos() {
+      container.innerHTML = '<div class="empty-state" style="padding:32px 0">Cargando...</div>';
+      api('goPesGetFormEventos', null).then(data => {
+        container.innerHTML = renderCapacitacionesListHtml_(data.eventos || []);
+        container.querySelectorAll('.js-cap-inscritos-btn').forEach(btn =>
+          btn.addEventListener('click', () => openCapacitacionesInscritos_(btn.dataset.id)));
+        container.querySelectorAll('.js-cap-edit-btn').forEach(btn =>
+          btn.addEventListener('click', () => openCapacitacionesForm_(btn.dataset.id, data.eventos || [])));
+      }).catch(showError);
+    }
+
+    document.querySelector('.js-cap-nuevo-btn')?.addEventListener('click', () => openCapacitacionesForm_(null, []));
+
+    loadEventos();
+    APP.state._capReload = loadEventos;
+  }
+
+  /* =========================================================
+     CAPACITACIONES — modal crear/editar evento
+     ========================================================= */
+
+  function openCapacitacionesForm_(eventoId, eventosList) {
+    const existing = eventoId ? (eventosList || []).find(e => e.evento_id === eventoId) : null;
+    const isEdit   = !!existing;
+
+    const existing2 = document.getElementById('cap-form-modal');
+    if (existing2) existing2.remove();
+
+    const estadoField = isEdit ? `
+      <div class="field field--half">
+        <label>Estado</label>
+        <select name="estado">
+          <option value="activo"   ${(existing.estado || '') === 'activo'   ? 'selected' : ''}>Activo</option>
+          <option value="cerrado"  ${(existing.estado || '') === 'cerrado'  ? 'selected' : ''}>Cerrado</option>
+        </select>
+      </div>` : '';
+
+    const pinField = `
+      <div class="field field--full js-cap-pin-field" style="display:none">
+        <label>Clave de SUPERUSER <span style="color:#b3261e">*</span></label>
+        <input type="password" name="pin" placeholder="Ingresa la clave de SUPERUSER para habilitar inscripción abierta" autocomplete="off">
+        <p style="margin:4px 0 0;font-size:0.78rem;color:var(--text-muted,#6b7a8d)">La clave es requerida para confirmar que un administrador autoriza este tipo de inscripción.</p>
+      </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="organizaciones-modal" id="cap-form-modal" role="dialog" aria-modal="true" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--surface,#fff);border-radius:12px;width:100%;max-width:580px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+          <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border,#D6E0EA);flex-shrink:0">
+            <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#3D96B4)">event</span>
+            <span style="font-weight:700;font-size:1rem;color:var(--text,#24364B);flex:1">${isEdit ? 'Editar evento' : 'Crear evento'}</span>
+            <button type="button" id="cap-form-close" style="background:none;border:none;cursor:pointer;color:var(--text-muted,#6b7a8d);display:flex;align-items:center;padding:4px;border-radius:6px">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:20px">
+            <form id="cap-event-form" class="form-grid organizaciones-form-grid">
+              <input type="hidden" name="evento_id" value="${isEdit ? escapeHtml(existing.evento_id) : ''}">
+              <div class="field field--half">
+                <label>Tipo de evento <span style="color:#b3261e">*</span></label>
+                <select name="tipo" required>
+                  <option value="">Seleccionar tipo...</option>
+                  <option value="capacitacion" ${(existing && existing.tipo) === 'capacitacion' ? 'selected' : ''}>Capacitación</option>
+                  <option value="certificacion" ${(existing && existing.tipo) === 'certificacion' ? 'selected' : ''}>Certificación</option>
+                  <option value="charla" ${(existing && existing.tipo) === 'charla' ? 'selected' : ''}>Charla</option>
+                </select>
+              </div>
+              <div class="field field--half">
+                <label>Título <span style="color:#b3261e">*</span></label>
+                <input type="text" name="titulo" value="${isEdit ? escapeHtml(existing.titulo || '') : ''}" required placeholder="Ej: Taller de primeros auxilios">
+              </div>
+              <div class="field field--half">
+                <label>Descripción</label>
+                <textarea name="descripcion" rows="3" placeholder="Describe el contenido y objetivo del evento...">${isEdit ? escapeHtml(existing.descripcion || '') : ''}</textarea>
+              </div>
+              <div class="field field--half">
+                <label>Fecha <span style="color:#b3261e">*</span></label>
+                <input type="date" name="fecha_evento" value="${isEdit ? escapeHtml(String(existing.fecha_evento || '').substring(0, 10)) : ''}" required>
+              </div>
+              <div class="field field--half">
+                <label>Lugar</label>
+                <input type="text" name="lugar" value="${isEdit ? escapeHtml(existing.lugar || '') : ''}" placeholder="Sala, dirección...">
+              </div>
+              <div class="field field--half">
+                <label>Hora inicio</label>
+                <input type="time" name="hora_inicio" value="${isEdit ? escapeHtml(existing.hora_inicio || '') : ''}">
+              </div>
+              <div class="field field--half">
+                <label>Hora fin</label>
+                <input type="time" name="hora_fin" value="${isEdit ? escapeHtml(existing.hora_fin || '') : ''}">
+              </div>
+              <div class="field field--half">
+                <label>Cupo máximo</label>
+                <input type="number" name="cupo_maximo" min="0" value="${isEdit ? escapeHtml(String(existing.cupo_maximo || 0)) : '0'}" placeholder="0 = sin límite">
+              </div>
+              ${estadoField}
+              <div class="field field--full">
+                <label>Tipo de inscripción <span style="color:#b3261e">*</span></label>
+                <div style="display:flex;gap:16px;padding-top:4px">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
+                    <input type="radio" name="tipo_inscripcion" value="exclusiva" ${(!isEdit || existing.tipo_inscripcion === 'exclusiva') ? 'checked' : ''}>
+                    <div>
+                      <span style="font-weight:600;font-size:0.88rem">Exclusiva</span>
+                      <p style="margin:1px 0 0;font-size:0.76rem;color:var(--text-muted,#6b7a8d)">Solo socios registrados en el sistema</p>
+                    </div>
+                  </label>
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
+                    <input type="radio" name="tipo_inscripcion" value="abierta" ${isEdit && existing.tipo_inscripcion === 'abierta' ? 'checked' : ''}>
+                    <div>
+                      <span style="font-weight:600;font-size:0.88rem">Abierta</span>
+                      <p style="margin:1px 0 0;font-size:0.76rem;color:var(--text-muted,#6b7a8d)">Cualquier persona — requiere clave SUPERUSER</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+              ${pinField}
+            </form>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border,#D6E0EA);flex-shrink:0">
+            <button type="button" class="secondary-btn" id="cap-form-cancel">Cancelar</button>
+            <button type="button" class="primary-btn" id="cap-form-submit">
+              <span class="material-symbols-outlined">save</span>${isEdit ? 'Guardar cambios' : 'Crear evento'}
+            </button>
+          </div>
+        </div>
+      </div>`);
+
+    const modal   = document.getElementById('cap-form-modal');
+    const form    = document.getElementById('cap-event-form');
+    const pinField2 = form.querySelector('.js-cap-pin-field');
+
+    function closeModal() { modal.remove(); }
+
+    document.getElementById('cap-form-close').addEventListener('click', closeModal);
+    document.getElementById('cap-form-cancel').addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', esc); }
+    });
+
+    if (!isEdit) {
+      form.querySelectorAll('input[name="tipo_inscripcion"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+          pinField2.style.display = radio.value === 'abierta' && radio.checked ? '' : 'none';
+        });
+      });
+    }
+
+    document.getElementById('cap-form-submit').addEventListener('click', () => {
+      const f    = form;
+      const data = {
+        evento_id:        f.querySelector('[name="evento_id"]')?.value || '',
+        tipo:             f.querySelector('[name="tipo"]')?.value || '',
+        titulo:           f.querySelector('[name="titulo"]')?.value || '',
+        descripcion:      f.querySelector('[name="descripcion"]')?.value || '',
+        fecha_evento:     f.querySelector('[name="fecha_evento"]')?.value || '',
+        hora_inicio:      f.querySelector('[name="hora_inicio"]')?.value || '',
+        hora_fin:         f.querySelector('[name="hora_fin"]')?.value || '',
+        lugar:            f.querySelector('[name="lugar"]')?.value || '',
+        cupo_maximo:      parseInt(f.querySelector('[name="cupo_maximo"]')?.value || 0, 10),
+        tipo_inscripcion: f.querySelector('input[name="tipo_inscripcion"]:checked')?.value || 'exclusiva',
+        estado:           f.querySelector('[name="estado"]')?.value || 'activo',
+        pin:              f.querySelector('[name="pin"]')?.value || ''
+      };
+
+      if (!data.tipo)        { showError('Selecciona un tipo de evento.'); return; }
+      if (!data.titulo.trim()) { showError('El título es obligatorio.'); return; }
+      if (!data.fecha_evento)  { showError('La fecha del evento es obligatoria.'); return; }
+
+      const btn = document.getElementById('cap-form-submit');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span>Guardando...';
+
+      api('goPesUpsertFormEvento', data).then(() => {
+        closeModal();
+        showSuccess(isEdit ? 'Evento actualizado.' : 'Evento creado correctamente.');
+        if (APP.state._capReload) APP.state._capReload();
+      }).catch(err => {
+        showError(err);
+        btn.disabled = false;
+        btn.innerHTML = `<span class="material-symbols-outlined">save</span>${isEdit ? 'Guardar cambios' : 'Crear evento'}`;
+      });
+    });
+  }
+
+  /* =========================================================
+     CAPACITACIONES — modal inscritos
+     ========================================================= */
+
+  function openCapacitacionesInscritos_(eventoId) {
+    const existing = document.getElementById('cap-inscritos-modal');
+    if (existing) existing.remove();
+
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="organizaciones-modal" id="cap-inscritos-modal" role="dialog" aria-modal="true"
+        style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px">
+        <div style="background:var(--surface,#fff);border-radius:12px;width:100%;max-width:720px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+          <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border,#D6E0EA);flex-shrink:0">
+            <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#3D96B4)">group</span>
+            <span style="font-weight:700;font-size:1rem;color:var(--text,#24364B);flex:1" id="cap-ins-title">Cargando...</span>
+            <button type="button" id="cap-ins-close" style="background:none;border:none;cursor:pointer;color:var(--text-muted,#6b7a8d);display:flex;align-items:center;padding:4px;border-radius:6px">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div style="flex:1;overflow-y:auto;padding:20px" id="cap-ins-body">
+            <div class="empty-state" style="padding:32px 0">Cargando inscritos...</div>
+          </div>
+        </div>
+      </div>`);
+
+    const modal  = document.getElementById('cap-inscritos-modal');
+    const body   = document.getElementById('cap-ins-body');
+    const titleEl = document.getElementById('cap-ins-title');
+
+    function closeModal() { modal.remove(); }
+    document.getElementById('cap-ins-close').addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', esc); }
+    });
+
+    function loadInscritos() {
+      api('goPesGetFormInscripciones', { evento_id: eventoId }).then(data => {
+        const ev  = data.evento || {};
+        const ins = data.inscripciones || [];
+        const tv  = capTipoVisual_(ev.tipo);
+
+        titleEl.innerHTML = `Inscritos — <span style="font-weight:400">${escapeHtml(ev.titulo || '')}</span>`;
+
+        const isOpen = String(ev.estado || '') === 'activo';
+        const listHtml = ins.length ? ins.map(i => {
+          const tipoBadge = i.tipo_inscrito === 'socio'
+            ? `<span style="display:inline-flex;padding:2px 7px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,#8CC63F 14%,transparent);color:#3a6b10">Socio</span>`
+            : `<span style="display:inline-flex;padding:2px 7px;border-radius:20px;font-size:0.7rem;font-weight:700;background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)">Externo</span>`;
+          return `
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border,#D6E0EA);border-radius:8px;background:var(--surface,#fff)">
+              <div>
+                <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+                  <strong style="font-size:0.88rem;color:var(--text,#24364B)">${escapeHtml(i.nombre || '')}</strong>
+                  ${tipoBadge}
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:0.78rem;color:var(--text-muted,#6b7a8d)">
+                  <span>RUT: ${escapeHtml(i.rut || '—')}</span>
+                  ${i.organizacion_vinculada ? `<span>${escapeHtml(i.organizacion_vinculada)}</span>` : ''}
+                  ${i.telefono ? `<span>${escapeHtml(i.telefono)}</span>` : ''}
+                  ${i.correo ? `<span>${escapeHtml(i.correo)}</span>` : ''}
+                </div>
+              </div>
+              ${isOpen ? `<button type="button" class="secondary-btn js-cap-cancel-ins" data-id="${escapeHtml(i.inscripcion_id)}" style="font-size:0.75rem;padding:4px 8px;color:#b3261e;border-color:#f4b4b0">
+                <span class="material-symbols-outlined" style="font-size:0.9rem">person_remove</span>
+              </button>` : ''}
+            </div>`;
+        }).join('') : `<div class="empty-state" style="padding:32px 0"><p>Sin inscritos aún.</p></div>`;
+
+        const cupoMax  = parseInt(ev.cupo_maximo || 0, 10);
+        const insCount = ins.length;
+        const cupoTxt  = cupoMax > 0 ? `${insCount}/${cupoMax}` : `${insCount}`;
+        const cupoFull = cupoMax > 0 && insCount >= cupoMax;
+
+        body.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.75rem;font-weight:700;background:color-mix(in srgb,${tv.color} 12%,transparent);color:${tv.color}">
+                <span class="material-symbols-outlined" style="font-size:0.85rem">${tv.icon}</span>${tv.label}
+              </span>
+              ${capInscripcionBadge_(ev.tipo_inscripcion)}
+              ${capEstadoBadge_(ev.estado)}
+              <span style="font-size:0.8rem;color:var(--text-muted,#6b7a8d)">${cupoTxt} inscrito${insCount !== 1 ? 's' : ''}</span>
+            </div>
+            ${isOpen && !cupoFull ? `<button type="button" class="primary-btn" id="cap-ins-add-btn" style="font-size:0.82rem;padding:6px 12px">
+              <span class="material-symbols-outlined" style="font-size:1rem">person_add</span>Inscribir persona
+            </button>` : ''}
+          </div>
+          <div id="cap-ins-form-container"></div>
+          <div style="display:flex;flex-direction:column;gap:8px" id="cap-ins-list">${listHtml}</div>`;
+
+        body.querySelectorAll('.js-cap-cancel-ins').forEach(btn => {
+          btn.addEventListener('click', () => {
+            if (!confirm('¿Cancelar la inscripción de esta persona?')) return;
+            api('goPesCancelFormInscripcion', { inscripcion_id: btn.dataset.id })
+              .then(() => { showSuccess('Inscripción cancelada.'); loadInscritos(); if (APP.state._capReload) APP.state._capReload(); })
+              .catch(showError);
+          });
+        });
+
+        const addBtn = document.getElementById('cap-ins-add-btn');
+        if (addBtn) {
+          addBtn.addEventListener('click', () => {
+            addBtn.style.display = 'none';
+            renderCapacitacionesInscripcionForm_(ev, document.getElementById('cap-ins-form-container'), loadInscritos);
+          });
+        }
+      }).catch(showError);
+    }
+
+    loadInscritos();
+  }
+
+  /* =========================================================
+     CAPACITACIONES — formulario de inscripción inline
+     ========================================================= */
+
+  function renderCapacitacionesInscripcionForm_(evento, container, onSuccess) {
+    const isExclusiva = String(evento.tipo_inscripcion || '') === 'exclusiva';
+
+    container.innerHTML = `
+      <div style="background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:10px;padding:16px;margin-bottom:14px">
+        <p style="margin:0 0 12px;font-weight:700;font-size:0.88rem;color:var(--text,#24364B)">Nueva inscripción
+          ${isExclusiva ? '<span style="font-size:0.75rem;font-weight:400;color:var(--text-muted);margin-left:6px">— Solo socios registrados</span>' : ''}
+        </p>
+        <div class="organizaciones-form-grid" id="cap-ins-form-fields" style="display:grid;gap:10px 12px">
+          <div class="field field--half">
+            <label>RUT <span style="color:#b3261e">*</span></label>
+            <input type="text" id="cap-ins-rut" placeholder="12.345.678-9" ${isExclusiva ? 'data-mode="exclusiva"' : ''}>
+            ${isExclusiva ? '<p style="margin:3px 0 0;font-size:0.75rem;color:var(--text-muted,#6b7a8d)">Al ingresar el RUT se busca el socio automáticamente.</p>' : ''}
+          </div>
+          <div class="field field--half">
+            <label>Nombre <span style="color:#b3261e">*</span></label>
+            <input type="text" id="cap-ins-nombre" placeholder="Nombre completo" ${isExclusiva ? 'readonly' : ''}>
+          </div>
+          <div class="field field--half">
+            <label>Teléfono</label>
+            <input type="text" id="cap-ins-telefono" placeholder="+56 9..." ${isExclusiva ? 'readonly' : ''}>
+          </div>
+          <div class="field field--half">
+            <label>Correo</label>
+            <input type="email" id="cap-ins-correo" placeholder="correo@ejemplo.cl" ${isExclusiva ? 'readonly' : ''}>
+          </div>
+          <div class="field field--full">
+            <label>Organización vinculada</label>
+            <select id="cap-ins-org">
+              <option value="">Cargando organizaciones...</option>
+            </select>
+          </div>
+          <div id="cap-ins-socio-msg" style="grid-column:1/-1;display:none"></div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button type="button" class="secondary-btn" id="cap-ins-form-cancel" style="font-size:0.82rem">Cancelar</button>
+          <button type="button" class="primary-btn" id="cap-ins-form-submit" style="font-size:0.82rem">
+            <span class="material-symbols-outlined" style="font-size:1rem">person_add</span>Inscribir
+          </button>
+        </div>
+      </div>`;
+
+    // Cargar organizaciones en el select
+    api('goPesGetOrganizacionesConHito5', {}).then(result => {
+      const orgSel = document.getElementById('cap-ins-org');
+      if (!orgSel) return;
+      const orgs = (result && result.orgs) || [];
+      orgSel.innerHTML = '<option value="">— Sin especificar —</option>' +
+        orgs.map(o => `<option value="${escapeHtml(o.nombre)}">${escapeHtml(o.nombre)}</option>`).join('');
+    }).catch(() => {
+      const orgSel = document.getElementById('cap-ins-org');
+      if (orgSel) orgSel.innerHTML = '<option value="">— Sin especificar —</option>';
+    });
+
+    document.getElementById('cap-ins-form-cancel').addEventListener('click', () => {
+      container.innerHTML = '';
+      document.getElementById('cap-ins-add-btn') && (document.getElementById('cap-ins-add-btn').style.display = '');
+    });
+
+    if (isExclusiva) {
+      let rutTimer = null;
+      document.getElementById('cap-ins-rut').addEventListener('input', function() {
+        clearTimeout(rutTimer);
+        const rut = this.value.trim();
+        const msgEl = document.getElementById('cap-ins-socio-msg');
+        if (rut.length < 5) { msgEl.style.display = 'none'; return; }
+        rutTimer = setTimeout(() => {
+          msgEl.style.display = 'flex';
+          msgEl.style.alignItems = 'center';
+          msgEl.style.gap = '6px';
+          msgEl.style.fontSize = '0.78rem';
+          msgEl.innerHTML = '<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--text-muted)">search</span> Buscando...';
+          api('goPesGetFormSocioByRut', { rut }).then(data => {
+            if (data && data.socio) {
+              const s = data.socio;
+              document.getElementById('cap-ins-nombre').value   = s.nombre_socio || '';
+              document.getElementById('cap-ins-telefono').value = '';
+              document.getElementById('cap-ins-correo').value   = '';
+              const orgSelEl = document.getElementById('cap-ins-org');
+              const orgName  = s.nombre_comite_origen || '';
+              if (orgSelEl) {
+                if (orgName && !Array.from(orgSelEl.options).some(o => o.value === orgName)) {
+                  const opt = document.createElement('option');
+                  opt.value = orgName; opt.textContent = orgName;
+                  orgSelEl.add(opt);
+                }
+                orgSelEl.value = orgName;
+              }
+              msgEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9rem;color:#1b6b2f">check_circle</span> <span style="color:#1b6b2f">Socio encontrado</span>`;
+            } else {
+              document.getElementById('cap-ins-nombre').value = '';
+              const orgSelEl2 = document.getElementById('cap-ins-org');
+              if (orgSelEl2) orgSelEl2.value = '';
+              msgEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9rem;color:#b3261e">error</span> <span style="color:#b3261e">RUT no encontrado en socios registrados</span>`;
+            }
+          }).catch(() => {
+            msgEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9rem;color:#b3261e">error</span> <span style="color:#b3261e">Error al buscar el socio</span>`;
+          });
+        }, 600);
+      });
+    }
+
+    document.getElementById('cap-ins-form-submit').addEventListener('click', () => {
+      const payload = {
+        evento_id:             evento.evento_id,
+        rut:                   document.getElementById('cap-ins-rut')?.value.trim() || '',
+        nombre:                document.getElementById('cap-ins-nombre')?.value.trim() || '',
+        telefono:              document.getElementById('cap-ins-telefono')?.value.trim() || '',
+        correo:                document.getElementById('cap-ins-correo')?.value.trim() || '',
+        organizacion_vinculada: document.getElementById('cap-ins-org')?.value.trim() || ''
+      };
+      if (!payload.rut)    { showError('El RUT es obligatorio.'); return; }
+      if (!payload.nombre) { showError('El nombre es obligatorio.'); return; }
+
+      const btn = document.getElementById('cap-ins-form-submit');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span>Inscribiendo...';
+
+      api('goPesUpsertFormInscripcion', payload).then(() => {
+        showSuccess('Persona inscrita correctamente.');
+        container.innerHTML = '';
+        onSuccess();
+        if (APP.state._capReload) APP.state._capReload();
+      }).catch(err => {
+        showError(err);
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:1rem">person_add</span>Inscribir';
+      });
+    });
   }
 

@@ -155,7 +155,7 @@
   }
 
   function renderSociosTableEmptyRow_(message) {
-    return `<tr><td colspan="3" class="socios-table__empty">${escapeHtml(message || 'No hay socios cargados.')}</td></tr>`;
+    return goPesTableEmptyRowHtml_('badge', message || 'Esta organización no tiene socios registrados.', 3);
   }
 
   function renderSociosTableRows_(rows, options = {}) {

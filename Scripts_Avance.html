@@ -564,8 +564,8 @@
     if (!el) return;
 
     if (!rows || !rows.length) {
-      el.className = 'avance-timeline empty-state';
-      el.innerHTML = 'No hay hitos registrados.';
+      el.className = 'avance-timeline';
+      el.innerHTML = goPesEmptyStateHtml_('timeline', 'Sin hitos registrados', 'Esta organización aún no tiene hitos en el sistema. Registra el primero desde el panel de avance.');
       return;
     }
 

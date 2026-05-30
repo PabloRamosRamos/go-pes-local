@@ -55,25 +55,41 @@
     window.GO_PES_INICIO.render({
       root,
       escapeHtml,
-      homeEmbedUrl: getHomeDashboardUrl_(),
-      panelData: APP.state.inicioPanelData || {}
+      panelData: APP.state.inicioPanelData || {},
+      dashData:  APP.state.dashboardData   || {},
+      onDashRefresh: function(filters, cb) {
+        api('getDashboardKpis', filters || {}).then(function(data) {
+          APP.state.dashboardData          = data || {};
+          APP.state.dashboardDataFetchedAt = Date.now();
+          if (typeof cb === 'function') cb(data);
+        }).catch(function(err) {
+          if (typeof cb === 'function') cb(null, err);
+        });
+      }
     });
   }
 
   function ensureInicioPanelData_(force) {
     const now = Date.now();
-    if (
-      !force &&
-      APP.state.inicioPanelData &&
-      APP.state.inicioPanelFetchedAt &&
-      (now - APP.state.inicioPanelFetchedAt) < 30000
-    ) {
-      return null;
-    }
+    const TTL = 30000;
+    const panelFresh = !force && APP.state.inicioPanelData  && APP.state.inicioPanelFetchedAt  && (now - APP.state.inicioPanelFetchedAt)  < TTL;
+    const dashFresh  = !force && APP.state.dashboardData    && APP.state.dashboardDataFetchedAt && (now - APP.state.dashboardDataFetchedAt) < TTL;
 
-    return api('getInicioPanelData').then(data => {
-      APP.state.inicioPanelData = data || {};
-      APP.state.inicioPanelFetchedAt = Date.now();
-    });
+    if (panelFresh && dashFresh) return null;
+
+    const tasks = [];
+    if (!panelFresh) {
+      tasks.push(api('getInicioPanelData').then(data => {
+        APP.state.inicioPanelData      = data || {};
+        APP.state.inicioPanelFetchedAt = Date.now();
+      }));
+    }
+    if (!dashFresh) {
+      tasks.push(api('getDashboardKpis', {}).then(data => {
+        APP.state.dashboardData          = data || {};
+        APP.state.dashboardDataFetchedAt = Date.now();
+      }));
+    }
+    return Promise.all(tasks);
   }
 

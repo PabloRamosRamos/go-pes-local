@@ -150,6 +150,7 @@ function listUsers() {
 }
 
 function updateUser(payload) {
+  try {
   const actor = requireRole_(['superuser']);
 
   if (!payload || !payload.email) {
@@ -200,6 +201,13 @@ function updateUser(payload) {
   logUserAction_('UPDATE_USER', 'usuario', payload.email, 'OK', { actor: actor.email, payload: row });
 
   return { ok: true, user: serializeUserForClient_(decorateUser_(row)) };
+  } catch (err) {
+    const msg = String(err && err.message || err || '');
+    if (!/no tienes permisos|authorization is required|not authorized|falta email|solo se permiten|superuser configurado/i.test(msg)) {
+      try { goPesLogCriticalError_('updateUser', err, getCurrentUserEmail_()); } catch (_) {}
+    }
+    throw err;
+  }
 }
 
 function readDimUsuariosUsers_() {
@@ -375,6 +383,7 @@ function upsertDimUsuarioByEmail_(row) {
 }
 
 function deactivateUser(payload) {
+  try {
   const actor = requireRole_(['superuser']);
   payload = payload || {};
 
@@ -425,6 +434,13 @@ function deactivateUser(payload) {
   logUserAction_('DEACTIVATE_USER', 'usuario', existing.email, 'OK', { actor: actor.email });
 
   return { ok: true, user: serializeUserForClient_(decorateUser_(persisted)) };
+  } catch (err) {
+    const msg = String(err && err.message || err || '');
+    if (!/no tienes permisos|authorization is required|not authorized|falta email|debes ingresar|no se puede desactivar|no se pudo confirmar/i.test(msg)) {
+      try { goPesLogCriticalError_('deactivateUser', err, getCurrentUserEmail_()); } catch (_) {}
+    }
+    throw err;
+  }
 }
 
 function seedSuperUsers_() {
@@ -743,5 +759,32 @@ function getSystemInfo() {
   const sheets = criticalSheets.map(function(name) {
     return { name: name, ok: !!ss.getSheetByName(name) };
   });
-  return serializeForClient_({ sheets: sheets });
+
+  var devStats = null;
+  const user = getUsuarioActual();
+  if (user && user.superuser_flag) {
+    const s = GO_PES_V2.DEV_STATS || {};
+    const hours      = Number(s.devHours      || 0);
+    const rate       = Number(s.hourlyRateCLP || 32000);
+    const uf         = Number(s.ufValueCLP    || 39500);
+    const usd        = Number(s.usdRateCLP    || 940);
+    const clp        = Math.round(hours * rate);
+    devStats = {
+      linesOfCode:    Number(s.linesOfCode   || 0),
+      devHours:       hours,
+      sourceFiles:    Number(s.sourceFiles   || 0),
+      apiEndpoints:   Number(s.apiEndpoints  || 0),
+      testCases:      Number(s.testCases     || 0),
+      uiModules:      Object.keys(GO_PES_V2.VIEWS  || {}).length,
+      roles:          (GO_PES_V2.ROLES || []).length,
+      definedSheets:  Object.keys(GO_PES_V2.SHEETS || {}).length,
+      activeSheets:   ss.getSheets().length,
+      marketValueCLP: clp,
+      marketValueUF:  Math.round(clp / uf),
+      marketValueUSD: Math.round(clp / usd),
+      hourlyRateCLP:  rate
+    };
+  }
+
+  return serializeForClient_({ sheets: sheets, devStats: devStats });
 }

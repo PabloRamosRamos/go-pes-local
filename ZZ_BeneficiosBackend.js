@@ -1370,7 +1370,7 @@ function goPesEnsureFondeseSheets_() {
   ensureSheetWithHeaders_(S.FACT_FONDESE, [
     'fondese_id', 'id_edicion', 'organizacion_id', 'nombre_organizacion',
     'convocatoria_id', 'linea_producto_id', 'estado_proceso', 'resultado_adj',
-    'estado_ejecucion', 'estado_rendicion', 'checklist_docs',
+    'estado_ejecucion', 'estado_rendicion', 'fecha_rendicion', 'observaciones_rendicion', 'checklist_docs',
     'fecha_creacion', 'fecha_actualizacion', 'creado_por'
   ]);
 }

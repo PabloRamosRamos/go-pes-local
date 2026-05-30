@@ -91,6 +91,8 @@
       activeView: normalizeModuleKey_(BOOTSTRAP.initialView || 'inicio') || 'inicio',
       inicioPanelData: null,
       inicioPanelFetchedAt: 0,
+      dashboardData: null,
+      dashboardDataFetchedAt: 0,
       currentFicha: null,
       buscarModuleRows: [],
       buscarModuleFetchedAt: 0,
@@ -118,6 +120,8 @@
       configSectionOrder: [],
       activeConfigSection: '',
       configLoadedAt: 0,
+      buscarPage: 0,
+      histPage: 0,
       renderedViews: {},
       catalogStatus: {
         app: false,
@@ -228,6 +232,7 @@
   function init() {
     hydrateTheme_();
     hydrateAppZoom_();
+    initTabDetection_();
     if (!APP.state.user || !APP.state.user.canAccess) {
       showAccessDenied_();
       hideAppLoading();
@@ -250,7 +255,25 @@
 
     showAppLoading(getLoadingText_());
 
-    Promise.resolve().then(() => {
+    // Pre-fetch both dashboard KPIs and inicio panel data in parallel while splash shows.
+    // Route only happens after both resolve so the inicio view renders immediately with full data.
+    var dashPrefetch = api('getDashboardKpis', {}).then(function(data) {
+      APP.state.dashboardData = data || {};
+      APP.state.dashboardDataFetchedAt = Date.now();
+    }).catch(function() {
+      APP.state.dashboardData = {};
+      APP.state.dashboardDataFetchedAt = Date.now();
+    });
+
+    var panelPrefetch = api('getInicioPanelData').then(function(data) {
+      APP.state.inicioPanelData = data || {};
+      APP.state.inicioPanelFetchedAt = Date.now();
+    }).catch(function() {
+      APP.state.inicioPanelData = {};
+      APP.state.inicioPanelFetchedAt = Date.now();
+    });
+
+    var bootstrapWork = Promise.resolve().then(() => {
       APP.state.user = BOOTSTRAP.user || APP.state.user;
       APP.state.permissions = BOOTSTRAP.permissions || APP.state.permissions;
       mergeCatalogs_(BOOTSTRAP.catalogs || {});
@@ -258,22 +281,59 @@
       applySystemConfigUi_();
       applyModuleDefinitionsUi_();
       applyPermissions();
-      route(APP.state.activeView, BOOTSTRAP.query || {});
-
-      if ((BOOTSTRAP.query || {}).solicitud_id || (BOOTSTRAP.query || {}).organizacion_id) {
-        loadFicha(BOOTSTRAP.query);
-      }
-
       setStatus('Listo.', null);
     }).catch(err => {
       console.error('Init fatal error:', err);
       setStatus('Ocurrió un error al iniciar la aplicación.', false);
+    });
+
+    Promise.all([bootstrapWork, dashPrefetch, panelPrefetch]).then(() => {
+      route(APP.state.activeView, BOOTSTRAP.query || {});
+      if ((BOOTSTRAP.query || {}).solicitud_id || (BOOTSTRAP.query || {}).organizacion_id) {
+        loadFicha(BOOTSTRAP.query);
+      }
     }).finally(() => {
       setTimeout(() => {
         hideAppLoading();
         hideContentLoading();
       }, 120);
     });
+  }
+
+  var _tabId = Math.random().toString(36).slice(2);
+  var _TAB_KEY = 'go-pes-v2-active-tab';
+
+  function initTabDetection_() {
+    try {
+      var existing = JSON.parse(localStorage.getItem(_TAB_KEY) || 'null');
+      var now = Date.now();
+      if (existing && existing.tabId !== _tabId && (now - (existing.ts || 0)) < 25000) {
+        var banner = document.getElementById('multi-tab-banner');
+        if (banner) banner.classList.remove('is-hidden');
+      }
+      var claimTab_ = function() {
+        try { localStorage.setItem(_TAB_KEY, JSON.stringify({ tabId: _tabId, ts: Date.now() })); } catch (_) {}
+      };
+      claimTab_();
+      var heartbeat = setInterval(claimTab_, 10000);
+      window.addEventListener('beforeunload', function() {
+        clearInterval(heartbeat);
+        try {
+          var cur = JSON.parse(localStorage.getItem(_TAB_KEY) || 'null');
+          if (cur && cur.tabId === _tabId) localStorage.removeItem(_TAB_KEY);
+        } catch (_) {}
+      });
+      window.addEventListener('storage', function(ev) {
+        if (ev.key !== _TAB_KEY || !ev.newValue) return;
+        try {
+          var data = JSON.parse(ev.newValue);
+          if (data && data.tabId !== _tabId) {
+            var banner = document.getElementById('multi-tab-banner');
+            if (banner) banner.classList.remove('is-hidden');
+          }
+        } catch (_) {}
+      });
+    } catch (_) {}
   }
 
   function showAccessDenied_() {
@@ -485,6 +545,40 @@
 
   // ── Información del sistema ───────────────────────────────────────────────
 
+  function buildDevStatsBlock_(d) {
+    if (!d) return '';
+    const fmtN   = n => Number(n || 0).toLocaleString('es-CL');
+    const fmtCLP = n => 'CLP $ ' + Number(n || 0).toLocaleString('es-CL');
+    const stat   = (val, lbl) =>
+      `<div class="sysinfo-dev-stat"><span class="sysinfo-dev-val">${val}</span><span class="sysinfo-dev-lbl">${lbl}</span></div>`;
+    return `
+    <div class="sysinfo-dev-panel">
+      <p class="sysinfo-dev-eyebrow">
+        <span class="material-symbols-outlined" style="font-size:.82rem;vertical-align:-1px">terminal</span>
+        Estadísticas de programación
+      </p>
+      <div class="sysinfo-dev-grid">
+        ${stat('~' + fmtN(d.linesOfCode),   'líneas de código')}
+        ${stat('~' + fmtN(d.devHours) + ' h', 'de desarrollo')}
+        ${stat(fmtN(d.sourceFiles),          'archivos fuente')}
+        ${stat(fmtN(d.definedSheets),        'tablas de datos')}
+        ${stat('~' + fmtN(d.apiEndpoints),   'endpoints API')}
+        ${stat(fmtN(d.testCases),            'tests automatizados')}
+        ${stat(fmtN(d.uiModules),            'módulos UI')}
+        ${stat(fmtN(d.roles),                'roles y permisos')}
+      </div>
+      <div class="sysinfo-dev-value-box">
+        <span class="sysinfo-dev-value-label">Valor estimado de mercado</span>
+        <div class="sysinfo-dev-value-main">${fmtCLP(d.marketValueCLP)} <span class="sysinfo-dev-value-uf">· ≈ ${fmtN(d.marketValueUF)} UF</span></div>
+        <div class="sysinfo-dev-value-ref">Referencia: freelancer senior Chile, ${fmtCLP(d.hourlyRateCLP)}/hr · Internacional: ~USD ${fmtN(d.marketValueUSD)}</div>
+      </div>
+      <div class="sysinfo-dev-note">
+        <span class="material-symbols-outlined" style="font-size:.78rem;vertical-align:-1px;flex-shrink:0">person</span>
+        Desarrollado íntegramente por 1 persona · Solo visible para superuser
+      </div>
+    </div>`;
+  }
+
   function openSystemInfoModal_() {
     const modal = document.getElementById('system-info-modal');
     if (!modal) return;
@@ -508,7 +602,8 @@
       ).join('');
       content.innerHTML =
         staticHtml +
-        (sheetsHtml ? `<p class="eyebrow" style="margin-top:16px;margin-bottom:8px">Hojas críticas</p>${sheetsHtml}` : '');
+        (sheetsHtml ? `<p class="eyebrow" style="margin-top:16px;margin-bottom:8px">Hojas críticas</p>${sheetsHtml}` : '') +
+        buildDevStatsBlock_(info.devStats || null);
     }).catch(err => {
       content.innerHTML = staticHtml + `<p class="muted" style="margin-top:8px;font-size:0.8rem;color:#c0392b">Error al consultar el servidor.</p>`;
       console.error('getSystemInfo error:', err);
@@ -651,7 +746,13 @@
     return new Promise((resolve, reject) => {
       google.script.run
         .withSuccessHandler(resolve)
-        .withFailureHandler(err => reject(err && err.message ? err.message : err))
+        .withFailureHandler(err => {
+          const msg = String(err && err.message ? err.message : (err || ''));
+          if (/authorization is required|not authorized|you do not have permission|script does not have permission/i.test(msg)) {
+            showSessionExpired_();
+          }
+          reject(msg || 'Ocurrió un error.');
+        })
         [fn](payload);
     });
   }
@@ -834,16 +935,22 @@
 
     if (searchBtn) searchBtn.addEventListener('click', runSearch);
 
+    const buscarExportBtn = document.getElementById('buscar-export-btn');
+    if (buscarExportBtn) buscarExportBtn.addEventListener('click', exportBuscarCSV_);
+
+    const fichaPrintBtn = document.getElementById('ficha-print-btn');
+    if (fichaPrintBtn) fichaPrintBtn.addEventListener('click', printFicha_);
+
     const searchQuery = document.getElementById('search-query');
     if (searchQuery && !searchQuery.dataset.buscarBound) {
       searchQuery.dataset.buscarBound = '1';
       let buscarDebounce = null;
       searchQuery.addEventListener('input', function() {
         clearTimeout(buscarDebounce);
-        buscarDebounce = setTimeout(updateBuscarTableView_, 120);
+        buscarDebounce = setTimeout(() => updateBuscarTableView_(true), 120);
       });
       searchQuery.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') { clearTimeout(buscarDebounce); updateBuscarTableView_(); }
+        if (e.key === 'Enter') { clearTimeout(buscarDebounce); updateBuscarTableView_(true); }
       });
     }
     if (saveUserBtn) saveUserBtn.addEventListener('click', saveUserFromForm);
@@ -1204,28 +1311,6 @@
     input.addEventListener('paste', () => setTimeout(normalizeLocal, 0));
   }
 
-  function buildProvidenciaEmailFromInput_() {
-    const input = document.getElementById('user-email-local');
-    const raw = String(input?.value || '').trim().toLowerCase().replace(/\s+/g, '');
-    if (!raw) throw new Error('Debes ingresar el email del usuario.');
-
-    let localPart = raw;
-    if (raw.includes('@')) {
-      const parts = raw.split('@').filter(Boolean);
-      if (parts.length !== 2 || parts[1] !== 'providencia.cl') {
-        throw new Error('Solo se permiten usuarios con correo @providencia.cl.');
-      }
-      localPart = parts[0];
-    }
-
-    if (!/^[a-z0-9._-]+$/.test(localPart)) {
-      throw new Error('El correo solo puede contener letras, números, puntos, guiones y guion bajo.');
-    }
-
-    if (input) input.value = localPart;
-    return `${localPart}@providencia.cl`;
-  }
-
   function renderUserModuleOptions_(selectedModules, targetId) {
     const root = document.getElementById(targetId || 'user-modules-input');
     if (!root) return;
@@ -1426,7 +1511,9 @@
     });
   }
 
-  function updateBuscarTableView_() {
+  const BUSCAR_PAGE_SIZE = 25;
+
+  function updateBuscarTableView_(resetPage) {
     const tbody   = document.getElementById('search-results');
     const countEl = document.getElementById('buscar-count');
     if (!tbody) return;
@@ -1434,6 +1521,8 @@
     const allRows = APP.state.buscarModuleRows || [];
     const query   = String((document.getElementById('search-query') || {}).value || '');
     const rows    = filterBuscarRows_(allRows, query);
+
+    if (resetPage) APP.state.buscarPage = 0;
 
     if (countEl) {
       countEl.textContent = query.trim()
@@ -1448,7 +1537,12 @@
       return;
     }
 
-    tbody.innerHTML = rows.map(r => `
+    const totalPages = Math.ceil(rows.length / BUSCAR_PAGE_SIZE);
+    if (APP.state.buscarPage >= totalPages) APP.state.buscarPage = Math.max(0, totalPages - 1);
+    const page = APP.state.buscarPage;
+    const pageRows = rows.slice(page * BUSCAR_PAGE_SIZE, (page + 1) * BUSCAR_PAGE_SIZE);
+
+    tbody.innerHTML = pageRows.map(r => `
       <tr>
         <td>${escapeHtml(r.solicitud_id || '')}</td>
         <td>${escapeHtml(r.nombre_completo || '')}</td>
@@ -1471,10 +1565,24 @@
         organizacion_id: btn.dataset.organizacion
       }))
     );
+
+    const pager = document.getElementById('buscar-pager');
+    if (pager) {
+      pager.innerHTML = goPesPaginatorHtml_(page, totalPages, 'buscar');
+      pager.querySelectorAll('[data-buscar-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          APP.state.buscarPage = Number(btn.dataset.buscarPage);
+          updateBuscarTableView_();
+        });
+      });
+    }
+
+    const exportBtn = document.getElementById('buscar-export-btn');
+    if (exportBtn) exportBtn.classList.toggle('is-hidden', !rows.length);
   }
 
   function runSearch() {
-    updateBuscarTableView_();
+    updateBuscarTableView_(true);
   }
 
   function loadFicha(params) {
@@ -1496,6 +1604,8 @@
       APP.state.currentFicha = data;
       renderFicha(data);
       setStatus('Ficha cargada correctamente.', true);
+      const fpBtn = document.getElementById('ficha-print-btn');
+      if (fpBtn) fpBtn.classList.remove('is-hidden');
     }).catch(err => {
       if (container) {
         container.innerHTML = '<div class="empty-state">No fue posible cargar la ficha.</div>';
@@ -1630,7 +1740,7 @@
       const el = document.getElementById(id);
       if (el && !el.dataset.bound) {
         el.dataset.bound = 'true';
-        el.addEventListener(id === 'hist-buscar' ? 'input' : 'change', applyHistorialClientFilters_);
+        el.addEventListener(id === 'hist-buscar' ? 'input' : 'change', () => applyHistorialClientFilters_(true));
       }
     });
     const printBtn = document.getElementById('hist-print-btn');
@@ -1665,7 +1775,7 @@
     api('listarHistorial', { periodo: periodo, source_key: source_key }).then(function(rows) {
       if (requestSeq !== APP.state.historialRequestSeq) return;
       APP.state.historialAllRows = Array.isArray(rows) ? rows : [];
-      applyHistorialClientFilters_();
+      applyHistorialClientFilters_(true);
     }).catch(function(err) {
       if (requestSeq === APP.state.historialRequestSeq && tbody) {
         tbody.innerHTML = '<tr><td colspan="8" class="muted">No fue posible cargar el historial.</td></tr>';
@@ -1681,7 +1791,10 @@
     });
   }
 
-  function applyHistorialClientFilters_() {
+  const HIST_PAGE_SIZE = 30;
+
+  function applyHistorialClientFilters_(resetPage) {
+    if (resetPage) APP.state.histPage = 0;
     const allRows = APP.state.historialAllRows || [];
     const selectedUser = (document.getElementById('hist-usuario') || {}).value || '';
     const resultado = (document.getElementById('hist-resultado') || {}).value || '';
@@ -1744,7 +1857,12 @@
       return;
     }
 
-    tbody.innerHTML = filtered.map(function(r) {
+    const totalHistPages = Math.ceil(filtered.length / HIST_PAGE_SIZE);
+    if (APP.state.histPage >= totalHistPages) APP.state.histPage = Math.max(0, totalHistPages - 1);
+    const histPage = APP.state.histPage;
+    const pageRows = filtered.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE);
+
+    tbody.innerHTML = pageRows.map(function(r) {
       const srcCls = histSourceBadgeClass_(r.source_key);
       const resCls = histResultBadgeClass_(r.result);
       return '<tr>'
@@ -1758,6 +1876,17 @@
         + '<td class="hist-detail">' + escapeHtml(r.detail_text || '') + '</td>'
         + '</tr>';
     }).join('');
+
+    const histPager = document.getElementById('hist-pager');
+    if (histPager) {
+      histPager.innerHTML = goPesPaginatorHtml_(histPage, totalHistPages, 'hist');
+      histPager.querySelectorAll('[data-hist-page]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          APP.state.histPage = Number(btn.dataset.histPage);
+          applyHistorialClientFilters_();
+        });
+      });
+    }
   }
 
   function populateHistorialUsuarioSelect_() {
@@ -1827,6 +1956,61 @@
     return '';
   }
 
+  function exportBuscarCSV_() {
+    const allRows = APP.state.buscarModuleRows || [];
+    const query   = String((document.getElementById('search-query') || {}).value || '');
+    const rows    = filterBuscarRows_(allRows, query);
+    if (!rows.length) { showError('No hay registros para exportar.'); return; }
+
+    const headers = ['Solicitud','Vecino','Dirección','Estado','Organización'];
+    const keys    = ['solicitud_id','nombre_completo','direccion_original','estado_actual','nombre_organizacion'];
+    const escape  = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const csv     = [headers.map(escape), ...rows.map(r => keys.map(k => escape(r[k] || '')))].map(r => r.join(',')).join('\r\n');
+    const blob    = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    a.href        = url;
+    a.download    = 'GO-PES_busqueda_' + todayISO_() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+    showSuccess('CSV exportado (' + rows.length + ' registros).');
+  }
+
+  function printFicha_() {
+    const data = APP.state.currentFicha;
+    if (!data || !data.summary) { showError('No hay ficha cargada.'); return; }
+    const s = data.summary || {};
+    const now = new Date().toLocaleString('es-CL');
+    const container = document.getElementById('ficha-container');
+    const bodyHtml  = container ? container.innerHTML : '<p>Sin datos</p>';
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
+      + '<title>Ficha ' + escapeHtml(s.solicitud_id || '') + '</title>'
+      + '<style>body{font-family:Inter,sans-serif;font-size:13px;color:#222;padding:24px}'
+      + '.ficha-layout-v2{display:grid;gap:20px}'
+      + '.ficha-universe{border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px}'
+      + '.ficha-universe__head{margin-bottom:10px}.ficha-universe__head h3{margin:0;font-size:15px}'
+      + '.ficha-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}'
+      + '.ficha-block{border:1px solid #eee;border-radius:6px;padding:12px}'
+      + '.ficha-block h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#666;display:flex;align-items:center;gap:4px}'
+      + '.kv{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #f0f0f0;font-size:12px}'
+      + '.kv strong{color:#666;white-space:nowrap}.kv span{text-align:right}'
+      + '.material-symbols-outlined{display:none}'
+      + '.footer{margin-top:20px;padding-top:8px;border-top:1px solid #ddd;font-size:11px;color:#888}'
+      + '@media print{body{padding:8px}}</style>'
+      + '</head><body>'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">'
+      + '<div><strong style="font-size:16px">Ficha: ' + escapeHtml(s.solicitud_id || '') + '</strong>'
+      + ' &nbsp;<span style="font-size:13px;color:#555">' + escapeHtml(s.nombre_completo || '') + '</span></div>'
+      + '<div style="font-size:11px;color:#888">GO-PES v2 · Municipalidad de Providencia</div></div>'
+      + bodyHtml
+      + '<div class="footer">Generado el ' + now + '</div>'
+      + '<script>window.onload=function(){window.print();}<\/script>'
+      + '</body></html>';
+    const win = window.open('', '_blank', 'width=900,height=650');
+    if (win) { win.document.write(html); win.document.close(); }
+  }
+
   function printHistorialReport_() {
     const rows = APP.state.historialAllRows || [];
     const total = rows.length;
@@ -1874,8 +2058,37 @@
     if (win) { win.document.write(html); win.document.close(); }
   }
 
+  var _sessionExpiredShown = false;
+
+  function showSessionExpired_() {
+    if (_sessionExpiredShown) return;
+    _sessionExpiredShown = true;
+    const overlay = document.getElementById('session-expired-overlay');
+    if (overlay) overlay.classList.remove('is-hidden');
+  }
+
+  function showToast_(message, type, durationMs) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const icons = { error: 'error', success: 'check_circle', session: 'lock_person' };
+    const toast = document.createElement('div');
+    toast.className = 'go-toast go-toast--' + (type || 'error');
+    toast.innerHTML =
+      '<span class="material-symbols-outlined go-toast__icon">' + (icons[type] || 'info') + '</span>' +
+      '<span class="go-toast__body">' + escapeHtml(message) + '</span>' +
+      '<button type="button" class="go-toast__close" aria-label="Cerrar"><span class="material-symbols-outlined" style="font-size:1rem">close</span></button>';
+    const close = () => {
+      toast.classList.add('go-toast--out');
+      setTimeout(() => toast.parentNode && toast.remove(), 200);
+    };
+    toast.querySelector('.go-toast__close').addEventListener('click', close);
+    if (durationMs) setTimeout(close, durationMs);
+    container.appendChild(toast);
+  }
+
   function showSuccess(message) {
     setStatus(message, true);
+    showToast_(message, 'success', 4000);
   }
 
   function showError(error) {
@@ -1883,6 +2096,7 @@
       ? error
       : (error && error.message ? error.message : 'Ocurrió un error.');
     setStatus(message, false);
+    showToast_(message, 'error', 7000);
   }
 
   function setStatus(message, ok) {
@@ -1929,6 +2143,68 @@
       .replace(/'/g, '&#039;');
   }
 
+  // Genera un empty-state completo (ícono + título + mensaje opcional)
+  function goPesEmptyStateHtml_(icon, title, msg, extraClass) {
+    const cls = ['empty-state', extraClass].filter(Boolean).join(' ');
+    return `<div class="${cls}">
+      <span class="material-symbols-outlined" style="font-size:2rem;opacity:.35;display:block">${icon || 'inbox'}</span>
+      <strong>${escapeHtml(title || '')}</strong>
+      ${msg ? `<p class="muted" style="font-size:.82rem;margin:0">${escapeHtml(msg)}</p>` : ''}
+    </div>`;
+  }
+
+  // Genera una fila vacía para <tbody> (no puede usar el box de empty-state)
+  function goPesTableEmptyRowHtml_(icon, msg, colspan) {
+    return `<tr><td colspan="${colspan || 1}" style="padding:0;border:0">
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:28px 16px;color:var(--text-muted,#6b7a8d);font-size:.85rem">
+        <span class="material-symbols-outlined" style="opacity:.4;font-size:1.2rem">${icon || 'inbox'}</span>
+        <span>${escapeHtml(msg || 'Sin registros.')}</span>
+      </div>
+    </td></tr>`;
+  }
+
+  function goPesFieldError_(el, message) {
+    if (!el) return;
+    const wrapper = el.closest('.field');
+    if (!wrapper) return;
+    let span = wrapper.querySelector('.field-error');
+    if (!span) {
+      span = document.createElement('span');
+      span.className = 'field-error';
+      span.setAttribute('role', 'alert');
+      el.insertAdjacentElement('afterend', span);
+    }
+    span.textContent = message || '';
+    wrapper.classList.toggle('has-error', !!message);
+  }
+
+  function goPesFieldClearError_(el) { goPesFieldError_(el, ''); }
+
+  function goPesPaginatorHtml_(current, total, prefix) {
+    if (total <= 1) return '';
+    const MAX_VISIBLE = 7;
+    const makeBtn = (page, label, active, disabled) =>
+      '<button type="button" class="go-pager__btn' + (active ? ' go-pager__btn--active' : '') + '"'
+      + (disabled ? ' disabled' : '')
+      + ' data-' + prefix + '-page="' + page + '">' + escapeHtml(String(label)) + '</button>';
+
+    let pages = '';
+    if (total <= MAX_VISIBLE) {
+      for (let i = 0; i < total; i++) pages += makeBtn(i, i + 1, i === current, false);
+    } else {
+      pages += makeBtn(0, 1, current === 0, false);
+      if (current > 2) pages += '<span class="go-pager__info">…</span>';
+      for (let i = Math.max(1, current - 1); i <= Math.min(total - 2, current + 1); i++) {
+        pages += makeBtn(i, i + 1, i === current, false);
+      }
+      if (current < total - 3) pages += '<span class="go-pager__info">…</span>';
+      pages += makeBtn(total - 1, total, current === total - 1, false);
+    }
+
+    return makeBtn(current - 1, '‹', false, current === 0)
+      + pages
+      + makeBtn(current + 1, '›', false, current === total - 1);
+  }
 
   function getSystemConfig_() {
     return APP.state.systemConfig || BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {};

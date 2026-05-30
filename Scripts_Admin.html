@@ -12,7 +12,7 @@
 
       rows = Array.isArray(rows) ? rows : (Array.isArray(rows?.users) ? rows.users : []);
       if (!rows.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="muted">No hay usuarios registrados para mostrar.</td></tr>';
+        tbody.innerHTML = goPesTableEmptyRowHtml_('group', 'No hay usuarios registrados en el sistema.', 7);
         return rows;
       }
       tbody.innerHTML = rows.map(r => `
@@ -28,9 +28,9 @@
               <button class="table-action-btn js-edit-user" type="button" title="Editar usuario" aria-label="Editar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible)}" data-role="${escapeHtml(normalizeEditableUserProfile_(r.perfil))}" data-active="${normalizeUiBool_(r.activo_flag, false)}" data-modules="${escapeHtml(r.modulos_permitidos || '')}">
                 <span class="material-symbols-outlined">edit</span>
               </button>
-              <button class="table-action-btn table-action-btn--danger js-delete-user" type="button" title="Desactivar usuario" aria-label="Desactivar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible || r.email)}" ${normalizeUiBool_(r.activo_flag, false) ? '' : 'disabled'}>
-                <span class="material-symbols-outlined">delete</span>
-              </button>
+              ${normalizeUiBool_(r.activo_flag, false)
+                ? `<button class="table-action-btn table-action-btn--danger js-delete-user" type="button" title="Desactivar usuario" aria-label="Desactivar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible || r.email)}"><span class="material-symbols-outlined">person_off</span></button>`
+                : `<button class="table-action-btn table-action-btn--success js-reactivate-user" type="button" title="Reactivar usuario" aria-label="Reactivar usuario" data-email="${escapeHtml(r.email)}" data-name="${escapeHtml(r.nombre_visible || r.email)}" data-role="${escapeHtml(normalizeEditableUserProfile_(r.perfil))}" data-modules="${escapeHtml(r.modulos_permitidos || '')}"><span class="material-symbols-outlined">person_check</span></button>`}
             </div>
           </td>
         </tr>
@@ -43,6 +43,23 @@
       });
       tbody.querySelectorAll('.js-delete-user').forEach(btn => {
         btn.addEventListener('click', () => openUserDeleteModal_(btn));
+      });
+      tbody.querySelectorAll('.js-reactivate-user').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (!confirm('¿Reactivar acceso para ' + (btn.dataset.name || btn.dataset.email) + '?')) return;
+          showContentLoading('Reactivando usuario...');
+          api('updateUser', {
+            email: btn.dataset.email,
+            nombre_visible: btn.dataset.name || btn.dataset.email,
+            perfil: btn.dataset.role || 'operador',
+            activo_flag: true,
+            superuser_flag: false,
+            modulos_permitidos: btn.dataset.modules || 'inicio'
+          }).then(() => {
+            showSuccess('Usuario reactivado.');
+            loadUsers();
+          }).catch(showError).finally(hideContentLoading);
+        });
       });
       return rows;
     }).catch(showError).finally(hideContentLoading);

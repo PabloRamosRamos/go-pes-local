@@ -176,6 +176,228 @@ function getInicioPanelData() {
   });
 }
 
+function getDashboardKpis(payload) {
+  requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'superuser']);
+
+  var filters      = payload || {};
+  var filterSector = normalizeText_(String(filters.sector             || ''));
+  var filterUv     = normalizeText_(String(filters.uv                || ''));
+  var filterYear   = Number(filters.year                             || 0);
+  var filterEstado = normalizeText_(String(filters.estado_constitucion|| ''));
+  var filterTipo   = normalizeText_(String(filters.tipo_organizacion  || ''));
+  var CLOSED = { 'cerrado':1,'cerrada':1,'finalizado':1,'rechazado':1,'rechazada':1 };
+  var MESES  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  var tz     = Session.getScriptTimeZone();
+
+  /* ── leer hojas ── */
+  var casos        = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS)         || [];
+  var orgs         = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES) || [];
+  var instrumentos = getSheetData_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS)  || [];
+  var hitos        = getSheetData_(GO_PES_V2.SHEETS.FACT_HITOS)         || [];
+  var avanceHitos  = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS)  || [];
+
+  /* ── filtrar orgs ── */
+  var filteredOrgs = orgs.slice();
+  if (filterSector) filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.sector||'')              === filterSector; });
+  if (filterUv)     filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.uv||'')                  === filterUv;     });
+  if (filterEstado) filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.estado_constitucion||'') === filterEstado; });
+  if (filterTipo)   filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.tipo_organizacion||'')   === filterTipo;   });
+
+  /* ── filtrar casos ── */
+  var filteredCasos = casos.slice();
+  if (filterSector) filteredCasos = filteredCasos.filter(function(r){ return normalizeText_(r.sector||'') === filterSector; });
+  if (filterUv)     filteredCasos = filteredCasos.filter(function(r){ return normalizeText_(r.uv||'')     === filterUv;     });
+  if (filterYear)   filteredCasos = filteredCasos.filter(function(r){
+    var d = r.fecha_ingreso ? new Date(r.fecha_ingreso) : null;
+    return d && !isNaN(d) && d.getFullYear() === filterYear;
+  });
+
+  var orgIdSet     = {};
+  var useOrgFilter = !!(filterSector || filterUv || filterEstado || filterTipo);
+  filteredOrgs.forEach(function(r){ if (r.organizacion_id) orgIdSet[r.organizacion_id] = true; });
+
+  /* ── KPIs básicos ── */
+  var totalSolicitudes = filteredCasos.length;
+  var totalOrgs        = filteredOrgs.length;
+  var orgsConstituidas = filteredOrgs.filter(function(r){ return normalizeText_(r.estado_constitucion||'') === 'constituida'; }).length;
+  var instActivos      = instrumentos.filter(function(r){ return orgIdSet[r.organizacion_id] && !CLOSED[normalizeText_(r.estado_instrumento||'')]; }).length;
+  var totalSocios      = filteredOrgs.reduce(function(s,r){ return s + (Number(r.cantidad_socios)||0); }, 0);
+  var pctConstituidas  = totalOrgs > 0 ? Math.round(orgsConstituidas / totalOrgs * 100) : 0;
+
+  /* ── tendencias 30 d vs 30 d previos ── */
+  var now  = new Date();
+  var ms30 = 30 * 86400000;
+  var t30  = new Date(now - ms30);
+  var t60  = new Date(now - 2 * ms30);
+  function cntRange_(rows, field, from, to) {
+    return rows.filter(function(r){ var d = r[field] ? new Date(r[field]) : null; return d && !isNaN(d) && d >= from && d <= to; }).length;
+  }
+  function trend_(a, b) { return b === 0 ? (a > 0 ? 100 : null) : Math.round((a - b) / b * 100); }
+  var solLast = cntRange_(filteredCasos, 'fecha_ingreso', t30, now);
+  var solPrev = cntRange_(filteredCasos, 'fecha_ingreso', t60, t30);
+  var orgLast = cntRange_(filteredOrgs,  'updated_at',    t30, now);
+  var orgPrev = cntRange_(filteredOrgs,  'updated_at',    t60, t30);
+
+  /* ── helper groupBy ── */
+  function groupBy_(rows, keyFn) {
+    var m = {};
+    rows.forEach(function(r){ var k = keyFn(r); m[k] = (m[k]||0) + 1; });
+    return Object.keys(m).map(function(k){ return { label: k, count: m[k] }; }).sort(function(a,b){ return b.count - a.count; });
+  }
+
+  /* ── gráficos: estado + UV + ingresos ── */
+  var estadosConstitucion = groupBy_(filteredOrgs, function(r){ return String(r.estado_constitucion||'Sin estado').trim()||'Sin estado'; });
+  var porUv               = groupBy_(filteredOrgs, function(r){ return String(r.uv||'Sin UV').trim()||'Sin UV'; }).slice(0,10);
+  var casosEstado         = groupBy_(filteredCasos, function(r){ return String(r.estado_actual||'Sin estado').trim()||'Sin estado'; }).slice(0,8);
+  var instPorTipo         = groupBy_(instrumentos.filter(function(r){ return orgIdSet[r.organizacion_id]; }),
+    function(r){ return String(r.instrumento_tipo||r.instrumento_codigo_catalogo||'Otro').trim()||'Otro'; });
+
+  /* ── tendencia mensual: ingresos + gestiones ── */
+  var baseYear     = filterYear || now.getFullYear();
+  var ingresosMes  = [0,0,0,0,0,0,0,0,0,0,0,0];
+  var gestionesMes = [0,0,0,0,0,0,0,0,0,0,0,0];
+  filteredCasos.forEach(function(r){
+    var d = r.fecha_ingreso ? new Date(r.fecha_ingreso) : null;
+    if (d && !isNaN(d) && d.getFullYear() === baseYear) ingresosMes[d.getMonth()]++;
+  });
+  hitos.forEach(function(h){
+    if (useOrgFilter && !orgIdSet[h.organizacion_id]) return;
+    var d = h.fecha_gestion ? new Date(h.fecha_gestion) : null;
+    if (d && !isNaN(d) && d.getFullYear() === baseYear) gestionesMes[d.getMonth()]++;
+  });
+  var tendenciaMensual = ingresosMes.map(function(ing, m){ return { label: MESES[m], ingresos: ing, gestiones: gestionesMes[m] }; });
+  var ingresosPorMes   = ingresosMes.map(function(c, m){ return { label: MESES[m], count: c }; });
+
+  /* ── avance por hito (FACT_AVANCE_HITOS) ── */
+  var hitoOrgs = {};
+  var avHitosFilt = useOrgFilter ? avanceHitos.filter(function(h){ return orgIdSet[h.organizacion_id]; }) : avanceHitos;
+  avHitosFilt.forEach(function(h){
+    var n = String(h.nombre_hito || h.codigo_hito || '').trim();
+    if (!n || n === '0') return;
+    if (!hitoOrgs[n]) hitoOrgs[n] = {};
+    if (h.organizacion_id) hitoOrgs[n][h.organizacion_id] = true;
+  });
+  var avancePorHito = Object.keys(hitoOrgs).map(function(n){
+    var done = Object.keys(hitoOrgs[n]).length;
+    return { hito: n, completados: done, total: totalOrgs, pct: totalOrgs > 0 ? Math.round(done / totalOrgs * 100) : 0 };
+  }).sort(function(a,b){ return b.completados - a.completados; }).slice(0, 6);
+
+  /* ── estado de beneficios ── */
+  var todayMs = now.getTime();
+  var d30ms   = 30 * 86400000;
+  var vigentes = 0, porVencer = 0, atrasados = 0;
+  instrumentos.filter(function(r){ return orgIdSet[r.organizacion_id] && !CLOSED[normalizeText_(r.estado_instrumento||'')]; })
+    .forEach(function(r){
+      var f = null;
+      var cs = [r.fecha_cierre, r.fecha_cierre_instrumento, r.fecha_habilitacion];
+      for (var i = 0; i < cs.length; i++) { var c = cs[i] ? new Date(cs[i]) : null; if (c && !isNaN(c)){ f = c; break; } }
+      if (!f){ vigentes++; return; }
+      var diff = f.getTime() - todayMs;
+      if (diff < 0) atrasados++; else if (diff <= d30ms) porVencer++; else vigentes++;
+    });
+
+  /* ── lookup nombre org ── */
+  var orgNames = {};
+  orgs.forEach(function(r){ if (r.organizacion_id) orgNames[r.organizacion_id] = r.nombre_organizacion || r.organizacion_id; });
+
+  /* ── tabla: próximos vencimientos ── */
+  var proximosVencimientos = [];
+  instrumentos.forEach(function(r){
+    if (!orgIdSet[r.organizacion_id]) return;
+    if (CLOSED[normalizeText_(r.estado_instrumento||'')]) return;
+    var f = null;
+    var cs = [r.fecha_cierre, r.fecha_cierre_instrumento, r.fecha_habilitacion];
+    for (var i = 0; i < cs.length; i++) { var c = cs[i] ? new Date(cs[i]) : null; if (c && !isNaN(c)){ f = c; break; } }
+    if (!f) return;
+    var diff = f.getTime() - todayMs;
+    if (diff < 0 || diff > 60 * 86400000) return;
+    var dias = Math.round(diff / 86400000);
+    proximosVencimientos.push({
+      nombre_organizacion: orgNames[r.organizacion_id] || r.organizacion_id,
+      instrumento:         r.instrumento_tipo || r.instrumento_codigo_catalogo || 'Beneficio',
+      fecha_cierre:        Utilities.formatDate(f, tz, 'dd/MM/yyyy'),
+      dias:                dias,
+      prioridad:           dias <= 7 ? 'Alta' : dias <= 20 ? 'Media' : 'Baja'
+    });
+  });
+  proximosVencimientos.sort(function(a,b){ return a.dias - b.dias; });
+  proximosVencimientos = proximosVencimientos.slice(0, 8);
+
+  /* ── tabla: atención prioritaria ── */
+  var ALERT_ST = { 'alerta':1,'suspension':1,'suspendida':1,'inactiva':1 };
+  var atencionPrioritaria = filteredOrgs.filter(function(r){
+    return ALERT_ST[normalizeText_(r.estado_general_organizacion||'')] || ALERT_ST[normalizeText_(r.estado_constitucion||'')];
+  }).map(function(r){
+    var ud = r.updated_at ? new Date(r.updated_at) : null;
+    return {
+      nombre_organizacion: r.nombre_organizacion || r.organizacion_id,
+      motivo:              r.motivo_alerta || r.estado_general_organizacion || 'Requiere revisión',
+      estado:              r.estado_constitucion || '—',
+      ultima_accion:       ud && !isNaN(ud) ? Utilities.formatDate(ud, tz, 'dd/MM/yyyy') : '—'
+    };
+  }).slice(0, 8);
+
+  /* ── tabla: últimas gestiones ── */
+  var hitosTabla = (useOrgFilter ? hitos.filter(function(h){ return orgIdSet[h.organizacion_id]; }) : hitos.slice())
+    .filter(function(h){ return !!h.fecha_gestion; })
+    .sort(function(a,b){ var da = new Date(a.fecha_gestion), db = new Date(b.fecha_gestion); return isNaN(da)?1:isNaN(db)?-1:db-da; })
+    .slice(0, 8);
+  var ultimasGestiones = hitosTabla.map(function(h){
+    var f = new Date(h.fecha_gestion);
+    return {
+      fecha:               !isNaN(f) ? Utilities.formatDate(f, tz, 'dd/MM/yyyy HH:mm') : '—',
+      nombre_organizacion: orgNames[h.organizacion_id] || h.organizacion_id || '—',
+      gestion:             h.hito || h.resultado_hito || '—',
+      usuario:             (h.responsable_gestion || h.updated_by || '').replace(/@.*/, '')
+    };
+  });
+
+  /* ── opciones de filtros ── */
+  var sectSeen = {}, allSect = [], uvSeen = {}, allUvs = [], tipoSeen = {}, allTipos = [];
+  orgs.forEach(function(r){
+    var s = String(r.sector||'').trim();         if (s && !sectSeen[s]){ sectSeen[s]=1; allSect.push(s); }
+    var u = String(r.uv||'').trim();             if (u && !uvSeen[u]){ uvSeen[u]=1; allUvs.push(u); }
+    var t = String(r.tipo_organizacion||'').trim(); if (t && !tipoSeen[t]){ tipoSeen[t]=1; allTipos.push(t); }
+  });
+  allSect.sort(); allUvs.sort(); allTipos.sort();
+  var yearsSeen = {};
+  casos.forEach(function(r){ var d = r.fecha_ingreso ? new Date(r.fecha_ingreso) : null; if (d && !isNaN(d)) yearsSeen[d.getFullYear()] = true; });
+  var years = Object.keys(yearsSeen).map(Number).sort(function(a,b){ return b - a; });
+
+  return serializeForClient_({
+    kpis: {
+      totalSolicitudes: totalSolicitudes, totalOrgs: totalOrgs,
+      orgsConstituidas: orgsConstituidas, pctConstituidas: pctConstituidas,
+      instActivos: instActivos, totalSocios: totalSocios,
+      trendSolicitudes: trend_(solLast, solPrev),
+      trendOrgs:        trend_(orgLast, orgPrev)
+    },
+    charts: {
+      estadosConstitucion: estadosConstitucion,
+      porUv:               porUv,
+      casosEstado:         casosEstado,
+      ingresosPorMes:      ingresosPorMes,
+      instrumentosPorTipo: instPorTipo,
+      tendenciaMensual:    tendenciaMensual,
+      avancePorHito:       avancePorHito,
+      estadoBeneficios:    { vigentes: vigentes, porVencer: porVencer, atrasados: atrasados }
+    },
+    tables: {
+      proximosVencimientos: proximosVencimientos,
+      atencionPrioritaria:  atencionPrioritaria,
+      ultimasGestiones:     ultimasGestiones
+    },
+    filters: {
+      sectores: allSect, uvs: allUvs, tipos: allTipos, years: years,
+      activeFilters: {
+        sector: filters.sector||'', uv: filters.uv||'', year: filters.year||'',
+        estado_constitucion: filters.estado_constitucion||'', tipo_organizacion: filters.tipo_organizacion||''
+      }
+    },
+    lastUpdated: Utilities.formatDate(new Date(), tz, 'dd/MM/yyyy HH:mm')
+  });
+}
+
 function buildInicioBeneficioAlerts_(rows, organizacionesById, options) {
   const config = Object.assign({
     highDays: 7,
@@ -1318,6 +1540,35 @@ function logProcessing_(level, action, entity, entityId, userEmail, result, deta
     resultado: result || 'OK',
     detalle_json: detail ? JSON.stringify(detail) : ''
   });
+}
+
+function goPesLogCriticalError_(fnName, err, actor) {
+  try {
+    const msg = err && err.message ? err.message : String(err || 'Error desconocido');
+    const stack = err && err.stack ? String(err.stack).substring(0, 800) : '';
+    logProcessing_('CRITICO', fnName, '', '', actor || '', 'FAIL', { message: msg, stack: stack });
+    const isOperational = /no tienes permisos|authorization is required|not authorized|you do not have permission|debes ingresar|usuario sin acceso|acceso denegado|falta email|falta .* del usuario|solo se permiten|superuser configurado|no se puede desactivar|no se pudo confirmar/i.test(msg);
+    if (!isOperational) {
+      const superEmail = getConfiguredPrimarySuperuserEmail_();
+      if (superEmail) {
+        MailApp.sendEmail({
+          to: superEmail,
+          subject: '[GO-PES] Error crítico en ' + fnName,
+          body: [
+            'Función:  ' + fnName,
+            'Usuario:  ' + (actor || 'desconocido'),
+            'Fecha:    ' + new Date().toISOString(),
+            '',
+            'Error:',
+            msg,
+            '',
+            'Stacktrace:',
+            stack
+          ].join('\n')
+        });
+      }
+    }
+  } catch (_) {}
 }
 
 function maybeCallMaker_(fnName, payload) {

@@ -267,7 +267,7 @@
     if (!gridEl) return;
 
     if (!orgs.length) {
-      gridEl.innerHTML = '<div class="organizaciones-detail empty-state">No hay organizaciones registradas.</div>';
+      gridEl.innerHTML = goPesEmptyStateHtml_('groups', 'Sin organizaciones registradas', 'Aún no hay organizaciones en el sistema. Usa "Nueva organización" para agregar la primera.', 'organizaciones-detail');
       return;
     }
 
@@ -284,7 +284,7 @@
       : orgs;
 
     if (!filtered.length) {
-      gridEl.innerHTML = '<div class="organizaciones-detail empty-state">No se encontraron organizaciones con ese criterio de búsqueda.</div>';
+      gridEl.innerHTML = goPesEmptyStateHtml_('search_off', 'Sin resultados', 'Ninguna organización coincide con el criterio de búsqueda. Intenta con otro término.', 'organizaciones-detail');
       return;
     }
 

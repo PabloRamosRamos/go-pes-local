@@ -359,7 +359,10 @@
   function renderCamaras1414Table_(rows, mode) {
     const list = rows || [];
     if (!list.length) {
-      return '<div class="empty-state">Sin registros.</div>';
+      const emptyMsg = mode === 'elegible'
+        ? 'No hay organizaciones que hayan completado los hitos requeridos para este beneficio.'
+        : 'No hay organizaciones en seguimiento del beneficio Cámaras 1414.';
+      return goPesEmptyStateHtml_('videocam_off', 'Sin registros', emptyMsg);
     }
 
     const isEligible = mode === 'elegible';
@@ -1017,12 +1020,16 @@
   }
 
   function renderFondeseConfigPanel_(rows) {
+    const list = rows || [];
+    const scheduleContent = list.length
+      ? list.map((row, index) => renderFondeseConfigRow_(row, index)).join('')
+      : goPesEmptyStateHtml_('savings', 'Sin ediciones configuradas', 'No hay convocatorias FONDESE registradas. El administrador debe crear la primera edición.');
     return `
       <section class="beneficios-block">
         <h4>Calendario editable de Fondese</h4>
         <p class="muted">Mantiene dos convocatorias fijas y deja las fechas listas para futuras alertas.</p>
         <div class="beneficios-schedule">
-          ${(rows || []).map((row, index) => renderFondeseConfigRow_(row, index)).join('')}
+          ${scheduleContent}
         </div>
       </section>
     `;
@@ -2318,15 +2325,30 @@
       }).join('');
 
       const convMap = {};
-      ((edicion && edicion.convocatorias) || []).forEach(function(c) { convMap[String(c.id)] = c.label; });
+      const convFull = {};
+      ((edicion && edicion.convocatorias) || []).forEach(function(c) { convMap[String(c.id)] = c.label; convFull[String(c.id)] = c; });
       const lineasMap = {};
       ((edicion && edicion.lineas_producto) || []).forEach(function(l) { lineasMap[l.id] = l.nombre; });
       const lineaNombre = lineasMap[r.linea_producto_id] || r.linea_producto_id || '—';
       const convNombre  = convMap[String(r.convocatoria_id || '')] || r.convocatoria_id || '—';
+      const currentConv = convFull[String(r.convocatoria_id || '')] || {};
 
       const adjudicadoVisible = estadoIdx >= ESTADOS.indexOf('adjudicado');
       const ejecucionVisible  = String(r.resultado_adj || '') === 'adjudicado';
       const rendicionVisible  = ejecucionVisible && ['en_ejecucion','en_rendicion','cerrado'].indexOf(r.estado_proceso) !== -1;
+
+      let rendicionDeadlineHtml = '';
+      if (currentConv.fecha_cierre_rendicion) {
+        const fechaCierre = new Date(String(currentConv.fecha_cierre_rendicion).replace(/-/g,'/'));
+        const today = new Date(); today.setHours(0,0,0,0);
+        const daysLeft = Math.ceil((fechaCierre - today) / 86400000);
+        const badge = daysLeft < 0
+          ? '<span style="background:#fce8e6;color:#b3261e;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700">Vencida hace ' + Math.abs(daysLeft) + ' días</span>'
+          : daysLeft <= 14
+            ? '<span style="background:#fff8e1;color:#e37400;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700">Vence en ' + daysLeft + ' días</span>'
+            : '<span style="background:#e6f4ea;color:#1e8e3e;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700">' + daysLeft + ' días restantes</span>';
+        rendicionDeadlineHtml = '<p class="fnd-monto" style="margin-bottom:10px">Fecha límite: <strong>' + escapeHtml(String(currentConv.fecha_cierre_rendicion)) + '</strong> &nbsp;' + badge + '</p>';
+      }
 
       container.innerHTML = `
         <div class="fnd-detail">
@@ -2404,16 +2426,32 @@
 
             ${rendicionVisible ? `
             <div class="fnd-section">
-              <h4>Estado de rendición</h4>
-              <div class="field">
-                <select name="estado_rendicion">
-                  <option value="pendiente" ${r.estado_rendicion === 'pendiente' || !r.estado_rendicion ? 'selected' : ''}>Pendiente</option>
-                  <option value="aprobada"  ${r.estado_rendicion === 'aprobada'  ? 'selected' : ''}>Aprobada</option>
-                  <option value="rechazada" ${r.estado_rendicion === 'rechazada' ? 'selected' : ''}>Rechazada</option>
-                </select>
+              <h4>Rendición de cuentas</h4>
+              ${rendicionDeadlineHtml}
+              <div class="form-grid form-grid--dense">
+                <div class="field">
+                  <label>Estado de rendición</label>
+                  <select name="estado_rendicion">
+                    <option value="pendiente" ${r.estado_rendicion === 'pendiente' || !r.estado_rendicion ? 'selected' : ''}>Pendiente</option>
+                    <option value="aprobada"  ${r.estado_rendicion === 'aprobada'  ? 'selected' : ''}>Aprobada</option>
+                    <option value="rechazada" ${r.estado_rendicion === 'rechazada' ? 'selected' : ''}>Rechazada</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label>Fecha de rendición</label>
+                  <input type="date" name="fecha_rendicion" value="${escapeHtml(r.fecha_rendicion || '')}">
+                </div>
+                <div class="field" data-span="2">
+                  <label>Observaciones</label>
+                  <textarea name="observaciones_rendicion" rows="3" placeholder="Notas sobre el estado de la rendición...">${escapeHtml(r.observaciones_rendicion || '')}</textarea>
+                </div>
               </div>
+              ${r.estado_proceso === 'en_ejecucion' ? `<div style="margin-top:10px"><button type="button" class="secondary-btn" id="fnd-iniciar-rendicion-btn"><span class="material-symbols-outlined">assignment_turned_in</span>Iniciar rendición</button></div>` : ''}
+              ${r.estado_proceso === 'en_rendicion' && r.estado_rendicion === 'aprobada' ? `<div style="margin-top:10px"><button type="button" class="primary-btn" id="fnd-cerrar-proceso-btn"><span class="material-symbols-outlined">check_circle</span>Cerrar proceso</button></div>` : ''}
             </div>
-            ` : `<input type="hidden" name="estado_rendicion" value="${escapeHtml(r.estado_rendicion || '')}">` }
+            ` : `<input type="hidden" name="estado_rendicion" value="${escapeHtml(r.estado_rendicion || '')}">
+            <input type="hidden" name="fecha_rendicion" value="${escapeHtml(r.fecha_rendicion || '')}">
+            <input type="hidden" name="observaciones_rendicion" value="">` }
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
               <button type="button" class="secondary-btn" id="fnd-volver-btn2">
@@ -2429,6 +2467,28 @@
 
       document.getElementById('fnd-volver-btn').addEventListener('click', function() { bindFondesePanel_(); });
       document.getElementById('fnd-volver-btn2').addEventListener('click', function() { bindFondesePanel_(); });
+
+      const iniciarRendicionBtn = document.getElementById('fnd-iniciar-rendicion-btn');
+      if (iniciarRendicionBtn) {
+        iniciarRendicionBtn.addEventListener('click', function() {
+          iniciarRendicionBtn.disabled = true;
+          api('goPesUpsertFondese', { fondese_id: r.fondese_id, estado_proceso: 'en_rendicion' }).then(function() {
+            showSuccess('Estado avanzado a: En rendición');
+            renderFondeseDetalle_(r.fondese_id);
+          }).catch(function(err) { showError(err); iniciarRendicionBtn.disabled = false; });
+        });
+      }
+
+      const cerrarProcesoBtn = document.getElementById('fnd-cerrar-proceso-btn');
+      if (cerrarProcesoBtn) {
+        cerrarProcesoBtn.addEventListener('click', function() {
+          cerrarProcesoBtn.disabled = true;
+          api('goPesUpsertFondese', { fondese_id: r.fondese_id, estado_proceso: 'cerrado' }).then(function() {
+            showSuccess('Proceso FONDESE cerrado.');
+            bindFondesePanel_();
+          }).catch(function(err) { showError(err); cerrarProcesoBtn.disabled = false; });
+        });
+      }
 
       document.getElementById('fnd-detalle-form').addEventListener('submit', function(e) {
         e.preventDefault();
@@ -3732,11 +3792,7 @@
 
   function renderCapacitacionesListHtml_(eventos) {
     if (!eventos || !eventos.length) {
-      return `<div class="empty-state" style="padding:48px 0">
-        <span class="material-symbols-outlined" style="font-size:2.5rem;display:block;margin:0 auto 10px;opacity:.35">event_busy</span>
-        <p>No hay eventos creados aún.</p>
-        <p class="muted" style="font-size:0.82rem;margin-top:4px">Usa "Crear evento" para registrar capacitaciones, certificaciones y charlas.</p>
-      </div>`;
+      return goPesEmptyStateHtml_('event_busy', 'Sin eventos creados', 'Usa "Crear evento" para registrar capacitaciones, certificaciones y charlas.');
     }
 
     const rows = eventos.map(ev => {

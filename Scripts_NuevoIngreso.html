@@ -50,32 +50,36 @@
   function validateIngresoField(el) {
     if (!el) return true;
 
-    el.setCustomValidity('');
     const value = String(el.value || '').trim();
+    let msg = '';
 
-    if (el.required && !value) el.setCustomValidity('Este campo es obligatorio.');
-    if (el.name === 'correo_contacto' && value && !/^\S+@\S+\.\S+$/.test(value)) {
-      el.setCustomValidity('Ingresa un correo válido.');
-    }
-    if (el.name === 'telefono_contacto' && value && value.replace(/\D/g, '').length < 8) {
-      el.setCustomValidity('Ingresa un teléfono válido.');
-    }
-    if (el.name === 'rut_vecino' && value && !/^[0-9.]+-[0-9kK]$/.test(value)) {
-      el.setCustomValidity('Usa formato 12.345.678-9 o 12345678-9.');
+    if (el.required && !value) {
+      msg = 'Este campo es obligatorio.';
+    } else if (el.name === 'correo_contacto' && value && !/^\S+@\S+\.\S+$/.test(value)) {
+      msg = 'Ingresa un correo válido.';
+    } else if (el.name === 'telefono_contacto' && value && value.replace(/\D/g, '').length < 8) {
+      msg = 'Mínimo 8 dígitos.';
+    } else if (el.name === 'rut_vecino' && value && !/^[0-9.]+-[0-9kK]$/.test(value)) {
+      msg = 'Formato: 12.345.678-9';
     }
 
-    el.reportValidity();
-    return !el.validationMessage;
+    goPesFieldError_(el, msg);
+    return !msg;
   }
 
   function validateIngresoForm() {
     const form = document.getElementById('form-ingreso');
     let ok = true;
+    let firstError = null;
 
     form.querySelectorAll('input, textarea, select').forEach(el => {
-      if (!validateIngresoField(el)) ok = false;
+      if (!validateIngresoField(el)) {
+        ok = false;
+        if (!firstError) firstError = el;
+      }
     });
 
+    if (firstError) firstError.focus();
     return ok;
   }
 
@@ -142,6 +146,7 @@
     if (!form) return;
 
     form.reset();
+    form.querySelectorAll('input, textarea, select').forEach(el => goPesFieldClearError_(el));
 
     const fecha = document.getElementById('ing-fecha_solicitud');
     if (fecha) fecha.value = todayISO_();
@@ -226,6 +231,15 @@
     requestAnimationFrame(() => {
       syncIngresoSectorOptions();
       renderIngresoPreview();
+
+      const form = document.getElementById('form-ingreso');
+      if (form && !form.dataset.blurInit) {
+        form.dataset.blurInit = 'true';
+        form.addEventListener('blur', ev => {
+          const el = ev.target;
+          if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') validateIngresoField(el);
+        }, true);
+      }
 
       setTimeout(() => {
         document.getElementById('ing-nombre_vecino')?.focus();

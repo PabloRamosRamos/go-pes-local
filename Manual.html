@@ -147,6 +147,7 @@
         </div>
         <div class="man-nav__section">
           <p class="man-nav__group-label">Módulos</p>
+          <a class="man-nav__link" data-target="sec-inicio">Inicio / Dashboard</a>
           <a class="man-nav__link" data-target="sec-ingreso">Nuevo ingreso</a>
           <a class="man-nav__link" data-target="sec-buscar">Buscar vecino</a>
           <a class="man-nav__link" data-target="sec-ficha">Ficha del vecino</a>
@@ -269,6 +270,91 @@
               <tr><td>Configuración del sistema</td><td>✗</td><td>✗ (solo Superuser)</td></tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- ============================================
+             INICIO / DASHBOARD
+             ============================================ -->
+        <div class="man-section" id="sec-inicio" data-search-section>
+          <h3 class="man-section-title"><span class="material-symbols-outlined">dashboard</span>Módulo: Inicio / Dashboard</h3>
+          <div class="man-roles"><span class="man-role">Visor</span><span class="man-role">Operador</span><span class="man-role">Coordinador</span></div>
+          <p class="man-p">El módulo Inicio es la pantalla principal del sistema y muestra el <strong>dashboard ejecutivo</strong> del programa. Concentra métricas operativas, gráficos de seguimiento y accesos rápidos a los módulos más usados. Es el punto de partida recomendado al iniciar cada jornada.</p>
+          <div class="man-callout man-callout--info">
+            <span class="material-symbols-outlined">info</span>
+            <div>El dashboard carga automáticamente al abrir la aplicación. Los datos se pre-cargan durante la pantalla de inicio para que el dashboard aparezca listo sin espera adicional.</div>
+          </div>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">filter_list</span>Barra de filtros</p>
+          <p class="man-p">En la parte superior del dashboard encontrarás cinco filtros que permiten segmentar todos los indicadores del panel simultáneamente:</p>
+          <table class="man-field-table">
+            <thead><tr><th>Filtro</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td><strong>UV</strong></td><td>Filtra por Unidad Vecinal. Muestra solo los datos de las organizaciones y casos de esa UV.</td></tr>
+              <tr><td><strong>Estado del comité</strong></td><td>Filtra por estado de constitución de las organizaciones: Constituida, En proceso, Iniciando, Inactiva.</td></tr>
+              <tr><td><strong>Tipo organización</strong></td><td>Filtra por tipo: Comité de seguridad, Junta de vecinos, Agrupación, etc.</td></tr>
+              <tr><td><strong>Período (año)</strong></td><td>Filtra las solicitudes de vecinos por año de ingreso.</td></tr>
+            </tbody>
+          </table>
+          <div class="man-callout man-callout--tip">
+            <span class="material-symbols-outlined">lightbulb</span>
+            <div>Puedes combinar varios filtros al mismo tiempo. Todos los gráficos, KPIs y tablas se actualizan simultáneamente al cambiar cualquier filtro. Para volver a la vista general, selecciona la opción vacía (—) en cada desplegable.</div>
+          </div>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">bar_chart</span>Indicadores KPI</p>
+          <p class="man-p">Debajo de los filtros se muestran seis tarjetas de indicadores clave del programa:</p>
+          <table class="man-field-table">
+            <thead><tr><th>Indicador</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Solicitudes</strong></td><td>Total de vecinos ingresados al sistema (con el filtro activo si corresponde).</td></tr>
+              <tr><td><strong>Organizaciones</strong></td><td>Cantidad de organizaciones comunitarias registradas.</td></tr>
+              <tr><td><strong>Constituidas</strong></td><td>Organizaciones que completaron el proceso de constitución.</td></tr>
+              <tr><td><strong>Inst. activos</strong></td><td>Beneficios (instrumentos) activos en el período actual.</td></tr>
+              <tr><td><strong>Socios</strong></td><td>Total de socios registrados en las organizaciones.</td></tr>
+              <tr><td><strong>% Constituidas</strong></td><td>Porcentaje de organizaciones ya constituidas respecto al total.</td></tr>
+            </tbody>
+          </table>
+          <p class="man-p">Cada tarjeta puede mostrar un indicador de tendencia (<strong>↑</strong> o <strong>↓</strong>) comparando los últimos 30 días con el período anterior. Esto permite identificar si el programa está creciendo o decreciendo en actividad.</p>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">donut_large</span>Gráficos superiores</p>
+          <p class="man-p">La franja principal de gráficos tiene tres paneles:</p>
+          <table class="man-field-table">
+            <thead><tr><th>Panel</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Estado de constitución</strong></td><td>Gráfico de dona que muestra la distribución de organizaciones por estado (Constituida, En proceso, Iniciando, Inactiva). Los colores corresponden a cada estado.</td></tr>
+              <tr><td><strong>Organizaciones por UV</strong></td><td>Gráfico de barras horizontales con las 10 UVs con más organizaciones. Permite identificar las zonas de mayor actividad del programa.</td></tr>
+              <tr><td><strong>Estado de beneficios</strong></td><td>Tres tarjetas que muestran: beneficios <em>Vigentes</em> (en verde), <em>Por vencer</em> en los próximos 60 días (en amarillo) y <em>Atrasados</em> (en rojo). Permite anticipar gestiones urgentes.</td></tr>
+            </tbody>
+          </table>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">speed</span>Gráficos de seguimiento</p>
+          <table class="man-field-table">
+            <thead><tr><th>Panel</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Avance por hito</strong></td><td>Seis medidores circulares que muestran el porcentaje de organizaciones que han completado cada uno de los hitos principales del proceso de constitución. Un medidor en 100% significa que todas las organizaciones activas han superado ese hito.</td></tr>
+              <tr><td><strong>Actividad mensual</strong></td><td>Gráfico de líneas dual con los últimos 12 meses. La línea azul muestra ingresos nuevos de vecinos y la línea verde muestra gestiones registradas en ese período. Permite ver la evolución mensual del trabajo del equipo.</td></tr>
+            </tbody>
+          </table>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">table_chart</span>Tablas de gestión prioritaria</p>
+          <p class="man-p">En la parte inferior del dashboard se muestran tres tablas con información accionable:</p>
+          <table class="man-field-table">
+            <thead><tr><th>Tabla</th><th>Descripción</th><th>Para qué sirve</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Próximos vencimientos</strong></td><td>Beneficios e instrumentos que vencen en los próximos 60 días, ordenados por fecha de vencimiento.</td><td>Anticipar renovaciones o cierres de beneficios antes de que expiren.</td></tr>
+              <tr><td><strong>Atención prioritaria</strong></td><td>Organizaciones o casos que tienen alertas o estados que requieren seguimiento urgente.</td><td>Identificar rápidamente qué casos necesitan acción inmediata.</td></tr>
+              <tr><td><strong>Últimas gestiones</strong></td><td>Las gestiones más recientes registradas en el sistema (hitos, avances), ordenadas de más reciente a más antigua.</td><td>Ver qué trabajo fue realizado recientemente por el equipo.</td></tr>
+            </tbody>
+          </table>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">refresh</span>Actualizar el dashboard</p>
+          <p class="man-p">El dashboard se carga automáticamente al abrir la aplicación con datos frescos. Si necesitas actualizarlo después de realizar cambios en otros módulos:</p>
+          <div class="man-steps">
+            <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Cambiar y volver</strong>Navega a otro módulo y regresa a Inicio. El sistema recarga los datos si han pasado más de 30 segundos desde la última carga.</div></div>
+            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Usar el botón Recargar</strong>Haz clic en el botón Recargar de la cabecera del módulo para forzar una actualización inmediata de todos los gráficos con datos del servidor.</div></div>
+          </div>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">speed</span>Acciones rápidas</p>
+          <p class="man-p">Debajo del encabezado del módulo aparecen tarjetas de <strong>acciones rápidas</strong> hacia los módulos más usados del programa. Son atajos que permiten navegar en un solo clic sin usar la barra lateral. Solo se muestran los módulos a los que tienes acceso según tu rol.</p>
         </div>
 
         <!-- ============================================
@@ -831,6 +917,21 @@
           <div class="man-faq-list">
 
             <div class="man-faq-item">
+              <button class="man-faq-q" type="button">¿Qué muestran los indicadores ↑ y ↓ en las tarjetas del dashboard? <span class="material-symbols-outlined">expand_more</span></button>
+              <div class="man-faq-a">Los indicadores de tendencia comparan los últimos 30 días con el período anterior de 30 días. Una flecha <strong>↑</strong> en verde indica que la actividad aumentó; una flecha <strong>↓</strong> en rojo indica que disminuyó. Esto ayuda a detectar si el programa está ganando o perdiendo ritmo sin tener que comparar manualmente reportes distintos. No todos los KPIs muestran tendencia — los que no tienen datos históricos suficientes no la calculan.</div>
+            </div>
+
+            <div class="man-faq-item">
+              <button class="man-faq-q" type="button">¿Para qué sirve filtrar el dashboard por UV o sector? <span class="material-symbols-outlined">expand_more</span></button>
+              <div class="man-faq-a">Los filtros permiten focalizar el dashboard en una zona específica de la comuna. Por ejemplo, si eres responsable de la UV 12, puedes seleccionarla y todos los KPIs, gráficos y tablas mostrarán solo los datos de esa UV. Esto es útil para reuniones de seguimiento zonales o para coordinar con otros operadores por área territorial. Combinando UV + Estado puedes ver, por ejemplo, cuántas organizaciones "En proceso" hay en una UV específica. El dashboard tiene 4 filtros: UV, Estado del comité, Tipo organización y Período.</div>
+            </div>
+
+            <div class="man-faq-item">
+              <button class="man-faq-q" type="button">¿Qué significa un beneficio "Por vencer" en el dashboard? <span class="material-symbols-outlined">expand_more</span></button>
+              <div class="man-faq-a">Un beneficio "Por vencer" es un instrumento activo cuya fecha de término está dentro de los <strong>próximos 60 días</strong>. Aparece en amarillo en las tarjetas de estado y en la tabla de próximos vencimientos con la fecha exacta. Es una alerta preventiva para que el equipo tome acción antes de que expire: renovar el convenio, notificar a la organización o iniciar el proceso de cierre según corresponda.</div>
+            </div>
+
+            <div class="man-faq-item">
               <button class="man-faq-q" type="button">No puedo guardar la solicitud de nuevo ingreso <span class="material-symbols-outlined">expand_more</span></button>
               <div class="man-faq-a">Verifica que todos los campos obligatorios estén completos: <strong>nombre, apellido, teléfono y dirección</strong>. El botón Guardar está deshabilitado si hay campos requeridos vacíos. Revisa que el formato del RUT sea correcto (12.345.678-9) si lo ingresaste.</div>
             </div>
@@ -944,6 +1045,9 @@
         <div class="man-section" id="sec-glosario" data-search-section>
           <h3 class="man-section-title"><span class="material-symbols-outlined">book_2</span>Glosario</h3>
           <div class="man-glos-list">
+            <div class="man-glos-item"><span class="man-glos-term">Dashboard</span><span class="man-glos-def">Panel ejecutivo del módulo Inicio. Concentra KPIs, gráficos de estado y constitución, avance por hito, actividad mensual y tablas de gestión prioritaria. Se actualiza con cada apertura de la aplicación.</span></div>
+            <div class="man-glos-item"><span class="man-glos-term">KPI</span><span class="man-glos-def">Indicador clave de desempeño (Key Performance Indicator). En GO-PES son las tarjetas numéricas del dashboard: solicitudes, organizaciones, constituidas, instrumentos activos, socios y porcentaje de constitución.</span></div>
+            <div class="man-glos-item"><span class="man-glos-term">Tendencia</span><span class="man-glos-def">Comparación automática entre los últimos 30 días y el período anterior. Se muestra como ↑ (aumento) o ↓ (disminución) junto a algunos KPIs del dashboard.</span></div>
             <div class="man-glos-item"><span class="man-glos-term">Caso / Solicitud</span><span class="man-glos-def">Registro creado al ingresar un vecino al sistema. Se identifica con un ID único (SOL-XXXXXX).</span></div>
             <div class="man-glos-item"><span class="man-glos-term">Hito</span><span class="man-glos-def">Paso o etapa dentro del proceso de constitución de una organización comunitaria. Los hitos son secuenciales y se registran con fecha.</span></div>
             <div class="man-glos-item"><span class="man-glos-term">UV (Unidad Vecinal)</span><span class="man-glos-def">División territorial menor de la comuna de Providencia. Cada dirección pertenece a una UV específica.</span></div>

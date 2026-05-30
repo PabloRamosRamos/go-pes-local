@@ -180,7 +180,6 @@ function getDashboardKpis(payload) {
   requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'superuser']);
 
   var filters      = payload || {};
-  var filterSector = normalizeText_(String(filters.sector             || ''));
   var filterUv     = normalizeText_(String(filters.uv                || ''));
   var filterYear   = Number(filters.year                             || 0);
   var filterEstado = normalizeText_(String(filters.estado_constitucion|| ''));
@@ -198,14 +197,12 @@ function getDashboardKpis(payload) {
 
   /* ── filtrar orgs ── */
   var filteredOrgs = orgs.slice();
-  if (filterSector) filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.sector||'')              === filterSector; });
   if (filterUv)     filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.uv||'')                  === filterUv;     });
   if (filterEstado) filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.estado_constitucion||'') === filterEstado; });
   if (filterTipo)   filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.tipo_organizacion||'')   === filterTipo;   });
 
   /* ── filtrar casos ── */
   var filteredCasos = casos.slice();
-  if (filterSector) filteredCasos = filteredCasos.filter(function(r){ return normalizeText_(r.sector||'') === filterSector; });
   if (filterUv)     filteredCasos = filteredCasos.filter(function(r){ return normalizeText_(r.uv||'')     === filterUv;     });
   if (filterYear)   filteredCasos = filteredCasos.filter(function(r){
     var d = r.fecha_ingreso ? new Date(r.fecha_ingreso) : null;
@@ -213,7 +210,7 @@ function getDashboardKpis(payload) {
   });
 
   var orgIdSet     = {};
-  var useOrgFilter = !!(filterSector || filterUv || filterEstado || filterTipo);
+  var useOrgFilter = !!(filterUv || filterEstado || filterTipo);
   filteredOrgs.forEach(function(r){ if (r.organizacion_id) orgIdSet[r.organizacion_id] = true; });
 
   /* ── KPIs básicos ── */
@@ -353,13 +350,12 @@ function getDashboardKpis(payload) {
   });
 
   /* ── opciones de filtros ── */
-  var sectSeen = {}, allSect = [], uvSeen = {}, allUvs = [], tipoSeen = {}, allTipos = [];
+  var uvSeen = {}, allUvs = [], tipoSeen = {}, allTipos = [];
   orgs.forEach(function(r){
-    var s = String(r.sector||'').trim();         if (s && !sectSeen[s]){ sectSeen[s]=1; allSect.push(s); }
     var u = String(r.uv||'').trim();             if (u && !uvSeen[u]){ uvSeen[u]=1; allUvs.push(u); }
     var t = String(r.tipo_organizacion||'').trim(); if (t && !tipoSeen[t]){ tipoSeen[t]=1; allTipos.push(t); }
   });
-  allSect.sort(); allUvs.sort(); allTipos.sort();
+  allUvs.sort(); allTipos.sort();
   var yearsSeen = {};
   casos.forEach(function(r){ var d = r.fecha_ingreso ? new Date(r.fecha_ingreso) : null; if (d && !isNaN(d)) yearsSeen[d.getFullYear()] = true; });
   var years = Object.keys(yearsSeen).map(Number).sort(function(a,b){ return b - a; });
@@ -388,9 +384,9 @@ function getDashboardKpis(payload) {
       ultimasGestiones:     ultimasGestiones
     },
     filters: {
-      sectores: allSect, uvs: allUvs, tipos: allTipos, years: years,
+      uvs: allUvs, tipos: allTipos, years: years,
       activeFilters: {
-        sector: filters.sector||'', uv: filters.uv||'', year: filters.year||'',
+        uv: filters.uv||'', year: filters.year||'',
         estado_constitucion: filters.estado_constitucion||'', tipo_organizacion: filters.tipo_organizacion||''
       }
     },

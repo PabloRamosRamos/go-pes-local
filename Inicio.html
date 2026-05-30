@@ -67,7 +67,7 @@
                 '<div><p class="eyebrow">Dashboard</p><h3>Panel ejecutivo del programa</h3></div>',
                 '<div class="dash-head-actions">',
                   '<span class="dash-updated" id="dash-updated">' + (dashData.lastUpdated ? esc(dashData.lastUpdated) : '') + '</span>',
-                  '<button class="btn btn--secondary btn--sm" id="dash-refresh-btn" type="button">',
+                  '<button class="btn secondary-btn btn--sm" id="dash-refresh-btn" type="button">',
                     '<span class="material-symbols-outlined" style="font-size:1rem">refresh</span> Actualizar',
                   '</button>',
                 '</div>',
@@ -89,7 +89,6 @@
        FILTER BAR
     ══════════════════════════════════════════ */
     function buildFilterBar_(filters, esc) {
-      var sectores = Array.isArray(filters.sectores) ? filters.sectores : [];
       var uvs      = Array.isArray(filters.uvs)      ? filters.uvs      : [];
       var tipos    = Array.isArray(filters.tipos)    ? filters.tipos    : [];
       var years    = Array.isArray(filters.years)    ? filters.years    : [];
@@ -111,7 +110,6 @@
       return [
         '<div class="dash-filters"><div class="dash-filters__row">',
           sel_('dash-filter-uv',     'UV',               uvs,      af.uv,                'Todas las UV'),
-          sel_('dash-filter-sector', 'Macrosector',      sectores, af.sector,            'Todos'),
           '<div class="dash-filter-item"><label for="dash-filter-estado">Estado comité</label>',
             '<select class="dash-filter-select" id="dash-filter-estado">',
               ESTADOS.map(function(v){ return '<option value="' + esc(v) + '"' + (v===(af.estado_constitucion||'')?'  selected':'') + '>' + esc(v||'Todos') + '</option>'; }).join(''),
@@ -377,7 +375,6 @@
         function v_(id){ return ((root.querySelector(id)||{}).value)||''; }
         return {
           uv:                  v_('#dash-filter-uv'),
-          sector:              v_('#dash-filter-sector'),
           estado_constitucion: v_('#dash-filter-estado'),
           tipo_organizacion:   v_('#dash-filter-tipo'),
           year:                parseInt(v_('#dash-filter-year')||'0', 10)
@@ -424,14 +421,13 @@
       }
 
       if (refreshBtn) refreshBtn.addEventListener('click', runRefresh_);
-      ['#dash-filter-uv','#dash-filter-sector','#dash-filter-estado','#dash-filter-tipo','#dash-filter-year'].forEach(function(sel){
+      ['#dash-filter-uv','#dash-filter-estado','#dash-filter-tipo','#dash-filter-year'].forEach(function(sel){
         var el = root.querySelector(sel);
         if (el) el.addEventListener('change', runRefresh_);
       });
     }
 
     function updateFilterOptions_(root, filters, esc) {
-      var sectores = Array.isArray(filters.sectores) ? filters.sectores : [];
       var uvs      = Array.isArray(filters.uvs)      ? filters.uvs      : [];
       var tipos    = Array.isArray(filters.tipos)    ? filters.tipos    : [];
       var years    = Array.isArray(filters.years)    ? filters.years    : [];
@@ -444,7 +440,6 @@
         el.value = cur;
       }
       rebuild_('#dash-filter-uv',     uvs,      'Todas las UV');
-      rebuild_('#dash-filter-sector', sectores, 'Todos');
       rebuild_('#dash-filter-tipo',   tipos,    'Todos');
       rebuild_('#dash-filter-year',   years,    'Todos los años');
     }

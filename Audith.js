@@ -86,6 +86,8 @@ function goPesRunAllTests() {
   acumular(goPesTestValidators_());
   acumular(goPesTestAuth_());
   acumular(goPesTestServices_());
+  acumular(goPesTestAvance_());
+  acumular(goPesTestBeneficios_());
 
   Logger.log('==========================================');
   Logger.log('  TOTAL: ' + total.passed + ' pasados, ' + total.failed + ' fallados' +
@@ -1042,6 +1044,296 @@ function goPesTestServices_() {
   s.skip('guardarInstrumento',  'escribe en RAW_Instrumentos + FACT_Instrumentos');
   s.skip('guardarRequisito',    'escribe en RAW_Requisitos + FACT_Requisitos');
   s.skip('refrescarVistasYMaster', 'requiere rol coordinador + reconstruye todas las vistas');
+
+  return s.run();
+}
+
+// ── SUITE 4: AVANCE ───────────────────────────────────────────────────────────
+
+function goPesTestAvance_() {
+  var s = createTestSuite_('Avance');
+
+  // goPesNormalizeOrganizacionNombre_
+  s.test('normalizeNombre: elimina tildes', function() {
+    assertEqual_(goPesNormalizeOrganizacionNombre_('Ángel'), 'angel');
+  });
+  s.test('normalizeNombre: convierte a minusculas', function() {
+    assertEqual_(goPesNormalizeOrganizacionNombre_('JUNTA'), 'junta');
+  });
+  s.test('normalizeNombre: colapsa espacios multiples', function() {
+    assertEqual_(goPesNormalizeOrganizacionNombre_('Junta  de  Vecinos'), 'junta de vecinos');
+  });
+  s.test('normalizeNombre: elimina caracteres especiales', function() {
+    assertEqual_(goPesNormalizeOrganizacionNombre_('Comité #1'), 'comite 1');
+  });
+  s.test('normalizeNombre: null → vacio', function() {
+    assertEqual_(goPesNormalizeOrganizacionNombre_(null), '');
+  });
+  s.test('normalizeNombre: string vacio → vacio', function() {
+    assertEqual_(goPesNormalizeOrganizacionNombre_(''), '');
+  });
+
+  // goPesIsTramoPreconstitucion_
+  s.test('isTramoPre: "Preconstitución" → true', function() {
+    assertTrue_(goPesIsTramoPreconstitucion_('Preconstitución'));
+  });
+  s.test('isTramoPre: "preconstitucion" → true', function() {
+    assertTrue_(goPesIsTramoPreconstitucion_('preconstitucion'));
+  });
+  s.test('isTramoPre: "Formalización posterior" → false', function() {
+    assertFalse_(goPesIsTramoPreconstitucion_('Formalización posterior'));
+  });
+  s.test('isTramoPre: vacio → false', function() {
+    assertFalse_(goPesIsTramoPreconstitucion_(''));
+  });
+
+  // goPesIsTramoFormalizacion_
+  s.test('isTramoForm: "Formalización posterior" → true', function() {
+    assertTrue_(goPesIsTramoFormalizacion_('Formalización posterior'));
+  });
+  s.test('isTramoForm: "formalizacion" → true', function() {
+    assertTrue_(goPesIsTramoFormalizacion_('formalizacion'));
+  });
+  s.test('isTramoForm: "Preconstitución" → false', function() {
+    assertFalse_(goPesIsTramoFormalizacion_('Preconstitución'));
+  });
+  s.test('isTramoForm: vacio → false', function() {
+    assertFalse_(goPesIsTramoFormalizacion_(''));
+  });
+
+  // goPesBool_
+  s.test('goPesBool: true → true', function() {
+    assertTrue_(goPesBool_(true));
+  });
+  s.test('goPesBool: false → false', function() {
+    assertFalse_(goPesBool_(false));
+  });
+  s.test('goPesBool: "true" → true', function() {
+    assertTrue_(goPesBool_('true'));
+  });
+  s.test('goPesBool: "si" → true', function() {
+    assertTrue_(goPesBool_('si'));
+  });
+  s.test('goPesBool: "sí" → true', function() {
+    assertTrue_(goPesBool_('sí'));
+  });
+  s.test('goPesBool: "1" → true', function() {
+    assertTrue_(goPesBool_('1'));
+  });
+  s.test('goPesBool: 1 (número) → true', function() {
+    assertTrue_(goPesBool_(1));
+  });
+  s.test('goPesBool: "no" → false', function() {
+    assertFalse_(goPesBool_('no'));
+  });
+  s.test('goPesBool: vacio → false', function() {
+    assertFalse_(goPesBool_(''));
+  });
+  s.test('goPesBool: null → false', function() {
+    assertFalse_(goPesBool_(null));
+  });
+  s.test('goPesBool: 0 → false', function() {
+    assertFalse_(goPesBool_(0));
+  });
+
+  // goPesGetEstadoAvanceActualFromRows_
+  s.test('getEstadoFromRows: array vacio → fallback estado Activo', function() {
+    var r = goPesGetEstadoAvanceActualFromRows_([], 'SOL-001');
+    assertEqual_(r.estado_avance, 'Activo');
+    assertEqual_(r.solicitud_id, 'SOL-001');
+  });
+  s.test('getEstadoFromRows: null → fallback estado Activo', function() {
+    assertEqual_(goPesGetEstadoAvanceActualFromRows_(null, 'SOL-X').estado_avance, 'Activo');
+  });
+  s.test('getEstadoFromRows: prefiere fila con activo_flag=true', function() {
+    var rows = [
+      { estado_avance: 'Stand by', activo_flag: false,  timestamp_registro: new Date('2024-01-01') },
+      { estado_avance: 'Activo',   activo_flag: true,   timestamp_registro: new Date('2024-01-02') }
+    ];
+    assertEqual_(goPesGetEstadoAvanceActualFromRows_(rows, '').estado_avance, 'Activo');
+  });
+  s.test('getEstadoFromRows: sin activos, retorna el más reciente', function() {
+    var rows = [
+      { estado_avance: 'Stand by', activo_flag: false, timestamp_registro: new Date('2024-01-01') },
+      { estado_avance: 'Detenido', activo_flag: false, timestamp_registro: new Date('2024-06-01') }
+    ];
+    assertEqual_(goPesGetEstadoAvanceActualFromRows_(rows, '').estado_avance, 'Detenido');
+  });
+  s.test('getEstadoFromRows: activo_flag como string "true"', function() {
+    var rows = [{ estado_avance: 'Finalizado', activo_flag: 'true', timestamp_registro: new Date() }];
+    assertEqual_(goPesGetEstadoAvanceActualFromRows_(rows, '').estado_avance, 'Finalizado');
+  });
+
+  // goPesIsHitoCreacionOrganizacion_
+  s.test('isHitoCreacion: orden 5 + preconstitución + documentacion → true', function() {
+    assertTrue_(goPesIsHitoCreacionOrganizacion_({
+      orden_hito: 5, tramo: 'Preconstitución', nombre_hito: 'Ingreso de documentación'
+    }));
+  });
+  s.test('isHitoCreacion: orden 5 + preconstitución + ingreso → true', function() {
+    assertTrue_(goPesIsHitoCreacionOrganizacion_({
+      orden_hito: 5, tramo: 'Preconstitución', nombre_hito: 'Hito de ingreso'
+    }));
+  });
+  s.test('isHitoCreacion: orden 5 + tramo formalizacion → false', function() {
+    assertFalse_(goPesIsHitoCreacionOrganizacion_({
+      orden_hito: 5, tramo: 'Formalización posterior', nombre_hito: 'Ingreso de documentación'
+    }));
+  });
+  s.test('isHitoCreacion: orden 3 + preconstitución → false', function() {
+    assertFalse_(goPesIsHitoCreacionOrganizacion_({
+      orden_hito: 3, tramo: 'Preconstitución', nombre_hito: 'Primera reunión'
+    }));
+  });
+  s.test('isHitoCreacion: null → false', function() {
+    assertFalse_(goPesIsHitoCreacionOrganizacion_(null));
+  });
+
+  // funciones que requieren spreadsheet o auth
+  s.skip('getCatalogosAvanceClient',      'requiere lectura CAT_Hitos_Avance + auth');
+  s.skip('getOrganizacionesAvanceClient', 'requiere lectura MAE_Organizaciones + auth');
+  s.skip('getAvanceOrganizacion',         'requiere auth + lectura FACT_Avance_Hitos + FACT_Avance_Estado');
+  s.skip('registrarHitoAvance',           'escribe en FACT_Avance_Hitos + LockService + auth');
+  s.skip('cambiarEstadoAvance',           'escribe en FACT_Avance_Estado + auth');
+
+  return s.run();
+}
+
+// ── SUITE 5: BENEFICIOS ───────────────────────────────────────────────────────
+
+function goPesTestBeneficios_() {
+  var s = createTestSuite_('Beneficios');
+
+  // getCamarasStateOptions_
+  s.test('stateOptions: retorna array no vacio', function() {
+    assertTrue_(getCamarasStateOptions_().length > 0);
+  });
+  s.test('stateOptions: contiene "Beneficio cerrado"', function() {
+    assertTrue_(getCamarasStateOptions_().indexOf('Beneficio cerrado') !== -1);
+  });
+  s.test('stateOptions: contiene "Solicitud enviada"', function() {
+    assertTrue_(getCamarasStateOptions_().indexOf('Solicitud enviada') !== -1);
+  });
+  s.test('stateOptions: contiene "Visita agendada"', function() {
+    assertTrue_(getCamarasStateOptions_().indexOf('Visita agendada') !== -1);
+  });
+
+  // getCamarasChecklistDefinitions_
+  s.test('checklistDefs: retorna array no vacio', function() {
+    assertTrue_(getCamarasChecklistDefinitions_().length > 0);
+  });
+  s.test('checklistDefs: cada item tiene code y label', function() {
+    getCamarasChecklistDefinitions_().forEach(function(d) {
+      assertTrue_(typeof d.code === 'string' && d.code.length > 0);
+      assertTrue_(typeof d.label === 'string' && d.label.length > 0);
+    });
+  });
+  s.test('checklistDefs: contiene DOC_CERT_VIGENCIA', function() {
+    assertTrue_(getCamarasChecklistDefinitions_().some(function(d) { return d.code === 'DOC_CERT_VIGENCIA'; }));
+  });
+  s.test('checklistDefs: contiene DOC_CERT_DIRECTORIO', function() {
+    assertTrue_(getCamarasChecklistDefinitions_().some(function(d) { return d.code === 'DOC_CERT_DIRECTORIO'; }));
+  });
+
+  // isCamarasEligibleListRow_
+  s.test('isEligible: "Elegible por certificado definitivo" → true', function() {
+    assertTrue_(isCamarasEligibleListRow_({ estado_beneficio: 'Elegible por certificado definitivo' }));
+  });
+  s.test('isEligible: "Gestion pendiente" → true', function() {
+    assertTrue_(isCamarasEligibleListRow_({ estado_beneficio: 'Gestion pendiente' }));
+  });
+  s.test('isEligible: "Solicitud de visita tecnica preparada" → true', function() {
+    assertTrue_(isCamarasEligibleListRow_({ estado_beneficio: 'Solicitud de visita tecnica preparada' }));
+  });
+  s.test('isEligible: "Solicitud enviada" → false', function() {
+    assertFalse_(isCamarasEligibleListRow_({ estado_beneficio: 'Solicitud enviada' }));
+  });
+  s.test('isEligible: "Beneficio cerrado" → false', function() {
+    assertFalse_(isCamarasEligibleListRow_({ estado_beneficio: 'Beneficio cerrado' }));
+  });
+  s.test('isEligible: null row → false', function() {
+    assertFalse_(isCamarasEligibleListRow_(null));
+  });
+  s.test('isEligible: estado vacio → false', function() {
+    assertFalse_(isCamarasEligibleListRow_({ estado_beneficio: '' }));
+  });
+
+  // isCamarasActiveListRow_
+  s.test('isActive: "Solicitud enviada" → true', function() {
+    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Solicitud enviada' }));
+  });
+  s.test('isActive: "Visita agendada" → true', function() {
+    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Visita agendada' }));
+  });
+  s.test('isActive: "Visita realizada" → true', function() {
+    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Visita realizada' }));
+  });
+  s.test('isActive: "Convenio recibido" → true', function() {
+    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Convenio recibido' }));
+  });
+  s.test('isActive: "Gestion pendiente" → false', function() {
+    assertFalse_(isCamarasActiveListRow_({ estado_beneficio: 'Gestion pendiente' }));
+  });
+  s.test('isActive: "Beneficio cerrado" → false', function() {
+    assertFalse_(isCamarasActiveListRow_({ estado_beneficio: 'Beneficio cerrado' }));
+  });
+  s.test('isActive: null row → false', function() {
+    assertFalse_(isCamarasActiveListRow_(null));
+  });
+
+  // resolveCamarasStageIndex_
+  s.test('stageIndex: closure cerrada → index 9', function() {
+    assertEqual_(resolveCamarasStageIndex_({ closure: { closed: true, closedDate: new Date() } }).index, 9);
+  });
+  s.test('stageIndex: closure → label "Beneficio cerrado"', function() {
+    assertEqual_(resolveCamarasStageIndex_({ closure: { closed: true, closedDate: new Date() } }).label, 'Beneficio cerrado');
+  });
+  s.test('stageIndex: convenio recibido → index 8', function() {
+    assertEqual_(resolveCamarasStageIndex_({ agreement: { received: true, receivedDate: new Date() } }).index, 8);
+  });
+  s.test('stageIndex: visita completada → index 6', function() {
+    assertEqual_(resolveCamarasStageIndex_({ visit: { visitCompleted: true } }).index, 6);
+  });
+  s.test('stageIndex: visita agendada → index 5', function() {
+    assertEqual_(resolveCamarasStageIndex_({ response: { visitDate: new Date() } }).index, 5);
+  });
+  s.test('stageIndex: email enviado → index 3', function() {
+    assertEqual_(resolveCamarasStageIndex_({ email: { sentConfirmed: true, sentDate: new Date() } }).index, 3);
+  });
+  s.test('stageIndex: solo eligibilityDate → index 0', function() {
+    assertEqual_(resolveCamarasStageIndex_({ eligibilityDate: new Date() }).index, 0);
+  });
+  s.test('stageIndex: sin datos → index 1 (gestion pendiente)', function() {
+    assertEqual_(resolveCamarasStageIndex_({}).index, 1);
+  });
+  s.test('stageIndex: closure prevalece sobre convenio', function() {
+    assertEqual_(resolveCamarasStageIndex_({
+      closure:   { closed: true, closedDate: new Date() },
+      agreement: { received: true, receivedDate: new Date() }
+    }).index, 9);
+  });
+  s.test('stageIndex: cada resultado tiene nextStep no vacio', function() {
+    var fixtures = [
+      { closure: { closed: true, closedDate: new Date() } },
+      { agreement: { received: true, receivedDate: new Date() } },
+      { visit: { visitCompleted: true } },
+      { response: { visitDate: new Date() } },
+      { eligibilityDate: new Date() },
+      {}
+    ];
+    fixtures.forEach(function(f) {
+      assertTrue_(resolveCamarasStageIndex_(f).nextStep.length > 0);
+    });
+  });
+
+  // funciones que requieren spreadsheet o auth
+  s.skip('getBeneficiosModuloPanel',        'requiere auth + lectura FACT_Instrumentos');
+  s.skip('guardarCamaras1414Organizacion',   'requiere auth + escritura FACT_Beneficios');
+  s.skip('goPesGetFondeseList',              'requiere auth + lectura FACT_Fondese');
+  s.skip('goPesUpsertFondese',               'requiere auth + escritura FACT_Fondese');
+  s.skip('goPesGetFormEventos',              'requiere auth + lectura FACT_Form_Eventos');
+  s.skip('goPesUpsertFormEvento',            'requiere auth + escritura + trigger de tiempo');
+  s.skip('goPesGetOrgsElegiblesFondese',     'requiere auth + lectura MAE_Organizaciones + FACT_Avance_Hitos');
 
   return s.run();
 }

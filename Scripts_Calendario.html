@@ -1,0 +1,20 @@
+  function renderCalendarioRoot_() {
+    var root = document.getElementById('inicio-calendario-root');
+    if (!root || !window.GO_PES_CALENDARIO) return;
+
+    GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml);
+
+    if (APP.state.calendarioData !== null) return;
+
+    api('getCalendarioEventos', {})
+      .then(function(data) {
+        APP.state.calendarioData      = data || {};
+        APP.state.calendarioFetchedAt = Date.now();
+        GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml);
+      })
+      .catch(function() {
+        APP.state.calendarioData      = { eventos: [] };
+        APP.state.calendarioFetchedAt = Date.now();
+        GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml);
+      });
+  }

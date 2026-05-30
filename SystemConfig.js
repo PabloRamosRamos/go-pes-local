@@ -570,7 +570,8 @@ function getConfiguredProgramName_() {
 }
 
 function getConfiguredEnvironmentLabel_() {
-  return getRuntimeSystemConfig_().general.environmentLabel || '';
+  return String((GO_PES_V2 && GO_PES_V2.ENVIRONMENT) || '').trim().toUpperCase() ||
+         getRuntimeSystemConfig_().general.environmentLabel || '';
 }
 
 function shouldShowVisibleVersion_() {

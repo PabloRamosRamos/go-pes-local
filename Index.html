@@ -23,7 +23,10 @@
       .sysinfo-dev-stat { background: var(--surface-alt, #f7fafc); border-radius: 8px; padding: 8px 6px; text-align: center; }
       .sysinfo-dev-val { display: block; font-size: 1rem; font-weight: 700; color: var(--text, #24364B); letter-spacing: -.01em; }
       .sysinfo-dev-lbl { display: block; font-size: .62rem; color: var(--text-muted, #6b7a8d); margin-top: 2px; line-height: 1.3; }
-      .sysinfo-dev-value-box { background: color-mix(in srgb, var(--runtime-brand-secondary, #8CC63F) 11%, var(--surface-alt, #f7fafc)); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+      .sysinfo-dev-value-box { background: rgba(140,198,63,.11); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+      @supports (color-mix(in srgb, red, blue)) {
+        .sysinfo-dev-value-box { background: color-mix(in srgb, var(--runtime-brand-secondary, #8CC63F) 11%, var(--surface-alt, #f7fafc)); }
+      }
       .sysinfo-dev-value-label { font-size: .67rem; font-weight: 700; color: var(--runtime-brand-secondary, #8CC63F); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 4px; }
       .sysinfo-dev-value-main { font-size: 1.08rem; font-weight: 700; color: var(--text, #24364B); }
       .sysinfo-dev-value-uf { font-size: .78rem; font-weight: 500; color: var(--text-muted, #6b7a8d); }
@@ -244,6 +247,31 @@
       html[data-theme="dark"] .dash-table td{color:var(--text,#d4e4f0);border-bottom-color:var(--border,#1e3040)}
       html[data-theme="dark"] .dash-table tr:hover td{background:var(--surface-alt,#182635)}
       html[data-theme="dark"] .dash-status-pill{background:var(--surface-alt,#182635);color:var(--text,#d4e4f0)}
+      /* Calendario de reuniones */
+      .inicio-cal-card{margin-top:0}
+      .inicio-cal-loading{display:flex;align-items:center;justify-content:center;padding:20px;color:var(--text-muted,#6b7a8d)}
+      .inicio-cal-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 12px;color:var(--text-muted,#6b7a8d);font-size:.82rem;text-align:center}
+      .inicio-cal-empty .material-symbols-outlined{font-size:1.6rem;opacity:.45}
+      .inicio-cal-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+      .inicio-cal-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border,#D6E0EA)}
+      .inicio-cal-item:last-child{border-bottom:none}
+      .inicio-cal-day{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0;text-align:center}
+      .inicio-cal-diasem{font-size:.62rem;font-weight:600;color:var(--text-muted,#6b7a8d);text-transform:uppercase;letter-spacing:.04em}
+      .inicio-cal-num{font-size:1.1rem;font-weight:700;color:var(--text,#24364B);line-height:1.1}
+      .inicio-cal-mes{font-size:.6rem;color:var(--text-muted,#6b7a8d);text-transform:uppercase}
+      .inicio-cal-body{flex:1;min-width:0}
+      .inicio-cal-titulo{margin:0;font-size:.8rem;font-weight:600;color:var(--text,#24364B);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .inicio-cal-meta{margin:2px 0 0;font-size:.72rem;color:var(--text-muted,#6b7a8d);display:flex;gap:6px;flex-wrap:wrap}
+      .inicio-cal-lugar::before{content:"· "}
+      .inicio-cal-badge{flex-shrink:0;display:inline-flex;padding:2px 7px;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.03em}
+      .inicio-cal-badge--reunion{background:rgba(61,150,180,.15);color:#3D96B4}
+      .inicio-cal-badge--ministro{background:rgba(140,198,63,.15);color:#5c8c1e}
+      .inicio-cal-footer{margin:6px 12px 8px;font-size:.68rem;color:var(--text-muted,#6b7a8d);display:flex;align-items:center;gap:4px}
+      .inicio-cal-footer .material-symbols-outlined{font-size:.85rem}
+      html[data-theme="dark"] .inicio-cal-badge--reunion{background:rgba(61,150,180,.22);color:#74c8e6}
+      html[data-theme="dark"] .inicio-cal-badge--ministro{background:rgba(140,198,63,.2);color:#9fd85a}
+      html[data-theme="dark"] .inicio-cal-num{color:var(--text,#d4e4f0)}
+      html[data-theme="dark"] .inicio-cal-titulo{color:var(--text,#d4e4f0)}
       /* Multi-tab banner (Item 11) */
       #multi-tab-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 9995; display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: #fff3cd; color: #664d03; border-bottom: 2px solid #ffc107; font-size: .83rem; font-weight: 500; line-height: 1.4; }
       #multi-tab-banner.is-hidden { display: none; }
@@ -314,6 +342,14 @@
                 </button>
                 <button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu js-app-zoom-option" data-zoom="0.8" role="menuitemradio" aria-checked="false">
                   <span class="user-menu-dropdown__label">80%</span>
+                  <span class="material-symbols-outlined user-menu-dropdown__check" aria-hidden="true">check</span>
+                </button>
+                <button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu js-app-zoom-option" data-zoom="0.7" role="menuitemradio" aria-checked="false">
+                  <span class="user-menu-dropdown__label">70%</span>
+                  <span class="material-symbols-outlined user-menu-dropdown__check" aria-hidden="true">check</span>
+                </button>
+                <button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu js-app-zoom-option" data-zoom="0.6" role="menuitemradio" aria-checked="false">
+                  <span class="user-menu-dropdown__label">60%</span>
                   <span class="material-symbols-outlined user-menu-dropdown__check" aria-hidden="true">check</span>
                 </button>
               </div>
@@ -824,6 +860,7 @@
     </script>
 
     <?!= include('Inicio'); ?>
+    <?!= include('Calendario'); ?>
     <?!= include('Manual'); ?>
     <?!= includeModule_('Scripts'); ?>
     <div id="multi-tab-banner" class="is-hidden" role="alert">
@@ -834,6 +871,19 @@
       </button>
     </div>
     <div id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+    <script>
+      (function() {
+        var ok = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' &&
+                 CSS.supports('color-mix(in srgb, red 50%, blue)');
+        if (ok) return;
+        var b = document.createElement('div');
+        b.id = 'browser-compat-warning';
+        b.setAttribute('role', 'alert');
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:9px 16px;background:#f59e0b;color:#1a1000;font-size:.8rem;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.18)';
+        b.innerHTML = '<span style="font-size:1rem">&#9888;</span> Tu navegador puede no ser compatible con esta aplicación. Se recomienda <strong>Chrome 111+</strong>, <strong>Edge 111+</strong> o <strong>Safari 16.2+</strong>. <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-weight:700;font-size:.9rem;padding:0 4px;color:inherit">&#x2715;</button>';
+        document.body.appendChild(b);
+      })();
+    </script>
     <div id="session-expired-overlay" class="is-hidden" role="alertdialog" aria-modal="true" aria-labelledby="session-expired-title">
       <div class="session-expired-dialog">
         <span class="material-symbols-outlined session-expired-icon">lock_person</span>

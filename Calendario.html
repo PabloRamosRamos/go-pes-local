@@ -1,0 +1,78 @@
+<script>
+window.GO_PES_CALENDARIO = (function() {
+
+  function render(root, data, esc) {
+    if (!root) return;
+    if (data === null || data === undefined) {
+      root.innerHTML =
+        '<section class="inicio-card inicio-cal-card">' +
+          '<div class="inicio-card__head">' +
+            '<span class="material-symbols-outlined">calendar_month</span>' +
+            '<div><h3>Calendario de reuniones</h3><p>Cargando eventos...</p></div>' +
+          '</div>' +
+          '<div class="inicio-cal-loading"><span class="material-symbols-outlined dash-spin">refresh</span></div>' +
+        '</section>';
+      return;
+    }
+    var eventos = Array.isArray(data.eventos) ? data.eventos : [];
+    root.innerHTML = buildCard_(eventos, data.fetchedAt || '', esc);
+  }
+
+  function buildCard_(eventos, fetchedAt, esc) {
+    var body = eventos.length === 0
+      ? '<div class="inicio-cal-empty">' +
+          '<span class="material-symbols-outlined">event_busy</span>' +
+          '<p>Sin reuniones próximas en los próximos 60 días</p>' +
+        '</div>'
+      : '<ul class="inicio-cal-list">' +
+          eventos.map(function(ev) { return buildItem_(ev, esc); }).join('') +
+        '</ul>';
+
+    return '<section class="inicio-card inicio-cal-card">' +
+      '<div class="inicio-card__head">' +
+        '<span class="material-symbols-outlined">calendar_month</span>' +
+        '<div><h3>Calendario de reuniones</h3>' +
+        '<p>Reuniones CS y Ministro de fe próximas</p></div>' +
+      '</div>' +
+      body +
+      (fetchedAt
+        ? '<p class="inicio-cal-footer">' +
+            '<span class="material-symbols-outlined">update</span>' +
+            esc(fetchedAt) +
+          '</p>'
+        : '') +
+    '</section>';
+  }
+
+  function buildItem_(ev, esc) {
+    var esReunion = ev.tipo === 'reunion';
+    var partesFecha = ev.fechaLabel.split(' de ');
+    var numDia = partesFecha[0] || '';
+    var mesDia = partesFecha[1] || '';
+    var hora = ev.allDay
+      ? 'Todo el día'
+      : ev.horaInicio + (ev.horaFin ? ' – ' + ev.horaFin : '');
+
+    return '<li class="inicio-cal-item">' +
+      '<div class="inicio-cal-day">' +
+        '<span class="inicio-cal-diasem">' + esc(ev.diaSemana) + '</span>' +
+        '<span class="inicio-cal-num">' + esc(numDia) + '</span>' +
+        '<span class="inicio-cal-mes">' + esc(mesDia) + '</span>' +
+      '</div>' +
+      '<div class="inicio-cal-body">' +
+        '<p class="inicio-cal-titulo">' + esc(ev.titulo) + '</p>' +
+        '<p class="inicio-cal-meta">' +
+          (hora ? '<span class="inicio-cal-hora">' + esc(hora) + '</span>' : '') +
+          (ev.lugar ? '<span class="inicio-cal-lugar">' + esc(ev.lugar) + '</span>' : '') +
+        '</p>' +
+      '</div>' +
+      '<span class="inicio-cal-badge ' +
+        (esReunion ? 'inicio-cal-badge--reunion' : 'inicio-cal-badge--ministro') + '">' +
+        (esReunion ? 'CS' : 'Min. Fe') +
+      '</span>' +
+    '</li>';
+  }
+
+  return { render: render };
+})();
+</script>

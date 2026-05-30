@@ -6,7 +6,7 @@
     (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.systemConfig) || {};
   const THEME_STORAGE_KEY = 'goPesTheme';
   const APP_ZOOM_STORAGE_KEY = 'goPesAppZoom';
-  const APP_ZOOM_OPTIONS = ['1', '0.9', '0.8'];
+  const APP_ZOOM_OPTIONS = ['1', '0.9', '0.8', '0.7', '0.6'];
   const APP_DEFAULT_MODULE_PREF_KEY = 'goDefaultModule';
 
   function normalizeModuleLookupKeyClient_(value) {
@@ -93,6 +93,8 @@
       inicioPanelFetchedAt: 0,
       dashboardData: null,
       dashboardDataFetchedAt: 0,
+      calendarioData: null,
+      calendarioFetchedAt: 0,
       currentFicha: null,
       buscarModuleRows: [],
       buscarModuleFetchedAt: 0,
@@ -438,9 +440,10 @@
 
   function readStoredAppZoom_() {
     try {
-      return normalizeAppZoom_(localStorage.getItem(APP_ZOOM_STORAGE_KEY));
+      const raw = localStorage.getItem(APP_ZOOM_STORAGE_KEY);
+      return raw !== null ? normalizeAppZoom_(raw) : null;
     } catch (err) {
-      return '1';
+      return null;
     }
   }
 
@@ -470,8 +473,8 @@
   }
 
   function hydrateAppZoom_() {
-    const bootZoom = normalizeAppZoom_(document.documentElement.dataset.appZoom || document.documentElement.style.zoom || '1');
-    applyAppZoom_(readStoredAppZoom_() || bootZoom, false);
+    const stored = readStoredAppZoom_(); // null = nunca guardado
+    applyAppZoom_(stored !== null ? stored : '0.9', false);
   }
 
   function updateThemeToggleUi_() {
@@ -2408,6 +2411,7 @@
   }
 
   <?!= include('Scripts_Inicio') ?>
+  <?!= include('Scripts_Calendario') ?>
   <?!= include('Scripts_Ficha') ?>
   <?!= include('Scripts_NuevoIngreso') ?>
   <?!= include('Scripts_Organizaciones') ?>

@@ -61,7 +61,8 @@ function getGoPesAvanceSheetDefinitions_() {
     'fecha_hito',
     'usuario_registro',
     'timestamp_registro',
-    'observacion'
+    'observacion',
+    'numero_ingreso'
   ];
 
   defs[S.FACT_AVANCE_ESTADO] = [

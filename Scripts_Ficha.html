@@ -115,12 +115,51 @@
       `
       : '';
 
+    const hitos = data.hitos || [];
     container.innerHTML = `
       <div class="ficha-layout-v2">
         ${universoVecino}
         ${universoOrganizacion}
+        ${renderHistorialGestionSection_(hitos, s)}
       </div>
     `;
+  }
+
+  function renderHistorialGestionSection_(hitos, summary) {
+    var canAdd = !!(APP.state.permissions && APP.state.permissions.modules && APP.state.permissions.modules.avance);
+
+    var rows = hitos.length
+      ? hitos.map(function(h) {
+          var fecha = escapeHtml(formatUiValue_(h.fecha_gestion || ''));
+          var tipo = escapeHtml(h.hito || '--');
+          var estado = escapeHtml(h.estado_hito || '');
+          var detalle = escapeHtml((h.detalle_gestion || '').slice(0, 130));
+          var resp = escapeHtml((h.responsable_gestion || '').replace(/@.*/, ''));
+          return '<div class="ficha-gestion-row">' +
+            '<span class="ficha-gestion-fecha">' + fecha + '</span>' +
+            '<span class="ficha-gestion-tipo">' + tipo + (estado ? ' | ' + estado : '') + '</span>' +
+            '<span class="ficha-gestion-detalle" title="' + escapeHtml(h.detalle_gestion || '') + '">' + detalle + '</span>' +
+            '<span class="ficha-gestion-resp">' + resp + '</span>' +
+          '</div>';
+        }).join('')
+      : '<div class="ficha-gestion-empty">Sin gestiones registradas.</div>';
+
+    var addBtn = canAdd
+      ? '<button class="ficha-gestion-add-btn" id="ficha-gestion-add-btn" type="button">' +
+          '<span class="material-symbols-outlined">add</span>Nueva gestion' +
+        '</button>'
+      : '';
+
+    return '<section class="ficha-gestiones">' +
+      '<div class="ficha-gestiones__head">' +
+        '<div class="ficha-gestiones__label">' +
+          '<span class="material-symbols-outlined">manage_history</span>' +
+          'Seguimiento de gestiones <span style="font-weight:400">(' + hitos.length + ')</span>' +
+        '</div>' +
+        addBtn +
+      '</div>' +
+      '<div class="ficha-gestion-list">' + rows + '</div>' +
+    '</section>';
   }
 
   function fichaBlock(icon, title, items) {

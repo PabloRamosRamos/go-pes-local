@@ -260,7 +260,8 @@
       .inicio-cal-num{font-size:1.1rem;font-weight:700;color:var(--text,#24364B);line-height:1.1}
       .inicio-cal-mes{font-size:.6rem;color:var(--text-muted,#6b7a8d);text-transform:uppercase}
       .inicio-cal-body{flex:1;min-width:0}
-      .inicio-cal-titulo{margin:0;font-size:.8rem;font-weight:600;color:var(--text,#24364B);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .inicio-cal-titulo-row{display:flex;align-items:center;gap:6px;min-width:0;margin-bottom:2px}
+      .inicio-cal-titulo{margin:0;font-size:.8rem;font-weight:600;color:var(--text,#24364B);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
       .inicio-cal-meta{margin:2px 0 0;font-size:.72rem;color:var(--text-muted,#6b7a8d);display:flex;gap:6px;flex-wrap:wrap}
       .inicio-cal-lugar::before{content:"· "}
       .inicio-cal-badge{flex-shrink:0;display:inline-flex;padding:2px 7px;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:.03em}
@@ -271,10 +272,11 @@
       /* Botón de acción + meta-row */
       .inicio-cal-meta-row{display:flex;align-items:center;gap:4px}
       .inicio-cal-meta{flex:1;margin:2px 0 0}
-      .inicio-cal-action{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:1px solid var(--border,#D6E0EA);border-radius:5px;background:none;cursor:pointer;color:var(--text-muted,#6b7a8d);transition:background .12s,color .12s,border-color .12s}
-      .inicio-cal-action:hover{background:rgba(61,150,180,.12);color:#3D96B4;border-color:#3D96B4}
-      .inicio-cal-action .material-symbols-outlined{font-size:.8rem;pointer-events:none}
-      html[data-theme="dark"] .inicio-cal-action:hover{background:rgba(116,200,230,.15);color:#74c8e6;border-color:#74c8e6}
+      .inicio-cal-action{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid var(--border,#D6E0EA);border-radius:6px;background:none;cursor:pointer;color:var(--text-muted,#6b7a8d);transition:background .12s,color .12s,border-color .12s}
+      .inicio-cal-action:hover:not(:disabled){background:rgba(61,150,180,.12);color:#3D96B4;border-color:#3D96B4}
+      .inicio-cal-action .material-symbols-outlined{font-size:1.1rem;pointer-events:none}
+      .inicio-cal-action--pending{cursor:not-allowed;opacity:.38}
+      html[data-theme="dark"] .inicio-cal-action:hover:not(:disabled){background:rgba(116,200,230,.15);color:#74c8e6;border-color:#74c8e6}
       /* Dialogo de asistencia */
       .inicio-cal-card{position:relative}
       .inicio-cal-dialog{position:absolute;inset:0;background:var(--surface,#fff);border-radius:inherit;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -303,6 +305,36 @@
       #multi-tab-banner__close { background: none; border: none; cursor: pointer; color: inherit; padding: 2px; display: flex; align-items: center; flex-shrink: 0; opacity: .7; }
       #multi-tab-banner__close:hover { opacity: 1; }
       html[data-theme="dark"] #multi-tab-banner { background: #3a2900; color: #ffd47e; border-bottom-color: #b98900; }
+      /* Seguimiento de gestiones en Ficha */
+      .ficha-gestiones{margin-top:22px;padding-top:16px;border-top:1px solid var(--border,#D6E0EA)}
+      .ficha-gestiones__head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px}
+      .ficha-gestiones__label{display:flex;align-items:center;gap:6px;font-size:.74rem;font-weight:700;color:var(--text-muted,#6b7a8d);text-transform:uppercase;letter-spacing:.06em}
+      .ficha-gestiones__label .material-symbols-outlined{font-size:1rem}
+      .ficha-gestion-add-btn{display:flex;align-items:center;gap:4px;font-size:.78rem;padding:4px 10px;border:1px solid var(--border,#D6E0EA);border-radius:6px;background:var(--surface,#fff);color:var(--text,#24364B);cursor:pointer;line-height:1.5}
+      .ficha-gestion-add-btn:hover{background:var(--surface-alt,#f7fafc)}
+      .ficha-gestion-add-btn .material-symbols-outlined{font-size:.9rem}
+      .ficha-gestion-list{display:flex;flex-direction:column}
+      .ficha-gestion-row{display:grid;grid-template-columns:108px 1fr minmax(0,2.5fr) 90px;gap:8px;padding:6px 2px;border-bottom:1px solid var(--border,#EAF0F5);align-items:baseline;font-size:.82rem}
+      .ficha-gestion-row:last-child{border-bottom:none}
+      .ficha-gestion-fecha{color:var(--text-muted,#6b7a8d);font-size:.76rem;white-space:nowrap}
+      .ficha-gestion-tipo{font-weight:600;color:var(--text,#24364B)}
+      .ficha-gestion-detalle{color:var(--text-muted,#6b7a8d);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .ficha-gestion-resp{color:var(--text-muted,#6b7a8d);font-size:.72rem;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .ficha-gestion-empty{font-size:.82rem;color:var(--text-muted,#6b7a8d);padding:6px 2px;font-style:italic}
+      .ficha-gestion-form{background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+      .ficha-gestion-form.is-hidden{display:none}
+      .ficha-gestion-form-row{display:grid;grid-template-columns:2fr 1.5fr 1fr;gap:10px;margin-bottom:10px}
+      .ficha-gestion-form label{display:flex;flex-direction:column;gap:4px;font-size:.78rem;font-weight:600;color:var(--text,#24364B)}
+      .ficha-gestion-form input,.ficha-gestion-form select,.ficha-gestion-form textarea{font-size:.84rem;padding:6px 10px;border:1px solid var(--border,#D6E0EA);border-radius:6px;background:var(--surface,#fff);color:var(--text,#24364B)}
+      .ficha-gestion-form textarea{resize:vertical;min-height:56px;width:100%;box-sizing:border-box;margin-bottom:8px}
+      .ficha-gestion-form-actions{display:flex;gap:8px}
+      html[data-theme="dark"] .ficha-gestiones{border-color:var(--border,#294356)}
+      html[data-theme="dark"] .ficha-gestion-row{border-color:var(--border,#1e3040)}
+      html[data-theme="dark"] .ficha-gestion-tipo{color:var(--text,#cdd9e5)}
+      html[data-theme="dark"] .ficha-gestion-add-btn{background:var(--surface,#14202d);border-color:var(--border,#294356);color:var(--text,#cdd9e5)}
+      html[data-theme="dark"] .ficha-gestion-add-btn:hover{background:var(--surface-alt,#182635)}
+      html[data-theme="dark"] .ficha-gestion-form{background:var(--surface-alt,#182635);border-color:var(--border,#294356)}
+      html[data-theme="dark"] .ficha-gestion-form input,html[data-theme="dark"] .ficha-gestion-form select,html[data-theme="dark"] .ficha-gestion-form textarea{background:var(--surface,#14202d);border-color:var(--border,#294356);color:var(--text,#cdd9e5)}
     </style>
     <script>
       (() => {

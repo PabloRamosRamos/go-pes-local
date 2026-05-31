@@ -58,15 +58,23 @@ window.GO_PES_CALENDARIO = (function() {
     var partesFecha = ev.fechaLabel.split(' de ');
     var numDia = partesFecha[0] || '';
     var mesDia = partesFecha[1] || '';
-    var hora   = ev.allDay ? 'Todo el día'
-               : ev.horaInicio + (ev.horaFin ? ' – ' + ev.horaFin : '');
+    var hora   = ev.allDay ? 'Todo el dia'
+               : ev.horaInicio + (ev.horaFin ? ' - ' + ev.horaFin : '');
+
+    var badge = '<span class="inicio-cal-badge ' +
+      (esReunion ? 'inicio-cal-badge--reunion' : 'inicio-cal-badge--ministro') + '">' +
+      (esReunion ? 'CS' : 'Min. Fe') +
+    '</span>';
 
     var actionBtn = esReunion
       ? '<button class="inicio-cal-action" data-cal-id="' + esc(ev.id) + '" type="button" ' +
           'title="Registrar asistencia y crear nuevo ingreso">' +
           '<span class="material-symbols-outlined">person_add</span>' +
         '</button>'
-      : '';
+      : '<button class="inicio-cal-action inicio-cal-action--pending" type="button" disabled ' +
+          'title="Para programar este evento, primero se deben completar los hitos previos en la app">' +
+          '<span class="material-symbols-outlined">how_to_reg</span>' +
+        '</button>';
 
     return '<li class="inicio-cal-item">' +
       '<div class="inicio-cal-day">' +
@@ -75,7 +83,10 @@ window.GO_PES_CALENDARIO = (function() {
         '<span class="inicio-cal-mes">' + esc(mesDia) + '</span>' +
       '</div>' +
       '<div class="inicio-cal-body">' +
-        '<p class="inicio-cal-titulo">' + esc(ev.titulo) + '</p>' +
+        '<div class="inicio-cal-titulo-row">' +
+          '<p class="inicio-cal-titulo">' + esc(ev.titulo) + '</p>' +
+          badge +
+        '</div>' +
         '<div class="inicio-cal-meta-row">' +
           '<p class="inicio-cal-meta">' +
             (hora ? '<span class="inicio-cal-hora">' + esc(hora) + '</span>' : '') +
@@ -84,10 +95,6 @@ window.GO_PES_CALENDARIO = (function() {
           actionBtn +
         '</div>' +
       '</div>' +
-      '<span class="inicio-cal-badge ' +
-        (esReunion ? 'inicio-cal-badge--reunion' : 'inicio-cal-badge--ministro') + '">' +
-        (esReunion ? 'CS' : 'Min. Fe') +
-      '</span>' +
     '</li>';
   }
 

@@ -192,67 +192,17 @@
   // -- TARJETA ORGANIZACION --
 
   function renderOrganizacionCardHtml_(org) {
-    const HITOS_DISPLAY = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-    const hitosCumplidos = org.hitos_cumplidos || [];
-    // Hitos 1-11 son lineales: si llegó al N, los anteriores están implícitos.
-    // Hitos 12-15 tienen permite_saltar y se cuentan solo si están explícitos.
-    const maxLineal = Math.max.apply(null, [0].concat(hitosCumplidos.filter(n => n >= 1 && n <= 11)));
-    const done = n => (n <= 11 && n <= maxLineal) || hitosCumplidos.indexOf(n) !== -1;
-    const countDone = HITOS_DISPLAY.filter(n => done(n)).length;
+    var hitosCumplidos = org.hitos_cumplidos || [];
+    var countDone = hitosCumplidos.length;
 
-    const estadoBg   = org.estado_general_organizacion === 'Activo'     ? '#dcfce7'
-                     : org.estado_general_organizacion === 'Suspendida' ? '#fef3c7'
-                     : '#fee2e2';
-    const estadoTxt  = org.estado_general_organizacion === 'Activo'     ? '#16a34a'
-                     : org.estado_general_organizacion === 'Suspendida' ? '#d97706'
-                     : '#dc2626';
-
-    const hitosHtml = HITOS_DISPLAY.map(n => {
-      const isOk = done(n);
-      const bg = isOk ? '#8CC63F' : 'var(--border,#e5e7eb)';
-      const color = isOk ? '#fff' : '#9ca3af';
-      return '<span title="Hito ' + n + '" style="width:22px;height:22px;border-radius:50%;background:' + bg + ';color:' + color + ';font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">' + n + '</span>';
-    }).join('');
-
-    return `
-      <div class="panel" style="padding:0;display:flex;flex-direction:column;overflow:hidden;">
-
-        <div style="padding:1rem 1rem 0.75rem;">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:0.5rem;margin-bottom:0.5rem;">
-            <h4 style="margin:0;font-size:0.95rem;line-height:1.4;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(org.label || 'Sin nombre')}</h4>
-            ${org.estado_general_organizacion ? `
-              <span style="font-size:0.68rem;font-weight:700;padding:2px 9px;border-radius:10px;white-space:nowrap;flex-shrink:0;background:${estadoBg};color:${estadoTxt};">
-                ${escapeHtml(org.estado_general_organizacion)}
-              </span>
-            ` : ''}
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.15rem 0.75rem;font-size:0.78rem;color:var(--text-muted,#6b7280);">
-            ${org.tipo_organizacion ? `<span style="grid-column:1/-1;"><strong style="font-weight:500;color:var(--text,#374151);">Tipo:</strong> ${escapeHtml(org.tipo_organizacion)}</span>` : ''}
-            ${org.uv             ? `<span><strong style="font-weight:500;color:var(--text,#374151);">UV:</strong> ${escapeHtml(org.uv)}</span>` : ''}
-            ${org.sector         ? `<span><strong style="font-weight:500;color:var(--text,#374151);">Sector:</strong> ${escapeHtml(org.sector)}</span>` : ''}
-            ${org.responsable_actual ? `<span style="grid-column:1/-1;"><strong style="font-weight:500;color:var(--text,#374151);">Responsable:</strong> ${escapeHtml(org.responsable_actual)}</span>` : ''}
-            ${org.estado_constitucion ? `<span style="grid-column:1/-1;"><strong style="font-weight:500;color:var(--text,#374151);">Constitución:</strong> ${escapeHtml(org.estado_constitucion)}</span>` : ''}
-          </div>
-        </div>
-
-        <div style="padding:0.6rem 1rem;border-top:1px solid var(--border,#f0f0f0);background:var(--surface-2,#fafafa);">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
-            <span style="font-size:0.69rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted,#9ca3af);">Avance de hitos</span>
-            <span style="font-size:0.72rem;font-weight:600;color:var(--primary,#3D96B4);">${countDone} / ${HITOS_DISPLAY.length}</span>
-          </div>
-          <div style="display:flex;gap:3px;flex-wrap:wrap;">${hitosHtml}</div>
-        </div>
-
-        <div style="padding:0.75rem 1rem;border-top:1px solid var(--border,#f0f0f0);">
-          <button type="button" class="secondary-btn" style="width:100%;justify-content:center;"
-            data-org-ver-detalle="${escapeHtml(org.value || '')}">
-            <span class="material-symbols-outlined">open_in_full</span>Ver detalle
-          </button>
-        </div>
-
-      </div>
-    `;
+    return '<div class="panel">' +
+      '<h4>' + escapeHtml(org.label || 'Sin nombre') + '</h4>' +
+      '<p>' + escapeHtml(org.tipo_organizacion || '') + '</p>' +
+      '<p>Hitos: ' + countDone + ' / 15</p>' +
+      '<button type="button" class="secondary-btn" data-org-ver-detalle="' + escapeHtml(org.value || '') + '">' +
+        '<span class="material-symbols-outlined">open_in_full</span>Ver detalle' +
+      '</button>' +
+    '</div>';
   }
 
   // -- RENDER GRID PRINCIPAL --

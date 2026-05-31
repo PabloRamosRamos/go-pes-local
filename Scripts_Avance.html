@@ -83,6 +83,12 @@
             <p class="muted">Requerido solo para registrar el hito Ingreso de documentación.</p>
           </div>
 
+          <div class="field is-hidden" id="avance-modal-num-ingreso-field">
+            <label>Numero de ingreso oficina de partes</label>
+            <input id="avance-modal-num-ingreso" type="number" min="1" step="1" placeholder="Ej: 4762">
+            <p class="muted">El anio se toma de la fecha del hito. Se mostrara como <strong>4762/26</strong>.</p>
+          </div>
+
           <div class="field">
             <label>Observación</label>
             <textarea id="avance-modal-observacion" rows="4" placeholder="Observación opcional"></textarea>
@@ -266,6 +272,15 @@
 
       lockAvanceActions_(true);
     }).catch(showError);
+  }
+
+  function formatNumIngreso_(val) {
+    if (!val) return '';
+    const parts = String(val).split('/');
+    if (parts.length === 2 && /^\d{4}$/.test(parts[1])) {
+      return parts[0] + '/' + parts[1].slice(2);
+    }
+    return val;
   }
 
   function clampPct_(value) {
@@ -576,6 +591,7 @@
         <p><strong>Tramo:</strong> ${escapeHtml(r.tramo || '')}</p>
         <p><strong>Fecha:</strong> ${escapeHtml(formatFechaHoraUi_(r.fecha_hito || ''))}</p>
         <p><strong>Usuario:</strong> ${escapeHtml(r.usuario_registro || '')}</p>
+        ${r.numero_ingreso ? '<p><strong>N&ordm; ingreso:</strong> ' + escapeHtml(formatNumIngreso_(r.numero_ingreso)) + '</p>' : ''}
         <p><strong>Observación:</strong> ${escapeHtml(r.observacion || '')}</p>
       </div>
     `).join('');
@@ -634,6 +650,15 @@
       if (orgNombreError) orgNombreError.classList.add('is-hidden');
     }
 
+    const numIngresoField = document.getElementById('avance-modal-num-ingreso-field');
+    const numIngresoInput = document.getElementById('avance-modal-num-ingreso');
+    if (numIngresoField && numIngresoInput) {
+      const esCartaOfParts = String(item.codigo_hito || '') === 'PRE_02';
+      numIngresoField.classList.toggle('is-hidden', !esCartaOfParts);
+      numIngresoInput.required = esCartaOfParts;
+      numIngresoInput.value = '';
+    }
+
     setModalVisibility_(modal, true);
   }
 
@@ -682,12 +707,15 @@
     const orgNombre = document.getElementById('avance-modal-org-nombre');
     const orgNombreError = document.getElementById('avance-modal-org-nombre-error');
 
+    const numIngresoInput = document.getElementById('avance-modal-num-ingreso');
+
     const organizacionId = String(orgSelect?.value || '').trim();
     const solicitudId = String(grupoSelect?.value || '').trim();
     const codigoHito = String(codigo?.value || '').trim();
     const fechaHito = String(fecha?.value || '').trim();
     const observacion = String(obs?.value || '').trim();
     const nombreOrganizacionVariable = String(orgNombre?.value || '').trim();
+    const numIngresoRaw = String(numIngresoInput?.value || '').trim();
 
     if (isGrupo && !solicitudId) {
       showError('Debes seleccionar un Grupo de vecinos.');
@@ -720,6 +748,18 @@
       return;
     }
 
+    const esCartaOfParts = codigoHito === 'PRE_02';
+    if (esCartaOfParts && !numIngresoRaw) {
+      showError('Debes ingresar el numero de ingreso de la carta en oficina de partes.');
+      return;
+    }
+
+    let numeroIngreso = '';
+    if (esCartaOfParts && numIngresoRaw) {
+      const anioHito = fechaHito ? new Date(fechaHito + 'T12:00:00').getFullYear() : new Date().getFullYear();
+      numeroIngreso = numIngresoRaw + '/' + anioHito;
+    }
+
     const nombreOrganizacionAsamblea = requiereNombreOrganizacion
       ? `COMITE DE SEGURIDAD ${nombreOrganizacionVariable}`.replace(/\s+/g, ' ').trim()
       : '';
@@ -733,7 +773,8 @@
       codigo_hito: codigoHito,
       fecha_hito: fechaHito,
       observacion: observacion,
-      nombre_organizacion_asamblea: nombreOrganizacionAsamblea
+      nombre_organizacion_asamblea: nombreOrganizacionAsamblea,
+      numero_ingreso: numeroIngreso
     }).then(res => {
       showSuccess(res && res.warning_nombre_duplicado
         ? `Hito registrado correctamente. Advertencia: ${res.warning_nombre_duplicado}`

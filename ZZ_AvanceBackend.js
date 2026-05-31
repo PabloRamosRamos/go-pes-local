@@ -210,6 +210,7 @@ function registrarHitoAvance(payload) {
   const solicitudIdPayload = String(payload.solicitud_id || '').trim();
   const codigoHito = String(payload.codigo_hito || '').trim();
   const observacion = String(payload.observacion || '').trim();
+  const numeroIngreso = String(payload.numero_ingreso || '').trim();
   const fechaHito = asDateOrBlank_(payload.fecha_hito);
 
   if (!codigoHito) throw new Error('Falta codigo_hito.');
@@ -264,7 +265,8 @@ function registrarHitoAvance(payload) {
     fecha_hito: fechaHito,
     usuario_registro: goPesGetUserEmail_(user),
     timestamp_registro: now,
-    observacion: observacion
+    observacion: observacion,
+    numero_ingreso: numeroIngreso
   });
 
   upsertVistaAvanceOrganizacionRowById_(organizacionId);
@@ -319,6 +321,7 @@ function registrarHitoAvanceGrupoVecinos_(payload, user, diag) {
   const solicitudId = String(payload.solicitud_id || '').trim();
   const codigoHito = String(payload.codigo_hito || '').trim();
   const observacion = String(payload.observacion || '').trim();
+  const numeroIngreso = String(payload.numero_ingreso || '').trim();
   const fechaHito = asDateOrBlank_(payload.fecha_hito);
 
   const caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
@@ -363,7 +366,8 @@ function registrarHitoAvanceGrupoVecinos_(payload, user, diag) {
     fecha_hito: fechaHito,
     usuario_registro: goPesGetUserEmail_(user),
     timestamp_registro: now,
-    observacion: observacion
+    observacion: observacion,
+    numero_ingreso: numeroIngreso
   });
 
   if (organizacionId) {

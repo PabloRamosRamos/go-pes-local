@@ -662,8 +662,22 @@ OBSERVACION: </pre>
           <div class="man-steps">
             <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Seleccionar la organización</strong>En el módulo Avance, elige la organización desde el selector o la lista de la vista.</div></div>
             <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Ver el hito pendiente</strong>El sistema muestra el siguiente hito a cumplir según el orden del proceso.</div></div>
-            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Registrar el hito</strong>Ingresa la fecha en que se cumplió el hito y una observación (opcional). Haz clic en Registrar.</div></div>
+            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Completar el formulario</strong>Ingresa la fecha en que se cumplió el hito y una observación (opcional). Algunos hitos requieren datos adicionales: el Hito 2 exige el <strong>número de ingreso</strong> asignado por oficina de partes. Haz clic en Guardar hito.</div></div>
             <div class="man-step"><div class="man-step__num">4</div><div class="man-step__body"><strong>Verificar avance</strong>El sistema actualiza el contador de hitos cumplidos y el estado de avance de la organización.</div></div>
+          </div>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">receipt_long</span>Hito 2 — Carta por oficina de partes</p>
+          <p class="man-p">Al registrar el Hito 2 el formulario solicita el <strong>número de ingreso</strong> asignado por la oficina de partes de la municipalidad cuando se entregó la carta que solicita ministro de fe. Este número es obligatorio.</p>
+          <table class="man-field-table">
+            <thead><tr><th>Campo</th><th>Descripción</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Número de ingreso</strong></td><td>Número correlativo asignado por oficina de partes al momento de recibir la carta. Solo el número, sin año (ej: <code>4762</code>).</td></tr>
+              <tr><td><strong>Formato de visualización</strong></td><td>El sistema muestra el número combinado con el año de la fecha del hito en formato <code>4762/26</code>. El año completo queda guardado internamente.</td></tr>
+            </tbody>
+          </table>
+          <div class="man-callout man-callout--warning">
+            <span class="material-symbols-outlined">warning</span>
+            <div>El contador de oficina de partes se reinicia cada 1 de enero. El sistema resuelve la ambigüedad usando el año de la fecha del hito que ingresas. Asegúrate de que la fecha sea correcta antes de guardar.</div>
           </div>
 
           <p class="man-section-subtitle"><span class="material-symbols-outlined">label</span>Estados de avance</p>
@@ -1064,6 +1078,11 @@ OBSERVACION: </pre>
             <div class="man-faq-item">
               <button class="man-faq-q" type="button">¿Cómo sé cuál es el siguiente hito a registrar para una organización? <span class="material-symbols-outlined">expand_more</span></button>
               <div class="man-faq-a">En el módulo Avance, al seleccionar una organización, el sistema muestra automáticamente el próximo hito pendiente según el avance actual. Los hitos ya cumplidos aparecen marcados y el siguiente aparece destacado.</div>
+            </div>
+
+            <div class="man-faq-item">
+              <button class="man-faq-q" type="button">¿Qué es el número de ingreso que pide el Hito 2? <span class="material-symbols-outlined">expand_more</span></button>
+              <div class="man-faq-a">Es el número correlativo que asigna la oficina de partes de la municipalidad al momento de recibir la carta que solicita ministro de fe. Cada documento que ingresa recibe un número único dentro del año en curso. Ingresa solo el número (ej: <code>4762</code>) — el sistema registra el año automáticamente desde la fecha del hito y muestra el dato como <code>4762/26</code>. Si la carta fue ingresada en un año distinto, ajusta la fecha del hito antes de guardar.</div>
             </div>
 
             <div class="man-faq-item">

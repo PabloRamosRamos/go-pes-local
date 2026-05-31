@@ -53,9 +53,10 @@ function getCalendarioEventos(payload) {
         diaSemana:  ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][start.getDay()],
         horaInicio: allDay ? '' : Utilities.formatDate(start, tz, 'HH:mm'),
         horaFin:    allDay ? '' : Utilities.formatDate(end,   tz, 'HH:mm'),
-        lugar:      (ev.getLocation() || '').trim(),
-        allDay:     allDay,
-        tipo:       tNorm.indexOf(normalizeCalText_('Reunion CS')) !== -1 ? 'reunion' : 'ministro'
+        lugar:       (ev.getLocation()    || '').trim(),
+        descripcion: (ev.getDescription() || '').trim(),
+        allDay:      allDay,
+        tipo:        tNorm.indexOf(normalizeCalText_('Reunion CS')) !== -1 ? 'reunion' : 'ministro'
       };
     })
     .sort(function(a, b) { return a.fecha.localeCompare(b.fecha); });

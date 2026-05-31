@@ -406,9 +406,49 @@
           <p class="man-section-subtitle"><span class="material-symbols-outlined">account_circle</span>Requisitos de cuenta</p>
           <p class="man-p">Esta funcionalidad solo está disponible para usuarios con cuenta <strong>@providencia.cl</strong>. Al acceder por primera vez con una nueva implementación del sistema, Google solicitará autorización para leer tu calendario. Debes aceptar para que el panel funcione.</p>
 
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">person_add</span>Botón de acción: crear nuevo ingreso</p>
+          <p class="man-p">Los eventos de tipo <strong>Reunión CS</strong> muestran un botón <span class="material-symbols-outlined" style="font-size:.9rem;vertical-align:middle">person_add</span> a la derecha. Al hacer clic, el sistema abre el módulo <strong>Nuevo ingreso</strong> con los datos pre-completados desde el evento de calendario:</p>
+          <table class="man-field-table">
+            <thead><tr><th>Campo del formulario</th><th>Origen</th></tr></thead>
+            <tbody>
+              <tr><td>Dirección</td><td>Campo <strong>Ubicación</strong> del evento en Google Calendar</td></tr>
+              <tr><td>Fecha de solicitud</td><td>Fecha de inicio del evento</td></tr>
+              <tr><td>Nombre, Apellido, Teléfono, etc.</td><td>Campo <strong>Descripción</strong> del evento (ver plantilla abajo)</td></tr>
+            </tbody>
+          </table>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">content_paste</span>Plantilla para el campo Descripción del evento</p>
+          <p class="man-p">Copia y pega la siguiente plantilla en el campo <strong>Descripción</strong> del evento de Google Calendar. Completa solo los campos que correspondan — los que queden vacíos simplemente no se pre-completarán.</p>
+
+          <pre style="background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:12px 16px;font-size:.8rem;line-height:1.8;overflow-x:auto;margin:10px 0">NOMBRE:
+APELLIDO:
+RUT:
+TELEFONO:
+CORREO:
+UV:
+TIPO_VIVIENDA:
+OBSERVACION: </pre>
+
+          <div class="man-callout man-callout--tip">
+            <span class="material-symbols-outlined">lightbulb</span>
+            <div>El sistema es flexible: acepta las claves en mayúsculas o minúsculas, con o sin acentos. El separador es siempre <strong>dos puntos (:)</strong> seguido del valor. Las líneas que no siguen este formato se ignoran.</div>
+          </div>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">example</span>Ejemplo completo de un evento "Reunion CS"</p>
+          <table class="man-field-table">
+            <thead><tr><th>Campo del evento en Calendar</th><th>Ejemplo</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Título</strong></td><td>Reunion CS - Comité Los Aromos</td></tr>
+              <tr><td><strong>Fecha</strong></td><td>15 de junio 2026, 10:00 – 11:00</td></tr>
+              <tr><td><strong>Ubicación</strong></td><td>Av. Providencia 1234</td></tr>
+              <tr><td><strong>Descripción</strong></td><td><code>NOMBRE: María<br>APELLIDO: González Soto<br>TELEFONO: 987654321<br>UV: 12<br>OBSERVACION: Interesada en el programa, referida por directiva.</code></td></tr>
+            </tbody>
+          </table>
+          <p class="man-p">Al hacer clic en <span class="material-symbols-outlined" style="font-size:.9rem;vertical-align:middle">person_add</span> en ese evento, el formulario de Nuevo ingreso se abrirá con dirección "Av. Providencia 1234", fecha "15/06/2026", nombre "María", apellido "González Soto", teléfono "987654321", UV "12" y observación pre-completados. El operador solo debe revisar, ajustar si es necesario y guardar.</p>
+
           <div class="man-callout man-callout--warning">
             <span class="material-symbols-outlined">warning</span>
-            <div>Si el panel muestra "Sin reuniones próximas" pero tienes eventos en tu calendario, verifica que el título del evento incluya exactamente el texto indicado arriba. El panel solo carga eventos de los próximos 60 días desde la fecha actual.</div>
+            <div>Si el panel muestra "Sin reuniones próximas" pero tienes eventos en tu calendario, verifica que el título del evento incluya exactamente "Reunion CS" o "Ministro de fe". El panel carga eventos de los próximos 60 días desde la fecha actual.</div>
           </div>
         </div>
 

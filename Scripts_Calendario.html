@@ -1,8 +1,49 @@
+  // Parsea el campo descripcion del evento: cada linea "CLAVE: Valor" → objeto
+  function parseCalDescripcion_(text) {
+    var result = {};
+    String(text || '').split(/\r?\n/).forEach(function(line) {
+      var sep = line.indexOf(':');
+      if (sep < 1) return;
+      var key = line.substring(0, sep).trim().toUpperCase().replace(/\s+/g, '_');
+      var val = line.substring(sep + 1).trim();
+      if (key && val) result[key] = val;
+    });
+    return result;
+  }
+
+  // Construye el objeto de prefill para el form de Nuevo Ingreso desde un evento de calendario
+  function buildPrefillFromCalEvent_(ev) {
+    var d = parseCalDescripcion_(ev.descripcion || '');
+    return {
+      nombre_vecino:      d['NOMBRE']         || '',
+      apellido_vecino:    d['APELLIDO']        || '',
+      rut_vecino:         d['RUT']             || '',
+      telefono_contacto:  d['TELEFONO']        || d['TEL'] || '',
+      correo_contacto:    d['CORREO']          || d['EMAIL'] || '',
+      uv:                 d['UV']              || '',
+      tipo_vivienda:      d['TIPO_VIVIENDA']   || d['VIVIENDA'] || '',
+      observaciones_form: d['OBSERVACION']     || d['OBS'] || '',
+      direccion_original: ev.lugar             || '',
+      fecha_solicitud:    ev.fecha             || ''
+    };
+  }
+
   function renderCalendarioRoot_() {
     var root = document.getElementById('inicio-calendario-root');
     if (!root || !window.GO_PES_CALENDARIO) return;
 
-    GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml);
+    function onCalAction(eventId) {
+      var eventos = (APP.state.calendarioData && APP.state.calendarioData.eventos) || [];
+      var ev = null;
+      for (var i = 0; i < eventos.length; i++) {
+        if (eventos[i].id === eventId) { ev = eventos[i]; break; }
+      }
+      if (!ev || ev.tipo !== 'reunion') return;
+      APP.state.nuevoIngresoPrefill = buildPrefillFromCalEvent_(ev);
+      route('nuevo-ingreso');
+    }
+
+    GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml, onCalAction);
 
     if (APP.state.calendarioData !== null) return;
 
@@ -10,11 +51,11 @@
       .then(function(data) {
         APP.state.calendarioData      = data || {};
         APP.state.calendarioFetchedAt = Date.now();
-        GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml);
+        GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml, onCalAction);
       })
       .catch(function() {
         APP.state.calendarioData      = { eventos: [] };
         APP.state.calendarioFetchedAt = Date.now();
-        GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml);
+        GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml, onCalAction);
       });
   }

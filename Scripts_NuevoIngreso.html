@@ -225,11 +225,42 @@
   }
 
 
+  function applyIngresoPrefill_() {
+    var prefill = APP.state.nuevoIngresoPrefill;
+    if (!prefill) return;
+    APP.state.nuevoIngresoPrefill = null;
+
+    var textFields = {
+      'ing-nombre_vecino':      prefill.nombre_vecino,
+      'ing-apellido_vecino':    prefill.apellido_vecino,
+      'ing-rut_vecino':         prefill.rut_vecino,
+      'ing-telefono_contacto':  prefill.telefono_contacto,
+      'ing-correo_contacto':    prefill.correo_contacto,
+      'ing-direccion_original': prefill.direccion_original,
+      'ing-fecha_solicitud':    prefill.fecha_solicitud,
+      'ing-observaciones_form': prefill.observaciones_form
+    };
+    Object.keys(textFields).forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el && textFields[id]) el.value = textFields[id];
+    });
+
+    if (prefill.uv) {
+      var uvEl = document.getElementById('ing-uv');
+      if (uvEl) { uvEl.value = prefill.uv; syncIngresoSectorOptions(); }
+    }
+    if (prefill.tipo_vivienda) {
+      var tvEl = document.getElementById('ing-tipo_vivienda');
+      if (tvEl) tvEl.value = prefill.tipo_vivienda;
+    }
+  }
+
   function renderNuevoIngresoView_() {
     showContentLoading('Iniciando Gestor Operativo');
 
     requestAnimationFrame(() => {
       syncIngresoSectorOptions();
+      applyIngresoPrefill_();
       renderIngresoPreview();
 
       const form = document.getElementById('form-ingreso');

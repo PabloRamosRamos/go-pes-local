@@ -1,7 +1,7 @@
 <script>
 window.GO_PES_CALENDARIO = (function() {
 
-  function render(root, data, esc) {
+  function render(root, data, esc, onAction) {
     if (!root) return;
     if (data === null || data === undefined) {
       root.innerHTML =
@@ -16,6 +16,14 @@ window.GO_PES_CALENDARIO = (function() {
     }
     var eventos = Array.isArray(data.eventos) ? data.eventos : [];
     root.innerHTML = buildCard_(eventos, data.fetchedAt || '', esc);
+
+    if (typeof onAction === 'function') {
+      root.addEventListener('click', function(e) {
+        var btn = e.target.closest('.inicio-cal-action');
+        if (!btn) return;
+        onAction(btn.dataset.calId);
+      });
+    }
   }
 
   function buildCard_(eventos, fetchedAt, esc) {
@@ -53,6 +61,12 @@ window.GO_PES_CALENDARIO = (function() {
       ? 'Todo el día'
       : ev.horaInicio + (ev.horaFin ? ' – ' + ev.horaFin : '');
 
+    var actionBtn = esReunion
+      ? '<button class="inicio-cal-action" data-cal-id="' + esc(ev.id) + '" type="button" title="Crear nuevo ingreso desde este evento">' +
+          '<span class="material-symbols-outlined">person_add</span>' +
+        '</button>'
+      : '';
+
     return '<li class="inicio-cal-item">' +
       '<div class="inicio-cal-day">' +
         '<span class="inicio-cal-diasem">' + esc(ev.diaSemana) + '</span>' +
@@ -70,6 +84,7 @@ window.GO_PES_CALENDARIO = (function() {
         (esReunion ? 'inicio-cal-badge--reunion' : 'inicio-cal-badge--ministro') + '">' +
         (esReunion ? 'CS' : 'Min. Fe') +
       '</span>' +
+      actionBtn +
     '</li>';
   }
 

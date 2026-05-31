@@ -268,10 +268,29 @@
       .inicio-cal-badge--ministro{background:rgba(140,198,63,.15);color:#5c8c1e}
       .inicio-cal-footer{margin:6px 12px 8px;font-size:.68rem;color:var(--text-muted,#6b7a8d);display:flex;align-items:center;gap:4px}
       .inicio-cal-footer .material-symbols-outlined{font-size:.85rem}
-      .inicio-cal-action{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:28px;height:28px;border:1px solid var(--border,#D6E0EA);border-radius:6px;background:none;cursor:pointer;color:var(--text-muted,#6b7a8d);transition:background .12s,color .12s,border-color .12s;margin-left:4px}
+      /* Botón de acción + meta-row */
+      .inicio-cal-meta-row{display:flex;align-items:center;gap:4px}
+      .inicio-cal-meta{flex:1;margin:2px 0 0}
+      .inicio-cal-action{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:1px solid var(--border,#D6E0EA);border-radius:5px;background:none;cursor:pointer;color:var(--text-muted,#6b7a8d);transition:background .12s,color .12s,border-color .12s}
       .inicio-cal-action:hover{background:rgba(61,150,180,.12);color:#3D96B4;border-color:#3D96B4}
-      .inicio-cal-action .material-symbols-outlined{font-size:.9rem;pointer-events:none}
+      .inicio-cal-action .material-symbols-outlined{font-size:.8rem;pointer-events:none}
       html[data-theme="dark"] .inicio-cal-action:hover{background:rgba(116,200,230,.15);color:#74c8e6;border-color:#74c8e6}
+      /* Dialogo de asistencia */
+      .inicio-cal-card{position:relative}
+      .inicio-cal-dialog{position:absolute;inset:0;background:var(--surface,#fff);border-radius:inherit;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px}
+      .inicio-cal-dialog.is-hidden{display:none}
+      .inicio-cal-dialog__box{width:100%;display:flex;flex-direction:column;gap:12px}
+      .inicio-cal-dialog__titulo{margin:0;font-size:.78rem;font-weight:600;color:var(--text-muted,#6b7a8d);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .inicio-cal-dialog__q{margin:0;font-size:.88rem;font-weight:600;color:var(--text,#24364B)}
+      .inicio-cal-dialog__btns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+      .inicio-cal-dialog__cancel{background:none;border:none;cursor:pointer;font-size:.78rem;color:var(--text-muted,#6b7a8d);padding:0 4px;text-decoration:underline}
+      .inicio-cal-dialog__cancel:hover{color:var(--text,#24364B)}
+      .inicio-cal-dialog__input{width:100%;padding:7px 10px;border:1px solid var(--border,#D6E0EA);border-radius:6px;font-size:.88rem;background:var(--surface-alt,#f7fafc);color:var(--text,#24364B);outline:none}
+      .inicio-cal-dialog__input:focus{border-color:#3D96B4;box-shadow:0 0 0 2px rgba(61,150,180,.15)}
+      #cal-step-loading{display:flex;align-items:center;justify-content:center;gap:8px;font-size:.82rem;color:var(--text-muted,#6b7a8d)}
+      html[data-theme="dark"] .inicio-cal-dialog{background:var(--surface,#1a2234)}
+      html[data-theme="dark"] .inicio-cal-dialog__input{background:var(--surface-alt,#111827);border-color:var(--border,#243449)}
+      html[data-theme="dark"] .inicio-cal-dialog__q{color:var(--text,#d4e4f0)}
       html[data-theme="dark"] .inicio-cal-badge--reunion{background:rgba(61,150,180,.22);color:#74c8e6}
       html[data-theme="dark"] .inicio-cal-badge--ministro{background:rgba(140,198,63,.2);color:#9fd85a}
       html[data-theme="dark"] .inicio-cal-num{color:var(--text,#d4e4f0)}
@@ -883,8 +902,8 @@
         var b = document.createElement('div');
         b.id = 'browser-compat-warning';
         b.setAttribute('role', 'alert');
-        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:9px 16px;background:#f59e0b;color:#1a1000;font-size:.8rem;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.18)';
-        b.innerHTML = '<span style="font-size:1rem">&#9888;</span> Tu navegador puede no ser compatible con esta aplicación. Se recomienda <strong>Chrome 111+</strong>, <strong>Edge 111+</strong> o <strong>Safari 16.2+</strong>. <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-weight:700;font-size:.9rem;padding:0 4px;color:inherit">&#x2715;</button>';
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:9px 48px 9px 16px;background:#f59e0b;color:#1a1000;font-size:.8rem;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.18)';
+        b.innerHTML = '<span style="font-size:1rem">&#9888;</span> Tu navegador puede no ser compatible con esta aplicación. Se recomienda <strong>Chrome 111+</strong>, <strong>Edge 111+</strong> o <strong>Safari 16.2+</strong>. <button onclick="this.parentElement.remove()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-weight:700;font-size:1rem;padding:4px 6px;color:inherit;line-height:1">&#x2715;</button>';
         document.body.appendChild(b);
       })();
     </script>

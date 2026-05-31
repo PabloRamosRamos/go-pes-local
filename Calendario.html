@@ -49,6 +49,7 @@ window.GO_PES_CALENDARIO = (function() {
             esc(fetchedAt) +
           '</p>'
         : '') +
+      buildDialog_(esc) +
     '</section>';
   }
 
@@ -57,12 +58,12 @@ window.GO_PES_CALENDARIO = (function() {
     var partesFecha = ev.fechaLabel.split(' de ');
     var numDia = partesFecha[0] || '';
     var mesDia = partesFecha[1] || '';
-    var hora = ev.allDay
-      ? 'Todo el día'
-      : ev.horaInicio + (ev.horaFin ? ' – ' + ev.horaFin : '');
+    var hora   = ev.allDay ? 'Todo el día'
+               : ev.horaInicio + (ev.horaFin ? ' – ' + ev.horaFin : '');
 
     var actionBtn = esReunion
-      ? '<button class="inicio-cal-action" data-cal-id="' + esc(ev.id) + '" type="button" title="Crear nuevo ingreso desde este evento">' +
+      ? '<button class="inicio-cal-action" data-cal-id="' + esc(ev.id) + '" type="button" ' +
+          'title="Registrar asistencia y crear nuevo ingreso">' +
           '<span class="material-symbols-outlined">person_add</span>' +
         '</button>'
       : '';
@@ -75,17 +76,47 @@ window.GO_PES_CALENDARIO = (function() {
       '</div>' +
       '<div class="inicio-cal-body">' +
         '<p class="inicio-cal-titulo">' + esc(ev.titulo) + '</p>' +
-        '<p class="inicio-cal-meta">' +
-          (hora ? '<span class="inicio-cal-hora">' + esc(hora) + '</span>' : '') +
-          (ev.lugar ? '<span class="inicio-cal-lugar">' + esc(ev.lugar) + '</span>' : '') +
-        '</p>' +
+        '<div class="inicio-cal-meta-row">' +
+          '<p class="inicio-cal-meta">' +
+            (hora ? '<span class="inicio-cal-hora">' + esc(hora) + '</span>' : '') +
+            (ev.lugar ? '<span class="inicio-cal-lugar">' + esc(ev.lugar) + '</span>' : '') +
+          '</p>' +
+          actionBtn +
+        '</div>' +
       '</div>' +
       '<span class="inicio-cal-badge ' +
         (esReunion ? 'inicio-cal-badge--reunion' : 'inicio-cal-badge--ministro') + '">' +
         (esReunion ? 'CS' : 'Min. Fe') +
       '</span>' +
-      actionBtn +
     '</li>';
+  }
+
+  function buildDialog_(esc) {
+    return '<div id="inicio-cal-dialog" class="inicio-cal-dialog is-hidden" role="dialog" aria-modal="true">' +
+      '<div class="inicio-cal-dialog__box">' +
+        '<p id="cal-dialog-titulo" class="inicio-cal-dialog__titulo"></p>' +
+        '<div id="cal-step-1">' +
+          '<p class="inicio-cal-dialog__q">¿Se realizó esta reunión?</p>' +
+          '<div class="inicio-cal-dialog__btns">' +
+            '<button id="cal-btn-si"  class="btn primary-btn   btn--sm">Sí, se realizó</button>' +
+            '<button id="cal-btn-no"  class="btn secondary-btn btn--sm">No se realizó</button>' +
+            '<button id="cal-btn-cancel-1" class="inicio-cal-dialog__cancel">Cancelar</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="cal-step-2" class="is-hidden">' +
+          '<p class="inicio-cal-dialog__q">¿Cuántas personas asistieron?</p>' +
+          '<input id="cal-asistentes" type="number" min="0" class="inicio-cal-dialog__input" placeholder="Ej: 15" autocomplete="off">' +
+          '<div class="inicio-cal-dialog__btns">' +
+            '<button id="cal-btn-continuar" class="btn primary-btn btn--sm">Continuar</button>' +
+            '<button id="cal-btn-cancel-2"  class="inicio-cal-dialog__cancel">Cancelar</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="cal-step-loading" class="is-hidden">' +
+          '<span class="material-symbols-outlined dash-spin">refresh</span>' +
+          '<span>Registrando...</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
   }
 
   return { render: render };

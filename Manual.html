@@ -406,8 +406,28 @@
           <p class="man-section-subtitle"><span class="material-symbols-outlined">account_circle</span>Requisitos de cuenta</p>
           <p class="man-p">Esta funcionalidad solo está disponible para usuarios con cuenta <strong>@providencia.cl</strong>. Al acceder por primera vez con una nueva implementación del sistema, Google solicitará autorización para leer tu calendario. Debes aceptar para que el panel funcione.</p>
 
-          <p class="man-section-subtitle"><span class="material-symbols-outlined">person_add</span>Botón de acción: crear nuevo ingreso</p>
-          <p class="man-p">Los eventos de tipo <strong>Reunión CS</strong> muestran un botón <span class="material-symbols-outlined" style="font-size:.9rem;vertical-align:middle">person_add</span> a la derecha. Al hacer clic, el sistema abre el módulo <strong>Nuevo ingreso</strong> con los datos pre-completados desde el evento de calendario:</p>
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">person_add</span>Botón de acción: registrar asistencia y crear nuevo ingreso</p>
+          <p class="man-p">Los eventos de tipo <strong>Reunión CS</strong> muestran un pequeño botón <span class="material-symbols-outlined" style="font-size:.9rem;vertical-align:middle">person_add</span> junto a la hora de la reunión. Este botón es la <strong>única manera de cerrar un evento</strong> del panel. Al hacer clic se abre un asistente de 2 pasos:</p>
+          <div class="man-steps">
+            <div class="man-step">
+              <div class="man-step__num">1</div>
+              <div class="man-step__body"><strong>¿Se realizó la reunión?</strong>
+                <ul style="margin:4px 0 0;padding-left:16px;font-size:.82rem">
+                  <li><strong>Sí, se realizó</strong> → avanza al paso 2.</li>
+                  <li><strong>No se realizó</strong> → el evento se registra como <em>No realizado</em> y desaparece del panel.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="man-step">
+              <div class="man-step__num">2</div>
+              <div class="man-step__body"><strong>¿Cuántas personas asistieron?</strong> Ingresa el número total de personas presentes en la reunión. Este dato es un KPI del programa (alcance). Al hacer clic en <strong>Continuar</strong>, el sistema registra la asistencia y abre el módulo <strong>Nuevo ingreso</strong> con los datos pre-completados.</div>
+            </div>
+          </div>
+          <div class="man-callout man-callout--info">
+            <span class="material-symbols-outlined">info</span>
+            <div>Una vez procesado (realizado o no), el evento desaparece del panel y no vuelve a aparecer. Esto aplica solo para tu cuenta — cada operador gestiona sus propios eventos.</div>
+          </div>
+          <p class="man-p">Al confirmar <em>Sí</em>, el formulario de Nuevo ingreso se pre-completa con la siguiente información del evento:</p>
           <table class="man-field-table">
             <thead><tr><th>Campo del formulario</th><th>Origen</th></tr></thead>
             <tbody>

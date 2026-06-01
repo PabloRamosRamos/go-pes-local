@@ -2,13 +2,38 @@
 
   function parseCalDescripcion_(text) {
     var result = {};
-    String(text || '').split(/\r?\n/).forEach(function(line) {
-      var sep = line.indexOf(':');
-      if (sep < 1) return;
-      var key = line.substring(0, sep).trim().toUpperCase().replace(/\s+/g, '_');
-      var val = line.substring(sep + 1).trim();
-      if (key && val) result[key] = val;
-    });
+    var str = String(text || '');
+
+    // Si no hay saltos de línea, dividir por campos clave (CAMPO:)
+    var lines = str.split(/\r?\n/);
+    if (lines.length === 1 && str.length > 0) {
+      // Todo en una línea - buscar patrones CAMPO: y dividir
+      var campos = ['NOMBRE', 'APELLIDO', 'RUT', 'TELEFONO', 'TEL', 'CORREO', 'EMAIL', 'UV', 'TIPO_VIVIENDA', 'VIVIENDA', 'OBSERVACION', 'OBS'];
+      var regex = new RegExp('(' + campos.join('|') + ')\\s*:', 'gi');
+      var matches = [];
+      var match;
+      while ((match = regex.exec(str)) !== null) {
+        matches.push({ key: match[1], index: match.index, endIndex: regex.lastIndex });
+      }
+
+      for (var i = 0; i < matches.length; i++) {
+        var current = matches[i];
+        var next = matches[i + 1];
+        var key = current.key.trim().toUpperCase().replace(/\s+/g, '_');
+        var val = str.substring(current.endIndex, next ? next.index : str.length).trim();
+        if (key && val) result[key] = val;
+      }
+    } else {
+      // Múltiples líneas - parser original
+      lines.forEach(function(line) {
+        var sep = line.indexOf(':');
+        if (sep < 1) return;
+        var key = line.substring(0, sep).trim().toUpperCase().replace(/\s+/g, '_');
+        var val = line.substring(sep + 1).trim();
+        if (key && val) result[key] = val;
+      });
+    }
+
     return result;
   }
 
@@ -126,40 +151,41 @@
   function _calRegistrar(realizado, asistentes) {
     var ev = _calPendingEvent;
     if (!ev) return;
-    _calShowLoading();
 
-    api('registrarEventoCalendario', {
-      eventId:    ev.id,
-      realizado:  realizado,
-      asistentes: asistentes,
-      titulo:     ev.titulo,
-      fecha:      ev.fecha
-    }).then(function() {
-      _calHideDialog();
-      if (!realizado) {
-        // Reunion no realizada: quitar del estado local para no volver a procesar
+    if (!realizado) {
+      // NO realizado: registrar y quitar inmediatamente
+      _calShowLoading();
+      api('registrarEventoCalendario', {
+        eventId:    ev.id,
+        realizado:  false,
+        asistentes: 0,
+        titulo:     ev.titulo,
+        fecha:      ev.fecha
+      }).then(function() {
+        _calHideDialog();
         if (APP.state.calendarioData && Array.isArray(APP.state.calendarioData.eventos)) {
           APP.state.calendarioData.eventos = APP.state.calendarioData.eventos.filter(function(e) {
             return e.id !== ev.id;
           });
         }
         renderCalendarioRoot_();
-      } else {
-        // Reunion realizada: marcar localmente pero mantener visible para poder reintentar
-        // si el usuario cancela el form de nuevo ingreso
-        if (APP.state.calendarioData && Array.isArray(APP.state.calendarioData.eventos)) {
-          APP.state.calendarioData.eventos = APP.state.calendarioData.eventos.map(function(e) {
-            return e.id === ev.id ? Object.assign({}, e, { registrado: true }) : e;
-          });
-        }
-        renderCalendarioRoot_();
-        APP.state.nuevoIngresoPrefill = buildPrefillFromCalEvent_(ev);
-        route('nuevo-ingreso');
-      }
-    }).catch(function(err) {
+      }).catch(function(err) {
+        _calHideDialog();
+        showError && showError(err);
+      });
+    } else {
+      // Realizado: guardar metadata pendiente, NO registrar todavía
+      // Se registrará cuando se guarde exitosamente el nuevo ingreso
       _calHideDialog();
-      showError && showError(err);
-    });
+      APP.state.calendarioPendingEvent = {
+        id:         ev.id,
+        titulo:     ev.titulo,
+        fecha:      ev.fecha,
+        asistentes: asistentes
+      };
+      APP.state.nuevoIngresoPrefill = buildPrefillFromCalEvent_(ev);
+      route('nuevo-ingreso');
+    }
   }
 
   // ── RENDER Y WIRING ───────────────────────────────────────────────────────────

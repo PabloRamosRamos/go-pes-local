@@ -117,6 +117,22 @@
     const proceed = () => {
       api('guardarIngreso', payload).then(res => {
         showSuccess('Solicitud guardada correctamente.');
+
+        // Si viene desde calendario, registrar el evento como procesado
+        if (APP.state.calendarioPendingEvent) {
+          const calEv = APP.state.calendarioPendingEvent;
+          APP.state.calendarioPendingEvent = null;
+          api('registrarEventoCalendario', {
+            eventId:    calEv.id,
+            realizado:  true,
+            asistentes: calEv.asistentes || 0,
+            titulo:     calEv.titulo,
+            fecha:      calEv.fecha
+          }).catch(function(err) {
+            console.error('Error al registrar evento calendario:', err);
+          });
+        }
+
         clearIngresoForm(false);
         loadFicha({ solicitud_id: res.solicitud_id, organizacion_id: '' });
       }).catch(showError).finally(() => {

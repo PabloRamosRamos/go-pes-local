@@ -383,16 +383,22 @@
 
   function initTabDetection_() {
     try {
-      window._bannerAutoCloseTimer = null;
       var showMultiTabBanner_ = function() {
         var banner = document.getElementById('multi-tab-banner');
         if (!banner) return;
+
         banner.classList.remove('is-hidden');
-        // Cerrar automáticamente después de 10 segundos
-        if (window._bannerAutoCloseTimer) clearTimeout(window._bannerAutoCloseTimer);
+
+        if (window._bannerAutoCloseTimer) {
+          clearTimeout(window._bannerAutoCloseTimer);
+        }
+
         window._bannerAutoCloseTimer = setTimeout(function() {
           var bannerEl = document.getElementById('multi-tab-banner');
-          if (bannerEl) bannerEl.classList.add('is-hidden');
+          if (bannerEl) {
+            bannerEl.classList.add('is-hidden');
+          }
+          window._bannerAutoCloseTimer = null;
         }, 10000);
       };
 
@@ -1753,8 +1759,10 @@
       const el = document.getElementById(id);
       if (el) el.disabled = true;
     });
-    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="muted">Cargando historial...</td></tr>';
-    showContentLoading('Cargando historial...');
+
+    // Mostrar loader local
+    const loader = document.getElementById('hist-table-loading');
+    if (loader) loader.classList.remove('is-hidden');
 
     api('listarHistorial', { periodo: periodo, source_key: source_key }).then(function(rows) {
       if (requestSeq !== APP.state.historialRequestSeq) return;
@@ -1771,7 +1779,8 @@
         const el = document.getElementById(id);
         if (el) el.disabled = false;
       });
-      hideContentLoading();
+      // Ocultar loader local
+      if (loader) loader.classList.add('is-hidden');
     });
   }
 

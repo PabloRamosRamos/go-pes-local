@@ -451,7 +451,11 @@
             </div>
             <div class="hist-chips" id="hist-chips"></div>
             <div class="hist-counter" id="hist-counter"></div>
-            <div class="hist-table-wrap">
+            <div class="hist-table-wrap" style="position:relative;">
+              <div id="hist-table-loading" class="module-loading is-hidden" style="position:absolute;top:0;left:0;right:0;bottom:0;background:var(--surface,#fff);z-index:10;">
+                <span class="material-symbols-outlined dash-spin">refresh</span>
+                <span>Cargando historial...</span>
+              </div>
               <table class="data-table">
                 <thead><tr><th>Fecha</th><th>Origen</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>ID</th><th>Resultado</th><th>Detalle</th></tr></thead>
                 <tbody id="hist-tbody"></tbody>

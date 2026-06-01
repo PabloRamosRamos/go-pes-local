@@ -122,13 +122,12 @@
     // Agregar is-hidden (activa transición de opacity)
     overlay.classList.add('is-hidden');
 
-    // Después de la transición, resetear display y contexto
+    // Después de la transición, solo resetear display
+    // NO mover el loader - quedará en su posición actual (app o content)
+    // y la próxima llamada a show decidirá dónde montarlo
     setTimeout(() => {
       if (overlay.classList.contains('is-hidden')) {
         overlay.style.display = 'none';
-        overlay.classList.remove('content-loading--modal');
-        overlay.classList.add('content-loading--content');
-        mountContentLoadingForContext_(overlay, false);
         syncContentLoadingLayerState_(overlay);
       }
     }, 250); // Sincronizado con --transition-base (220ms) + margen
@@ -142,7 +141,7 @@
    * @param {string} message - Mensaje a mostrar en el loader
    */
   function showModalLoading(message) {
-    const overlay = ensureContentLoadingMounted_(true); // Forzar contexto modal
+    const overlay = ensureContentLoadingMounted_(true);
     const text = overlay ? overlay.querySelector('.content-loading__text') : null;
     if (!overlay) return;
 
@@ -150,7 +149,6 @@
     overlay.setAttribute('aria-busy', 'true');
     overlay.style.display = 'flex';
 
-    // Forzar reflow antes de quitar is-hidden para que funcione la transición
     overlay.offsetHeight;
     overlay.classList.remove('is-hidden');
     syncContentLoadingLayerState_(overlay);
@@ -163,4 +161,10 @@
   function hideModalLoading() {
     hideContentLoading();
   }
+
+  // Exponer funciones globalmente para módulos cargados con includeModule_()
+  window.showContentLoading = showContentLoading;
+  window.hideContentLoading = hideContentLoading;
+  window.showModalLoading = showModalLoading;
+  window.hideModalLoading = hideModalLoading;
 </script>

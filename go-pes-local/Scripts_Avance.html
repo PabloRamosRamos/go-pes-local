@@ -3,7 +3,25 @@
     if (!container) return;
 
     container.className = 'avance-shell';
+    container.style.position = 'relative';
     container.innerHTML = `
+      <div id="avance-loading" class="content-loading is-hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:var(--surface,#fff);" aria-live="polite" aria-busy="false">
+        <div class="content-loading__box loading-shell" role="status">
+          <div class="content-loading__spinner loading-shell__visual" aria-hidden="true">
+            <span class="loading-shell__halo"></span>
+            <span class="loading-shell__ring"></span>
+            <span class="loading-shell__ring loading-shell__ring--reverse"></span>
+            <span class="loading-shell__pulse"></span>
+            <span class="loading-shell__beam"></span>
+            <span class="loading-shell__dot loading-shell__dot--one"></span>
+            <span class="loading-shell__dot loading-shell__dot--two"></span>
+            <span class="loading-shell__dot loading-shell__dot--three"></span>
+          </div>
+          <div class="content-loading__text">Cargando opciones...</div>
+          <div class="loading-shell__subtext">Actualizando la información del módulo.</div>
+        </div>
+      </div>
+
       <div class="avance-header">
         <div class="field field--grow">
           <label>Tramo 1 - Grupo de vecinos</label>
@@ -13,11 +31,6 @@
         <div class="field field--grow">
           <label>Tramo 2 - Organización</label>
           <select id="avance-organizacion-select"></select>
-        </div>
-
-        <div id="avance-loading" class="module-loading">
-          <span class="material-symbols-outlined dash-spin">refresh</span>
-          <span>Cargando opciones...</span>
         </div>
       </div>
 
@@ -333,9 +346,9 @@
     const currentValue = String(select.value || '').trim();
     const currentGrupoValue = String(grupoSelect?.value || '').trim();
 
-    // Mostrar loader local
-    const loader = document.getElementById('avance-loading');
-    if (loader) loader.classList.remove('is-hidden');
+    if (typeof window.showModalLoading === 'function') {
+      showAvanceLoading_('Cargando opciones...');
+    }
 
     Promise.all([
       api('getGruposVecinosAvanceClient'),
@@ -363,12 +376,14 @@
         grupoSelect.value = currentGrupoValue;
       }
 
-      // Ocultar loader
-      if (loader) loader.classList.add('is-hidden');
+      if (typeof window.hideModalLoading === 'function') {
+        hideAvanceLoading_();
+      }
     }).catch(err => {
       console.error(err);
-      // Ocultar loader en caso de error
-      if (loader) loader.classList.add('is-hidden');
+      if (typeof window.hideModalLoading === 'function') {
+        hideAvanceLoading_();
+      }
     });
   }
 
@@ -386,7 +401,7 @@
       return Promise.resolve();
     }
 
-    showContentLoading('Cargando módulo de avance...');
+    showAvanceLoading_('Cargando módulo de avance...');
 
     return Promise.all([
       api('getCatalogosAvanceClient'),
@@ -399,12 +414,12 @@
       APP.state.avanceOrganizaciones = (organizaciones && organizaciones.organizacionesList) || [];
       APP.state.avanceOrganizacionesFetchedAt = Date.now();
     }).finally(() => {
-      hideContentLoading();
+      hideAvanceLoading_();
     });
   }
 
   function loadAvanceOrganizacion_(organizacionId) {
-    showContentLoading('Cargando avance...');
+    showAvanceLoading_('Cargando avance...');
 
     return api('getAvanceOrganizacion', { organizacion_id: organizacionId }).then(data => {
       APP.state.currentAvance = data;
@@ -418,12 +433,12 @@
       clearAvanceView_();
       showError(err);
     }).finally(() => {
-      hideContentLoading();
+      hideAvanceLoading_();
     });
   }
 
   function loadAvanceGrupoVecinos_(solicitudId) {
-    showContentLoading('Cargando avance de Grupo de vecinos...');
+    showAvanceLoading_('Cargando avance de Grupo de vecinos...');
 
     return api('getAvanceGrupoVecinos', { solicitud_id: solicitudId }).then(data => {
       APP.state.currentAvance = data;
@@ -437,7 +452,7 @@
       clearAvanceView_();
       showError(err);
     }).finally(() => {
-      hideContentLoading();
+      hideAvanceLoading_();
     });
   }
 
@@ -851,7 +866,7 @@
       }
     }
 
-    showContentLoading('Actualizando estado de avance...');
+    showAvanceLoading_('Actualizando estado de avance...');
 
     api('cambiarEstadoAvance', {
       organizacion_id: organizacionId,
@@ -862,7 +877,7 @@
       showSuccess(`Estado actualizado a: ${nuevoEstado}`);
       loadAvanceOrganizacion_(organizacionId);
     }).catch(showError).finally(() => {
-      hideContentLoading();
+      hideAvanceLoading_();
     });
   }
 
@@ -906,4 +921,27 @@
 
     closeAvanceHitoModal_();
     lockAvanceActions_(true);
+  }
+
+  function showAvanceLoading_(message) {
+    const loader = document.getElementById('avance-loading');
+    if (!loader) return;
+    const text = loader.querySelector('.content-loading__text');
+    if (text && message) text.textContent = message;
+    loader.setAttribute('aria-busy', 'true');
+    loader.style.display = 'flex';
+    loader.offsetHeight;
+    loader.classList.remove('is-hidden');
+  }
+
+  function hideAvanceLoading_() {
+    const loader = document.getElementById('avance-loading');
+    if (!loader) return;
+    loader.setAttribute('aria-busy', 'false');
+    loader.classList.add('is-hidden');
+    setTimeout(() => {
+      if (loader.classList.contains('is-hidden')) {
+        loader.style.display = 'none';
+      }
+    }, 250);
   }

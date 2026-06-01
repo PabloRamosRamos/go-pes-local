@@ -14,12 +14,14 @@
 
         <div id="org-stats-row"></div>
 
-        <div class="panel organizaciones-selector-panel" style="margin-bottom:1rem;">
+        <div class="panel organizaciones-selector-panel" style="margin-bottom:0.75rem;">
           <div class="field field--grow">
             <label>Buscar organización</label>
             <input type="text" id="org-search-input" placeholder="Filtrar por nombre, tipo, UV o responsable…" autocomplete="off">
           </div>
         </div>
+
+        <div id="org-chip-row" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;"></div>
 
         <div id="organizaciones-grid-list"></div>
 
@@ -29,6 +31,7 @@
       </div>
     `;
 
+    APP.state.orgChipFiltro = APP.state.orgChipFiltro || 'todos';
     bindOrganizacionesView_();
     renderOrganizacionesGridFromState_();
   }
@@ -158,7 +161,7 @@
 
   function renderOrganizacionesStatsHtml_(orgs) {
     const cards = [
-      { n: 2,  label: 'Asamblea',         icon: 'groups',          color: '#3D96B4' },
+      { n: 2,  label: 'Carta ingresada',  icon: 'mail',            color: '#3D96B4' },
       { n: 9,  label: 'Cert. provisorio', icon: 'pending_actions', color: '#f59e0b' },
       { n: 11, label: 'Cert. definitivo', icon: 'verified',        color: '#22c55e' },
       { n: 14, label: 'Cta. bancaria',    icon: 'account_balance', color: '#8CC63F' }
@@ -191,63 +194,201 @@
 
   // -- TARJETA ORGANIZACION --
 
-  function renderOrganizacionCardHtml_(org) {
-    var hitosCumplidos = org.hitos_cumplidos || [];
-    var countDone = hitosCumplidos.length;
+  function buildOrgStepper_(items, HITO_NOMBRES) {
+    return items.map(function(item, idx) {
+      var isDone = item.done;
+      var isCurr = item.current;
+      var dotMod = isDone ? 'org-step-dot--done' : isCurr ? 'org-step-dot--current' : 'org-step-dot--pending';
+      var sizeMod = item.n >= 10 ? 'org-step-dot--sm' : 'org-step-dot--lg';
+      var tooltip = 'Hito ' + item.n + (HITO_NOMBRES[item.n] ? ': ' + HITO_NOMBRES[item.n] : '');
+      var content = isDone ? '&#10003;' : String(item.n);
+      var lineMod = isDone ? 'org-step-line--done' : 'org-step-line--pending';
+      return '<span class="org-step-dot ' + dotMod + ' ' + sizeMod + '" title="' + tooltip + '">' + content + '</span>' +
+        (idx < items.length - 1 ? '<div class="org-step-line ' + lineMod + '"></div>' : '');
+    }).join('');
+  }
 
-    return '<div class="panel">' +
-      '<h4>' + escapeHtml(org.label || 'Sin nombre') + '</h4>' +
-      '<p>' + escapeHtml(org.tipo_organizacion || '') + '</p>' +
-      '<p>Hitos: ' + countDone + ' / 15</p>' +
-      '<button type="button" class="secondary-btn" data-org-ver-detalle="' + escapeHtml(org.value || '') + '">' +
-        '<span class="material-symbols-outlined">open_in_full</span>Ver detalle' +
-      '</button>' +
+  var ORG_HITO_NOMBRES = {
+    1:'Reunion informativa', 2:'Carta oficina partes', 3:'Fecha asignada',
+    4:'Asamblea constitutiva', 5:'Docs ingresados', 6:'Obs. subsanadas',
+    7:'Cert. provisorio', 8:'Ingreso com. electoral', 9:'Asamblea ratificacion',
+    10:'Docs ratificacion', 11:'Cert. definitivo', 12:'RUT obtenido',
+    13:'RCCE', 14:'Cta. bancaria', 15:'Reg. municipal'
+  };
+
+  function renderOrganizacionCardHtml_(org) {
+    if (org.tipo === 'grupo_vecinos') return renderGrupoVecinosCardHtml_(org);
+
+    var hitos = org.hitos_cumplidos || [];
+    var maxT1    = Math.max.apply(null, [0].concat(hitos.filter(function(n){ return n >= 1 && n <= 7; })));
+    var maxT2lin = Math.max.apply(null, [0].concat(hitos.filter(function(n){ return n >= 8 && n <= 11; })));
+    var doneT1   = function(n) { return n <= maxT1; };
+    var doneT2   = function(n) { return n <= 11 ? n <= maxT2lin : hitos.indexOf(n) !== -1; };
+    var countDone = maxT1
+      + (maxT2lin >= 8 ? maxT2lin - 7 : 0)
+      + hitos.filter(function(n){ return n >= 12 && n <= 15; }).length;
+    var nextT1 = maxT1 < 7 ? maxT1 + 1 : null;
+    var nextT2 = [8,9,10,11,12,13,14,15].find(function(n){ return !doneT2(n); }) || null;
+
+    var t1Items = [1,2,3,4,5,6,7].map(function(n){ return { n:n, done:doneT1(n), current:n===nextT1 }; });
+    var t2Items = [8,9,10,11,12,13,14,15].map(function(n){ return { n:n, done:doneT2(n), current:n===nextT2 }; });
+
+    var badgeMod = org.estado_general_organizacion === 'Activo'     ? 'org-card__badge--activo'
+                 : org.estado_general_organizacion === 'Suspendida' ? 'org-card__badge--suspendida'
+                 : 'org-card__badge--inactivo';
+
+    var estadoBadge = org.estado_general_organizacion
+      ? '<span class="org-card__badge ' + badgeMod + '">' + escapeHtml(org.estado_general_organizacion) + '</span>'
+      : '';
+
+    var meta = '';
+    if (org.tipo_organizacion)  meta += '<span class="full"><strong>Tipo:</strong> ' + escapeHtml(org.tipo_organizacion) + '</span>';
+    if (org.uv)                 meta += '<span><strong>UV:</strong> ' + escapeHtml(org.uv) + '</span>';
+    if (org.sector)             meta += '<span><strong>Sector:</strong> ' + escapeHtml(org.sector) + '</span>';
+    if (org.responsable_actual) meta += '<span class="full"><strong>Responsable:</strong> ' + escapeHtml(org.responsable_actual) + '</span>';
+
+    return '<div class="panel org-card">' +
+      '<div class="org-card__header">' +
+        '<div class="org-card__title-row">' +
+          '<h4 class="org-card__title">' + escapeHtml(org.label || 'Sin nombre') + '</h4>' +
+          estadoBadge +
+        '</div>' +
+        '<div class="org-card__meta">' + meta + '</div>' +
+      '</div>' +
+      '<div class="org-card__avance">' +
+        '<div class="org-card__avance-head">' +
+          '<span class="org-card__avance-label">Avance de hitos</span>' +
+          '<span class="org-card__avance-count">' + countDone + ' / 15</span>' +
+        '</div>' +
+        '<div class="org-card__stepper">' +
+          '<div class="org-card__stepper-row">' +
+            '<span class="org-card__stepper-label">T1</span>' +
+            '<div class="org-card__stepper-track">' + buildOrgStepper_(t1Items, ORG_HITO_NOMBRES) + '</div>' +
+          '</div>' +
+          '<div class="org-card__stepper-gap"></div>' +
+          '<div class="org-card__stepper-row">' +
+            '<span class="org-card__stepper-label">T2</span>' +
+            '<div class="org-card__stepper-track">' + buildOrgStepper_(t2Items, ORG_HITO_NOMBRES) + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="org-card__footer">' +
+        '<button type="button" class="secondary-btn" style="width:100%;justify-content:center;" data-org-ver-detalle="' + escapeHtml(org.value || '') + '">' +
+          '<span class="material-symbols-outlined">open_in_full</span>Ver detalle' +
+        '</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderGrupoVecinosCardHtml_(org) {
+    var hitos = org.hitos_cumplidos || [];
+    var maxHito = Math.max.apply(null, [0].concat(hitos.filter(function(n){ return n >= 1 && n <= 7; })));
+    var nextHito = maxHito < 7 ? maxHito + 1 : null;
+
+    var dotItems = [1,2,3,4,5,6,7].map(function(n){ return { n:n, done:n<=maxHito, current:n===nextHito }; });
+
+    var meta = '';
+    if (org.uv)                 meta += '<span><strong>UV:</strong> ' + escapeHtml(org.uv) + '</span>';
+    if (org.sector)             meta += '<span><strong>Sector:</strong> ' + escapeHtml(org.sector) + '</span>';
+    if (org.fecha_ingreso)      meta += '<span class="full"><strong>Ingreso:</strong> ' + escapeHtml(org.fecha_ingreso) + '</span>';
+    if (org.responsable_actual) meta += '<span class="full"><strong>Responsable:</strong> ' + escapeHtml(org.responsable_actual) + '</span>';
+
+    return '<div class="panel org-card">' +
+      '<div class="org-card__header">' +
+        '<div class="org-card__title-row">' +
+          '<h4 class="org-card__title">' + escapeHtml(org.label || 'Grupo de vecinos') + '</h4>' +
+          '<span class="org-card__badge org-card__badge--proceso">En proceso</span>' +
+        '</div>' +
+        '<div class="org-card__meta">' + meta + '</div>' +
+      '</div>' +
+      '<div class="org-card__avance">' +
+        '<div class="org-card__avance-head">' +
+          '<span class="org-card__avance-label">Avance T1</span>' +
+          '<span class="org-card__avance-count">' + maxHito + ' / 7</span>' +
+        '</div>' +
+        '<div class="org-card__stepper-row">' +
+          '<div class="org-card__stepper-track">' + buildOrgStepper_(dotItems, ORG_HITO_NOMBRES) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="org-card__footer">' +
+        '<button type="button" class="secondary-btn" style="width:100%;justify-content:center;" data-grupo-ver-ficha="' + escapeHtml(org.solicitud_id || '') + '">' +
+          '<span class="material-symbols-outlined">person_search</span>Ver ficha' +
+        '</button>' +
+      '</div>' +
     '</div>';
   }
 
   // -- RENDER GRID PRINCIPAL --
 
   function renderOrganizacionesGridFromState_() {
-    const orgs = APP.state.organizacionesModulo || [];
+    var allItems = APP.state.organizacionesModulo || [];
+    var chipFiltro = APP.state.orgChipFiltro || 'todos';
 
-    const statsEl = document.getElementById('org-stats-row');
-    if (statsEl) statsEl.innerHTML = renderOrganizacionesStatsHtml_(orgs);
+    var statsEl = document.getElementById('org-stats-row');
+    if (statsEl) statsEl.innerHTML = renderOrganizacionesStatsHtml_(allItems);
 
-    const gridEl = document.getElementById('organizaciones-grid-list');
+    var chipRow = document.getElementById('org-chip-row');
+    if (chipRow) {
+      var chips = [
+        { key: 'todos',          label: 'Todos (' + allItems.length + ')' },
+        { key: 'organizacion',   label: 'Constituidas (' + allItems.filter(function(o){ return o.tipo === 'organizacion' || !o.tipo; }).length + ')' },
+        { key: 'grupo_vecinos',  label: 'En proceso (' + allItems.filter(function(o){ return o.tipo === 'grupo_vecinos'; }).length + ')' }
+      ];
+      chipRow.innerHTML = chips.map(function(c) {
+        var active = c.key === chipFiltro;
+        var cls = 'secondary-btn org-chip-btn' + (active ? ' org-chip-btn--active' : '');
+        return '<button class="' + cls + '" data-chip-key="' + c.key + '">' + c.label + '</button>';
+      }).join('');
+    }
+
+    var gridEl = document.getElementById('organizaciones-grid-list');
     if (!gridEl) return;
 
-    if (!orgs.length) {
-      gridEl.innerHTML = goPesEmptyStateHtml_('groups', 'Sin organizaciones registradas', 'Aún no hay organizaciones en el sistema. Usa "Nueva organización" para agregar la primera.', 'organizaciones-detail');
+    var items = chipFiltro === 'todos' ? allItems
+      : allItems.filter(function(o) {
+          if (chipFiltro === 'organizacion') return o.tipo === 'organizacion' || !o.tipo;
+          return o.tipo === chipFiltro;
+        });
+
+    if (!items.length) {
+      gridEl.innerHTML = goPesEmptyStateHtml_('groups', 'Sin registros', 'No hay elementos en esta categoria.', 'organizaciones-detail');
       return;
     }
 
-    const query = String((document.getElementById('org-search-input') || {}).value || '').toLowerCase().trim();
-    const filtered = query
-      ? orgs.filter(org =>
-          (org.label               || '').toLowerCase().includes(query) ||
-          (org.tipo_organizacion   || '').toLowerCase().includes(query) ||
-          (org.uv                  || '').toLowerCase().includes(query) ||
-          (org.sector              || '').toLowerCase().includes(query) ||
-          (org.responsable_actual  || '').toLowerCase().includes(query) ||
-          (org.estado_constitucion || '').toLowerCase().includes(query)
-        )
-      : orgs;
+    var query = String((document.getElementById('org-search-input') || {}).value || '').toLowerCase().trim();
+    var filtered = query
+      ? items.filter(function(org) {
+          return (org.label              || '').toLowerCase().indexOf(query) !== -1 ||
+                 (org.tipo_organizacion  || '').toLowerCase().indexOf(query) !== -1 ||
+                 (org.uv                || '').toLowerCase().indexOf(query) !== -1 ||
+                 (org.sector            || '').toLowerCase().indexOf(query) !== -1 ||
+                 (org.responsable_actual|| '').toLowerCase().indexOf(query) !== -1;
+        })
+      : items;
 
     if (!filtered.length) {
-      gridEl.innerHTML = goPesEmptyStateHtml_('search_off', 'Sin resultados', 'Ninguna organización coincide con el criterio de búsqueda. Intenta con otro término.', 'organizaciones-detail');
+      gridEl.innerHTML = goPesEmptyStateHtml_('search_off', 'Sin resultados', 'Ninguna coincidencia con el criterio de busqueda.', 'organizaciones-detail');
       return;
     }
 
-    gridEl.innerHTML = `
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;padding-bottom:2rem;">
-        ${filtered.map(org => renderOrganizacionCardHtml_(org)).join('')}
-      </div>
-    `;
+    gridEl.innerHTML = '<div class="org-grid">' +
+      filtered.map(function(org) { return renderOrganizacionCardHtml_(org); }).join('') +
+    '</div>';
 
-    gridEl.querySelectorAll('[data-org-ver-detalle]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const orgId = btn.dataset.orgVerDetalle;
+    gridEl.querySelectorAll('[data-org-ver-detalle]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var orgId = btn.dataset.orgVerDetalle;
         if (orgId) loadOrganizacionDetalle_(orgId);
+      });
+    });
+
+    gridEl.querySelectorAll('[data-grupo-ver-ficha]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var solId = btn.dataset.grupoVerFicha;
+        if (solId) {
+          loadFicha({ solicitud_id: solId });
+          route('ficha');
+        }
       });
     });
   }
@@ -255,7 +396,14 @@
   // -- BINDINGS --
 
   function bindOrganizacionesView_() {
-    document.getElementById('org-search-input')?.addEventListener('input', () => {
+    document.getElementById('org-search-input')?.addEventListener('input', function() {
+      renderOrganizacionesGridFromState_();
+    });
+
+    document.getElementById('org-chip-row')?.addEventListener('click', function(e) {
+      var btn = e.target.closest('.org-chip-btn');
+      if (!btn) return;
+      APP.state.orgChipFiltro = btn.dataset.chipKey || 'todos';
       renderOrganizacionesGridFromState_();
     });
 

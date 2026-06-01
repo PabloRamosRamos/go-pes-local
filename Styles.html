@@ -6647,4 +6647,126 @@
     }
   }
 
+  /* ===== Organizaciones — tarjetas y stepper (GO-PES v2) ===== */
+  .org-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+    padding-bottom: 2rem;
+  }
+
+  .org-card {
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .org-card__header { padding: 1rem 1rem 0.75rem; }
+  .org-card__title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .org-card__title {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .org-card__meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.15rem 0.75rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .org-card__meta strong { font-weight: 500; }
+  .org-card__meta .full { grid-column: 1 / -1; }
+
+  .org-card__badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 10px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .org-card__badge--activo    { background: #dcfce7; color: #16a34a; }
+  .org-card__badge--suspendida{ background: #fef3c7; color: #d97706; }
+  .org-card__badge--inactivo  { background: #fee2e2; color: #dc2626; }
+  .org-card__badge--proceso   { background: var(--runtime-brand-primary, #3D96B4); color: #fff; }
+
+  .org-card__avance {
+    padding: 0.6rem 1rem;
+    border-top: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .org-card__avance-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .org-card__avance-label {
+    font-size: 0.69rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+  }
+  .org-card__avance-count {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--primary, #3D96B4);
+  }
+
+  .org-card__stepper      { display: flex; flex-direction: column; }
+  .org-card__stepper-gap  { height: 5px; }
+  .org-card__stepper-row  { display: flex; align-items: center; }
+  .org-card__stepper-label {
+    font-size: 0.63rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    min-width: 22px;
+    margin-right: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .org-card__stepper-track { flex: 1; display: flex; align-items: center; }
+
+  .org-step-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    cursor: default;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .org-step-dot--lg { font-size: 7px; }
+  .org-step-dot--sm { font-size: 5.5px; }
+  .org-step-dot--done    { background: #8CC63F; color: #fff; border: none; }
+  .org-step-dot--current { background: var(--runtime-brand-primary, #3D96B4); color: #fff; border: 2px solid var(--runtime-brand-primary, #3D96B4); }
+  .org-step-dot--pending { background: transparent; color: var(--text-muted); border: 1.5px solid var(--border, #D6E0EA); }
+
+  .org-step-line          { flex: 1; height: 2px; }
+  .org-step-line--done    { background: #8CC63F; }
+  .org-step-line--pending { background: var(--border, #D6E0EA); }
+
+  .org-card__footer { padding: 0.75rem 1rem; border-top: 1px solid var(--border); }
+
+  .org-chip-btn--active {
+    background: var(--runtime-brand-primary, #3D96B4);
+    color: #fff;
+    border-color: var(--runtime-brand-primary, #3D96B4);
+  }
+
 </style>

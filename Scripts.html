@@ -871,7 +871,7 @@
       return Promise.resolve();
     }
 
-    return api('getOrganizacionesModuloClient').then(data => {
+    return api('getOrganizacionesConGruposClient').then(data => {
       APP.state.organizacionesModulo = (data && data.organizaciones) || [];
       APP.state.organizacionesModuloFetchedAt = Date.now();
     });

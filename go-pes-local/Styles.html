@@ -7270,6 +7270,135 @@ html[data-theme="dark"] .dash-status-pill{background:var(--surface-alt,#182635);
   }
 }
 
+/* ========================================
+   TABLAS RESPONSIVE — Fase 4.2
+   Card layout en mobile para tablas data
+   ======================================== */
+
+@media (max-width: 767px) {
+  /* Tablas generales: convertir a cards */
+  .data-table thead {
+    position: absolute;
+    clip: rect(0, 0, 0, 0);
+    height: 1px;
+    width: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+  }
+
+  .data-table tbody tr {
+    display: block;
+    margin-bottom: 12px;
+    border: 1px solid var(--border, #D6E0EA);
+    border-radius: 8px;
+    background: var(--surface, #fff);
+  }
+
+  .data-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border, #EAF0F5);
+    text-align: right;
+    min-height: 40px;
+  }
+
+  .data-table tbody td:last-child {
+    border-bottom: none;
+  }
+
+  .data-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    text-align: left;
+    padding-right: 12px;
+    flex-shrink: 0;
+    color: var(--text-muted, #6b7a8d);
+    font-size: 0.85rem;
+  }
+
+  /* Tablas del dashboard ya son responsive por grid */
+  .dash-table {
+    font-size: 0.7rem;
+  }
+
+  .dash-table th,
+  .dash-table td {
+    padding: 5px 8px;
+  }
+
+  /* Tabla de búsqueda */
+  .buscar-table-wrap {
+    overflow-x: auto;
+  }
+
+  /* Tabla de organizaciones */
+  .organizaciones-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 12px;
+  }
+
+  .organizaciones-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-muted, #6b7a8d);
+  }
+
+  /* Tabla de socios */
+  .socios-table tbody tr {
+    display: block;
+    margin-bottom: 10px;
+    border: 1px solid var(--border, #D6E0EA);
+    border-radius: 6px;
+  }
+
+  .socios-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 12px;
+  }
+
+  .socios-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-muted, #6b7a8d);
+  }
+
+  /* Tabla de usuarios */
+  .users-table tbody tr {
+    display: block;
+    margin-bottom: 10px;
+    border-radius: 6px;
+  }
+
+  .users-table tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+  }
+
+  .users-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--text-muted, #6b7a8d);
+  }
+
+  /* Botones de acción en tablas */
+  .table-action-btn {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+
+  .table-action-btn .material-symbols-outlined {
+    font-size: 0.9rem;
+  }
+}
+
 /* Calendario de reuniones — Módulo Inicio */
 .inicio-cal-card{margin-top:0}
 .inicio-cal-loading{display:flex;align-items:center;justify-content:center;padding:20px;color:var(--text-muted,#6b7a8d)}

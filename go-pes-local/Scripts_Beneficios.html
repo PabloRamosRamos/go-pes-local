@@ -476,11 +476,11 @@
             <div class="beneficios-form__grid">
               <div class="field">
                 <label>Responsable</label>
-                <input type="text" name="responsable_beneficio" value="${escapeHtml(assignment.responsable_beneficio || '')}">
+                <input type="text" name="responsable_beneficio" value="${escapeHtml(assignment.responsable_beneficio || '')}" aria-label="Responsable del beneficio">
               </div>
               <div class="field">
                 <label>Proximo paso</label>
-                <input type="text" value="${escapeHtml(assignment.proximo_hito_beneficio || workflow.nextStep || '')}" disabled>
+                <input type="text" value="${escapeHtml(assignment.proximo_hito_beneficio || workflow.nextStep || '')}" disabled aria-label="Próximo paso">
               </div>
               <div class="field" data-span="2">
                 <label>Contacto del comite</label>

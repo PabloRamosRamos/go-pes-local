@@ -38,6 +38,7 @@ function buscarVecino(query) {
         r.nombre_completo,
         r.nombre_vecino,
         r.apellido_vecino,
+        r.rut_vecino,
         r.telefono_contacto,
         r.correo_contacto,
         r.direccion_original,
@@ -583,6 +584,34 @@ function formatInicioDate_(value) {
   const date = parseInicioDate_(value);
   if (!date) return '';
   return Utilities.formatDate(date, Session.getScriptTimeZone(), 'dd-MM-yyyy');
+}
+
+function editarDatosVecino(payload) {
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    const user = requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'superuser']);
+    const solicitudId = String(payload && payload.solicitud_id || '').trim();
+    if (!solicitudId) throw new Error('Falta solicitud_id.');
+
+    const existing = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
+    if (!existing) throw new Error('No se encontro la solicitud indicada.');
+
+    const patch = {};
+    if (payload.telefono_contacto  !== undefined) patch.telefono_contacto  = String(payload.telefono_contacto  || '').trim();
+    if (payload.correo_contacto    !== undefined) patch.correo_contacto    = String(payload.correo_contacto    || '').trim();
+    if (payload.direccion_original !== undefined) patch.direccion_original = String(payload.direccion_original || '').trim();
+    if (payload.uv                 !== undefined) patch.uv                 = String(payload.uv                 || '').trim();
+    if (payload.sector             !== undefined) patch.sector             = String(payload.sector             || '').trim();
+
+    patchCaseSummary_(solicitudId, patch);
+
+    refreshPartialArtifacts_({ masterSolicitudIds: [solicitudId] });
+    logUserAction_('EDIT_VECINO_CONTACTO', 'vecino', solicitudId, 'OK', patch);
+    return serializeForClient_({ ok: true, solicitud_id: solicitudId });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function obtenerFicha(payload) {
@@ -1235,10 +1264,12 @@ function guardarRequisito(payload) {
 }
 
 function recalcularFicha(payload) {
-  requireRole_([]);
   payload = payload || {};
   const solicitudId = String(payload.solicitud_id || '').trim();
   let organizacionId = String(payload.organizacion_id || '').trim();
+
+  // Rebuild global requiere coordinador/superuser; recálculo parcial permite cualquier rol
+  requireRole_(solicitudId || organizacionId ? [] : ['coordinador', 'superuser']);
 
   if (!solicitudId && !organizacionId) {
     return refrescarVistasYMaster();

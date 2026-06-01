@@ -19,6 +19,7 @@ function goPesRefrescarVistasYMaster_() {
 }
 
 function goPesRefrescarVistasYMaster() {
+  requireRole_(['coordinador', 'superuser']);
   return goPesRefrescarVistasYMaster_();
 }
 

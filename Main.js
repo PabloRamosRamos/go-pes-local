@@ -6,7 +6,7 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros Â· Municipalidad de Providencia',
   VERSION: '2.1.512',
-  BUILD: '6561ae1',
+  BUILD: '72b1040',
   BUILD_DATE: '20260531',
   ENVIRONMENT: 'DEV',
   SUPERUSERS: [
@@ -118,7 +118,7 @@ function doGet(e) {
 
   return template.evaluate()
     .setTitle(getConfiguredAppTitle_())
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
@@ -139,7 +139,7 @@ function onOpen() {
     .addItem('Reconstruir estructuras desde RAW', 'reconstruirEstructurasDesdeRaw')
     .addItem('Refrescar catÃ¡logos sugeridos', 'refrescarCatalogosSugeridos')
     .addItem('Reconstruir vistas y master', 'goPesRefrescarVistasYMaster')
-    .addItem('Inicializar superUsers', 'goPesSeedSuperUsers_')
+    .addItem('Inicializar superUsers', 'goPesSeedSuperUsers')
     .addSeparator()
     .addItem('Ejecutar tests', 'goPesRunAllTests')
     .addToUi();
@@ -194,7 +194,8 @@ function refrescarCatalogosSugeridos() {
   return rebuildSuggestionDims_();
 }
 
-function goPesSeedSuperUsers_() {
+function goPesSeedSuperUsers() {
+  requireRole_(['superuser']);
   seedSuperUsers_();
   SpreadsheetApp.getActiveSpreadsheet().toast('SuperUsers inicializados.', 'GO-PES', 4);
 }

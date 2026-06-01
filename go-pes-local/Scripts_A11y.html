@@ -1,0 +1,322 @@
+<script>
+/**
+ * Scripts_A11y.html
+ *
+ * Utilidades de accesibilidad (a11y):
+ * - Focus trap para modales
+ * - Restauración de foco
+ * - Gestión de Escape key
+ * - Helpers ARIA
+ *
+ * Creado: 2026-05-31
+ * Parte de: Fase 1 Frontend - Accesibilidad crítica
+ */
+
+(function() {
+  'use strict';
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ESTADO GLOBAL DE MODALES
+  // ══════════════════════════════════════════════════════════════════════════
+
+  window.A11Y = window.A11Y || {
+    activeModals: [],          // Stack de modales activos
+    focusedBeforeModal: null,  // Elemento con foco antes de abrir modal
+    trapHandlers: new WeakMap() // Handlers de trap por modal
+  };
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SELECTORES DE ELEMENTOS FOCUSABLES
+  // ══════════════════════════════════════════════════════════════════════════
+
+  const FOCUSABLE_SELECTORS = [
+    'a[href]',
+    'button:not([disabled])',
+    'textarea:not([disabled])',
+    'input:not([disabled]):not([type="hidden"])',
+    'select:not([disabled])',
+    '[tabindex]:not([tabindex="-1"])',
+    'audio[controls]',
+    'video[controls]',
+    '[contenteditable]:not([contenteditable="false"])'
+  ].join(', ');
+
+  /**
+   * Obtiene todos los elementos focusables dentro de un container
+   * @param {HTMLElement} container
+   * @returns {HTMLElement[]}
+   */
+  function getFocusableElements(container) {
+    if (!container) return [];
+    const elements = container.querySelectorAll(FOCUSABLE_SELECTORS);
+    return Array.from(elements).filter(el => {
+      // Filtrar elementos que están ocultos o dentro de elementos ocultos
+      return el.offsetParent !== null &&
+             !el.hasAttribute('aria-hidden') &&
+             !el.closest('[aria-hidden="true"]') &&
+             !el.closest('.is-hidden') &&
+             !el.closest('.hidden');
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // FOCUS TRAP
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Activa el focus trap en un modal
+   * @param {HTMLElement} modal - Elemento del modal
+   * @returns {Function} Función para desactivar el trap
+   */
+  function trapFocus(modal) {
+    if (!modal) return function() {};
+
+    const focusableElements = getFocusableElements(modal);
+    if (focusableElements.length === 0) {
+      console.warn('A11Y: Modal sin elementos focusables', modal.id);
+      return function() {};
+    }
+
+    const firstFocusable = focusableElements[0];
+    const lastFocusable = focusableElements[focusableElements.length - 1];
+
+    /**
+     * Handler del evento keydown para el trap
+     */
+    function handleTrap(e) {
+      if (e.key !== 'Tab') return;
+
+      // Shift + Tab en el primer elemento → ir al último
+      if (e.shiftKey) {
+        if (document.activeElement === firstFocusable) {
+          e.preventDefault();
+          lastFocusable.focus();
+        }
+      }
+      // Tab en el último elemento → ir al primero
+      else {
+        if (document.activeElement === lastFocusable) {
+          e.preventDefault();
+          firstFocusable.focus();
+        }
+      }
+    }
+
+    // Activar trap
+    modal.addEventListener('keydown', handleTrap);
+
+    // Guardar handler para poder removerlo después
+    window.A11Y.trapHandlers.set(modal, handleTrap);
+
+    // Foco inicial al primer elemento focusable
+    setTimeout(() => {
+      if (firstFocusable) firstFocusable.focus();
+    }, 50);
+
+    // Retornar función de cleanup
+    return function() {
+      modal.removeEventListener('keydown', handleTrap);
+      window.A11Y.trapHandlers.delete(modal);
+    };
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GESTIÓN DE MODALES
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Abre un modal con focus trap y accesibilidad completa
+   * @param {string|HTMLElement} modalIdOrElement - ID o elemento del modal
+   * @param {Object} options - Opciones
+   * @param {boolean} options.restoreFocus - Si debe restaurar el foco al cerrar (default: true)
+   * @param {boolean} options.trapFocus - Si debe activar focus trap (default: true)
+   * @param {boolean} options.closeOnEscape - Si debe cerrar con Escape (default: true)
+   * @param {Function} options.onClose - Callback al cerrar
+   */
+  function openModal(modalIdOrElement, options) {
+    const opts = Object.assign({
+      restoreFocus: true,
+      trapFocus: true,
+      closeOnEscape: true,
+      onClose: null
+    }, options || {});
+
+    const modal = typeof modalIdOrElement === 'string'
+      ? document.getElementById(modalIdOrElement)
+      : modalIdOrElement;
+
+    if (!modal) {
+      console.error('A11Y: Modal no encontrado', modalIdOrElement);
+      return;
+    }
+
+    // Guardar foco actual
+    if (opts.restoreFocus && window.A11Y.activeModals.length === 0) {
+      window.A11Y.focusedBeforeModal = document.activeElement;
+    }
+
+    // Mostrar modal
+    modal.classList.remove('is-hidden', 'hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    modal.setAttribute('aria-modal', 'true');
+
+    // Bloquear scroll del body
+    document.body.style.overflow = 'hidden';
+
+    // Activar focus trap
+    let cleanupTrap = null;
+    if (opts.trapFocus) {
+      cleanupTrap = trapFocus(modal);
+    }
+
+    // Manejar Escape key
+    function handleEscape(e) {
+      if (e.key === 'Escape' && opts.closeOnEscape) {
+        closeModal(modal);
+      }
+    }
+
+    if (opts.closeOnEscape) {
+      modal.addEventListener('keydown', handleEscape);
+    }
+
+    // Agregar al stack de modales activos
+    window.A11Y.activeModals.push({
+      element: modal,
+      cleanupTrap: cleanupTrap,
+      handleEscape: handleEscape,
+      onClose: opts.onClose,
+      restoreFocus: opts.restoreFocus
+    });
+
+    // Log para debug
+    if (window.APP && window.APP.config && window.APP.config.debug) {
+      console.log('A11Y: Modal abierto', modal.id, {
+        focusableCount: getFocusableElements(modal).length,
+        trapActive: opts.trapFocus,
+        stackDepth: window.A11Y.activeModals.length
+      });
+    }
+  }
+
+  /**
+   * Cierra un modal y restaura el estado
+   * @param {string|HTMLElement} modalIdOrElement - ID o elemento del modal
+   */
+  function closeModal(modalIdOrElement) {
+    const modal = typeof modalIdOrElement === 'string'
+      ? document.getElementById(modalIdOrElement)
+      : modalIdOrElement;
+
+    if (!modal) {
+      console.error('A11Y: Modal no encontrado para cerrar', modalIdOrElement);
+      return;
+    }
+
+    // Buscar el modal en el stack
+    const index = window.A11Y.activeModals.findIndex(m => m.element === modal);
+    if (index === -1) {
+      console.warn('A11Y: Modal no está en el stack de activos', modal.id);
+      return;
+    }
+
+    const modalData = window.A11Y.activeModals[index];
+
+    // Ocultar modal
+    modal.classList.add('is-hidden');
+    modal.setAttribute('aria-hidden', 'true');
+    modal.removeAttribute('aria-modal');
+
+    // Cleanup trap
+    if (modalData.cleanupTrap) {
+      modalData.cleanupTrap();
+    }
+
+    // Cleanup escape handler
+    if (modalData.handleEscape) {
+      modal.removeEventListener('keydown', modalData.handleEscape);
+    }
+
+    // Callback de cierre
+    if (modalData.onClose) {
+      modalData.onClose();
+    }
+
+    // Remover del stack
+    window.A11Y.activeModals.splice(index, 1);
+
+    // Si no quedan modales activos
+    if (window.A11Y.activeModals.length === 0) {
+      // Restaurar scroll del body
+      document.body.style.overflow = '';
+
+      // Restaurar foco
+      if (modalData.restoreFocus && window.A11Y.focusedBeforeModal) {
+        setTimeout(() => {
+          if (window.A11Y.focusedBeforeModal && window.A11Y.focusedBeforeModal.focus) {
+            window.A11Y.focusedBeforeModal.focus();
+          }
+          window.A11Y.focusedBeforeModal = null;
+        }, 50);
+      }
+    }
+
+    // Log para debug
+    if (window.APP && window.APP.config && window.APP.config.debug) {
+      console.log('A11Y: Modal cerrado', modal.id, {
+        stackDepth: window.A11Y.activeModals.length
+      });
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // HELPERS ARIA
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Anuncia un mensaje a lectores de pantalla vía aria-live
+   * @param {string} message - Mensaje a anunciar
+   * @param {string} priority - 'polite' o 'assertive' (default: 'polite')
+   */
+  function announce(message, priority) {
+    priority = priority || 'polite';
+
+    let announcer = document.getElementById('a11y-announcer-' + priority);
+    if (!announcer) {
+      announcer = document.createElement('div');
+      announcer.id = 'a11y-announcer-' + priority;
+      announcer.setAttribute('role', 'status');
+      announcer.setAttribute('aria-live', priority);
+      announcer.setAttribute('aria-atomic', 'true');
+      announcer.className = 'sr-only';
+      document.body.appendChild(announcer);
+    }
+
+    // Limpiar y anunciar
+    announcer.textContent = '';
+    setTimeout(() => {
+      announcer.textContent = message;
+    }, 100);
+  }
+
+  /**
+   * Actualiza el título de la página (útil para cambios de vista)
+   * @param {string} title - Nuevo título
+   */
+  function updatePageTitle(title) {
+    document.title = title + ' - GO-PES';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // API PÚBLICA
+  // ══════════════════════════════════════════════════════════════════════════
+
+  window.A11Y.openModal = openModal;
+  window.A11Y.closeModal = closeModal;
+  window.A11Y.trapFocus = trapFocus;
+  window.A11Y.announce = announce;
+  window.A11Y.updatePageTitle = updatePageTitle;
+  window.A11Y.getFocusableElements = getFocusableElements;
+
+})();
+</script>

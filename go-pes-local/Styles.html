@@ -7699,4 +7699,19 @@ html[data-theme="dark"] .ficha-gestion-form input,html[data-theme="dark"] .ficha
   transition-delay: 480ms;
 }
 
+/* ======== MODULE LOADING (local loader para módulos) ======== */
+.module-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px;
+  font-size: .85rem;
+  color: var(--text-muted, #6b7a8d);
+  grid-column: 1 / -1; /* Ocupar todo el ancho en grids */
+}
+.module-loading.is-hidden {
+  display: none;
+}
+
 </style>

@@ -15,6 +15,10 @@
           <select id="avance-organizacion-select"></select>
         </div>
 
+        <div id="avance-loading" class="module-loading">
+          <span class="material-symbols-outlined dash-spin">refresh</span>
+          <span>Cargando opciones...</span>
+        </div>
       </div>
 
       <div id="avance-resumen" class="avance-resumen empty-state">
@@ -329,6 +333,10 @@
     const currentValue = String(select.value || '').trim();
     const currentGrupoValue = String(grupoSelect?.value || '').trim();
 
+    // Mostrar loader local
+    const loader = document.getElementById('avance-loading');
+    if (loader) loader.classList.remove('is-hidden');
+
     Promise.all([
       api('getGruposVecinosAvanceClient'),
       api('getOrganizacionesAvanceClient')
@@ -354,7 +362,14 @@
       if (currentGrupoValue && APP.state.avanceGrupos.some(x => String(x.value) === currentGrupoValue)) {
         grupoSelect.value = currentGrupoValue;
       }
-    }).catch(console.error);
+
+      // Ocultar loader
+      if (loader) loader.classList.add('is-hidden');
+    }).catch(err => {
+      console.error(err);
+      // Ocultar loader en caso de error
+      if (loader) loader.classList.add('is-hidden');
+    });
   }
 
   function loadAvanceCatalogos_() {

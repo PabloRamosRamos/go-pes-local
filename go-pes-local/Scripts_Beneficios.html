@@ -12,7 +12,11 @@
           </div>
           <div class="beneficios-actions"></div>
         </div>
-        <div id="beneficios-content" class="beneficios-workspace empty-state">Cargando beneficios...</div>
+        <div id="beneficios-loading" class="module-loading">
+          <span class="material-symbols-outlined dash-spin">refresh</span>
+          <span>Cargando beneficios...</span>
+        </div>
+        <div id="beneficios-content" class="beneficios-workspace empty-state is-hidden"></div>
       </div>
     `;
 
@@ -20,14 +24,29 @@
   }
 
   function refreshBeneficiosModuloMinimo_() {
-    showContentLoading('Cargando beneficios...');
+    const loader = document.getElementById('beneficios-loading');
+    const content = document.getElementById('beneficios-content');
+
+    // Mostrar loader, ocultar contenido
+    if (loader) loader.classList.remove('is-hidden');
+    if (content) content.classList.add('is-hidden');
+
     return api('getBeneficiosModuloPanel', {
       beneficio_codigo: APP.state.currentBeneficioCodigo || '',
       organizacion_id: APP.state.currentBeneficioOrganizacionId || ''
     }).then(data => {
       APP.state.currentBeneficiosDetalle = data || {};
       renderBeneficiosPanelMinimo_(APP.state.currentBeneficiosDetalle);
-    }).catch(showError).finally(hideContentLoading);
+
+      // Ocultar loader, mostrar contenido
+      if (loader) loader.classList.add('is-hidden');
+      if (content) content.classList.remove('is-hidden');
+    }).catch(err => {
+      showError(err);
+      // Ocultar loader en caso de error
+      if (loader) loader.classList.add('is-hidden');
+      if (content) content.classList.remove('is-hidden');
+    });
   }
 
   function getBeneficioTabVisual_(codigo) {

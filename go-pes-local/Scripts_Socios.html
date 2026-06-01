@@ -219,7 +219,11 @@
           </label>
           <p id="socios-table-summary" class="socios-table__summary muted">${escapeHtml(getSociosTableSummaryText_(totalRows, totalRows, APP.state.sociosModuleQuery || ''))}</p>
         </div>
-        <div class="socios-table-wrap">
+        <div class="socios-table-wrap" style="position:relative;">
+          <div id="socios-table-loading" class="module-loading is-hidden" style="position:absolute;top:0;left:0;right:0;bottom:0;background:var(--surface,#fff);z-index:10;">
+            <span class="material-symbols-outlined dash-spin">refresh</span>
+            <span>Cargando socios...</span>
+          </div>
           <table class="socios-table">
             <thead>
               <tr>

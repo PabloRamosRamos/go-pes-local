@@ -2120,53 +2120,16 @@
     if (win) { win.document.write(html); win.document.close(); }
   }
 
-  var _sessionExpiredShown = false;
+  // ══════════════════════════════════════════════════════════════════════════
+  // UI UTILITIES — Migrado a Scripts_UI.html (Fase 3)
+  // Aliases por compatibilidad con código existente
+  // ══════════════════════════════════════════════════════════════════════════
 
-  function showSessionExpired_() {
-    if (_sessionExpiredShown) return;
-    _sessionExpiredShown = true;
-    const overlay = document.getElementById('session-expired-overlay');
-    if (overlay) overlay.classList.remove('is-hidden');
-  }
-
-  function showToast_(message, type, durationMs) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    const icons = { error: 'error', success: 'check_circle', session: 'lock_person' };
-    const toast = document.createElement('div');
-    toast.className = 'go-toast go-toast--' + (type || 'error');
-    toast.innerHTML =
-      '<span class="material-symbols-outlined go-toast__icon">' + (icons[type] || 'info') + '</span>' +
-      '<span class="go-toast__body">' + escapeHtml(message) + '</span>' +
-      '<button type="button" class="go-toast__close" aria-label="Cerrar"><span class="material-symbols-outlined" style="font-size:1rem">close</span></button>';
-    const close = () => {
-      toast.classList.add('go-toast--out');
-      setTimeout(() => toast.parentNode && toast.remove(), 200);
-    };
-    toast.querySelector('.go-toast__close').addEventListener('click', close);
-    if (durationMs) setTimeout(close, durationMs);
-    container.appendChild(toast);
-  }
-
-  function showSuccess(message) {
-    setStatus(message, true);
-    showToast_(message, 'success', 4000);
-  }
-
-  function showError(error) {
-    const message = typeof error === 'string'
-      ? error
-      : (error && error.message ? error.message : 'Ocurrió un error.');
-    setStatus(message, false);
-    showToast_(message, 'error', 7000);
-  }
-
-  function setStatus(message, ok) {
-    const el = document.getElementById('status-message');
-    if (!el) return;
-    el.textContent = message;
-    el.style.color = ok === false ? '#A12A2A' : ok === true ? '#0C6844' : '';
-  }
+  const showSessionExpired_ = () => window.GO_PES_UI && window.GO_PES_UI.showSessionExpired();
+  const showToast_ = (msg, type, dur) => window.GO_PES_UI && window.GO_PES_UI.showToast(msg, type, dur);
+  const showSuccess = (msg) => window.GO_PES_UI && window.GO_PES_UI.showSuccess(msg);
+  const showError = (err) => window.GO_PES_UI && window.GO_PES_UI.showError(err);
+  const setStatus = (msg, ok) => window.GO_PES_UI && window.GO_PES_UI.setStatus(msg, ok);
 
   function friendlyBeneficioLabel_(value) {
     const raw = String(value || '').trim();
@@ -2196,77 +2159,16 @@
     return `${d.getFullYear()}-${m}-${day}`;
   }
 
-  function escapeHtml(value) {
-    return String(value == null ? '' : value)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  }
+  const escapeHtml = (v) => window.GO_PES_UI && window.GO_PES_UI.escapeHtml(v);
+  const goPesEmptyStateHtml_ = (...args) => window.GO_PES_UI && window.GO_PES_UI.emptyStateHtml(...args);
+  const goPesTableEmptyRowHtml_ = (...args) => window.GO_PES_UI && window.GO_PES_UI.tableEmptyRowHtml(...args);
+  const goPesFieldError_ = (...args) => window.GO_PES_UI && window.GO_PES_UI.fieldError(...args);
+  const goPesFieldClearError_ = (el) => window.GO_PES_UI && window.GO_PES_UI.fieldClearError(el);
+  const goPesPaginatorHtml_ = (...args) => window.GO_PES_UI && window.GO_PES_UI.paginatorHtml(...args);
 
-  // Genera un empty-state completo (ícono + título + mensaje opcional)
-  function goPesEmptyStateHtml_(icon, title, msg, extraClass) {
-    const cls = ['empty-state', extraClass].filter(Boolean).join(' ');
-    return `<div class="${cls}">
-      <span class="material-symbols-outlined" style="font-size:2rem;opacity:.35;display:block">${icon || 'inbox'}</span>
-      <strong>${escapeHtml(title || '')}</strong>
-      ${msg ? `<p class="muted" style="font-size:.82rem;margin:0">${escapeHtml(msg)}</p>` : ''}
-    </div>`;
-  }
-
-  // Genera una fila vacía para <tbody> (no puede usar el box de empty-state)
-  function goPesTableEmptyRowHtml_(icon, msg, colspan) {
-    return `<tr><td colspan="${colspan || 1}" style="padding:0;border:0">
-      <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:28px 16px;color:var(--text-muted,#6b7a8d);font-size:.85rem">
-        <span class="material-symbols-outlined" style="opacity:.4;font-size:1.2rem">${icon || 'inbox'}</span>
-        <span>${escapeHtml(msg || 'Sin registros.')}</span>
-      </div>
-    </td></tr>`;
-  }
-
-  function goPesFieldError_(el, message) {
-    if (!el) return;
-    const wrapper = el.closest('.field');
-    if (!wrapper) return;
-    let span = wrapper.querySelector('.field-error');
-    if (!span) {
-      span = document.createElement('span');
-      span.className = 'field-error';
-      span.setAttribute('role', 'alert');
-      el.insertAdjacentElement('afterend', span);
-    }
-    span.textContent = message || '';
-    wrapper.classList.toggle('has-error', !!message);
-  }
-
-  function goPesFieldClearError_(el) { goPesFieldError_(el, ''); }
-
-  function goPesPaginatorHtml_(current, total, prefix) {
-    if (total <= 1) return '';
-    const MAX_VISIBLE = 7;
-    const makeBtn = (page, label, active, disabled) =>
-      '<button type="button" class="go-pager__btn' + (active ? ' go-pager__btn--active' : '') + '"'
-      + (disabled ? ' disabled' : '')
-      + ' data-' + prefix + '-page="' + page + '">' + escapeHtml(String(label)) + '</button>';
-
-    let pages = '';
-    if (total <= MAX_VISIBLE) {
-      for (let i = 0; i < total; i++) pages += makeBtn(i, i + 1, i === current, false);
-    } else {
-      pages += makeBtn(0, 1, current === 0, false);
-      if (current > 2) pages += '<span class="go-pager__info">…</span>';
-      for (let i = Math.max(1, current - 1); i <= Math.min(total - 2, current + 1); i++) {
-        pages += makeBtn(i, i + 1, i === current, false);
-      }
-      if (current < total - 3) pages += '<span class="go-pager__info">…</span>';
-      pages += makeBtn(total - 1, total, current === total - 1, false);
-    }
-
-    return makeBtn(current - 1, '‹', false, current === 0)
-      + pages
-      + makeBtn(current + 1, '›', false, current === total - 1);
-  }
+  // ══════════════════════════════════════════════════════════════════════════
+  // FIN UI UTILITIES
+  // ══════════════════════════════════════════════════════════════════════════
 
   function getSystemConfig_() {
     return APP.state.systemConfig || BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {};

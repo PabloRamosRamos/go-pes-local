@@ -122,4 +122,31 @@
     mountContentLoadingForContext_(overlay, false);
     syncContentLoadingLayerState_(overlay);
   }
+
+  /**
+   * Muestra el loading global con contexto de MODAL forzado.
+   * Uso: cuando el flujo dispara una acción desde un modal abierto
+   * y necesita que el loader cubra toda la pantalla.
+   *
+   * @param {string} message - Mensaje a mostrar en el loader
+   */
+  function showModalLoading(message) {
+    const overlay = ensureContentLoadingMounted_(true); // Forzar contexto modal
+    const text = overlay ? overlay.querySelector('.content-loading__text') : null;
+    if (!overlay) return;
+
+    if (text) text.textContent = message || getLoadingText_();
+    overlay.setAttribute('aria-busy', 'true');
+    overlay.classList.remove('is-hidden');
+    overlay.style.display = 'flex';
+    syncContentLoadingLayerState_(overlay);
+  }
+
+  /**
+   * Oculta el loading modal.
+   * Alias de hideContentLoading() para simetría con showModalLoading().
+   */
+  function hideModalLoading() {
+    hideContentLoading();
+  }
 </script>

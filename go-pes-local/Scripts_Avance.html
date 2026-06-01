@@ -765,7 +765,7 @@
       : '';
 
     closeAvanceHitoModal_();
-    showContentLoading(requiereNombreOrganizacion ? 'Creando organización...' : 'Registrando hito...');
+    showModalLoading(requiereNombreOrganizacion ? 'Creando organización...' : 'Registrando hito...');
 
     api('registrarHitoAvance', {
       organizacion_id: isGrupo ? '' : organizacionId,
@@ -808,7 +808,7 @@
         if (benefitReminder) openAvanceBeneficioReminderModal_(benefitReminder);
       });
     }).catch(showError).finally(() => {
-      hideContentLoading();
+      hideModalLoading();
     });
   }
 

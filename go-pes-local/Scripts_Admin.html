@@ -197,13 +197,13 @@
 
     if (btn) btn.disabled = true;
     closeUserEditModal_();
-    showContentLoading('Guardando usuario...');
+    showModalLoading('Guardando usuario...');
     api('updateUser', payload).then(() => {
       showSuccess('Usuario actualizado.');
       loadUsers();
     }).catch(showError).finally(() => {
       if (btn) btn.disabled = false;
-      hideContentLoading();
+      hideModalLoading();
     });
   }
 
@@ -236,14 +236,14 @@
 
     if (btn) btn.disabled = true;
     closeUserDeleteModal_();
-    showContentLoading('Desactivando usuario...');
+    showModalLoading('Desactivando usuario...');
     api('deactivateUser', payload).then(() => {
       markUserInactiveInTable_(payload.email);
       showSuccess('Usuario desactivado.');
       return loadUsers();
     }).catch(showError).finally(() => {
       if (btn) btn.disabled = false;
-      hideContentLoading();
+      hideModalLoading();
     });
   }
 

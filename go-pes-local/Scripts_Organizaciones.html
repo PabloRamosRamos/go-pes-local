@@ -464,7 +464,7 @@
   // -- DETALLE --
 
   function loadOrganizacionDetalle_(organizacionId) {
-    showContentLoading('Cargando organización...');
+    showModalLoading('Cargando organización...');
     return api('getOrganizacionModuloDetalle', { organizacion_id: organizacionId }).then(data => {
       APP.state.currentOrganizacionDetalle = data || {};
       const titleEl = document.getElementById('org-detalle-modal-title');
@@ -474,7 +474,7 @@
       renderOrganizacionDetalle_(APP.state.currentOrganizacionDetalle);
       openOrganizacionDetalleModal_();
       setOrganizacionesActionState_(true);
-    }).catch(showError).finally(hideContentLoading);
+    }).catch(showError).finally(hideModalLoading);
   }
 
   function openOrganizacionDetalleModal_() {
@@ -781,7 +781,7 @@
       return;
     }
 
-    showContentLoading('Actualizando cargo...');
+    showModalLoading('Actualizando cargo...');
     api('actualizarCargoSocioOrganizacion', {
       organizacion_id: org.organizacion_id,
       socio_id: socioId,
@@ -791,7 +791,7 @@
       showSuccess('Cargo de socio actualizado.');
       return loadOrganizacionDetalle_(org.organizacion_id);
     }).catch(showError).finally(() => {
-      hideContentLoading();
+      hideModalLoading();
     });
   }
 

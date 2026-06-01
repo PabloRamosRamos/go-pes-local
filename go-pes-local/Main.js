@@ -6,7 +6,7 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
   VERSION: '2.1.7',
-  BUILD: 'b5210bf',
+  BUILD: '7bc7a4d',
   BUILD_DATE: '20260601',
   ENVIRONMENT: 'DEV',
   SUPERUSERS: [
@@ -88,7 +88,7 @@ const GO_PES_V2 = {
   },
   ROLES: ['visor', 'operador', 'coordinador', 'superuser'],
   AVANCE: {
-    TRAMOS: ['PreconstituciÃ³n', 'FormalizaciÃ³n posterior'],
+    TRAMOS: ['Preconstitución', 'Formalización posterior'],
     ESTADOS: ['Activo', 'Stand by', 'Detenido', 'Finalizado']
   },
   TRUSTED_DOMAIN_AUTO_ACTIVE: false,
@@ -137,7 +137,7 @@ function onOpen() {
     .addSeparator()
     .addItem('Configurar motor operativo', 'setupMotorOperativoPES')
     .addItem('Reconstruir estructuras desde RAW', 'reconstruirEstructurasDesdeRaw')
-    .addItem('Refrescar catÃ¡logos sugeridos', 'refrescarCatalogosSugeridos')
+    .addItem('Refrescar catálogos sugeridos', 'refrescarCatalogosSugeridos')
     .addItem('Reconstruir vistas y master', 'goPesRefrescarVistasYMaster')
     .addItem('Inicializar superUsers', 'goPesSeedSuperUsers')
     .addSeparator()

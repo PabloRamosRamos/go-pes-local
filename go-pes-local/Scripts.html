@@ -192,6 +192,23 @@
     }
   };
 
+  // Exponer APP globalmente para que los módulos incluidos con includeModule_() puedan acceder
+  window.APP = APP;
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // CATALOG CACHE ALIASES — Deben estar antes de usarse en init()
+  // ══════════════════════════════════════════════════════════════════════════
+
+  const normalizeCatalogs = (c) => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.normalizeCatalogs(c);
+  const mergeCatalogs_ = (c) => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.mergeCatalogs(c);
+  const ensureIngresoCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureIngresoCatalogs();
+  const ensureAppCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureAppCatalogs();
+  const ensureOrganizacionCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureOrganizacionCatalogs();
+  const ensureSociosCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureSociosCatalogs();
+  const ensureBuscarData_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureBuscarData();
+  const ensureOrganizacionesModuloList_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureOrganizacionesModuloList();
+  const ensureCatalogsForView_ = (v) => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureCatalogsForView(v);
+
   const USER_ROLE_OPTIONS = [
     { value: 'visor', label: 'Visor' },
     { value: 'operador', label: 'Operador' },
@@ -366,11 +383,22 @@
 
   function initTabDetection_() {
     try {
+      var _bannerAutoCloseTimer = null;
+      var showMultiTabBanner_ = function() {
+        var banner = document.getElementById('multi-tab-banner');
+        if (!banner) return;
+        banner.classList.remove('is-hidden');
+        // Cerrar automáticamente después de 10 segundos
+        if (_bannerAutoCloseTimer) clearTimeout(_bannerAutoCloseTimer);
+        _bannerAutoCloseTimer = setTimeout(function() {
+          banner.classList.add('is-hidden');
+        }, 10000);
+      };
+
       var existing = JSON.parse(localStorage.getItem(_TAB_KEY) || 'null');
       var now = Date.now();
       if (existing && existing.tabId !== _tabId && (now - (existing.ts || 0)) < 25000) {
-        var banner = document.getElementById('multi-tab-banner');
-        if (banner) banner.classList.remove('is-hidden');
+        showMultiTabBanner_();
       }
       var claimTab_ = function() {
         try { localStorage.setItem(_TAB_KEY, JSON.stringify({ tabId: _tabId, ts: Date.now() })); } catch (_) {}
@@ -389,8 +417,7 @@
         try {
           var data = JSON.parse(ev.newValue);
           if (data && data.tabId !== _tabId) {
-            var banner = document.getElementById('multi-tab-banner');
-            if (banner) banner.classList.remove('is-hidden');
+            showMultiTabBanner_();
           }
         } catch (_) {}
       });
@@ -819,6 +846,9 @@
     });
   }
 
+  // Exponer api globalmente para módulos incluidos con includeModule_()
+  window.api = api;
+
   function hydrateLogo() {
     const img = document.getElementById('appLogo');
     if (!img) return;
@@ -834,24 +864,6 @@
     }
   }
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // CATALOG CACHE — Migrado a Scripts_CatalogCache.html (Fase 3.2)
-  // Aliases por compatibilidad con código existente
-  // ══════════════════════════════════════════════════════════════════════════
-
-  const normalizeCatalogs = (c) => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.normalizeCatalogs(c);
-  const mergeCatalogs_ = (c) => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.mergeCatalogs(c);
-  const ensureIngresoCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureIngresoCatalogs();
-  const ensureAppCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureAppCatalogs();
-  const ensureOrganizacionCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureOrganizacionCatalogs();
-  const ensureSociosCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureSociosCatalogs();
-  const ensureBuscarData_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureBuscarData();
-  const ensureOrganizacionesModuloList_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureOrganizacionesModuloList();
-  const ensureCatalogsForView_ = (v) => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureCatalogsForView(v);
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // FIN CATALOG CACHE
-  // ══════════════════════════════════════════════════════════════════════════
 
   function hydrateStaticUser() {
     const user = APP.state.user || {};
@@ -2215,6 +2227,55 @@
   <?!= include('Scripts_Socios') ?>
   <?!= include('Scripts_Avance') ?>
   <?!= include('Scripts_Admin') ?>
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // EXPONER NAMESPACE GLOBAL PARA MÓDULOS CARGADOS CON includeModule_()
+  // ══════════════════════════════════════════════════════════════════════════
+
+  window.GO_PES = window.GO_PES || {};
+  Object.assign(window.GO_PES, {
+    // Core
+    APP: APP,
+    api: api,
+    route: route,
+    loadFicha: loadFicha,
+
+    // UI helpers
+    showError: showError,
+    showSuccess: showSuccess,
+    setStatus: setStatus,
+    escapeHtml: escapeHtml,
+    goPesEmptyStateHtml_: goPesEmptyStateHtml_,
+
+    // Catalogs
+    normalizeCatalogs: normalizeCatalogs,
+    mergeCatalogs_: mergeCatalogs_,
+    ensureIngresoCatalogs_: ensureIngresoCatalogs_,
+    ensureAppCatalogs_: ensureAppCatalogs_,
+    ensureOrganizacionCatalogs_: ensureOrganizacionCatalogs_,
+    ensureSociosCatalogs_: ensureSociosCatalogs_,
+    ensureBuscarData_: ensureBuscarData_,
+    ensureOrganizacionesModuloList_: ensureOrganizacionesModuloList_,
+    ensureCatalogsForView_: ensureCatalogsForView_,
+
+    // Utils
+    buildFullName: buildFullName,
+    todayISO_: todayISO_,
+    friendlyBeneficioLabel_: friendlyBeneficioLabel_,
+    getSystemConfig_: getSystemConfig_,
+    getSocioCargoOptions_: getSocioCargoOptions_,
+    getViewLabel_: getViewLabel_,
+
+    // Form helpers
+    fillSelect: fillSelect,
+    populateSelectsInForm_: populateSelectsInForm_,
+    syncSectorOptions: syncSectorOptions,
+    formatUiValue_: formatUiValue_
+  });
+
+  // Aliases globales directos para compatibilidad
+  window.APP = APP;
+  window.api = api;
 
 })();
 </script>

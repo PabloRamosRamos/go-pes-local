@@ -199,6 +199,10 @@
 
   function buildOrgStepper_(items, HITO_NOMBRES) {
     return items.map(function(item, idx) {
+      // Si es invisible, renderizar espacio vacío sin línea
+      if (item.invisible) {
+        return '<span class="org-step-dot" style="opacity:0;pointer-events:none;"></span>';
+      }
       var isDone = item.done;
       var isCurr = item.current;
       var dotMod = isDone ? 'org-step-dot--done' : isCurr ? 'org-step-dot--current' : 'org-step-dot--pending';
@@ -206,8 +210,11 @@
       var tooltip = 'Hito ' + item.n + (HITO_NOMBRES[item.n] ? ': ' + HITO_NOMBRES[item.n] : '');
       var content = isDone ? '&#10003;' : String(item.n);
       var lineMod = isDone ? 'org-step-line--done' : 'org-step-line--pending';
+      // No renderizar línea si el siguiente elemento es invisible
+      var nextItem = items[idx + 1];
+      var shouldRenderLine = idx < items.length - 1 && (!nextItem || !nextItem.invisible);
       return '<span class="org-step-dot ' + dotMod + ' ' + sizeMod + '" title="' + tooltip + '">' + content + '</span>' +
-        (idx < items.length - 1 ? '<div class="org-step-line ' + lineMod + '"></div>' : '');
+        (shouldRenderLine ? '<div class="org-step-line ' + lineMod + '"></div>' : '');
     }).join('');
   }
 
@@ -234,6 +241,8 @@
     var nextT2 = [8,9,10,11,12,13,14,15].find(function(n){ return !doneT2(n); }) || null;
 
     var t1Items = [1,2,3,4,5,6,7].map(function(n){ return { n:n, done:doneT1(n), current:n===nextT1 }; });
+    // Agregar placeholder invisible al final de T1 para alinear con T2 (8 elementos)
+    t1Items.push({ n:0, done:false, current:false, invisible:true });
     var t2Items = [8,9,10,11,12,13,14,15].map(function(n){ return { n:n, done:doneT2(n), current:n===nextT2 }; });
 
     // Limpiar título: quitar prefijo "COMITE DE SEGURIDAD"
@@ -245,9 +254,9 @@
     var meta = '';
     var totalSocios = Number(org.total_socios || 0);
     meta += '<span><strong>Socios:</strong> ' + (totalSocios > 0 ? totalSocios : '-') + '</span>';
-    if (org.uv) meta += '<span><strong>UV:</strong> ' + escapeHtml(org.uv) + '</span>';
-    if (org.direccion) meta += '<span class="full"><strong>Dirección:</strong> ' + escapeHtml(org.direccion) + '</span>';
-    if (org.nombre_contacto) meta += '<span class="full"><strong>Contacto:</strong> ' + escapeHtml(org.nombre_contacto) + '</span>';
+    meta += '<span><strong>UV:</strong> ' + (org.uv ? escapeHtml(org.uv) : '-') + '</span>';
+    meta += '<span class="full"><strong>Dirección:</strong> ' + (org.direccion ? escapeHtml(org.direccion) : '<span class="muted">Sin registrar</span>') + '</span>';
+    meta += '<span class="full"><strong>Contacto:</strong> ' + (org.nombre_contacto ? escapeHtml(org.nombre_contacto) : '<span class="muted">Sin registrar</span>') + '</span>';
 
     return '<div class="panel org-card stagger-item">' +
       '<div class="org-card__header">' +
@@ -287,6 +296,10 @@
     var nextHito = maxHito < 7 ? maxHito + 1 : null;
 
     var t1Items = [1,2,3,4,5,6,7].map(function(n){ return { n:n, done:n<=maxHito, current:n===nextHito }; });
+    // Agregar placeholder invisible al final de T1 para alinear con T2 (8 elementos)
+    t1Items.push({ n:0, done:false, current:false, invisible:true });
+    // T2 vacío para grupos de vecinos (no han llegado a formalización)
+    var t2Items = [8,9,10,11,12,13,14,15].map(function(n){ return { n:n, done:false, current:false }; });
 
     // Limpiar título: quitar prefijo "COMITE DE SEGURIDAD" si aplica
     var titulo = String(org.label || 'Grupo de vecinos')
@@ -296,9 +309,9 @@
     // Construir metadata con nuevo formato (misma estructura que organizaciones)
     var meta = '';
     meta += '<span><strong>Socios:</strong> -</span>'; // Los grupos aún no tienen socios formales
-    if (org.uv) meta += '<span><strong>UV:</strong> ' + escapeHtml(org.uv) + '</span>';
-    if (org.direccion) meta += '<span class="full"><strong>Dirección:</strong> ' + escapeHtml(org.direccion) + '</span>';
-    if (org.nombre_contacto) meta += '<span class="full"><strong>Contacto:</strong> ' + escapeHtml(org.nombre_contacto) + '</span>';
+    meta += '<span><strong>UV:</strong> ' + (org.uv ? escapeHtml(org.uv) : '-') + '</span>';
+    meta += '<span class="full"><strong>Dirección:</strong> ' + (org.direccion ? escapeHtml(org.direccion) : '<span class="muted">Sin registrar</span>') + '</span>';
+    meta += '<span class="full"><strong>Contacto:</strong> ' + (org.nombre_contacto ? escapeHtml(org.nombre_contacto) : '<span class="muted">Sin registrar</span>') + '</span>';
 
     return '<div class="panel org-card stagger-item">' +
       '<div class="org-card__header">' +
@@ -311,12 +324,17 @@
       '<div class="org-card__avance">' +
         '<div class="org-card__avance-head">' +
           '<span class="org-card__avance-label">Avance</span>' +
-          '<span class="org-card__avance-count">' + maxHito + ' / 7</span>' +
+          '<span class="org-card__avance-count">' + maxHito + ' / 15</span>' +
         '</div>' +
         '<div class="org-card__stepper">' +
           '<div class="org-card__stepper-row">' +
             '<span class="org-card__stepper-label">T1</span>' +
             '<div class="org-card__stepper-track">' + buildOrgStepper_(t1Items, ORG_HITO_NOMBRES) + '</div>' +
+          '</div>' +
+          '<div class="org-card__stepper-gap"></div>' +
+          '<div class="org-card__stepper-row">' +
+            '<span class="org-card__stepper-label">T2</span>' +
+            '<div class="org-card__stepper-track">' + buildOrgStepper_(t2Items, ORG_HITO_NOMBRES) + '</div>' +
           '</div>' +
         '</div>' +
       '</div>' +

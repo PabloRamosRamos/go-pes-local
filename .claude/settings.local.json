@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Remove-Item \"c:\\\\Users\\\\peram\\\\Documents\\\\Sitios\\\\GO Provi\\\\go-pes-local\\\\LegacyMigration.js\")",
+      "Bash(grep -v \"^[0-9]*:  *//[^/]\")",
+      "Bash(powershell -Command \"\\(Get-Content 'c:\\\\\\\\Users\\\\\\\\peram\\\\\\\\Documents\\\\\\\\Sitios\\\\\\\\GO Provi\\\\\\\\go-pes-local\\\\\\\\Scripts.html'\\).Count\")",
+      "Bash(python3)",
+      "Bash(python3 -c \"print\\('python works'\\)\")",
+      "Bash(py --version)",
+      "Bash(where python *)",
+      "Bash(python)",
+      "Bash(clasp pull *)",
+      "Bash(clasp -u dev pull)",
+      "Bash(grep -o \".\\\\{0,500\\\\}stepper.\\\\{0,500\\\\}\" \"C:/Users/peram/.claude/projects/c--Users-peram-Documents-Sitios-GO-Provi/9746c974-4c4a-40c1-b15e-dd4ffb40411a.jsonl\" 2>/dev/null | head -5)",
+      "Read(//c/Users/peram/.claude/projects/c--Users-peram-Documents-Sitios-GO-Provi/**)"
+    ]
+  }
+}

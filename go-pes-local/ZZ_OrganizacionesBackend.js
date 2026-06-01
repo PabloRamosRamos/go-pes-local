@@ -53,6 +53,23 @@ function getOrganizacionesConGruposClient() {
   var avanceHitos = [];
   try { avanceHitos = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS) || []; } catch (e) {}
 
+  // Obtener socios por organización para contar total
+  var socios = [];
+  try { socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || []; } catch (e) {}
+  var sociosByOrg = {};
+  var contactoByOrg = {}; // Primer socio con cargo "Presidente" o primer socio
+  socios.forEach(function(s) {
+    var orgId = String(s.organizacion_id || '').trim();
+    if (!orgId) return;
+    if (!sociosByOrg[orgId]) sociosByOrg[orgId] = 0;
+    sociosByOrg[orgId]++;
+
+    // Capturar contacto principal (preferir Presidente)
+    if (!contactoByOrg[orgId] || String(s.cargo_socio || '').toLowerCase().indexOf('president') !== -1) {
+      contactoByOrg[orgId] = String(s.nombre_socio || '').trim();
+    }
+  });
+
   var hitosByOrg = {};
   var hitosBySolicitud = {};
   avanceHitos.forEach(function(h) {
@@ -83,8 +100,11 @@ function getOrganizacionesConGruposClient() {
         estado_constitucion: String(r.estado_constitucion || ''),
         uv: String(r.uv || ''),
         sector: String(r.sector || ''),
+        direccion: String(r.direccion_organizacion || r.direccion || ''),
         tipo_organizacion: String(r.tipo_organizacion || ''),
         responsable_actual: String(r.responsable_actual || ''),
+        total_socios: sociosByOrg[orgId] || 0,
+        nombre_contacto: contactoByOrg[orgId] || '',
         certificado_definitivo_flag: String(r.certificado_definitivo_flag || ''),
         certificado_provisorio_flag: String(r.certificado_provisorio_flag || ''),
         personalidad_juridica_flag: String(r.personalidad_juridica_flag || ''),
@@ -111,8 +131,11 @@ function getOrganizacionesConGruposClient() {
         solicitud_id: solId,
         uv: String(r.uv || ''),
         sector: String(r.sector || ''),
+        direccion: String(r.direccion_original || ''),
         direccion_original: String(r.direccion_original || ''),
         responsable_actual: String(r.responsable_actual || ''),
+        total_socios: 0, // Los grupos de vecinos no tienen socios formales aún
+        nombre_contacto: String(r.nombre_completo || '').trim(), // El vecino que hace la solicitud
         fecha_ingreso: r.fecha_ingreso ? Utilities.formatDate(r.fecha_ingreso instanceof Date ? r.fecha_ingreso : new Date(r.fecha_ingreso), Session.getScriptTimeZone(), 'dd/MM/yyyy') : '',
         hitos_cumplidos: hitosBySolicitud[solId] || []
       };

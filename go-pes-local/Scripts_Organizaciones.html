@@ -236,31 +236,29 @@
     var t1Items = [1,2,3,4,5,6,7].map(function(n){ return { n:n, done:doneT1(n), current:n===nextT1 }; });
     var t2Items = [8,9,10,11,12,13,14,15].map(function(n){ return { n:n, done:doneT2(n), current:n===nextT2 }; });
 
-    var badgeMod = org.estado_general_organizacion === 'Activo'     ? 'org-card__badge--activo'
-                 : org.estado_general_organizacion === 'Suspendida' ? 'org-card__badge--suspendida'
-                 : 'org-card__badge--inactivo';
+    // Limpiar título: quitar prefijo "COMITE DE SEGURIDAD"
+    var titulo = String(org.label || 'Sin nombre')
+      .replace(/^COMITE DE SEGURIDAD\s+/i, '')
+      .replace(/^COMITÉ DE SEGURIDAD\s+/i, '');
 
-    var estadoBadge = org.estado_general_organizacion
-      ? '<span class="org-card__badge ' + badgeMod + '">' + escapeHtml(org.estado_general_organizacion) + '</span>'
-      : '';
-
+    // Construir metadata con nuevo formato
     var meta = '';
-    if (org.tipo_organizacion)  meta += '<span class="full"><strong>Tipo:</strong> ' + escapeHtml(org.tipo_organizacion) + '</span>';
-    if (org.uv)                 meta += '<span><strong>UV:</strong> ' + escapeHtml(org.uv) + '</span>';
-    if (org.sector)             meta += '<span><strong>Sector:</strong> ' + escapeHtml(org.sector) + '</span>';
-    if (org.responsable_actual) meta += '<span class="full"><strong>Responsable:</strong> ' + escapeHtml(org.responsable_actual) + '</span>';
+    var totalSocios = Number(org.total_socios || 0);
+    meta += '<span><strong>Socios:</strong> ' + (totalSocios > 0 ? totalSocios : '-') + '</span>';
+    if (org.uv) meta += '<span><strong>UV:</strong> ' + escapeHtml(org.uv) + '</span>';
+    if (org.direccion) meta += '<span class="full"><strong>Dirección:</strong> ' + escapeHtml(org.direccion) + '</span>';
+    if (org.nombre_contacto) meta += '<span class="full"><strong>Contacto:</strong> ' + escapeHtml(org.nombre_contacto) + '</span>';
 
     return '<div class="panel org-card stagger-item">' +
       '<div class="org-card__header">' +
         '<div class="org-card__title-row">' +
-          '<h4 class="org-card__title">' + escapeHtml(org.label || 'Sin nombre') + '</h4>' +
-          estadoBadge +
+          '<h4 class="org-card__title">' + escapeHtml(titulo) + '</h4>' +
         '</div>' +
         '<div class="org-card__meta">' + meta + '</div>' +
       '</div>' +
       '<div class="org-card__avance">' +
         '<div class="org-card__avance-head">' +
-          '<span class="org-card__avance-label">Avance de hitos</span>' +
+          '<span class="org-card__avance-label">Avance</span>' +
           '<span class="org-card__avance-count">' + countDone + ' / 15</span>' +
         '</div>' +
         '<div class="org-card__stepper">' +
@@ -288,29 +286,38 @@
     var maxHito = Math.max.apply(null, [0].concat(hitos.filter(function(n){ return n >= 1 && n <= 7; })));
     var nextHito = maxHito < 7 ? maxHito + 1 : null;
 
-    var dotItems = [1,2,3,4,5,6,7].map(function(n){ return { n:n, done:n<=maxHito, current:n===nextHito }; });
+    var t1Items = [1,2,3,4,5,6,7].map(function(n){ return { n:n, done:n<=maxHito, current:n===nextHito }; });
 
+    // Limpiar título: quitar prefijo "COMITE DE SEGURIDAD" si aplica
+    var titulo = String(org.label || 'Grupo de vecinos')
+      .replace(/^COMITE DE SEGURIDAD\s+/i, '')
+      .replace(/^COMITÉ DE SEGURIDAD\s+/i, '');
+
+    // Construir metadata con nuevo formato (misma estructura que organizaciones)
     var meta = '';
-    if (org.uv)                 meta += '<span><strong>UV:</strong> ' + escapeHtml(org.uv) + '</span>';
-    if (org.sector)             meta += '<span><strong>Sector:</strong> ' + escapeHtml(org.sector) + '</span>';
-    if (org.fecha_ingreso)      meta += '<span class="full"><strong>Ingreso:</strong> ' + escapeHtml(org.fecha_ingreso) + '</span>';
-    if (org.responsable_actual) meta += '<span class="full"><strong>Responsable:</strong> ' + escapeHtml(org.responsable_actual) + '</span>';
+    meta += '<span><strong>Socios:</strong> -</span>'; // Los grupos aún no tienen socios formales
+    if (org.uv) meta += '<span><strong>UV:</strong> ' + escapeHtml(org.uv) + '</span>';
+    if (org.direccion) meta += '<span class="full"><strong>Dirección:</strong> ' + escapeHtml(org.direccion) + '</span>';
+    if (org.nombre_contacto) meta += '<span class="full"><strong>Contacto:</strong> ' + escapeHtml(org.nombre_contacto) + '</span>';
 
     return '<div class="panel org-card stagger-item">' +
       '<div class="org-card__header">' +
         '<div class="org-card__title-row">' +
-          '<h4 class="org-card__title">' + escapeHtml(org.label || 'Grupo de vecinos') + '</h4>' +
+          '<h4 class="org-card__title">' + escapeHtml(titulo) + '</h4>' +
           '<span class="org-card__badge org-card__badge--proceso">En proceso</span>' +
         '</div>' +
         '<div class="org-card__meta">' + meta + '</div>' +
       '</div>' +
       '<div class="org-card__avance">' +
         '<div class="org-card__avance-head">' +
-          '<span class="org-card__avance-label">Avance T1</span>' +
+          '<span class="org-card__avance-label">Avance</span>' +
           '<span class="org-card__avance-count">' + maxHito + ' / 7</span>' +
         '</div>' +
-        '<div class="org-card__stepper-row">' +
-          '<div class="org-card__stepper-track">' + buildOrgStepper_(dotItems, ORG_HITO_NOMBRES) + '</div>' +
+        '<div class="org-card__stepper">' +
+          '<div class="org-card__stepper-row">' +
+            '<span class="org-card__stepper-label">T1</span>' +
+            '<div class="org-card__stepper-track">' + buildOrgStepper_(t1Items, ORG_HITO_NOMBRES) + '</div>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div class="org-card__footer">' +

@@ -293,6 +293,7 @@
     const now = Date.now();
     const body = document.getElementById('socios-table-body');
     const count = document.querySelector('.socios-panel__count');
+    const loader = document.getElementById('socios-table-loading');
     const canReuse = !force
       && APP.state.sociosModuleRows.length
       && APP.state.sociosModuleFetchedAt
@@ -303,21 +304,25 @@
       return Promise.resolve(APP.state.sociosModuleRows);
     }
 
-    if (body) {
-      body.innerHTML = '<tr><td colspan="3" class="socios-table__empty">Cargando socios...</td></tr>';
-    }
+    // Mostrar loader
+    if (loader) loader.classList.remove('is-hidden');
     if (count) count.textContent = '...';
 
     return api('getSociosModuloClient').then(data => {
       APP.state.sociosModuleRows = (data && data.rows) || [];
       APP.state.sociosModuleFetchedAt = Date.now();
       updateSociosTableView_(APP.state.sociosModuleRows);
+
+      // Ocultar loader
+      if (loader) loader.classList.add('is-hidden');
       return APP.state.sociosModuleRows;
     }).catch(err => {
       if (body) {
         body.innerHTML = '<tr><td colspan="3" class="socios-table__empty">No fue posible cargar los socios.</td></tr>';
       }
       if (count) count.textContent = '0';
+      // Ocultar loader en caso de error
+      if (loader) loader.classList.add('is-hidden');
       showError(err);
       throw err;
     });

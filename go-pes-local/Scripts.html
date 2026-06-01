@@ -383,15 +383,16 @@
 
   function initTabDetection_() {
     try {
-      var _bannerAutoCloseTimer = null;
+      window._bannerAutoCloseTimer = null;
       var showMultiTabBanner_ = function() {
         var banner = document.getElementById('multi-tab-banner');
         if (!banner) return;
         banner.classList.remove('is-hidden');
         // Cerrar automáticamente después de 10 segundos
-        if (_bannerAutoCloseTimer) clearTimeout(_bannerAutoCloseTimer);
-        _bannerAutoCloseTimer = setTimeout(function() {
-          banner.classList.add('is-hidden');
+        if (window._bannerAutoCloseTimer) clearTimeout(window._bannerAutoCloseTimer);
+        window._bannerAutoCloseTimer = setTimeout(function() {
+          var bannerEl = document.getElementById('multi-tab-banner');
+          if (bannerEl) bannerEl.classList.add('is-hidden');
         }, 10000);
       };
 

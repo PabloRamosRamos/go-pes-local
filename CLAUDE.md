@@ -290,8 +290,10 @@ Suite de tests automatizados en `Audith.js` cubre:
 - [x] `Scripts.html` dividido en 8 parciales por módulo (Fase 5 completada)
 - [x] Tests automatizados implementados en `Audith.js` (182 tests base + 8 tests seguridad, 0 fallos, verificados en DEV y PROD)
 - [x] Auditoría de seguridad completada (5 de 7 hallazgos cerrados, 2 excluidos por diseño DEV)
+- [x] Plan de mejora frontend completado (5/5 fases: A11y, Consolidación CSS, Modularización JS, Responsive, Design System). Ver [`docs/design-system.md`](../docs/design-system.md) y [`docs/frontend-plan-resumen.md`](../docs/frontend-plan-resumen.md).
 - [ ] Superusuario y dominios confiables hardcodeados en Main.js — evaluar moverlos a CFG_Parametros (bajo, solo convenios de configuración)
 - [ ] Eliminar 3 funciones duplicadas en `Scripts_Beneficios.html` (`renderCamaras1414Panel_`, `renderCamaras1414Table_`, `renderCamaras1414Detail_` — segunda definición es la activa)
+- [ ] Añadir `data-label` attributes a tablas dinámicas de `Scripts_*.html` para card layout responsive (incremental, baja prioridad)
 
 ## Historial de cambios significativos
 

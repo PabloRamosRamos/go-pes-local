@@ -6647,6 +6647,64 @@
     }
   }
 
+  /* ===== Calendario — refresh, registered state, coincidencias ===== */
+  .inicio-cal-refresh-btn {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+  .inicio-cal-action--registered {
+    opacity: 0.75;
+    background: var(--runtime-brand-primary, #3D96B4);
+    color: #fff;
+    border-color: var(--runtime-brand-primary, #3D96B4);
+  }
+  .cal-coincidencias {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 0.75rem;
+    background: var(--surface-2);
+  }
+  .cal-coincidencias__label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .cal-coincidencias__label .material-symbols-outlined { font-size: 1rem; }
+  .cal-coincidencias__content { display: flex; flex-direction: column; gap: 0.4rem; }
+  .cal-coincidencias__match {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    background: var(--bg, #f5f7fa);
+    border-radius: 6px;
+    font-size: 0.8rem;
+  }
+  .cal-coincidencias__match-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+    min-width: 0;
+  }
+  .cal-coincidencias__match-info strong { font-size: 0.83rem; }
+  .cal-coincidencias__match-info span   { color: var(--text-muted); font-size: 0.74rem; }
+  .cal-coincidencias__loading,
+  .cal-coincidencias__empty {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
   /* ===== Organizaciones — tarjetas y stepper (GO-PES v2) ===== */
   .org-grid {
     display: grid;

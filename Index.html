@@ -255,7 +255,9 @@
       .inicio-cal-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
       .inicio-cal-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--border,#D6E0EA)}
       .inicio-cal-item:last-child{border-bottom:none}
-      .inicio-cal-day{display:flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0;text-align:center}
+      .inicio-cal-day{display:flex;flex-direction:column;align-items:center;width:38px;flex-shrink:0;text-align:center;border-radius:8px;padding:4px 2px;transition:background .12s}
+      .inicio-cal-day.inicio-cal-badge--reunion .inicio-cal-num{color:#3D96B4}
+      .inicio-cal-day.inicio-cal-badge--ministro .inicio-cal-num{color:#5c8c1e}
       .inicio-cal-diasem{font-size:.62rem;font-weight:600;color:var(--text-muted,#6b7a8d);text-transform:uppercase;letter-spacing:.04em}
       .inicio-cal-num{font-size:1.1rem;font-weight:700;color:var(--text,#24364B);line-height:1.1}
       .inicio-cal-mes{font-size:.6rem;color:var(--text-muted,#6b7a8d);text-transform:uppercase}

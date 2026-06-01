@@ -876,6 +876,9 @@ function guardarIngreso(payload) {
 }
 
 function guardarSeguimiento(payload) {
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
   const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   validateSeguimientoV2_(payload);
   const now = new Date();
@@ -941,10 +944,16 @@ function guardarSeguimiento(payload) {
   logProcessing_('INFO', 'guardarSeguimiento', 'avance', hitoId, user.email, 'OK', payload);
   logUserAction_('CREATE_AVANCE', 'avance', hitoId, 'OK', payload);
   return { ok: true, hito_id: hitoId };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function guardarOrganizacion(payload) {
   const diag = goPesDiagStart_('Services.guardarOrganizacion', {});
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
   const user = requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
   validateOrganizacionV2_(payload);
   const now = new Date();
@@ -1034,15 +1043,18 @@ function guardarOrganizacion(payload) {
   logProcessing_('INFO', 'guardarOrganizacion', 'organizacion', organizacionId, user.email, 'OK', payload);
   logUserAction_('UPSERT_ORGANIZACION', 'organizacion', organizacionId, 'OK', payload);
   const result = { ok: true, organizacion_id: organizacionId };
-  goPesDiagEnd_(diag, {
-    ok: true,
-    organizacion_id: organizacionId
-  });
+  goPesDiagEnd_(diag, { ok: true, organizacion_id: organizacionId });
   return result;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function guardarInstrumento(payload) {
   const diag = goPesDiagStart_('Services.guardarInstrumento', {});
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
   const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   ensureSheetsSubset_([
     GO_PES_V2.SHEETS.RAW_INSTRUMENTOS,
@@ -1125,15 +1137,18 @@ function guardarInstrumento(payload) {
     org_instrumento_id: orgInstrumentoId,
     organizacion_id: organizacionId
   };
-  goPesDiagEnd_(diag, {
-    ok: true,
-    org_instrumento_id: orgInstrumentoId
-  });
+  goPesDiagEnd_(diag, { ok: true, org_instrumento_id: orgInstrumentoId });
   return result;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function guardarRequisito(payload) {
   const diag = goPesDiagStart_('Services.guardarRequisito', {});
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
   const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   ensureSheetsSubset_([
     GO_PES_V2.SHEETS.RAW_REQUISITOS,
@@ -1212,11 +1227,11 @@ function guardarRequisito(payload) {
     org_instrumento_id: orgInstrumentoId,
     organizacion_id: organizacionId
   };
-  goPesDiagEnd_(diag, {
-    ok: true,
-    requisito_registro_id: requisitoRegistroId
-  });
+  goPesDiagEnd_(diag, { ok: true, requisito_registro_id: requisitoRegistroId });
   return result;
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function recalcularFicha(payload) {

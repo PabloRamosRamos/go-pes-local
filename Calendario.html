@@ -1,7 +1,7 @@
 <script>
 window.GO_PES_CALENDARIO = (function() {
 
-  function render(root, data, esc, onAction) {
+  function render(root, data, esc, onAction, onRefresh) {
     if (!root) return;
     if (data === null || data === undefined) {
       root.innerHTML =
@@ -17,12 +17,20 @@ window.GO_PES_CALENDARIO = (function() {
     var eventos = Array.isArray(data.eventos) ? data.eventos : [];
     root.innerHTML = buildCard_(eventos, data.fetchedAt || '', esc);
 
-    if (typeof onAction === 'function') {
-      root.addEventListener('click', function(e) {
-        var btn = e.target.closest('.inicio-cal-action');
-        if (!btn) return;
-        onAction(btn.dataset.calId);
-      });
+    if (!root.dataset.calActionsWired) {
+      root.dataset.calActionsWired = '1';
+      if (typeof onAction === 'function') {
+        root.addEventListener('click', function(e) {
+          var btn = e.target.closest('.inicio-cal-action');
+          if (!btn) return;
+          onAction(btn.dataset.calId);
+        });
+      }
+      if (typeof onRefresh === 'function') {
+        root.addEventListener('click', function(e) {
+          if (e.target.closest('.inicio-cal-refresh-btn')) onRefresh();
+        });
+      }
     }
   }
 
@@ -40,7 +48,10 @@ window.GO_PES_CALENDARIO = (function() {
       '<div class="inicio-card__head">' +
         '<span class="material-symbols-outlined">calendar_month</span>' +
         '<div><h3>Calendario de reuniones</h3>' +
-        '<p>Reuniones CS y Ministro de fe próximas</p></div>' +
+        '<p>Reuniones CS y Ministro de fe proximas</p></div>' +
+        '<button class="inicio-cal-refresh-btn secondary-btn btn--sm" type="button" title="Actualizar calendario">' +
+          '<span class="material-symbols-outlined">refresh</span>' +
+        '</button>' +
       '</div>' +
       body +
       (fetchedAt
@@ -61,23 +72,25 @@ window.GO_PES_CALENDARIO = (function() {
     var hora   = ev.allDay ? 'Todo el dia'
                : ev.horaInicio + (ev.horaFin ? ' - ' + ev.horaFin : '');
 
-    var badge = '<span class="inicio-cal-badge ' +
-      (esReunion ? 'inicio-cal-badge--reunion' : 'inicio-cal-badge--ministro') + '">' +
-      (esReunion ? 'CS' : 'Min. Fe') +
-    '</span>';
-
-    var actionBtn = esReunion
-      ? '<button class="inicio-cal-action" data-cal-id="' + esc(ev.id) + '" type="button" ' +
-          'title="Registrar asistencia y crear nuevo ingreso">' +
-          '<span class="material-symbols-outlined">person_add</span>' +
-        '</button>'
-      : '<button class="inicio-cal-action inicio-cal-action--pending" type="button" disabled ' +
+    var dayMod = esReunion ? 'inicio-cal-badge--reunion' : 'inicio-cal-badge--ministro';
+    var yaRegistrado = esReunion && ev.registrado;
+    var actionBtn = !esReunion
+      ? '<button class="inicio-cal-action inicio-cal-action--pending" type="button" disabled ' +
           'title="Para programar este evento, primero se deben completar los hitos previos en la app">' +
           '<span class="material-symbols-outlined">how_to_reg</span>' +
+        '</button>'
+      : yaRegistrado
+      ? '<button class="inicio-cal-action inicio-cal-action--registered" data-cal-id="' + esc(ev.id) + '" type="button" ' +
+          'title="Asistencia registrada - click para continuar con el ingreso">' +
+          '<span class="material-symbols-outlined">how_to_reg</span>' +
+        '</button>'
+      : '<button class="inicio-cal-action" data-cal-id="' + esc(ev.id) + '" type="button" ' +
+          'title="Registrar asistencia y crear nuevo ingreso">' +
+          '<span class="material-symbols-outlined">person_add</span>' +
         '</button>';
 
     return '<li class="inicio-cal-item">' +
-      '<div class="inicio-cal-day">' +
+      '<div class="inicio-cal-day ' + dayMod + '">' +
         '<span class="inicio-cal-diasem">' + esc(ev.diaSemana) + '</span>' +
         '<span class="inicio-cal-num">' + esc(numDia) + '</span>' +
         '<span class="inicio-cal-mes">' + esc(mesDia) + '</span>' +
@@ -85,7 +98,6 @@ window.GO_PES_CALENDARIO = (function() {
       '<div class="inicio-cal-body">' +
         '<div class="inicio-cal-titulo-row">' +
           '<p class="inicio-cal-titulo">' + esc(ev.titulo) + '</p>' +
-          badge +
         '</div>' +
         '<div class="inicio-cal-meta-row">' +
           '<p class="inicio-cal-meta">' +
@@ -102,6 +114,13 @@ window.GO_PES_CALENDARIO = (function() {
     return '<div id="inicio-cal-dialog" class="inicio-cal-dialog is-hidden" role="dialog" aria-modal="true">' +
       '<div class="inicio-cal-dialog__box">' +
         '<p id="cal-dialog-titulo" class="inicio-cal-dialog__titulo"></p>' +
+        '<div id="cal-coincidencias" class="cal-coincidencias is-hidden">' +
+          '<p class="cal-coincidencias__label">' +
+            '<span class="material-symbols-outlined">manage_search</span>' +
+            'Coincidencias en el sistema' +
+          '</p>' +
+          '<div id="cal-coincidencias-content" class="cal-coincidencias__content"></div>' +
+        '</div>' +
         '<div id="cal-step-1">' +
           '<p class="inicio-cal-dialog__q">¿Se realizó esta reunión?</p>' +
           '<div class="inicio-cal-dialog__btns">' +

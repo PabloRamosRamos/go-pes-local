@@ -73,6 +73,7 @@ function debugBuscarVecinoPablo() {
  * Encadena los tres suites y loguea un resumen final.
  */
 function goPesRunAllTests() {
+  requireRole_(['superuser']);
   Logger.log('');
   Logger.log('==========================================');
   Logger.log('  GO-PES v2 — Tests automatizados');

@@ -41,11 +41,72 @@
     dialog.querySelector('#cal-step-1').classList.remove('is-hidden');
     dialog.querySelector('#cal-step-2').classList.add('is-hidden');
     dialog.querySelector('#cal-step-loading').classList.add('is-hidden');
+    var coincDiv = document.getElementById('cal-coincidencias');
+    if (coincDiv) coincDiv.classList.add('is-hidden');
     var inp = dialog.querySelector('#cal-asistentes');
     if (inp) inp.value = '';
     dialog.classList.remove('is-hidden');
     var btnSi = dialog.querySelector('#cal-btn-si');
     if (btnSi) btnSi.focus();
+
+    if (ev.tipo === 'reunion') _calBuscarCoincidencias_(ev);
+  }
+
+  function _calBuscarCoincidencias_(ev) {
+    var prefill = buildPrefillFromCalEvent_(ev);
+    var payload = {
+      nombre_vecino:     prefill.nombre_vecino    || '',
+      apellido_vecino:   prefill.apellido_vecino  || '',
+      telefono_contacto: prefill.telefono_contacto|| '',
+      direccion_original: ev.lugar               || ''
+    };
+    var hasQuery = payload.nombre_vecino || payload.telefono_contacto || payload.direccion_original;
+    if (!hasQuery) return;
+
+    var coincDiv = document.getElementById('cal-coincidencias');
+    var contentEl = document.getElementById('cal-coincidencias-content');
+    if (!coincDiv || !contentEl) return;
+
+    contentEl.innerHTML = '<p class="cal-coincidencias__loading">' +
+      '<span class="material-symbols-outlined dash-spin">refresh</span> Buscando...</p>';
+    coincDiv.classList.remove('is-hidden');
+
+    api('buscarCoincidenciasIngreso', payload).then(function(rows) {
+      var matches = Array.isArray(rows) ? rows.slice(0, 5) : [];
+      if (!matches.length) {
+        contentEl.innerHTML = '<p class="cal-coincidencias__empty">Sin coincidencias en el sistema.</p>';
+        return;
+      }
+      contentEl.innerHTML = matches.map(function(r) {
+        var nombre = escapeHtml(r.nombre_completo || 'Vecino registrado');
+        var solId  = escapeHtml(r.solicitud_id    || '');
+        var tel    = escapeHtml(r.telefono_contacto|| '');
+        var dir    = escapeHtml(r.direccion_original|| '');
+        return '<div class="cal-coincidencias__match">' +
+          '<div class="cal-coincidencias__match-info">' +
+            '<strong>' + nombre + '</strong>' +
+            (solId ? '<span>' + solId + '</span>' : '') +
+            (tel   ? '<span>' + tel   + '</span>' : '') +
+            (dir   ? '<span>' + dir   + '</span>' : '') +
+          '</div>' +
+          '<button type="button" class="secondary-btn btn--sm cal-coinc-ver-ficha" data-sol-id="' + solId + '">' +
+            '<span class="material-symbols-outlined">open_in_new</span>' +
+          '</button>' +
+        '</div>';
+      }).join('');
+
+      contentEl.querySelectorAll('.cal-coinc-ver-ficha').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var solId = btn.dataset.solId;
+          if (!solId) return;
+          _calHideDialog();
+          loadFicha({ solicitud_id: solId });
+          route('ficha');
+        });
+      });
+    }).catch(function() {
+      contentEl.innerHTML = '<p class="cal-coincidencias__empty">No se pudo verificar coincidencias.</p>';
+    });
   }
 
   function _calHideDialog() {
@@ -74,17 +135,24 @@
       titulo:     ev.titulo,
       fecha:      ev.fecha
     }).then(function() {
-      // Quitar el evento del estado local
-      if (APP.state.calendarioData && Array.isArray(APP.state.calendarioData.eventos)) {
-        APP.state.calendarioData.eventos = APP.state.calendarioData.eventos.filter(function(e) {
-          return e.id !== ev.id;
-        });
-      }
       _calHideDialog();
-      // Re-renderizar la sección
-      renderCalendarioRoot_();
-      // Si se realizó, continuar al form de nuevo ingreso
-      if (realizado) {
+      if (!realizado) {
+        // Reunion no realizada: quitar del estado local para no volver a procesar
+        if (APP.state.calendarioData && Array.isArray(APP.state.calendarioData.eventos)) {
+          APP.state.calendarioData.eventos = APP.state.calendarioData.eventos.filter(function(e) {
+            return e.id !== ev.id;
+          });
+        }
+        renderCalendarioRoot_();
+      } else {
+        // Reunion realizada: marcar localmente pero mantener visible para poder reintentar
+        // si el usuario cancela el form de nuevo ingreso
+        if (APP.state.calendarioData && Array.isArray(APP.state.calendarioData.eventos)) {
+          APP.state.calendarioData.eventos = APP.state.calendarioData.eventos.map(function(e) {
+            return e.id === ev.id ? Object.assign({}, e, { registrado: true }) : e;
+          });
+        }
+        renderCalendarioRoot_();
         APP.state.nuevoIngresoPrefill = buildPrefillFromCalEvent_(ev);
         route('nuevo-ingreso');
       }
@@ -110,7 +178,12 @@
       _calShowDialog(ev);
     }
 
-    GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml, onCalAction);
+    function onCalRefresh() {
+      APP.state.calendarioData = null;
+      renderCalendarioRoot_();
+    }
+
+    GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml, onCalAction, onCalRefresh);
 
     // Wiring del dialogo (una sola vez por root)
     if (!root.dataset.calDialogWired) {

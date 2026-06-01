@@ -253,9 +253,6 @@ function getDefaultSystemConfig_() {
       externalLinks: []
     },
     technical: {
-      maintenanceMode: false,
-      demoMode: false,
-      showExtendedLogs: false,
       enableDataReset: true,
       resetExclusions: [
         'DIM_Usuarios',
@@ -307,9 +304,6 @@ function getRuntimeClientSystemConfig_() {
     alertsInicio: config.alertsInicio,
     integrations: config.integrations,
     technical: {
-      maintenanceMode: config.technical.maintenanceMode,
-      demoMode: config.technical.demoMode,
-      showExtendedLogs: config.technical.showExtendedLogs,
       enableDataReset: config.technical.enableDataReset
     }
   });
@@ -521,9 +515,6 @@ function normalizeConfigSectionByName_(section, value, current) {
       };
     case 'technical':
       return {
-        maintenanceMode: sanitizeConfigBool_(input.maintenanceMode, previous.maintenanceMode),
-        demoMode: sanitizeConfigBool_(input.demoMode, previous.demoMode),
-        showExtendedLogs: sanitizeConfigBool_(input.showExtendedLogs, previous.showExtendedLogs),
         enableDataReset: sanitizeConfigBool_(input.enableDataReset, previous.enableDataReset),
         resetExclusions: sanitizeStringList_(input.resetExclusions, previous.resetExclusions)
       };

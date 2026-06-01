@@ -6,9 +6,9 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros Â· Municipalidad de Providencia',
   VERSION: '2.1.512',
-  BUILD: 'e6d6334',
+  BUILD: '6561ae1',
   BUILD_DATE: '20260531',
-  ENVIRONMENT: 'PROD',
+  ENVIRONMENT: 'DEV',
   SUPERUSERS: [
     'pablo.ramos@providencia.cl',
     'p.e.ramos.ramos@gmail.com'
@@ -118,7 +118,7 @@ function doGet(e) {
 
   return template.evaluate()
     .setTitle(getConfiguredAppTitle_())
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.SAMEORIGIN)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
@@ -158,6 +158,7 @@ function openGoPesV2_() {
 }
 
 function setupMotorOperativoPES() {
+  requireRole_(['superuser']);
   return setupMotorOperativoPES_();
 }
 
@@ -184,10 +185,12 @@ function goPesSetupFormacionAutoCloseTrigger_() {
 }
 
 function reconstruirEstructurasDesdeRaw() {
+  requireRole_(['superuser']);
   return reconstruirEstructurasDesdeRaw_();
 }
 
 function refrescarCatalogosSugeridos() {
+  requireRole_(['superuser']);
   return rebuildSuggestionDims_();
 }
 
@@ -319,6 +322,7 @@ function fijarSpreadsheetPES_() {
 }
 
 function fijarSpreadsheetPES() {
+  requireRole_(['superuser']);
   fijarSpreadsheetPES_();
 }
 

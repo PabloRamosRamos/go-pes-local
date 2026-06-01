@@ -164,7 +164,7 @@ function getOrganizacionModuloDetalle(payload) {
     || '';
   const historial = (getSheetData_(GO_PES_V2.SHEETS.LOG_ACCIONES) || [])
     .filter(function(r) {
-      return String(r.entity_id || '') === organizacionId || String(r.detail || '').indexOf(organizacionId) !== -1;
+      return String(r.entity_id || '') === organizacionId || String(r.detail_json || '').indexOf(organizacionId) !== -1;
     })
     .sort(function(a, b) {
       return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);

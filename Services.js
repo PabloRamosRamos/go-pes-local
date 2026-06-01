@@ -1322,7 +1322,7 @@ function refrescarVistasYMaster() {
 }
 
 function listarHistorial(filters) {
-  requireModuleAccess_('historial', ['operador', 'coordinador', 'superuser']);
+  requireModuleAccess_('historial', ['superuser']);
   const config = filters || {};
   let rows = buildHistorialRows_();
   rows = filterHistorialRowsByPeriod_(rows, config.periodo || '');
@@ -1352,7 +1352,7 @@ function listarHistorial(filters) {
 }
 
 function getHistorialUsuariosLista() {
-  requireModuleAccess_('historial', ['operador', 'coordinador', 'superuser']);
+  requireModuleAccess_('historial', ['superuser']);
   const rows = getSheetData_(GO_PES_V2.SHEETS.DIM_USUARIOS) || [];
   return serializeForClient_(
     rows

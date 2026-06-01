@@ -5,9 +5,11 @@
  * Fuente: spreadsheet de producción anterior.
  * Hojas origen: 'Respuestas de formulario 1' (ingresos) y 'SOCIOS'.
  * Flujo: verificar → previsualizar → ejecutar ingresos → ejecutar socios.
+ *
+ * CONFIGURACIÓN: El Spreadsheet ID de origen se almacena en PropertiesService.
+ * Para configurarlo, ejecutar desde el editor (una sola vez):
+ *   goPesConfigurarMigracionSourceId('1Eb_mj3Ef6Ss0JiBuQvlshj3nbKTOqLgtNbDRDsBzJq8')
  */
-
-var MIGRACION_SOURCE_ID_ = '1Eb_mj3Ef6Ss0JiBuQvlshj3nbKTOqLgtNbDRDsBzJq8';
 var MIGRACION_SHEET_INGRESOS_ = 'Respuestas de formulario 1';
 var MIGRACION_SHEET_SOCIOS_ = 'SOCIOS';
 
@@ -85,8 +87,64 @@ function migracionApplyMap_(rowObj, columnMap) {
   return result;
 }
 
+/**
+ * Obtiene el Spreadsheet ID de origen configurado en PropertiesService.
+ * @private
+ */
+function getMigracionSourceId_() {
+  const props = PropertiesService.getScriptProperties();
+  const sourceId = props.getProperty('GO_PES_MIGRATION_SOURCE_ID');
+
+  if (!sourceId) {
+    throw new Error(
+      'Spreadsheet de migración no configurado. ' +
+      'Ejecuta desde el editor: goPesConfigurarMigracionSourceId("SPREADSHEET_ID")'
+    );
+  }
+
+  return sourceId;
+}
+
+/**
+ * Configura el Spreadsheet ID de origen para migración.
+ * Solo superusers pueden ejecutar esta función.
+ */
+function goPesConfigurarMigracionSourceId(spreadsheetId) {
+  const user = requireRole_(['superuser']);
+
+  const id = String(spreadsheetId || '').trim();
+  if (!id || id.length < 20) {
+    throw new Error('Spreadsheet ID inválido.');
+  }
+
+  // Validar que el spreadsheet existe y es accesible
+  try {
+    SpreadsheetApp.openById(id);
+  } catch (err) {
+    throw new Error('No se pudo acceder al Spreadsheet con ID: ' + id + '. Verifica los permisos.');
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  props.setProperty('GO_PES_MIGRATION_SOURCE_ID', id);
+
+  logProcessing_('INFO', 'goPesConfigurarMigracionSourceId', 'migration_config', id, user.email, 'OK', {
+    spreadsheet_id: id
+  });
+
+  return { ok: true, spreadsheet_id: id, message: 'Spreadsheet de migración configurado correctamente' };
+}
+
+/**
+ * Obtiene el Spreadsheet ID configurado (solo para verificación).
+ */
+function goPesVerMigracionSourceId() {
+  requireRole_(['superuser']);
+  const sourceId = getMigracionSourceId_();
+  return { ok: true, spreadsheet_id: sourceId };
+}
+
 function migracionReadSource_(sheetName) {
-  const ss = SpreadsheetApp.openById(MIGRACION_SOURCE_ID_);
+  const ss = SpreadsheetApp.openById(getMigracionSourceId_());
   const sheet = ss.getSheetByName(sheetName);
   if (!sheet) throw new Error('No se encontró la hoja "' + sheetName + '" en la fuente de migración.');
 
@@ -284,7 +342,7 @@ function ejecutarMigracionIngresos(payload) {
         fecha_solicitud:      fechaSolicitud,
         observaciones_form:   mapped.observaciones_form || '',
         estado_vecino:        'Migrado',
-        legacy_source:        MIGRACION_SOURCE_ID_,
+        legacy_source:        getMigracionSourceId_(),
         legacy_key:           ''
       });
 
@@ -468,7 +526,7 @@ function ejecutarMigracionSocios(payload) {
         ubicacion_socio:     mapped.ubicacion_socio || '',
         nombre_comite_origen:mapped.nombre_comite_origen || '',
         status_carga:        'MIGRACION',
-        legacy_source:       MIGRACION_SOURCE_ID_,
+        legacy_source:       getMigracionSourceId_(),
         legacy_key:          ''
       });
 

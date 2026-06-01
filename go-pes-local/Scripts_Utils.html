@@ -1,0 +1,195 @@
+<script>
+/**
+ * Scripts_Utils.html — Funciones utilitarias y helpers
+ *
+ * Funciones extraídas de Scripts.html:
+ * - Helpers de nombres y fechas
+ * - Getters de configuración del sistema
+ * - Helpers de usuario y dominio
+ * - Labels amigables para vistas y beneficios
+ * - Socios dashboard config
+ *
+ * Creado: 2026-05-31
+ * Parte de: Fase 3 Frontend - Modularización JS
+ */
+(() => {
+  'use strict';
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // HELPERS BÁSICOS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function buildFullName(firstName, lastName) {
+    return [firstName, lastName]
+      .map(v => String(v || '').trim())
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  function todayISO_() {
+    const d = new Date();
+    const m = `${d.getMonth() + 1}`.padStart(2, '0');
+    const day = `${d.getDate()}`.padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${day}`;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SYSTEM CONFIG GETTERS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function getSystemConfig_() {
+    const APP = window.APP || {};
+    const BOOTSTRAP = window.BOOTSTRAP || {};
+    const TEMPLATE_SYSTEM_CONFIG = (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.systemConfig) || {};
+    return APP.state?.systemConfig || BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {};
+  }
+
+  function getSystemGeneralConfig_() {
+    return getSystemConfig_().general || {};
+  }
+
+  function getSystemBrandingConfig_() {
+    return getSystemConfig_().branding || {};
+  }
+
+  function shouldShowVisibleVersionClient_() {
+    const general = getSystemGeneralConfig_();
+    return general.showVisibleVersion !== false;
+  }
+
+  function getLoadingText_() {
+    return getSystemGeneralConfig_().loadingText || 'Iniciando Gestor Operativo';
+  }
+
+  function getAllowedUserDomain_() {
+    return String((((getSystemConfig_().accessModules || {}).allowedDomain) || 'providencia.cl'))
+      .trim()
+      .replace(/^@+/, '') || 'providencia.cl';
+  }
+
+  function getDefaultManagedUserProfile_() {
+    const profile = String((((getSystemConfig_().accessModules || {}).defaultUserProfile) || 'operador'))
+      .trim()
+      .toLowerCase();
+    return ['visor', 'operador', 'coordinador'].includes(profile) ? profile : 'operador';
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DASHBOARD URLS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function getHomeDashboardUrl_() {
+    const GO_PES_TEMPLATE = window.GO_PES_TEMPLATE || {};
+    return String((((getSystemConfig_().integrations || {}).homeDashboardUrl) || GO_PES_TEMPLATE.homeDashboardUrl || '')).trim();
+  }
+
+  function getSociosDashboardUrl_() {
+    const GO_PES_TEMPLATE = window.GO_PES_TEMPLATE || {};
+    return String((((getSystemConfig_().integrations || {}).sociosDashboardUrl) || GO_PES_TEMPLATE.sociosDashboardUrl || '')).trim();
+  }
+
+  function getSociosDashboardHeight_() {
+    const value = Number((((getSystemConfig_().socios || {}).dashboardHeight) || 443));
+    return Number.isFinite(value) && value > 0 ? value : 443;
+  }
+
+  function getSocioCargoOptions_() {
+    const ORGANIZACION_SOCIO_CARGOS = [
+      'Presidente/a',
+      'Vicepresidente/a',
+      'Secretario/a',
+      'Tesorero/a',
+      'Director/a',
+      'Socio/a'
+    ];
+    const configured = (((getSystemConfig_().socios || {}).allowedRoles) || []).filter(Boolean);
+    return configured.length ? configured : ORGANIZACION_SOCIO_CARGOS.slice();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // VIEW HELPERS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function getViewDefinition_(view) {
+    const APP = window.APP || {};
+    // Nota: normalizeModuleKey_ está en Scripts.html core, no se puede mover aquí
+    const normalizedView = view; // Simplificado, normalización se hace en caller si es necesario
+    return ((APP.state && APP.state.moduleDefinitions) || [])
+      .find(module => module.view === normalizedView || module.key === normalizedView) || null;
+  }
+
+  function getViewLabel_(view, fallback) {
+    const def = getViewDefinition_(view);
+    return (def && def.label) || fallback || friendlyViewName_(view);
+  }
+
+  function friendlyViewName_(view) {
+    const def = getViewDefinition_(view);
+    if (def && def.label) return def.label;
+    const names = {
+      inicio: 'Inicio',
+      buscar: 'Buscar vecino',
+      ficha: 'Ficha',
+      'nuevo-ingreso': 'Nuevo ingreso',
+      avance: 'Avance',
+      organizacion: 'Organizaciones',
+      instrumento: 'Beneficios',
+      socios: 'Socios',
+      historial: 'Historial',
+      usuarios: 'Gestión de usuarios',
+      configuracion: 'Configuración'
+    };
+    return names[view] || view;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // BENEFICIO LABEL HELPER
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function friendlyBeneficioLabel_(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const APP = window.APP || {};
+    const fromCatalog = ((APP.state && APP.state.catalogs && APP.state.catalogs.beneficiosBase) || [])
+      .find(item => String(item.beneficio_codigo || '').trim() === raw);
+
+    if (fromCatalog && fromCatalog.beneficio_nombre) {
+      return fromCatalog.beneficio_nombre;
+    }
+
+    const fallback = {
+      CHARLAS_CAPACITACIONES: 'CAPACITACIONES',
+      FONDESE: 'FONDESE',
+      CAMARAS_1414: 'Cámaras 1414'
+    };
+    return fallback[raw] || raw;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // API PÚBLICA
+  // ══════════════════════════════════════════════════════════════════════════
+
+  window.GO_PES_UTILS = window.GO_PES_UTILS || {};
+  Object.assign(window.GO_PES_UTILS, {
+    buildFullName: buildFullName,
+    todayISO: todayISO_,
+    getSystemConfig: getSystemConfig_,
+    getSystemGeneralConfig: getSystemGeneralConfig_,
+    getSystemBrandingConfig: getSystemBrandingConfig_,
+    shouldShowVisibleVersion: shouldShowVisibleVersionClient_,
+    getLoadingText: getLoadingText_,
+    getAllowedUserDomain: getAllowedUserDomain_,
+    getDefaultManagedUserProfile: getDefaultManagedUserProfile_,
+    getHomeDashboardUrl: getHomeDashboardUrl_,
+    getSociosDashboardUrl: getSociosDashboardUrl_,
+    getSociosDashboardHeight: getSociosDashboardHeight_,
+    getSocioCargoOptions: getSocioCargoOptions_,
+    getViewDefinition: getViewDefinition_,
+    getViewLabel: getViewLabel_,
+    friendlyViewName: friendlyViewName_,
+    friendlyBeneficioLabel: friendlyBeneficioLabel_
+  });
+
+})();
+</script>

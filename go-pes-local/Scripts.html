@@ -2026,33 +2026,14 @@
   const showError = (err) => window.GO_PES_UI && window.GO_PES_UI.showError(err);
   const setStatus = (msg, ok) => window.GO_PES_UI && window.GO_PES_UI.setStatus(msg, ok);
 
-  function friendlyBeneficioLabel_(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return '';
+  // ══════════════════════════════════════════════════════════════════════════
+  // UTILS — Migrado a Scripts_Utils.html (Fase 3.3)
+  // Aliases por compatibilidad con código existente
+  // ══════════════════════════════════════════════════════════════════════════
 
-    const fromCatalog = (APP.state.catalogs.beneficiosBase || []).find(item =>
-      String(item.beneficio_codigo || '').trim() === raw
-    );
-    if (fromCatalog && fromCatalog.beneficio_nombre) return fromCatalog.beneficio_nombre;
-
-    const fallback = {
-      CHARLAS_CAPACITACIONES: 'CAPACITACIONES',
-      FONDESE: 'FONDESE',
-      CAMARAS_1414: 'Cámaras 1414'
-    };
-    return fallback[raw] || raw;
-  }
-
-  function buildFullName(name, last) {
-    return [name, last].map(v => String(v || '').trim()).filter(Boolean).join(' ');
-  }
-
-  function todayISO_() {
-    const d = new Date();
-    const m = `${d.getMonth() + 1}`.padStart(2, '0');
-    const day = `${d.getDate()}`.padStart(2, '0');
-    return `${d.getFullYear()}-${m}-${day}`;
-  }
+  const friendlyBeneficioLabel_ = (v) => window.GO_PES_UTILS && window.GO_PES_UTILS.friendlyBeneficioLabel(v);
+  const buildFullName = (...args) => window.GO_PES_UTILS && window.GO_PES_UTILS.buildFullName(...args);
+  const todayISO_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.todayISO();
 
   const escapeHtml = (v) => window.GO_PES_UI && window.GO_PES_UI.escapeHtml(v);
   const goPesEmptyStateHtml_ = (...args) => window.GO_PES_UI && window.GO_PES_UI.emptyStateHtml(...args);
@@ -2065,30 +2046,12 @@
   // FIN UI UTILITIES
   // ══════════════════════════════════════════════════════════════════════════
 
-  function getSystemConfig_() {
-    return APP.state.systemConfig || BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {};
-  }
-
-  function getSystemGeneralConfig_() {
-    return getSystemConfig_().general || {};
-  }
-
-  function getSystemBrandingConfig_() {
-    return getSystemConfig_().branding || {};
-  }
-
-  function shouldShowVisibleVersionClient_() {
-    const general = getSystemGeneralConfig_();
-    return general.showVisibleVersion !== false;
-  }
-
-  function getLoadingText_() {
-    return getSystemGeneralConfig_().loadingText || 'Iniciando Gestor Operativo';
-  }
-
-  function getAllowedUserDomain_() {
-    return String((((getSystemConfig_().accessModules || {}).allowedDomain) || 'providencia.cl')).trim().replace(/^@+/, '') || 'providencia.cl';
-  }
+  const getSystemConfig_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getSystemConfig();
+  const getSystemGeneralConfig_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getSystemGeneralConfig();
+  const getSystemBrandingConfig_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getSystemBrandingConfig();
+  const shouldShowVisibleVersionClient_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.shouldShowVisibleVersion();
+  const getLoadingText_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getLoadingText();
+  const getAllowedUserDomain_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getAllowedUserDomain();
 
   function initUserEmailField_() {
     const input = document.getElementById('user-email-local');
@@ -2141,28 +2104,11 @@
     return `${localPart}@${domain}`;
   }
 
-  function getDefaultManagedUserProfile_() {
-    const profile = String((((getSystemConfig_().accessModules || {}).defaultUserProfile) || 'operador')).trim().toLowerCase();
-    return ['visor', 'operador', 'coordinador'].includes(profile) ? profile : 'operador';
-  }
-
-  function getHomeDashboardUrl_() {
-    return String((((getSystemConfig_().integrations || {}).homeDashboardUrl) || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.homeDashboardUrl) || '')).trim();
-  }
-
-  function getSociosDashboardUrl_() {
-    return String((((getSystemConfig_().integrations || {}).sociosDashboardUrl) || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.sociosDashboardUrl) || '')).trim();
-  }
-
-  function getSociosDashboardHeight_() {
-    const value = Number((((getSystemConfig_().socios || {}).dashboardHeight) || 443));
-    return Number.isFinite(value) && value > 0 ? value : 443;
-  }
-
-  function getSocioCargoOptions_() {
-    const configured = (((getSystemConfig_().socios || {}).allowedRoles) || []).filter(Boolean);
-    return configured.length ? configured : ORGANIZACION_SOCIO_CARGOS.slice();
-  }
+  const getDefaultManagedUserProfile_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getDefaultManagedUserProfile();
+  const getHomeDashboardUrl_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getHomeDashboardUrl();
+  const getSociosDashboardUrl_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getSociosDashboardUrl();
+  const getSociosDashboardHeight_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getSociosDashboardHeight();
+  const getSocioCargoOptions_ = () => window.GO_PES_UTILS && window.GO_PES_UTILS.getSocioCargoOptions();
 
   function applyBrandingRuntimeTheme_() {
     const branding = getSystemBrandingConfig_();
@@ -2182,15 +2128,8 @@
     Object.keys(tokens).forEach(key => rootStyle.setProperty(key, tokens[key]));
   }
 
-  function getViewDefinition_(view) {
-    const normalizedView = normalizeModuleKey_(view) || view;
-    return (APP.state.moduleDefinitions || []).find(module => module.view === normalizedView || module.key === normalizedView) || null;
-  }
-
-  function getViewLabel_(view, fallback) {
-    const def = getViewDefinition_(view);
-    return (def && def.label) || fallback || friendlyViewName_(view);
-  }
+  const getViewDefinition_ = (v) => window.GO_PES_UTILS && window.GO_PES_UTILS.getViewDefinition(normalizeModuleKey_(v) || v);
+  const getViewLabel_ = (...args) => window.GO_PES_UTILS && window.GO_PES_UTILS.getViewLabel(...args);
 
   function applySystemConfigUi_() {
     const config = getSystemConfig_();
@@ -2247,24 +2186,11 @@
   }
 
 
-  function friendlyViewName_(view) {
-    const def = getViewDefinition_(view);
-    if (def && def.label) return def.label;
-    const names = {
-      inicio: 'Inicio',
-      buscar: 'Buscar vecino',
-      ficha: 'Ficha',
-      'nuevo-ingreso': 'Nuevo ingreso',
-      avance: 'Avance',
-      organizacion: 'Organizaciones',
-      instrumento: 'Beneficios',
-      socios: 'Socios',
-      historial: 'Historial',
-      usuarios: 'Gestión de usuarios',
-      configuracion: 'Configuración'
-    };
-    return names[view] || view;
-  }
+  const friendlyViewName_ = (v) => window.GO_PES_UTILS && window.GO_PES_UTILS.friendlyViewName(v);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // FIN UTILS
+  // ══════════════════════════════════════════════════════════════════════════
 
   <?!= include('Scripts_Inicio') ?>
   <?!= include('Scripts_Calendario') ?>

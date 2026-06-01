@@ -4,10 +4,12 @@
  * Regla central: solo se limpian hojas incluidas explicitamente en whitelist.
  * No se eliminan hojas, no se eliminan encabezados y no se limpian catalogos,
  * usuarios, permisos, logs ni configuraciones.
+ *
+ * IMPORTANTE: Este módulo usa el sistema de PINs de SecurityPins.js.
+ * Si es la primera vez que ejecutas limpiarDatosPruebaAdmin después de actualizar,
+ * debes configurar el PIN primero ejecutando desde el editor:
+ *   goPesConfigurePinDeSeguridad('admin_reset', 'TU_PIN_AQUI')
  */
-
-const GO_PES_ADMIN_RESET_PIN_SALT = 'GO_PES_ADMIN_RESET_PIN_V1';
-const GO_PES_ADMIN_RESET_PIN_HASH = 'xUGcfZmxbUgq7J3VGUoJPCj+O5upODLuZTWCHH+zefk=';
 
 function getAdminDataResetPlan() {
   const user = requireRole_(['superuser']);
@@ -22,7 +24,7 @@ function getAdminDataResetPlan() {
 function limpiarDatosPruebaAdmin(payload) {
   const user = requireRole_(['superuser']);
   goPesAssertAdminResetSuperuser_(user);
-  goPesValidateAdminResetPin_(payload && payload.pin);
+  goPesValidatePin_(GO_PES_PIN_CONTEXTS.ADMIN_RESET, payload && payload.pin, user.email);
 
   const confirmacion = String(payload && payload.confirmacion || '').trim().toUpperCase();
   if (confirmacion !== 'LIMPIAR') {
@@ -133,18 +135,10 @@ function goPesAssertAdminResetSuperuser_(user) {
   }
 }
 
-function goPesValidateAdminResetPin_(pin) {
-  const candidate = goPesHashAdminResetPin_(pin);
-  if (candidate !== GO_PES_ADMIN_RESET_PIN_HASH) {
-    throw new Error('PIN invalido.');
-  }
-}
-
-function goPesHashAdminResetPin_(pin) {
-  const raw = GO_PES_ADMIN_RESET_PIN_SALT + ':' + String(pin || '').trim();
-  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw, Utilities.Charset.UTF_8);
-  return Utilities.base64Encode(digest);
-}
+/**
+ * DEPRECATED: Migrado a SecurityPins.js
+ * Mantenido temporalmente para referencia. Usar goPesValidatePin_() en su lugar.
+ */
 
 function goPesEnsureAdminResetSheetConfig_() {
   ensureSheetsSubset_(goPesGetAdminResetCleanableSheets_());

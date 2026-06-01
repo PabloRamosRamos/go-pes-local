@@ -393,11 +393,11 @@ function deactivateUser(payload) {
   if (!payload.pin) {
     throw new Error('Debes ingresar la clave de SUPERUSER.');
   }
-  if (typeof goPesValidateAdminResetPin_ !== 'function') {
+  if (typeof goPesValidatePin_ !== 'function') {
     throw new Error('No esta disponible la validacion de clave de SUPERUSER.');
   }
 
-  goPesValidateAdminResetPin_(payload.pin);
+  goPesValidatePin_(GO_PES_PIN_CONTEXTS.USER_DEACTIVATE, payload.pin, actor.email);
 
   const normalizedEmail = normalizeEmail_(payload.email);
   const existing = readDimUsuariosUsers_().users

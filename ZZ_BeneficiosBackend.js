@@ -1757,7 +1757,7 @@ function goPesUpsertFormEvento(payload) {
   var tipoInscripcion = String(payload.tipo_inscripcion || '').toLowerCase().trim();
   if (tipoInscripcion === 'abierta') {
     if (!payload.pin) throw new Error('Se requiere la clave de SUPERUSER para crear eventos con inscripción abierta.');
-    goPesValidateAdminResetPin_(payload.pin);
+    goPesValidatePin_(GO_PES_PIN_CONTEXTS.EVENTO_ABIERTO, payload.pin, actorEmail);
   }
 
   var tipo = String(payload.tipo || '').toLowerCase().trim();

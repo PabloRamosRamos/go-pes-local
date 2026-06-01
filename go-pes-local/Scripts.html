@@ -834,129 +834,24 @@
     }
   }
 
-  function normalizeCatalogs(c) {
-    return {
-      ...c,
-      estado_hito: (c.estadosPorTipo || {}).estado_hito || [],
-      estado_constitucion: (c.estadosPorTipo || {}).estado_constitucion || [],
-      estado_general_organizacion: (c.estadosPorTipo || {}).estado_general_organizacion || [],
-      estado_instrumento: (c.estadosPorTipo || {}).estado_instrumento || [],
-      resultado_instrumento: (c.estadosPorTipo || {}).resultado_instrumento || [],
-      estado_requisito: (c.estadosPorTipo || {}).estado_requisito || [],
-      estado_vecino: (c.estadosPorTipo || {}).estado_vecino || [],
-      instrumentosCodigo: (c.instrumentos || []).map(i => i.instrumento_codigo_catalogo),
-      instrumentosTipo: [...new Set((c.instrumentos || []).map(i => i.instrumento_tipo).filter(Boolean))],
-      instrumentosOrigen: [...new Set((c.instrumentos || []).map(i => i.origen_instrumento).filter(Boolean))]
-    };
-  }
+  // ══════════════════════════════════════════════════════════════════════════
+  // CATALOG CACHE — Migrado a Scripts_CatalogCache.html (Fase 3.2)
+  // Aliases por compatibilidad con código existente
+  // ══════════════════════════════════════════════════════════════════════════
 
-  function mergeCatalogs_(catalogs) {
-    APP.state.catalogs = normalizeCatalogs({
-      ...(APP.state.catalogs || {}),
-      ...(catalogs || {})
-    });
-  }
+  const normalizeCatalogs = (c) => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.normalizeCatalogs(c);
+  const mergeCatalogs_ = (c) => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.mergeCatalogs(c);
+  const ensureIngresoCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureIngresoCatalogs();
+  const ensureAppCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureAppCatalogs();
+  const ensureOrganizacionCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureOrganizacionCatalogs();
+  const ensureSociosCatalogs_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureSociosCatalogs();
+  const ensureBuscarData_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureBuscarData();
+  const ensureOrganizacionesModuloList_ = () => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureOrganizacionesModuloList();
+  const ensureCatalogsForView_ = (v) => window.GO_PES_CATALOG_CACHE && window.GO_PES_CATALOG_CACHE.ensureCatalogsForView(v);
 
-  function ensureIngresoCatalogs_() {
-    if (APP.state.catalogStatus.ingreso) return null;
-
-    return api('getCatalogosNuevoIngresoClient').then(data => {
-      mergeCatalogs_(data || {});
-      APP.state.catalogStatus.ingreso = true;
-    });
-  }
-
-  function ensureAppCatalogs_() {
-    if (APP.state.catalogStatus.app) return null;
-
-    return api('getCatalogosAppClient').then(data => {
-      mergeCatalogs_(data || {});
-      APP.state.catalogStatus.app = true;
-    });
-  }
-
-  function ensureOrganizacionCatalogs_() {
-    if (APP.state.catalogStatus.organizacion) return null;
-
-    return api('getOrganizacionesModuloClient').then(data => {
-      APP.state.organizacionesModulo = (data && data.organizaciones) || [];
-      APP.state.organizacionesModuloFetchedAt = Date.now();
-      mergeCatalogs_({
-        organizacionesList: APP.state.organizacionesModulo
-      });
-      APP.state.catalogStatus.organizacion = true;
-    });
-  }
-
-  function ensureSociosCatalogs_() {
-    const now = Date.now();
-    if (
-      APP.state.sociosOrganizaciones.length &&
-      APP.state.sociosOrganizacionesFetchedAt &&
-      (now - APP.state.sociosOrganizacionesFetchedAt) < 30000
-    ) {
-      return Promise.resolve();
-    }
-
-    return api('getOrganizacionesAvanceClient').then(data => {
-      APP.state.sociosOrganizaciones = (data && data.organizacionesList) || [];
-      APP.state.sociosOrganizacionesFetchedAt = Date.now();
-    });
-  }
-
-  function ensureBuscarData_() {
-    const now = Date.now();
-    if (
-      APP.state.buscarModuleRows.length &&
-      APP.state.buscarModuleFetchedAt &&
-      (now - APP.state.buscarModuleFetchedAt) < 60000
-    ) {
-      return null;
-    }
-    return api('getBuscarModuleData').then(function(data) {
-      APP.state.buscarModuleRows = (data && data.rows) || [];
-      APP.state.buscarModuleFetchedAt = Date.now();
-    });
-  }
-
-  function ensureOrganizacionesModuloList_() {
-    const now = Date.now();
-    if (
-      APP.state.organizacionesModulo.length &&
-      APP.state.organizacionesModuloFetchedAt &&
-      (now - APP.state.organizacionesModuloFetchedAt) < 30000
-    ) {
-      return Promise.resolve();
-    }
-
-    return api('getOrganizacionesConGruposClient').then(data => {
-      APP.state.organizacionesModulo = (data && data.organizaciones) || [];
-      APP.state.organizacionesModuloFetchedAt = Date.now();
-    });
-  }
-
-  function ensureCatalogsForView_(view) {
-    switch (view) {
-      case 'inicio':
-        return ensureInicioPanelData_();
-      case 'nuevo-ingreso':
-        return ensureIngresoCatalogs_();
-      case 'organizacion': {
-        const pending = [ensureAppCatalogs_(), ensureOrganizacionesModuloList_()].filter(Boolean);
-        return pending.length ? Promise.all(pending) : null;
-      }
-      case 'instrumento': {
-        const pending = [ensureAppCatalogs_(), ensureOrganizacionesModuloList_()].filter(Boolean);
-        return pending.length ? Promise.all(pending) : null;
-      }
-      case 'socios':
-        return ensureSociosCatalogs_();
-      case 'buscar':
-        return ensureBuscarData_();
-      default:
-        return null;
-    }
-  }
+  // ══════════════════════════════════════════════════════════════════════════
+  // FIN CATALOG CACHE
+  // ══════════════════════════════════════════════════════════════════════════
 
   function hydrateStaticUser() {
     const user = APP.state.user || {};

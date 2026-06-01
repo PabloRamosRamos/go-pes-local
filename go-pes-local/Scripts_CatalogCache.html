@@ -1,0 +1,205 @@
+<script>
+/**
+ * Scripts_CatalogCache.html — Cache y lazy-loading de catálogos
+ *
+ * Funciones extraídas de Scripts.html:
+ * - Normalización y merge de catálogos
+ * - Carga lazy de catálogos por módulo
+ * - Cache con TTL de datos de módulos
+ * - Ensure functions para cada vista
+ *
+ * Creado: 2026-05-31
+ * Parte de: Fase 3 Frontend - Modularización JS
+ */
+(() => {
+  'use strict';
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // NORMALIZE & MERGE CATALOGS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function normalizeCatalogs(c) {
+    return {
+      ...c,
+      estado_hito: (c.estadosPorTipo || {}).estado_hito || [],
+      estado_constitucion: (c.estadosPorTipo || {}).estado_constitucion || [],
+      estado_general_organizacion: (c.estadosPorTipo || {}).estado_general_organizacion || [],
+      estado_instrumento: (c.estadosPorTipo || {}).estado_instrumento || [],
+      resultado_instrumento: (c.estadosPorTipo || {}).resultado_instrumento || [],
+      estado_requisito: (c.estadosPorTipo || {}).estado_requisito || [],
+      estado_vecino: (c.estadosPorTipo || {}).estado_vecino || [],
+      instrumentosCodigo: (c.instrumentos || []).map(i => i.instrumento_codigo_catalogo),
+      instrumentosTipo: [...new Set((c.instrumentos || []).map(i => i.instrumento_tipo).filter(Boolean))],
+      instrumentosOrigen: [...new Set((c.instrumentos || []).map(i => i.origen_instrumento).filter(Boolean))]
+    };
+  }
+
+  function mergeCatalogs_(catalogs) {
+    if (!window.APP || !window.APP.state) {
+      console.warn('GO_PES_CATALOGS: APP.state no disponible aún');
+      return;
+    }
+    window.APP.state.catalogs = normalizeCatalogs({
+      ...(window.APP.state.catalogs || {}),
+      ...(catalogs || {})
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ENSURE CATALOGS (lazy load con cache)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function ensureIngresoCatalogs_() {
+    if (!window.APP || !window.APP.state) return Promise.resolve();
+    if (window.APP.state.catalogStatus.ingreso) return Promise.resolve();
+
+    return window.api('getCatalogosNuevoIngresoClient').then(data => {
+      mergeCatalogs_(data || {});
+      window.APP.state.catalogStatus.ingreso = true;
+    });
+  }
+
+  function ensureAppCatalogs_() {
+    if (!window.APP || !window.APP.state) return Promise.resolve();
+    if (window.APP.state.catalogStatus.app) return Promise.resolve();
+
+    return window.api('getCatalogosAppClient').then(data => {
+      mergeCatalogs_(data || {});
+      window.APP.state.catalogStatus.app = true;
+    });
+  }
+
+  function ensureOrganizacionCatalogs_() {
+    if (!window.APP || !window.APP.state) return Promise.resolve();
+    if (window.APP.state.catalogStatus.organizacion) return Promise.resolve();
+
+    return window.api('getOrganizacionesModuloClient').then(data => {
+      window.APP.state.organizacionesModulo = (data && data.organizaciones) || [];
+      window.APP.state.organizacionesModuloFetchedAt = Date.now();
+      mergeCatalogs_({
+        organizacionesList: window.APP.state.organizacionesModulo
+      });
+      window.APP.state.catalogStatus.organizacion = true;
+    });
+  }
+
+  function ensureSociosCatalogs_() {
+    if (!window.APP || !window.APP.state) return Promise.resolve();
+
+    const now = Date.now();
+    if (
+      window.APP.state.sociosOrganizaciones.length &&
+      window.APP.state.sociosOrganizacionesFetchedAt &&
+      (now - window.APP.state.sociosOrganizacionesFetchedAt) < 30000
+    ) {
+      return Promise.resolve();
+    }
+
+    return window.api('getOrganizacionesAvanceClient').then(data => {
+      window.APP.state.sociosOrganizaciones = (data && data.organizacionesList) || [];
+      window.APP.state.sociosOrganizacionesFetchedAt = Date.now();
+    });
+  }
+
+  function ensureBuscarData_() {
+    if (!window.APP || !window.APP.state) return Promise.resolve();
+
+    const now = Date.now();
+    if (
+      window.APP.state.buscarModuleRows.length &&
+      window.APP.state.buscarModuleFetchedAt &&
+      (now - window.APP.state.buscarModuleFetchedAt) < 60000
+    ) {
+      return Promise.resolve();
+    }
+
+    return window.api('getBuscarModuleData').then(function(data) {
+      window.APP.state.buscarModuleRows = (data && data.rows) || [];
+      window.APP.state.buscarModuleFetchedAt = Date.now();
+    });
+  }
+
+  function ensureOrganizacionesModuloList_() {
+    if (!window.APP || !window.APP.state) return Promise.resolve();
+
+    const now = Date.now();
+    if (
+      window.APP.state.organizacionesModulo.length &&
+      window.APP.state.organizacionesModuloFetchedAt &&
+      (now - window.APP.state.organizacionesModuloFetchedAt) < 30000
+    ) {
+      return Promise.resolve();
+    }
+
+    return window.api('getOrganizacionesConGruposClient').then(data => {
+      window.APP.state.organizacionesModulo = (data && data.organizaciones) || [];
+      window.APP.state.organizacionesModuloFetchedAt = Date.now();
+    });
+  }
+
+  function ensureInicioPanelData_() {
+    if (!window.APP || !window.APP.state) return Promise.resolve();
+
+    const now = Date.now();
+    const TTL = 300000; // 5 minutos
+    if (
+      window.APP.state.inicioPanelData &&
+      window.APP.state.inicioPanelFetchedAt &&
+      (now - window.APP.state.inicioPanelFetchedAt) < TTL
+    ) {
+      return Promise.resolve();
+    }
+
+    return window.api('getInicioPanelData').then(data => {
+      window.APP.state.inicioPanelData = data || {};
+      window.APP.state.inicioPanelFetchedAt = Date.now();
+    });
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ENSURE CATALOGS FOR VIEW (router helper)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  function ensureCatalogsForView_(view) {
+    switch (view) {
+      case 'inicio':
+        return ensureInicioPanelData_();
+      case 'nuevo-ingreso':
+        return ensureIngresoCatalogs_();
+      case 'organizacion': {
+        const pending = [ensureAppCatalogs_(), ensureOrganizacionesModuloList_()].filter(Boolean);
+        return pending.length ? Promise.all(pending) : Promise.resolve();
+      }
+      case 'instrumento': {
+        const pending = [ensureAppCatalogs_(), ensureOrganizacionesModuloList_()].filter(Boolean);
+        return pending.length ? Promise.all(pending) : Promise.resolve();
+      }
+      case 'socios':
+        return ensureSociosCatalogs_();
+      case 'buscar':
+        return ensureBuscarData_();
+      default:
+        return Promise.resolve();
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // API PÚBLICA
+  // ══════════════════════════════════════════════════════════════════════════
+
+  window.GO_PES_CATALOG_CACHE = window.GO_PES_CATALOG_CACHE || {};
+  Object.assign(window.GO_PES_CATALOG_CACHE, {
+    normalizeCatalogs: normalizeCatalogs,
+    mergeCatalogs: mergeCatalogs_,
+    ensureIngresoCatalogs: ensureIngresoCatalogs_,
+    ensureAppCatalogs: ensureAppCatalogs_,
+    ensureOrganizacionCatalogs: ensureOrganizacionCatalogs_,
+    ensureSociosCatalogs: ensureSociosCatalogs_,
+    ensureBuscarData: ensureBuscarData_,
+    ensureOrganizacionesModuloList: ensureOrganizacionesModuloList_,
+    ensureInicioPanelData: ensureInicioPanelData_,
+    ensureCatalogsForView: ensureCatalogsForView_
+  });
+
+})();
+</script>

@@ -1381,8 +1381,22 @@
     APP.state.activeView = view;
     const wasRendered = !!APP.state.renderedViews[view];
 
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(`view-${view}`)?.classList.add('active');
+    // Desactivar todas las vistas y limpiar estados de transición
+    document.querySelectorAll('.view').forEach(v => {
+      v.classList.remove('active', 'view-enter', 'view-enter-active');
+    });
+
+    // Activar vista con transición enter-only
+    const targetView = document.getElementById(`view-${view}`);
+    if (targetView) {
+      targetView.classList.add('active', 'view-enter');
+      // Forzar reflow antes de activar la transición
+      targetView.offsetHeight;
+      requestAnimationFrame(() => {
+        targetView.classList.remove('view-enter');
+        targetView.classList.add('view-enter-active');
+      });
+    }
 
     document.querySelectorAll('.nav-btn').forEach(btn =>
       btn.classList.toggle('is-active', btn.dataset.view === view)

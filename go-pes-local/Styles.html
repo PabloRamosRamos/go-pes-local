@@ -1012,8 +1012,7 @@
     }
   }
 
-  .view { display: none; }
-  .view.active { display: block; }
+  /* Reglas de .view movidas al sistema de transiciones (línea ~7650) */
 
   .section-head {
     display: flex;
@@ -7628,6 +7627,34 @@ html[data-theme="dark"] .ficha-gestion-form input,html[data-theme="dark"] .ficha
 /* Evitar flash al mostrar loading */
 .content-loading:not(.is-hidden) {
   opacity: 1;
+}
+
+/* ========================================
+   VISTAS: transición enter-only
+   ======================================== */
+
+/* Base: las vistas inactivas están ocultas */
+.view {
+  display: none;
+}
+
+/* Vista activa: visible */
+.view.active {
+  display: block;
+}
+
+/* Estado inicial al activar (antes de la transición) */
+.view.view-enter {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+/* Estado final (después de activar la transición) */
+.view.view-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--transition-base) var(--ease-out),
+              transform var(--transition-base) var(--ease-out);
 }
 
 </style>

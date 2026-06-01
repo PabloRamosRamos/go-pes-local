@@ -191,6 +191,41 @@ function actualizarCargoSocioOrganizacion(payload) {
   });
 }
 
+function editarDatosSocio(payload) {
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
+    const socioId = String(payload && payload.socio_id || '').trim();
+    if (!socioId) throw new Error('Falta socio_id.');
+
+    const socio = findByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioId, false);
+    if (!socio) throw new Error('No se encontro el socio indicado.');
+
+    const cargo = (payload.cargo !== undefined) ? String(payload.cargo || '').trim() : (socio.cargo || '');
+    if (cargo && !goPesSocioCargoPermitido_(cargo)) throw new Error('Cargo de socio no permitido: ' + cargo);
+
+    const now = new Date();
+    const next = Object.assign({}, socio, {
+      run_socio:       payload.run_socio       !== undefined ? String(payload.run_socio       || '').trim() : (socio.run_socio       || ''),
+      numero_registro: payload.numero_registro !== undefined ? String(payload.numero_registro || '').trim() : (socio.numero_registro || ''),
+      nombre_socio:    payload.nombre_socio    !== undefined ? String(payload.nombre_socio    || '').trim() : (socio.nombre_socio    || ''),
+      edad:            payload.edad            !== undefined ? String(payload.edad            || '').trim() : (socio.edad            || ''),
+      cargo:           cargo,
+      direccion_socio: payload.direccion_socio !== undefined ? String(payload.direccion_socio || '').trim() : (socio.direccion_socio || ''),
+      updated_by: user.email,
+      updated_at: now
+    });
+
+    upsertByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', next, false);
+
+    logUserAction_('EDIT_SOCIO', 'socio', socioId, 'OK', { socio_id: socioId, organizacion_id: socio.organizacion_id });
+    return serializeForClient_({ ok: true, socio_id: socioId, organizacion_id: socio.organizacion_id });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function goPesSocioCargoPermitidoLegacy_(cargo) {
   return [
     'Presidente',

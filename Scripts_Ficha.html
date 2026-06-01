@@ -89,7 +89,11 @@
         <div class="ficha-universe__head">
           <p class="eyebrow">Universo 1</p>
           <h3>Vecino y solicitud</h3>
+          <button type="button" class="secondary-btn btn--sm" id="ficha-edit-contacto-btn">
+            <span class="material-symbols-outlined">edit</span>Editar contacto
+          </button>
         </div>
+        <div id="ficha-edit-contacto-form" class="ficha-edit-form is-hidden"></div>
         <div class="ficha-grid ficha-grid--main">
           ${vecinoBlock}
           ${avanceBlock}
@@ -123,6 +127,59 @@
         ${renderHistorialGestionSection_(hitos, s)}
       </div>
     `;
+    initFichaEditHandlers_(s);
+  }
+
+  function initFichaEditHandlers_(s) {
+    var btn  = document.getElementById('ficha-edit-contacto-btn');
+    var form = document.getElementById('ficha-edit-contacto-form');
+    if (!btn || !form) return;
+
+    btn.addEventListener('click', function() {
+      if (!form.classList.contains('is-hidden')) {
+        form.classList.add('is-hidden');
+        return;
+      }
+      form.innerHTML =
+        '<div class="ficha-edit-form__grid">' +
+          '<label>Telefono<input type="tel" id="fedit-telefono" value="' + escapeHtml(s.telefono_contacto || '') + '" maxlength="50"></label>' +
+          '<label>Correo<input type="email" id="fedit-correo" value="' + escapeHtml(s.correo_contacto || '') + '" maxlength="150"></label>' +
+          '<label>Direccion<input type="text" id="fedit-direccion" value="' + escapeHtml(s.direccion_original || '') + '" maxlength="250"></label>' +
+          '<label>UV<input type="text" id="fedit-uv" value="' + escapeHtml(s.uv || '') + '" maxlength="30"></label>' +
+          '<label>Sector<input type="text" id="fedit-sector" value="' + escapeHtml(s.sector || '') + '" maxlength="60"></label>' +
+        '</div>' +
+        '<div class="ficha-edit-form__actions">' +
+          '<button type="button" class="primary-btn" id="fedit-guardar"><span class="material-symbols-outlined">save</span>Guardar</button>' +
+          '<button type="button" class="secondary-btn" id="fedit-cancelar"><span class="material-symbols-outlined">close</span>Cancelar</button>' +
+        '</div>';
+      form.classList.remove('is-hidden');
+      document.getElementById('fedit-telefono').focus();
+
+      document.getElementById('fedit-cancelar').addEventListener('click', function() {
+        form.classList.add('is-hidden');
+      });
+
+      document.getElementById('fedit-guardar').addEventListener('click', function() {
+        var saveBtn = this;
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+        api('editarDatosVecino', {
+          solicitud_id:       s.solicitud_id || '',
+          telefono_contacto:  document.getElementById('fedit-telefono').value,
+          correo_contacto:    document.getElementById('fedit-correo').value,
+          direccion_original: document.getElementById('fedit-direccion').value,
+          uv:                 document.getElementById('fedit-uv').value,
+          sector:             document.getElementById('fedit-sector').value
+        }).then(function() {
+          showSuccess('Datos actualizados correctamente.');
+          loadFicha({ solicitud_id: s.solicitud_id, organizacion_id: s.organizacion_id || '' });
+        }).catch(function(err) {
+          showError(err);
+          saveBtn.disabled = false;
+          saveBtn.textContent = 'Guardar';
+        });
+      });
+    });
   }
 
   function renderHistorialGestionSection_(hitos, summary) {

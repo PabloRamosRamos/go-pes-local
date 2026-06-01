@@ -244,7 +244,10 @@
             </button>
           </div>
           <div id="socios-detail-content" class="socios-detail-card"></div>
-          <div class="actions">
+          <div class="actions" id="socios-detail-actions">
+            <button type="button" class="secondary-btn" id="socios-detail-edit-btn">
+              <span class="material-symbols-outlined">edit</span>Editar
+            </button>
             <button type="button" class="secondary-btn" data-socios-detail-close="true">
               <span class="material-symbols-outlined">done</span>Cerrar
             </button>
@@ -361,7 +364,20 @@
 
     bindSociosView_();
     fillSociosComiteSelects_();
-    loadSociosModuleData_().catch(() => {});
+    loadSociosModuleData_().then(function() {
+      // Pre-filtrar si venimos desde ficha de organización
+      const pendingOrg = APP.state.sociosPendingOrgNombre || '';
+      if (pendingOrg) {
+        const searchInput = document.getElementById('socios-table-search');
+        if (searchInput) {
+          searchInput.value = pendingOrg;
+          APP.state.sociosModuleQuery = pendingOrg;
+          updateSociosTableView_();
+        }
+        APP.state.sociosPendingOrgId     = '';
+        APP.state.sociosPendingOrgNombre = '';
+      }
+    }).catch(function() {});
   }
 
   function renderSociosBulkModal_() {
@@ -524,6 +540,14 @@
     document.querySelectorAll('.socios-modal').forEach(modal => setModalVisibility_(modal, false));
   }
 
+  function bindSocioDetailEditBtn_() {
+    var btn = document.getElementById('socios-detail-edit-btn');
+    if (btn && !btn.dataset.boundEdit) {
+      btn.dataset.boundEdit = '1';
+      btn.addEventListener('click', openSocioEditForm_);
+    }
+  }
+
   function openSocioDetailModal_(socioId) {
     const id = String(socioId || '').trim();
     const row = (APP.state.sociosModuleRows || []).find(item => String(item.socio_id || '').trim() === id);
@@ -546,10 +570,86 @@
       : 'Información completa del registro seleccionado.';
     content.innerHTML = renderSocioDetailContent_(row);
     setModalVisibility_(modal, true);
+    bindSocioDetailEditBtn_();
   }
 
   function closeSocioDetailModal_() {
     setModalVisibility_('socios-detail-modal', false);
+  }
+
+  function openSocioEditForm_() {
+    var row = APP.state.currentSocioDetalle;
+    if (!row) return;
+    var content = document.getElementById('socios-detail-content');
+    var actions = document.getElementById('socios-detail-actions');
+    if (!content || !actions) return;
+
+    var cargoOptions = getSocioCargoOptions_().map(function(c) {
+      var sel = c === row.cargo ? ' selected' : '';
+      return '<option value="' + escapeHtml(c) + '"' + sel + '>' + escapeHtml(c) + '</option>';
+    }).join('');
+
+    content.innerHTML =
+      '<div class="ficha-edit-form__grid">' +
+        '<label>RUN<input type="text" id="sedit-run" value="' + escapeHtml(row.run_socio || '') + '" maxlength="20"></label>' +
+        '<label>N. registro<input type="text" id="sedit-nreg" value="' + escapeHtml(row.numero_registro || '') + '" maxlength="20"></label>' +
+        '<label>Nombre<input type="text" id="sedit-nombre" value="' + escapeHtml(row.nombre_socio || '') + '" maxlength="150"></label>' +
+        '<label>Edad<input type="number" id="sedit-edad" value="' + escapeHtml(String(row.edad || '')) + '" min="0" max="120"></label>' +
+        '<label>Cargo<select id="sedit-cargo"><option value="">Sin cargo</option>' + cargoOptions + '</select></label>' +
+        '<label>Direccion<input type="text" id="sedit-direccion" value="' + escapeHtml(row.direccion_socio || '') + '" maxlength="250"></label>' +
+      '</div>';
+
+    actions.innerHTML =
+      '<button type="button" class="primary-btn" id="sedit-guardar"><span class="material-symbols-outlined">save</span>Guardar</button>' +
+      '<button type="button" class="secondary-btn" id="sedit-cancelar"><span class="material-symbols-outlined">close</span>Cancelar</button>';
+
+    document.getElementById('sedit-cancelar').addEventListener('click', function() {
+      content.innerHTML = renderSocioDetailContent_(row);
+      restoreSocioDetailActions_();
+    });
+
+    document.getElementById('sedit-guardar').addEventListener('click', function() {
+      var saveBtn = this;
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Guardando...';
+      api('editarDatosSocio', {
+        socio_id:        row.socio_id,
+        organizacion_id: row.organizacion_id,
+        run_socio:       document.getElementById('sedit-run').value,
+        numero_registro: document.getElementById('sedit-nreg').value,
+        nombre_socio:    document.getElementById('sedit-nombre').value,
+        edad:            document.getElementById('sedit-edad').value,
+        cargo:           document.getElementById('sedit-cargo').value,
+        direccion_socio: document.getElementById('sedit-direccion').value
+      }).then(function() {
+        showSuccess('Socio actualizado correctamente.');
+        APP.state.sociosModuleFetchedAt = 0;
+        return loadSociosModuleData_({ force: true }).then(function(rows) {
+          var updated = (rows || []).find(function(r) { return r.socio_id === row.socio_id; });
+          if (updated) {
+            APP.state.currentSocioDetalle = updated;
+            content.innerHTML = renderSocioDetailContent_(updated);
+          }
+          restoreSocioDetailActions_();
+        });
+      }).catch(function(err) {
+        showError(err);
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Guardar';
+      });
+    });
+  }
+
+  function restoreSocioDetailActions_() {
+    var actions = document.getElementById('socios-detail-actions');
+    if (!actions) return;
+    actions.innerHTML =
+      '<button type="button" class="secondary-btn" id="socios-detail-edit-btn"><span class="material-symbols-outlined">edit</span>Editar</button>' +
+      '<button type="button" class="secondary-btn" data-socios-detail-close="true"><span class="material-symbols-outlined">done</span>Cerrar</button>';
+    document.getElementById('socios-detail-edit-btn')?.addEventListener('click', openSocioEditForm_);
+    actions.querySelectorAll('[data-socios-detail-close]').forEach(function(btn) {
+      btn.addEventListener('click', closeSocioDetailModal_);
+    });
   }
 
   function handleSociosBulkFile_(ev) {

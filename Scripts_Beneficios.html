@@ -10,15 +10,12 @@
             <h2>Operacion por organizacion</h2>
             <p class="muted">Gestion operativa de beneficios por organizacion, con seguimiento de estados y trazabilidad asociada.</p>
           </div>
-          <div class="beneficios-actions">
-            <button type="button" class="secondary-btn" id="beneficios-reload-btn"><span class="material-symbols-outlined">refresh</span>Recargar</button>
-          </div>
+          <div class="beneficios-actions"></div>
         </div>
         <div id="beneficios-content" class="beneficios-workspace empty-state">Cargando beneficios...</div>
       </div>
     `;
 
-    document.getElementById('beneficios-reload-btn')?.addEventListener('click', () => refreshBeneficiosModuloMinimo_());
     refreshBeneficiosModuloMinimo_();
   }
 

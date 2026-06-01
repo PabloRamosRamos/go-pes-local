@@ -225,7 +225,7 @@
               <tr><td><strong>Ver en modo oscuro / claro</strong></td><td>Alterna el tema visual del sistema.</td></tr>
               <tr><td><strong>Zoom</strong></td><td>Ajusta el tamaño de la interfaz: 100%, 90%, 80%, 70% o 60%. El valor por defecto es 90%. Se guarda por usuario.</td></tr>
               <tr><td><strong>Manual de usuario</strong></td><td>Abre este manual. También puede abrirse desde aquí en cualquier momento.</td></tr>
-              <tr><td><strong>Información del sistema</strong></td><td>Muestra tu usuario, rol, versión y entorno del sistema.</td></tr>
+              <tr><td><strong>Información del sistema</strong></td><td>Muestra la versión del sistema, identificador de build, fecha de compilación, entorno (DEV/PROD) y estado de las hojas críticas de datos.</td></tr>
             </tbody>
           </table>
 
@@ -233,7 +233,7 @@
           <p class="man-p">El módulo <strong>Inicio</strong> muestra un panel de acciones rápidas con los atajos más usados: Nuevo ingreso, Buscar, acceso a módulos frecuentes y métricas básicas del programa. Úsalo como punto de partida cuando inicies sesión.</p>
           <div class="man-callout man-callout--tip">
             <span class="material-symbols-outlined">lightbulb</span>
-            <div>Si el sistema parece lento o una pantalla no carga, usa el botón <strong>Recargar</strong> que aparece en la parte superior de cada módulo. Esto actualiza los datos sin recargar toda la página.</div>
+            <div>Si el sistema parece lento o una pantalla no carga, navega a otro módulo y vuelve. El módulo Inicio dispone de un botón <strong>Actualizar</strong> para refrescar los KPIs del dashboard. El calendario de reuniones tiene su propio botón de recarga en la esquina superior del panel.</div>
           </div>
         </div>
 
@@ -375,7 +375,7 @@
 
           <div class="man-callout man-callout--info">
             <span class="material-symbols-outlined">info</span>
-            <div>Los eventos se leen directamente desde tu cuenta de Google (<strong>@providencia.cl</strong>). Solo se muestran eventos de los próximos <strong>60 días</strong>. No se almacenan ni copian datos del calendario en el sistema.</div>
+            <div>Los eventos se leen directamente desde tu cuenta de Google (<strong>@providencia.cl</strong>). Solo se muestran eventos de los próximos <strong>60 días</strong>. Cuando procesas un evento (realizado o no), el sistema registra la acción en auditoría y marca el evento como procesado para tu sesión.</div>
           </div>
 
           <p class="man-section-subtitle"><span class="material-symbols-outlined">filter_list</span>Eventos que se muestran</p>
@@ -425,7 +425,7 @@
           </div>
           <div class="man-callout man-callout--info">
             <span class="material-symbols-outlined">info</span>
-            <div>Una vez procesado (realizado o no), el evento desaparece del panel y no vuelve a aparecer. Esto aplica solo para tu cuenta — cada operador gestiona sus propios eventos.</div>
+            <div>Si marcas <strong>No se realizó</strong>, el evento desaparece del panel. Si marcas <strong>Sí, se realizó</strong>, el evento queda visible con indicador de "registrado" — esto permite retomar el formulario de nuevo ingreso si lo cerraste antes de completarlo. Usa el botón <span class="material-symbols-outlined" style="font-size:.9rem;vertical-align:middle">refresh</span> del panel para actualizar la lista desde Google Calendar.</div>
           </div>
           <p class="man-p">Al confirmar <em>Sí</em>, el formulario de Nuevo ingreso se pre-completa con la siguiente información del evento:</p>
           <table class="man-field-table">
@@ -546,7 +546,7 @@ OBSERVACION: </pre>
           <p class="man-section-subtitle"><span class="material-symbols-outlined">manage_search</span>Cómo buscar</p>
           <div class="man-steps">
             <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Ir a Buscar vecino</strong>Haz clic en el ícono de lupa en la barra lateral.</div></div>
-            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Ingresar el término de búsqueda</strong>Escribe en el campo de texto: nombre, apellido, RUT, teléfono, dirección, ID de solicitud (ej: SOL-000001) o nombre de organización.</div></div>
+            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Ingresar el término de búsqueda</strong>Escribe en el campo de texto: nombre, apellido, RUT/RUN, teléfono, correo, dirección, ID de solicitud (ej: SOL-000001) o nombre de organización. No hay mínimo de caracteres.</div></div>
             <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Hacer clic en Filtrar</strong>El sistema mostrará la tabla con los resultados que coincidan. La búsqueda es flexible y no requiere exactitud.</div></div>
             <div class="man-step"><div class="man-step__num">4</div><div class="man-step__body"><strong>Abrir la ficha</strong>Haz clic en el botón de ver (flecha o nombre del vecino) en la fila correspondiente para ir a la ficha completa.</div></div>
           </div>
@@ -606,25 +606,9 @@ OBSERVACION: </pre>
             </tbody>
           </table>
 
-          <p class="man-section-subtitle"><span class="material-symbols-outlined">edit</span>Editar datos</p>
-          <div class="man-steps">
-            <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Abrir la ficha</strong>Desde el módulo Buscar, haz clic en la fila del vecino.</div></div>
-            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Clic en Editar</strong>Usa el botón de edición (lápiz) en la sección correspondiente para modificar datos.</div></div>
-            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Guardar cambios</strong>Tras modificar los campos deseados, confirma con el botón Guardar. El sistema registra automáticamente quién realizó el cambio y cuándo.</div></div>
-          </div>
           <div class="man-callout man-callout--info">
             <span class="material-symbols-outlined">info</span>
-            <div>Todos los cambios en la ficha quedan registrados en el historial de acciones del sistema con nombre de usuario, fecha y hora.</div>
-          </div>
-
-          <p class="man-section-subtitle"><span class="material-symbols-outlined">swap_horiz</span>Cambiar el estado del caso</p>
-          <p class="man-p">El estado del caso refleja la situación actual del vecino dentro del programa. Puedes actualizarlo desde la ficha en cualquier momento.</p>
-          <div class="man-steps">
-            <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Abrir la ficha del vecino</strong>Accede desde el módulo Buscar haciendo clic en la fila del vecino.</div></div>
-            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Localizar la sección Estado del caso</strong>Está visible en el panel lateral o en la parte superior de la ficha. Haz clic en el selector de estado.</div></div>
-            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Seleccionar el nuevo estado</strong>Elige entre los estados disponibles según la situación actual del vecino.</div></div>
-            <div class="man-step"><div class="man-step__num">4</div><div class="man-step__body"><strong>Agregar observación (recomendado)</strong>Escribe el motivo del cambio de estado para dejar trazabilidad. Ejemplo: <em>"Vecino completó proceso de constitución con su organización."</em></div></div>
-            <div class="man-step"><div class="man-step__num">5</div><div class="man-step__body"><strong>Confirmar</strong>El estado queda actualizado y el cambio aparece en el historial de gestión.</div></div>
+            <div>La ficha del vecino es de <strong>solo lectura</strong>. Para registrar avances, cambios de estado o nuevas gestiones usa el módulo <strong>Avance</strong>. Para corregir datos de ingreso contacta a un coordinador o superusuario.</div>
           </div>
 
           <p class="man-section-subtitle"><span class="material-symbols-outlined">add_comment</span>Registrar una gestión</p>
@@ -632,7 +616,7 @@ OBSERVACION: </pre>
           <div class="man-steps">
             <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Ir a la sección Historial de gestión</strong>Dentro de la ficha del vecino, desplázate hasta la sección correspondiente.</div></div>
             <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Clic en Agregar gestión</strong>Se abrirá el formulario de gestión.</div></div>
-            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Completar los datos</strong>Selecciona el tipo de acción (llamada, visita, correo, reunión, etc.), la fecha y escribe una descripción de lo que ocurrió.</div></div>
+            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Completar los datos</strong>Escribe el tipo de acción (ej: llamada, visita, reunion), selecciona el estado resultante desde el catálogo, indica la fecha y escribe una observación de lo que ocurrió.</div></div>
             <div class="man-step"><div class="man-step__num">4</div><div class="man-step__body"><strong>Guardar</strong>La gestión queda registrada con tu nombre de usuario y fecha, visible para todos los operadores.</div></div>
           </div>
           <div class="man-callout man-callout--tip">
@@ -739,7 +723,7 @@ OBSERVACION: </pre>
           <p class="man-section-subtitle"><span class="material-symbols-outlined">edit_note</span>Editar datos de una organización</p>
           <div class="man-steps">
             <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Seleccionar la organización</strong>Haz clic en la fila de la organización o en el botón de edición (lápiz).</div></div>
-            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Editar en el formulario lateral o modal</strong>Modifica los campos necesarios: nombre, dirección, teléfono de contacto, responsable, UV, etc.</div></div>
+            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Editar en el formulario modal</strong>Modifica los campos disponibles: tipo de organización, nombre, dirección de referencia, UV, sector, fechas de constitución, banderas jurídicas (personalidad jurídica, directiva vigente, certificados) y estado administrativo.</div></div>
             <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Guardar</strong>Confirma con el botón Guardar. Los cambios se reflejan inmediatamente en la vista de lista.</div></div>
           </div>
 
@@ -748,33 +732,16 @@ OBSERVACION: </pre>
             <div>Las organizaciones <strong>no se pueden eliminar</strong> del sistema para preservar la trazabilidad histórica. Si una organización ya no está activa, actualiza su estado.</div>
           </div>
 
-          <p class="man-section-subtitle"><span class="material-symbols-outlined">add_business</span>Crear una nueva organización</p>
-          <p class="man-p">Para ingresar al sistema una organización comunitaria que no existe aún en la base de datos, sigue estos pasos:</p>
-          <div class="man-steps">
-            <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Ir al módulo Organizaciones</strong>Haz clic en el ícono de grupo en la barra lateral.</div></div>
-            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Clic en Nueva organización</strong>Botón ubicado en la parte superior derecha de la pantalla.</div></div>
-            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Completar el formulario</strong>Ingresa el nombre oficial, tipo de organización, dirección de la sede, UV, sector, teléfono de contacto y responsable asignado.</div></div>
-            <div class="man-step"><div class="man-step__num">4</div><div class="man-step__body"><strong>Guardar</strong>La organización queda registrada con un ID único y estado inicial Activo. Aparecerá inmediatamente en la lista de organizaciones.</div></div>
+          <div class="man-callout man-callout--info">
+            <span class="material-symbols-outlined">info</span>
+            <div>Las organizaciones <strong>no se crean desde este módulo</strong>. Una organización se origina automáticamente en el sistema al completar el <strong>Hito 5</strong> del proceso de constitución en el módulo <strong>Avance</strong>. Este módulo solo permite editar organizaciones ya existentes.</div>
           </div>
-          <table class="man-field-table">
-            <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
-            <tbody>
-              <tr><td>Nombre</td><td><span class="man-badge man-badge--req">Obligatorio</span></td><td>Nombre oficial de la organización comunitaria.</td></tr>
-              <tr><td>Tipo</td><td><span class="man-badge man-badge--req">Obligatorio</span></td><td>Comité de seguridad, junta de vecinos, agrupación, etc.</td></tr>
-              <tr><td>Dirección sede</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Domicilio de la sede donde se reúnen.</td></tr>
-              <tr><td>UV</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Unidad Vecinal a la que pertenece.</td></tr>
-              <tr><td>Sector</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Zona territorial de Providencia.</td></tr>
-              <tr><td>Teléfono</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Teléfono del presidente o de la sede.</td></tr>
-              <tr><td>Responsable</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Operador o coordinador asignado a esta organización.</td></tr>
-              <tr><td>Observaciones</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Notas de contexto sobre la organización.</td></tr>
-            </tbody>
-          </table>
 
-          <p class="man-section-subtitle"><span class="material-symbols-outlined">person_pin</span>Ver socios desde organizaciones</p>
-          <p class="man-p">Desde la ficha de una organización puedes acceder directamente a la lista de sus socios usando el botón <strong>Ver socios</strong>. También puedes ver el avance y los beneficios vinculados a esa organización.</p>
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">person_pin</span>Ver socios desde la ficha de organización</p>
+          <p class="man-p">Desde la ficha de una organización (botón <strong>Ver detalle</strong> en la tarjeta), usa el botón <strong>Ver socios</strong> para ir directamente al módulo Socios con esa organización pre-filtrada. También puedes ver el avance de hitos y los beneficios vinculados desde esa misma ficha.</p>
 
           <p class="man-section-subtitle"><span class="material-symbols-outlined">filter_list</span>Buscar y filtrar organizaciones</p>
-          <p class="man-p">La lista de organizaciones tiene un campo de búsqueda en la parte superior. Escribe parte del nombre, UV o sector para filtrar en tiempo real. También puedes filtrar por estado usando los botones de filtro rápido (Activo, Stand by, Detenido, Finalizado).</p>
+          <p class="man-p">La lista de organizaciones tiene un campo de búsqueda en la parte superior. Escribe parte del nombre, UV, sector o responsable para filtrar en tiempo real. Usa los chips de filtro rápido para ver: <strong>Todos</strong> (organizaciones y grupos de vecinos en proceso), <strong>Constituidas</strong> (organizaciones formalizadas) o <strong>En proceso</strong> (grupos de vecinos que aún no completan el Hito 5).</p>
         </div>
 
         <!-- ============================================
@@ -789,7 +756,7 @@ OBSERVACION: </pre>
           <div class="man-steps">
             <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Ir al módulo Socios</strong>Haz clic en el ícono de insignia en la barra lateral.</div></div>
             <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Seleccionar organización</strong>Elige la organización a la que pertenecerá el socio desde el selector.</div></div>
-            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Clic en Agregar socio</strong>Completa el formulario con RUT, nombre, cargo, teléfono, correo y dirección del socio.</div></div>
+            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Clic en Agregar socio manualmente</strong>Completa el formulario con RUN, número de registro, nombre, edad, cargo y dirección del socio.</div></div>
             <div class="man-step"><div class="man-step__num">4</div><div class="man-step__body"><strong>Guardar</strong>El socio queda registrado y visible en la tabla de socios de esa organización.</div></div>
           </div>
 
@@ -797,11 +764,11 @@ OBSERVACION: </pre>
           <table class="man-field-table">
             <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
             <tbody>
-              <tr><td>RUT</td><td><span class="man-badge man-badge--req">Obligatorio</span></td><td>Identificador único del socio. Formato estándar.</td></tr>
+              <tr><td>RUN</td><td><span class="man-badge man-badge--req">Obligatorio</span></td><td>Rol Único Nacional del socio.</td></tr>
+              <tr><td>N° de registro</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Número de registro en el libro de socios de la organización.</td></tr>
               <tr><td>Nombre</td><td><span class="man-badge man-badge--req">Obligatorio</span></td><td>Nombre completo del socio.</td></tr>
+              <tr><td>Edad</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Edad del socio.</td></tr>
               <tr><td>Cargo</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Rol en la organización (presidente, secretario, tesorero, vocal, etc.).</td></tr>
-              <tr><td>Teléfono</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Número de contacto directo.</td></tr>
-              <tr><td>Correo</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Email del socio.</td></tr>
               <tr><td>Dirección</td><td><span class="man-badge man-badge--opt">Opcional</span></td><td>Domicilio del socio.</td></tr>
             </tbody>
           </table>
@@ -810,11 +777,11 @@ OBSERVACION: </pre>
             <div>El RUT del socio se usa para verificar identidad en el módulo de Beneficios (Capacitaciones). Ingrésalo correctamente para facilitar la inscripción a eventos.</div>
           </div>
 
-          <p class="man-section-subtitle"><span class="material-symbols-outlined">edit</span>Editar datos de un socio</p>
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">edit</span>Editar el cargo de un socio</p>
           <div class="man-steps">
-            <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Localizar al socio</strong>En la tabla de socios de la organización, haz clic en el botón de edición (lápiz) de la fila correspondiente.</div></div>
-            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Modificar los datos</strong>Puedes editar nombre, RUT, cargo, teléfono, correo y dirección.</div></div>
-            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Guardar</strong>Los cambios se reflejan inmediatamente. El sistema registra quién realizó la edición.</div></div>
+            <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body"><strong>Localizar al socio</strong>En la tabla de socios, haz clic en la fila del socio para abrir su detalle.</div></div>
+            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body"><strong>Cambiar el cargo</strong>Selecciona el nuevo cargo desde el selector del panel de detalle.</div></div>
+            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body"><strong>Guardar</strong>El cargo se actualiza inmediatamente en la tabla.</div></div>
           </div>
 
           <p class="man-section-subtitle"><span class="material-symbols-outlined">work</span>Cargos típicos de la directiva</p>
@@ -859,16 +826,17 @@ OBSERVACION: </pre>
              ============================================ -->
         <div class="man-section" id="sec-camaras" data-search-section>
           <h3 class="man-section-title"><span class="material-symbols-outlined">videocam</span>Beneficio: Cámaras 1414</h3>
-          <p class="man-p">Gestiona la instalación de cámaras de seguridad para organizaciones. El proceso tiene cuatro etapas que deben completarse en orden.</p>
+          <p class="man-p">Gestiona la instalación de cámaras de seguridad para organizaciones. El proceso es granular y comprende múltiples estados intermedios dentro de cada etapa.</p>
 
-          <p class="man-section-subtitle"><span class="material-symbols-outlined">linear_scale</span>Etapas del proceso</p>
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">linear_scale</span>Etapas principales del proceso</p>
           <table class="man-field-table">
-            <thead><tr><th>#</th><th>Etapa</th><th>Descripción</th></tr></thead>
+            <thead><tr><th>Etapa</th><th>Descripción</th></tr></thead>
             <tbody>
-              <tr><td>1</td><td><strong>Solicitud</strong></td><td>La organización realiza la solicitud formal. Se registra la organización interesada.</td></tr>
-              <tr><td>2</td><td><strong>Visita técnica</strong></td><td>El equipo técnico visita el lugar para evaluar la factibilidad de instalación.</td></tr>
-              <tr><td>3</td><td><strong>Convenio</strong></td><td>Se firma el convenio entre la organización y la municipalidad. Se especifican las condiciones.</td></tr>
-              <tr><td>4</td><td><strong>Cierre</strong></td><td>Se confirma la instalación exitosa y se cierra el caso.</td></tr>
+              <tr><td><strong>Solicitud</strong></td><td>La organización registra su interés. El sistema verifica elegibilidad.</td></tr>
+              <tr><td><strong>Visita técnica</strong></td><td>Evaluación de factibilidad en terreno. Puede tener resultados intermedios (pendiente, aprobada, rechazada).</td></tr>
+              <tr><td><strong>Convenio</strong></td><td>Elaboración, revisión y firma del convenio. Incluye estados como "en borrador", "enviado a firma" y "firmado".</td></tr>
+              <tr><td><strong>Instalación</strong></td><td>Coordinación e instalación de las cámaras. Incluye estados como "programada", "en ejecución" y "instalada".</td></tr>
+              <tr><td><strong>Cierre</strong></td><td>Verificación final y cierre del caso con acta de conformidad.</td></tr>
             </tbody>
           </table>
 
@@ -919,8 +887,10 @@ OBSERVACION: </pre>
           <p class="man-p">Cada edición anual tiene <strong>dos llamados</strong> (primer y segundo llamado). Para que una organización pueda postular debe:</p>
           <div class="man-steps">
             <div class="man-step"><div class="man-step__num">1</div><div class="man-step__body">Estar registrada en el sistema con estado activo.</div></div>
-            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body">No tener rendiciones pendientes de ediciones anteriores.</div></div>
-            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body">Cumplir con los requisitos de la línea de producto a la que postula.</div></div>
+            <div class="man-step"><div class="man-step__num">2</div><div class="man-step__body">Tener completado el proceso de formalización (hito FOR_04 del módulo Avance).</div></div>
+            <div class="man-step"><div class="man-step__num">3</div><div class="man-step__body">No tener rendiciones pendientes de ediciones anteriores.</div></div>
+            <div class="man-step"><div class="man-step__num">4</div><div class="man-step__body">No tener una postulación activa en la edición vigente (no se puede postular dos veces al mismo llamado).</div></div>
+            <div class="man-step"><div class="man-step__num">5</div><div class="man-step__body">Cumplir con los requisitos de la línea de producto a la que postula.</div></div>
           </div>
 
           <p class="man-section-subtitle"><span class="material-symbols-outlined">add_circle</span>Registrar nueva postulación</p>
@@ -1067,7 +1037,7 @@ OBSERVACION: </pre>
 
             <div class="man-faq-item">
               <button class="man-faq-q" type="button">Busco al vecino pero no aparece en los resultados <span class="material-symbols-outlined">expand_more</span></button>
-              <div class="man-faq-a">Prueba con distintos términos: solo el número de teléfono, solo el apellido, o el ID de solicitud si lo tienes (SOL-XXXXXX). La búsqueda es flexible pero requiere al menos 2-3 caracteres. Si el vecino fue ingresado recientemente, espera un momento y recarga.</div>
+              <div class="man-faq-a">Prueba con distintos términos: solo el número de teléfono, solo el apellido, el RUT, o el ID de solicitud si lo tienes (SOL-XXXXXX). La búsqueda no tiene restricción de caracteres mínimos; con término vacío devuelve los primeros 50 registros. Si el vecino fue ingresado recientemente, espera un momento y vuelve a intentar.</div>
             </div>
 
             <div class="man-faq-item">

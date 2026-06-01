@@ -6647,6 +6647,55 @@
     }
   }
 
+  /* ===== Ficha vecino y Socios — formulario de edicion inline ===== */
+  .ficha-edit-form {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .ficha-edit-form__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem 1rem;
+  }
+  .ficha-edit-form__grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .ficha-edit-form__grid input,
+  .ficha-edit-form__grid select {
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: var(--surface, #fff);
+    color: var(--text);
+    outline: none;
+  }
+  .ficha-edit-form__grid input:focus,
+  .ficha-edit-form__grid select:focus {
+    border-color: var(--runtime-brand-primary, #3D96B4);
+  }
+  .ficha-edit-form__actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  .ficha-universe__head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+  }
+  .ficha-universe__head h3 { flex: 1; margin: 0; }
+
   /* ===== Calendario — refresh, registered state, coincidencias ===== */
   .inicio-cal-refresh-btn {
     margin-left: auto;

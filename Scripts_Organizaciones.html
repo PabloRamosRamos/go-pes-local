@@ -49,6 +49,9 @@
               <h3 id="org-detalle-modal-title">Organización</h3>
             </div>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+              <button type="button" class="secondary-btn" id="org-ver-socios-btn" disabled>
+                <span class="material-symbols-outlined">badge</span>Ver socios
+              </button>
               <button type="button" class="secondary-btn" id="org-edit-btn" disabled>
                 <span class="material-symbols-outlined">edit</span>Editar
               </button>
@@ -407,6 +410,15 @@
       renderOrganizacionesGridFromState_();
     });
 
+    document.getElementById('org-ver-socios-btn')?.addEventListener('click', () => {
+      const det = APP.state.currentOrganizacionDetalle;
+      const org = det && det.organizacion;
+      if (!org) return;
+      APP.state.sociosPendingOrgId    = org.organizacion_id || '';
+      APP.state.sociosPendingOrgNombre = org.nombre_organizacion || '';
+      closeOrganizacionDetalleModal_();
+      route('socios');
+    });
     document.getElementById('org-edit-btn')?.addEventListener('click', () => {
       const data = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.organizacion;
       if (data) openOrganizacionEditModal_(data);
@@ -480,7 +492,7 @@
   }
 
   function setOrganizacionesActionState_(enabled) {
-    ['org-edit-btn', 'org-suspend-btn'].forEach(id => {
+    ['org-ver-socios-btn', 'org-edit-btn', 'org-suspend-btn'].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) btn.disabled = !enabled;
     });

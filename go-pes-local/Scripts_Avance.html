@@ -821,7 +821,7 @@
       return;
     }
 
-    const fechaEstado = window.prompt('Ingresa la fecha del estado (YYYY-MM-DD)', todayISO_()) || '';
+    const fechaEstado = window.prompt('Ingresa la fecha del cambio de estado', todayISO_()) || '';
     if (!String(fechaEstado).trim()) {
       showError('Debes indicar una fecha.');
       return;

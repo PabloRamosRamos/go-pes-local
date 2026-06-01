@@ -116,7 +116,7 @@
 
     const proceed = () => {
       api('guardarIngreso', payload).then(res => {
-        showSuccess(`Solicitud guardada: ${res.solicitud_id}`);
+        showSuccess('Solicitud guardada correctamente.');
         clearIngresoForm(false);
         loadFicha({ solicitud_id: res.solicitud_id, organizacion_id: '' });
       }).catch(showError).finally(() => {
@@ -219,7 +219,7 @@
       upsertOrganizacionCatalogEntry_(Object.assign({}, payload, {
         organizacion_id: res.organizacion_id
       }));
-      showSuccess(`Organización guardada: ${res.organizacion_id}`);
+      showSuccess('Organización guardada correctamente.');
       if (payload.solicitud_id) loadFicha({ solicitud_id: payload.solicitud_id, organizacion_id: res.organizacion_id });
     }).catch(showError);
   }

@@ -284,18 +284,37 @@ Suite de tests automatizados en `Audith.js` cubre:
 - Configuración de contextos de seguridad
 - Acceso al módulo Historial
 
+## Estadísticas del proyecto
+
+**Ver [`docs/dev-stats.md`](../docs/dev-stats.md) para estadísticas completas de desarrollo.**
+
+| Métrica | Valor |
+|---------|-------|
+| **Archivos de código** | 44 (22 JS + 22 HTML) |
+| **Líneas de código** | ~33.326 |
+| **Tests automatizados** | 262 (0 fallos) |
+| **Cobertura estimada** | ~78% |
+| **Módulos funcionales** | 11 |
+| **Hojas de base de datos** | 35+ |
+| **Estado general** | ✅ **PRODUCCIÓN ESTABLE** |
+
 ## Tareas pendientes
 
 - [x] Manual de usuario implementado en `Manual.html` (accesible desde menú de usuario → Manual). Cubre todos los módulos, roles, FAQ y glosario.
 - [x] `Scripts.html` dividido en 8 parciales por módulo (Fase 5 completada)
-- [x] Tests automatizados implementados en `Audith.js` (182 tests base + 8 tests seguridad, 0 fallos, verificados en DEV y PROD)
+- [x] Tests automatizados implementados en `Audith.js` (262 tests, 0 fallos, verificados en DEV y PROD)
 - [x] Auditoría de seguridad completada (5 de 7 hallazgos cerrados, 2 excluidos por diseño DEV)
 - [x] Plan de mejora frontend completado (5/5 fases: A11y, Consolidación CSS, Modularización JS, Responsive, Design System). Ver [`docs/design-system.md`](../docs/design-system.md) y [`docs/frontend-plan-resumen.md`](../docs/frontend-plan-resumen.md).
+- [x] Sistema de transiciones UX implementado (3 fases: modales, vistas, stagger). Ver [`docs/design-system.md`](../docs/design-system.md) sección "Transiciones y Animaciones".
+- [x] Eliminar 3 funciones duplicadas en `Scripts_Beneficios.html` — Ya completado en commits anteriores (verificado 2026-06-01: solo existe 1 definición de cada función)
 - [ ] Superusuario y dominios confiables hardcodeados en Main.js — evaluar moverlos a CFG_Parametros (bajo, solo convenios de configuración)
-- [ ] Eliminar 3 funciones duplicadas en `Scripts_Beneficios.html` (`renderCamaras1414Panel_`, `renderCamaras1414Table_`, `renderCamaras1414Detail_` — segunda definición es la activa)
 - [ ] Añadir `data-label` attributes a tablas dinámicas de `Scripts_*.html` para card layout responsive (incremental, baja prioridad)
 
 ## Historial de cambios significativos
+
+- **2026-06-01 (UX — Normalización de mensajes técnicos)** — Implementado sistema de traducción de errores técnicos a mensajes operativos en dos capas: **(1) Capa central:** función `normalizeUserMessage_()` en `Scripts_UI.html` que intercepta todos los errores en `showError()` antes de mostrarlos. Mapea ~15 mensajes técnicos exactos (ej: "Usuario no registrado en DIM_Usuarios" → "Tu usuario no tiene acceso habilitado"), detecta patrones ("Falta el campo obligatorio: nombre_vecino" → "Debes completar el campo Nombre"), reemplaza nombres de tablas/constantes (`DIM_*`, `GO_PES_V2` → "el sistema"), filtra JSON crudo. Diccionario de 13 campos técnicos → etiquetas visibles. **(2) Limpieza en origen:** `Validators.js` (6 funciones con etiquetas legibles en vez de nombres técnicos), `Scripts_Socios.html` (errores de importación en tabla HTML legible, no JSON stringify), `Scripts_Avance.html` (prompt sin formato técnico YYYY-MM-DD), 3 archivos con mensajes de éxito sin IDs ("Solicitud guardada: SOL-123" → "Solicitud guardada correctamente"). **Criterio editorial:** lenguaje de tarea, no de estructura interna; contexto funcional + acción sugerida; sin nombres de tablas, variables, claves técnicas, formatos internos ni JSON crudo. Archivos: `Scripts_UI.html` (+95 líneas), `Validators.js` (~60 líneas), `Scripts_Socios.html`, `Scripts_Avance.html`, `Scripts_NuevoIngreso.html`, `Scripts_Organizaciones.html`. Total ~169 líneas modificadas + ~15 mensajes backend auto-traducidos.
+
+- **2026-06-01 (Testing — Corrección suite de seguridad + estadísticas)** — Corregidos 10 fallos en `goPesTestSecurity_()` causados por uso incorrecto de `function(assert)` en vez de las funciones globales de assert (`assertTrue_`, `assertEqual_`). Reemplazadas todas las referencias en 13 tests de seguridad. Suite completa ahora pasa exitosamente: **262 tests, 0 fallos** (90 validators + 41 auth + 51 services + 35 avance + 32 beneficios + 13 security, 26 SKIPs intencionales). Creado documento `docs/dev-stats.md` con métricas completas del proyecto: 44 archivos, ~33.326 líneas de código, 11 módulos funcionales, 35+ hojas de base de datos. Desglose detallado por tipo de archivo (JS backend/frontend, CSS, HTML), cobertura de tests por suite (~78%), hitos de desarrollo completados (6 fases: Arquitectura, Modularización, Seguridad, Testing, Design System, UX/UI), deuda técnica pendiente (solo 3 items de prioridad media/baja), métricas de calidad (100% tests pasados, 71% hallazgos seguridad cerrados, 0 CSS inline), tiempos de carga estimados, estado del proyecto (**PRODUCCIÓN ESTABLE**). Sección nueva en `CLAUDE.md` con tabla resumen de métricas. Archivos: `Audith.js` (13 tests corregidos), `docs/dev-stats.md` (nuevo), `CLAUDE.md` (estadísticas + historial).
 
 - **2026-06-01 (UX — Stagger en cards/listas, Fase 3)** — Implementado sistema de animación escalonada (stagger) para módulos visuales. **CSS:** nuevas clases `.stagger-item` (estado inicial: opacity 0, translateY(8px)) y `.stagger-item.stagger-animate` (estado animado: opacity 1, translateY(0) con transition 220ms). Delays incrementales vía `:nth-child(n)` de 40ms por ítem (máx 12 items visibles con delays hasta 440ms, items 13+ comparten delay 480ms para evitar espera excesiva). **Aplicación:** módulo **Inicio** (6 KPI cards, 5 chart cards, 3 table cards en `Inicio.html` + activación en `Scripts_Inicio.html`), módulo **Organizaciones** (cards de organizaciones y grupos de vecinos en `Scripts_Organizaciones.html`). Activación vía `requestAnimationFrame` después de `innerHTML` render para forzar reflow. **No aplicado a Beneficios** (estructura panel compleja, pospuesto). Archivos: Styles.html (+48 líneas stagger system), Inicio.html (5 cambios: 3× chart cards, 1× KPI cards, 1× table cards), Scripts_Inicio.html (+8 líneas activación), Scripts_Organizaciones.html (2 cambios: org-card class, activación). **Resultado:** entrada visual progresiva y pulida sin afectar performance.
 

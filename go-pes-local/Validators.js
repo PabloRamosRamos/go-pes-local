@@ -3,48 +3,114 @@
  * Mantiene helpers puros para no mezclar esta capa con side effects.
  */
 function validateIngresoV2_(p) {
-  ['nombre_vecino', 'apellido_vecino', 'telefono_contacto', 'direccion_original', 'requerimiento_inicial'].forEach(f => {
-    if (!String(p[f] || '').trim()) throw new Error(`Falta el campo obligatorio: ${f}`);
+  const requiredFields = {
+    nombre_vecino: 'Nombre',
+    apellido_vecino: 'Apellido',
+    telefono_contacto: 'Teléfono',
+    direccion_original: 'Dirección',
+    requerimiento_inicial: 'Requerimiento'
+  };
+
+  Object.keys(requiredFields).forEach(field => {
+    if (!String(p[field] || '').trim()) {
+      throw new Error(`Debes completar el campo ${requiredFields[field]}.`);
+    }
   });
-  if (p.correo_contacto && !/.+@.+\..+/.test(String(p.correo_contacto))) throw new Error('Correo no válido.');
+
+  if (p.correo_contacto && !/.+@.+\..+/.test(String(p.correo_contacto))) {
+    throw new Error('El correo electrónico no es válido.');
+  }
 }
 
 function validateSeguimientoV2_(p) {
-  ['solicitud_id', 'fecha_gestion', 'responsable_gestion', 'flujo', 'hito', 'estado_hito', 'detalle_gestion'].forEach(f => {
-    if (!String(p[f] || '').trim()) throw new Error(`Falta el campo obligatorio: ${f}`);
+  const requiredFields = {
+    solicitud_id: 'Identificador de solicitud',
+    fecha_gestion: 'Fecha de gestión',
+    responsable_gestion: 'Responsable',
+    flujo: 'Flujo',
+    hito: 'Hito',
+    estado_hito: 'Estado',
+    detalle_gestion: 'Detalle'
+  };
+
+  Object.keys(requiredFields).forEach(field => {
+    if (!String(p[field] || '').trim()) {
+      throw new Error(`Debes completar el campo ${requiredFields[field]}.`);
+    }
   });
-  if (p.documento_respaldo_url && !looksLikeUrl_(p.documento_respaldo_url)) throw new Error('La URL de respaldo no es válida.');
+
+  if (p.documento_respaldo_url && !looksLikeUrl_(p.documento_respaldo_url)) {
+    throw new Error('La URL del documento de respaldo no es válida.');
+  }
 }
 
 function validateOrganizacionV2_(p) {
-  ['tipo_organizacion', 'nombre_organizacion'].forEach(f => {
-    if (!String(p[f] || '').trim()) throw new Error(`Falta el campo obligatorio: ${f}`);
+  const requiredFields = {
+    tipo_organizacion: 'Tipo de organización',
+    nombre_organizacion: 'Nombre de organización'
+  };
+
+  Object.keys(requiredFields).forEach(field => {
+    if (!String(p[field] || '').trim()) {
+      throw new Error(`Debes completar el campo ${requiredFields[field]}.`);
+    }
   });
 }
 
 function validateInstrumentoV2_(p) {
-  ['organizacion_id', 'instrumento_codigo_catalogo', 'instrumento_tipo', 'origen_instrumento', 'anio_convocatoria', 'estado_instrumento'].forEach(f => {
-    if (!String(p[f] || '').trim()) throw new Error(`Falta el campo obligatorio: ${f}`);
+  const requiredFields = {
+    organizacion_id: 'Organización',
+    instrumento_codigo_catalogo: 'Código de beneficio',
+    instrumento_tipo: 'Tipo de beneficio',
+    origen_instrumento: 'Origen',
+    anio_convocatoria: 'Año de convocatoria',
+    estado_instrumento: 'Estado'
+  };
+
+  Object.keys(requiredFields).forEach(field => {
+    if (!String(p[field] || '').trim()) {
+      throw new Error(`Debes completar el campo ${requiredFields[field]}.`);
+    }
   });
+
   if (p.avance_instrumento_pct !== '' && p.avance_instrumento_pct !== undefined && !isNumberBetween_(p.avance_instrumento_pct, 0, 100)) {
-    throw new Error('El avance del instrumento debe estar entre 0 y 100.');
+    throw new Error('El porcentaje de avance debe estar entre 0 y 100.');
   }
-  if (p.documento_respaldo_url && !looksLikeUrl_(p.documento_respaldo_url)) throw new Error('La URL de respaldo del instrumento no es válida.');
+
+  if (p.documento_respaldo_url && !looksLikeUrl_(p.documento_respaldo_url)) {
+    throw new Error('La URL del documento de respaldo no es válida.');
+  }
 }
 
 function validateRequisitoV2_(p) {
-  ['organizacion_id', 'org_instrumento_id', 'estado_requisito'].forEach(f => {
-    if (!String(p[f] || '').trim()) throw new Error(`Falta el campo obligatorio: ${f}`);
+  const requiredFields = {
+    organizacion_id: 'Organización',
+    org_instrumento_id: 'Beneficio asociado',
+    estado_requisito: 'Estado del requisito'
+  };
+
+  Object.keys(requiredFields).forEach(field => {
+    if (!String(p[field] || '').trim()) {
+      throw new Error(`Debes completar el campo ${requiredFields[field]}.`);
+    }
   });
+
   if (!String(p.requisito_codigo || p.requisito_nombre_libre || '').trim()) {
-    throw new Error('Debes indicar un requisito del catálogo o un nombre libre.');
+    throw new Error('Debes indicar un requisito del catálogo o escribir un nombre personalizado.');
   }
-  if (p.documento_respaldo_url && !looksLikeUrl_(p.documento_respaldo_url)) throw new Error('La URL de respaldo del requisito no es válida.');
+
+  if (p.documento_respaldo_url && !looksLikeUrl_(p.documento_respaldo_url)) {
+    throw new Error('La URL del documento de respaldo no es válida.');
+  }
 }
 
 function validateSocioRowV2_(row) {
-  if (!String(row.organizacion_id || '').trim()) return { ok: false, error: 'Falta organización asociada.' };
-  if (!String(row.nombre_socio || '').trim()) return { ok: false, error: 'Nombre de socio vacío.' };
+  if (!String(row.organizacion_id || '').trim()) {
+    return { ok: false, error: 'Debes seleccionar una organización.' };
+  }
+  if (!String(row.nombre_socio || '').trim()) {
+    return { ok: false, error: 'Debes completar el nombre del socio.' };
+  }
   return { ok: true };
 }
 

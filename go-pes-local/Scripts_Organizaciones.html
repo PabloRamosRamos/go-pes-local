@@ -810,7 +810,7 @@
       return;
     }
     api('guardarOrganizacion', payload).then(res => {
-      showSuccess('Organización guardada: ' + res.organizacion_id);
+      showSuccess('Organización guardada correctamente.');
       closeOrganizacionEditModal_();
       APP.state.organizacionesModuloFetchedAt = 0;
       return ensureOrganizacionesModuloList_().then(() => {

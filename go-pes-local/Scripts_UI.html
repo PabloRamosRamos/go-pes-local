@@ -57,10 +57,109 @@
     showToast_(message, 'success', 4000);
   }
 
+  /**
+   * Normaliza mensajes técnicos internos a mensajes operativos para usuario.
+   * Detecta nombres de campos, tablas, constantes internas y los traduce a lenguaje funcional.
+   */
+  function normalizeUserMessage_(rawMessage) {
+    if (!rawMessage || typeof rawMessage !== 'string') {
+      return 'Ocurrió un error inesperado.';
+    }
+
+    let msg = rawMessage.trim();
+
+    // ── Mapeo de mensajes técnicos completos ──
+    const exactMatches = {
+      'Usuario no registrado en DIM_Usuarios.': 'Tu usuario no tiene acceso habilitado al sistema.',
+      'Usuario registrado pero inactivo en DIM_Usuarios.': 'Tu acceso al sistema está deshabilitado.',
+      'Falta solicitud_id.': 'No fue posible identificar la solicitud. Recarga la ficha e inténtalo nuevamente.',
+      'Falta organizacion_id.': 'No fue posible identificar la organización seleccionada.',
+      'GO_PES_V2 no está disponible.': 'El sistema no está disponible en este momento. Intenta nuevamente o contacta a soporte.',
+      'No se pudo acceder al spreadsheet contenedor.': 'El sistema no está disponible en este momento. Intenta nuevamente o contacta a soporte.',
+      'Ingresa la fecha del estado (YYYY-MM-DD)': 'Ingresa la fecha del cambio de estado.'
+    };
+
+    if (exactMatches[msg]) {
+      return exactMatches[msg];
+    }
+
+    // ── Patrones de reemplazo (orden: específico → genérico) ──
+
+    // Contexto inválido de PIN
+    if (/contexto invalido\. debe ser:/i.test(msg)) {
+      return 'No fue posible validar esta acción de seguridad.';
+    }
+
+    // Campos obligatorios con nombre técnico
+    const fieldLabels = {
+      nombre_vecino: 'Nombre',
+      apellido_vecino: 'Apellido',
+      telefono_contacto: 'Teléfono',
+      direccion_original: 'Dirección',
+      requerimiento_inicial: 'Requerimiento',
+      correo_contacto: 'Correo',
+      solicitud_id: 'Identificador de solicitud',
+      organizacion_id: 'Identificador de organización',
+      org_instrumento_id: 'Identificador de beneficio',
+      nombre_organizacion: 'Nombre de organización',
+      tipo_organizacion: 'Tipo de organización',
+      fecha_ingreso: 'Fecha de ingreso',
+      observacion: 'Observación'
+    };
+
+    // "Falta el campo obligatorio: nombre_vecino" → "Debes completar el campo Nombre."
+    msg = msg.replace(
+      /falta\s+el\s+campo\s+obligatorio:\s*(\w+)/gi,
+      (match, field) => {
+        const label = fieldLabels[field] || field;
+        return `Debes completar el campo ${label}`;
+      }
+    );
+
+    // "El campo nombre_vecino es obligatorio" → "Debes completar el campo Nombre"
+    msg = msg.replace(
+      /el\s+campo\s+(\w+)\s+es\s+obligatorio/gi,
+      (match, field) => {
+        const label = fieldLabels[field] || field;
+        return `Debes completar el campo ${label}`;
+      }
+    );
+
+    // Reemplazar nombres técnicos sueltos por etiquetas
+    Object.keys(fieldLabels).forEach(techName => {
+      const regex = new RegExp(`\\b${techName}\\b`, 'gi');
+      msg = msg.replace(regex, fieldLabels[techName]);
+    });
+
+    // Referencias a tablas internas (DIM_*, MAE_*, FACT_*, etc.)
+    if (/\b(DIM|MAE|FACT|RAW|CFG|LOG|VW)_[A-Z_]+\b/i.test(msg)) {
+      msg = msg.replace(/\b(DIM|MAE|FACT|RAW|CFG|LOG|VW)_[A-Z_]+\b/gi, 'el sistema');
+    }
+
+    // Referencias a constantes globales
+    msg = msg.replace(/\bGO_PES_V2\b/g, 'el sistema');
+    msg = msg.replace(/\bSpreadsheet\b/gi, 'el sistema');
+
+    // Errores de spreadsheet/acceso
+    if (/no\s+se\s+encontr[oó]\s+el\s+spreadsheet/i.test(msg)) {
+      return 'El sistema no está disponible en este momento. Intenta nuevamente o contacta a soporte.';
+    }
+
+    // JSON stringify crudo (ej: {"errors":[...]})
+    if (/^\{.*\}$/.test(msg) || /^\[.*\]$/.test(msg)) {
+      return 'Ocurrió un error al procesar la solicitud. Revisa los datos e inténtalo nuevamente.';
+    }
+
+    // Mensajes que ya están bien escritos para usuario (dejarlos pasar)
+    return msg;
+  }
+
   function showError(error) {
-    const message = typeof error === 'string'
+    const rawMessage = typeof error === 'string'
       ? error
       : (error && error.message ? error.message : 'Ocurrió un error.');
+
+    const message = normalizeUserMessage_(rawMessage);
     setStatus(message, false);
     showToast_(message, 'error', 7000);
   }

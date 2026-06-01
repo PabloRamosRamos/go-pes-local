@@ -50,7 +50,16 @@
       APP.state.sociosModuleFetchedAt = 0;
       loadSociosModuleData_({ force: true }).catch(() => {});
       if (res.errors && res.errors.length) {
-        document.getElementById('socios-preview').insertAdjacentHTML('beforeend', `<div class="message error">Errores: ${escapeHtml(JSON.stringify(res.errors))}</div>`);
+        const errorSummary = `
+          <div class="message error" style="margin-top:12px">
+            <strong>La carga terminó con observaciones.</strong>
+            <p style="margin:8px 0 4px">Revisa las siguientes filas con error:</p>
+            <ul style="margin:0;padding-left:20px;font-size:.9em">
+              ${res.errors.map(err => `<li>Fila ${err.row || '?'}: ${escapeHtml(err.message || 'Error desconocido')}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+        document.getElementById('socios-preview').insertAdjacentHTML('beforeend', errorSummary);
       }
     }).catch(showError);
   }

@@ -7168,6 +7168,108 @@ html[data-theme="dark"] .dash-table td{color:var(--text,#d4e4f0);border-bottom-c
 html[data-theme="dark"] .dash-table tr:hover td{background:var(--surface-alt,#182635)}
 html[data-theme="dark"] .dash-status-pill{background:var(--surface-alt,#182635);color:var(--text,#d4e4f0)}
 
+/* ========================================
+   DASHBOARD RESPONSIVE — Fase 4.1
+   Media queries para tablet y mobile
+   ======================================== */
+
+/* Tablet: 768px - 1199px */
+@media (max-width: 1199px) {
+  .dash-kpi-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .dash-grid-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dash-tables-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-gauge-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile: < 768px */
+@media (max-width: 767px) {
+  .dash-kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .dash-kpi {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .dash-kpi__icon {
+    font-size: 1.1rem;
+  }
+
+  .dash-kpi__value {
+    font-size: 1.1rem;
+  }
+
+  .dash-kpi__label {
+    font-size: 0.7rem;
+    white-space: normal;
+  }
+
+  .dash-grid-3,
+  .dash-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dash-tables-row {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .dash-table-card__body {
+    max-height: 180px;
+  }
+
+  .dash-gauge-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .dash-gauge-svg {
+    width: 70px;
+    height: 70px;
+  }
+
+  .dash-gauge-label {
+    font-size: 0.65rem;
+    max-width: 70px;
+  }
+
+  .dash-donut-wrap {
+    flex-direction: column;
+  }
+
+  .dash-donut-svg {
+    width: 150px;
+    height: 150px;
+  }
+}
+
+/* Mobile pequeño: < 480px */
+@media (max-width: 479px) {
+  .dash-kpi-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dash-gauge-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Calendario de reuniones — Módulo Inicio */
 .inicio-cal-card{margin-top:0}
 .inicio-cal-loading{display:flex;align-items:center;justify-content:center;padding:20px;color:var(--text-muted,#6b7a8d)}

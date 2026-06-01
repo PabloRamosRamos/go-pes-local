@@ -295,6 +295,8 @@ Suite de tests automatizados en `Audith.js` cubre:
 
 ## Historial de cambios significativos
 
+- **2026-05-31 (Frontend — Design System documentado)** — Creado sistema de diseño completo en `docs/design-system.md` (693 líneas). Documentación cubre: paleta de colores (sistema + variables CSS), componentes base (botones, badges, tablas, cards, modales, formularios, toasts, paginador), iconografía (Material Symbols), tipografía (Inter), espaciado, border radius, sombras, tema oscuro, responsive (4 breakpoints), accesibilidad (keyboard nav, focus trap, ARIA, contrast), convenciones de código (BEM, orden de propiedades), estrategia de migración progresiva. Sección "Design System" añadida a `CLAUDE.md` con principios, tabla de componentes, variables CSS, reglas de trabajo. **Fase 5 del plan de mejora frontend completada.**
+
 - **2026-05-31 (Seguridad — PINs externalizados + rate limiting)** — Implementado sistema centralizado de PINs en `SecurityPins.js` con separación por contexto. Los PINs ya no están hardcodeados en el código fuente; se almacenan hasheados en `PropertiesService.getScriptProperties()`. Tres contextos independientes: `admin_reset` (limpieza datos), `user_deactivate` (desactivar usuarios), `evento_abierto` (eventos inscripción abierta). Rate limiting automático: 3 intentos/usuario/hora vía `CacheService`. Logs de intentos fallidos en `LOG_Procesamiento` para auditoría. Archivos modificados: nuevo `SecurityPins.js`, `ZZ_AdminDataReset.js` (migrado de constantes hardcodeadas a `goPesValidatePin_`), `Auth.js` (contexto `USER_DEACTIVATE`), `ZZ_BeneficiosBackend.js` (contexto `EVENTO_ABIERTO`). Funciones públicas de setup: `goPesConfigurePinDeSeguridad(context, pin)`, `goPesIsPinConfigured(context)`, `goPesResetPinRateLimit(context, email)`. BREAKING: Después de deploy, los superusers deben ejecutar la configuración inicial de PINs desde el editor (ver sección "Configuración de PINs de seguridad" en CLAUDE.md).
 - **2026-05-31 (Seguridad — auth guards en funciones mutantes Fase 1)** — Cerrados 2 hallazgos críticos: (1) Bypass autorización en `recalcularFicha()` — rebuild global ahora requiere coordinador/superuser; (2) Funciones mutantes sin auth guard — `goPesRefrescarVistasYMaster()` y `goPesSeedSuperUsers()` ahora protegidas. Archivos: `Services.js:1267-1272`, `DerivedBuilders.js:21`, `Main.js:197-200,142`.
 - **2026-05-31 (Arquitectura CSS — estandarización)** — Todo el CSS de la aplicación centralizado en `Styles.html` y `ThemeDark.html`. Regla establecida: prohibido CSS inline en JS; todo nuevo estilo va en esos dos archivos al final, con comentario de sección. Aplicado concretamente en el módulo Organizaciones: extraídas ~17 clases nuevas (`org-card`, `org-card__*`, `org-step-dot--*`, `org-step-line--*`, `org-card__badge--*`, `org-chip-btn--active`, `org-grid`) de las funciones `renderOrganizacionCardHtml_` y `renderGrupoVecinosCardHtml_`. Dark mode de badges añadido en `ThemeDark.html`. Función helper `buildOrgStepper_()` y constante `ORG_HITO_NOMBRES` extraídas como utilidades de módulo. `CLAUDE.md` actualizado con reglas de arquitectura CSS.
@@ -367,3 +369,82 @@ Antes de tocar cualquier valor de color:
 3. **El modo claro y el modo oscuro son interdependientes.** Un cambio en un fallback del modo claro puede romper el modo oscuro y viceversa. Verifica ambos.
 4. **Hex exacto, sin aproximaciones.** Si el sistema usa `#03C2AE`, en todos los lugares es `#03C2AE`. Nunca sustituir por un valor "cercano" o "equivalente".
 5. **Los fallbacks del sistema no son errores.** Valores como `#F7FAFC` en `GO_PES_V2.COLORS.bg` son constantes de sistema con propósito definido. No los reemplaces por valores de branding sin entender qué parte del UI alimentan.
+
+## Design System
+
+GO-PES v2 cuenta con un sistema de diseño documentado que define componentes visuales, patrones de interacción y convenciones de código frontend.
+
+### Documentación completa
+
+Ver [`docs/design-system.md`](../docs/design-system.md) para la referencia completa del sistema de diseño.
+
+### Principios
+
+1. **Consistencia visual** — Todos los componentes siguen las mismas convenciones de color, espaciado, tipografía y estados interactivos.
+2. **Accesibilidad por defecto** — Keyboard navigation, focus traps, ARIA labels, color contrast WCAG AA.
+3. **Responsive mobile-first** — Breakpoints definidos (mobile < 768px, tablet 768-1199px, desktop ≥ 1200px).
+4. **Modo claro y oscuro** — Todos los componentes soportan tema claro y oscuro vía variables CSS.
+5. **Migración progresiva** — Nuevos componentes usan el Design System; componentes existentes se migran gradualmente sin romper funcionalidad.
+
+### Componentes base
+
+- **Botones:** `.primary-btn`, `.secondary-btn`, `.danger-btn` (con modificadores `.btn--sm`, `.btn--lg`)
+- **Badges:** `.badge-pill` (con variantes `.badge--success`, `.badge--warning`, `.badge--error`, `.badge--info`)
+- **Tablas:** `.data-table` (con card layout automático en mobile < 768px usando `data-label` attributes)
+- **Cards:** `.panel`, `.card` (con estructura `.panel__head`, `.panel__body`, `.panel__footer`)
+- **Modales:** `.modal` (con API JavaScript `A11Y.openModal()` / `A11Y.closeModal()` en `Scripts_A11y.html`)
+- **Estados vacíos:** `.empty-state` (helper `GO_PES_UI.emptyStateHtml()` en `Scripts_UI.html`)
+- **Formularios:** `.field` (con `.has-error`, `.field-error`, modificadores `.field--full`, `.field--half`)
+- **Toasts:** API `GO_PES_UI.showSuccess()`, `GO_PES_UI.showError()`, `GO_PES_UI.showToast()`
+- **Paginador:** `GO_PES_UI.paginatorHtml(currentPage, totalPages, dataPrefix)`
+
+### Variables CSS
+
+Todas definidas en `Styles.html` y sobrescritas en `ThemeDark.html`:
+
+- **Colores:** `--runtime-brand-primary`, `--runtime-brand-secondary`, `--runtime-brand-accent`, `--text`, `--text-muted`, `--surface`, `--surface-alt`, `--border`, `--success`, `--warning`, `--danger`
+- **Espaciado:** `--space-1` (4px) a `--space-8` (40px)
+- **Border radius:** `--radius-sm` (4px) a `--radius-pill` (9999px)
+- **Sombras:** `--shadow-sm`, `--shadow-md`, `--shadow-lg`, `--shadow-xl`
+
+### Iconografía
+
+**Material Symbols Outlined** — Google Fonts
+
+```html
+<span class="material-symbols-outlined">save</span>
+<span class="material-symbols-outlined">edit</span>
+<span class="material-symbols-outlined">delete</span>
+```
+
+### Tipografía
+
+**Inter** — Google Fonts
+
+Jerarquía: h1 (2rem/700), h2 (1.5rem/600), h3 (1.25rem/600), h4 (1rem/600), body (0.875rem/400), small (0.75rem)
+
+### Convenciones de código
+
+- **Nomenclatura CSS:** BEM simplificado (`.bloque`, `.bloque__elemento`, `.bloque--modificador`)
+- **Orden de propiedades:** Posicionamiento → Box model → Tipografía → Visual → Otros
+- **Comentarios:** Secciones con separador `/* ======== SECCIÓN ======== */`
+
+### Archivos del Design System
+
+| Archivo | Propósito |
+|---------|-----------|
+| `docs/design-system.md` | Documentación completa del sistema de diseño |
+| `Styles.html` | CSS global (modo claro) + variables + componentes base |
+| `ThemeDark.html` | Overrides para modo oscuro |
+| `Scripts_A11y.html` | Sistema de accesibilidad (focus trap, modales, ARIA) |
+| `Scripts_UI.html` | Helpers de UI (toasts, empty states, paginador) |
+| `Scripts_Utils.html` | Utilidades (nombres, fechas, config, labels) |
+| `Scripts_CatalogCache.html` | Cache de catálogos con TTL |
+
+### Reglas de trabajo con el Design System
+
+1. **Nuevos componentes siempre usan el Design System.** No crear clases ad-hoc; reutilizar las existentes o extenderlas.
+2. **Documentar extensiones.** Si agregas una variante nueva de un componente base (ej: `.badge--highlight`), documéntala en `design-system.md`.
+3. **No romper lo existente.** Las clases nuevas coexisten con las viejas. Refactorizar componentes legacy de forma incremental.
+4. **Deprecación explícita.** Marcar clases viejas con `/* @deprecated Use .nueva-clase instead */` antes de eliminarlas.
+5. **Testing cross-theme.** Verificar todo cambio visual en modo claro Y modo oscuro antes de hacer commit.

@@ -106,8 +106,11 @@
 
     if (text) text.textContent = message || getLoadingText_();
     overlay.setAttribute('aria-busy', 'true');
-    overlay.classList.remove('is-hidden');
     overlay.style.display = 'flex';
+
+    // Forzar reflow antes de quitar is-hidden para que funcione la transición
+    overlay.offsetHeight;
+    overlay.classList.remove('is-hidden');
     syncContentLoadingLayerState_(overlay);
   }
 
@@ -115,12 +118,20 @@
     const overlay = document.getElementById('content-loading');
     if (!overlay) return;
     overlay.setAttribute('aria-busy', 'false');
-    overlay.classList.remove('content-loading--modal');
-    overlay.classList.add('content-loading--content');
+
+    // Agregar is-hidden (activa transición de opacity)
     overlay.classList.add('is-hidden');
-    overlay.style.display = 'none';
-    mountContentLoadingForContext_(overlay, false);
-    syncContentLoadingLayerState_(overlay);
+
+    // Después de la transición, resetear display y contexto
+    setTimeout(() => {
+      if (overlay.classList.contains('is-hidden')) {
+        overlay.style.display = 'none';
+        overlay.classList.remove('content-loading--modal');
+        overlay.classList.add('content-loading--content');
+        mountContentLoadingForContext_(overlay, false);
+        syncContentLoadingLayerState_(overlay);
+      }
+    }, 250); // Sincronizado con --transition-base (220ms) + margen
   }
 
   /**
@@ -137,8 +148,11 @@
 
     if (text) text.textContent = message || getLoadingText_();
     overlay.setAttribute('aria-busy', 'true');
-    overlay.classList.remove('is-hidden');
     overlay.style.display = 'flex';
+
+    // Forzar reflow antes de quitar is-hidden para que funcione la transición
+    overlay.offsetHeight;
+    overlay.classList.remove('is-hidden');
     syncContentLoadingLayerState_(overlay);
   }
 

@@ -155,13 +155,20 @@
       window.A11Y.focusedBeforeModal = document.activeElement;
     }
 
-    // Mostrar modal
-    modal.classList.remove('is-hidden', 'hidden');
+    // Fase 1: Mostrar con estado is-opening (opacity 0, transform inicial)
+    modal.classList.remove('is-hidden', 'hidden', 'is-closing');
+    modal.classList.add('is-opening');
     modal.setAttribute('aria-hidden', 'false');
     modal.setAttribute('aria-modal', 'true');
 
     // Bloquear scroll del body
     document.body.style.overflow = 'hidden';
+
+    // Fase 2: Forzar reflow y cambiar a is-open (inicia transición)
+    requestAnimationFrame(() => {
+      modal.classList.remove('is-opening');
+      modal.classList.add('is-open');
+    });
 
     // Activar focus trap
     let cleanupTrap = null;
@@ -222,12 +229,13 @@
 
     const modalData = window.A11Y.activeModals[index];
 
-    // Ocultar modal
-    modal.classList.add('is-hidden');
+    // Fase 1: Iniciar cierre con estado is-closing
+    modal.classList.remove('is-open', 'is-opening');
+    modal.classList.add('is-closing');
     modal.setAttribute('aria-hidden', 'true');
     modal.removeAttribute('aria-modal');
 
-    // Cleanup trap
+    // Cleanup trap inmediato
     if (modalData.cleanupTrap) {
       modalData.cleanupTrap();
     }
@@ -245,21 +253,44 @@
     // Remover del stack
     window.A11Y.activeModals.splice(index, 1);
 
-    // Si no quedan modales activos
-    if (window.A11Y.activeModals.length === 0) {
-      // Restaurar scroll del body
-      document.body.style.overflow = '';
+    // Fase 2: Esperar fin de transición antes de ocultar completamente
+    function handleTransitionEnd(e) {
+      // Solo procesar eventos del modal raíz (evitar bubbling de hijos)
+      if (e.target !== modal) return;
 
-      // Restaurar foco
-      if (modalData.restoreFocus && window.A11Y.focusedBeforeModal) {
-        setTimeout(() => {
-          if (window.A11Y.focusedBeforeModal && window.A11Y.focusedBeforeModal.focus) {
-            window.A11Y.focusedBeforeModal.focus();
-          }
-          window.A11Y.focusedBeforeModal = null;
-        }, 50);
+      modal.removeEventListener('transitionend', handleTransitionEnd);
+      modal.classList.remove('is-closing');
+      modal.classList.add('is-hidden');
+
+      // Si no quedan modales activos
+      if (window.A11Y.activeModals.length === 0) {
+        // Restaurar scroll del body
+        document.body.style.overflow = '';
+
+        // Restaurar foco
+        if (modalData.restoreFocus && window.A11Y.focusedBeforeModal) {
+          setTimeout(() => {
+            if (window.A11Y.focusedBeforeModal && window.A11Y.focusedBeforeModal.focus) {
+              window.A11Y.focusedBeforeModal.focus();
+            }
+            window.A11Y.focusedBeforeModal = null;
+          }, 50);
+        }
       }
     }
+
+    modal.addEventListener('transitionend', handleTransitionEnd);
+
+    // Fallback: si no hay transición (prefers-reduced-motion), forzar cierre
+    setTimeout(() => {
+      if (modal.classList.contains('is-closing')) {
+        modal.classList.remove('is-closing');
+        modal.classList.add('is-hidden');
+        if (window.A11Y.activeModals.length === 0) {
+          document.body.style.overflow = '';
+        }
+      }
+    }, 250);
 
     // Log para debug
     if (window.APP && window.APP.config && window.APP.config.debug) {

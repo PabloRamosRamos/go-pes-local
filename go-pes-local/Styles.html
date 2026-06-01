@@ -7490,4 +7490,144 @@ html[data-theme="dark"] .ficha-gestion-add-btn:hover{background:var(--surface-al
 html[data-theme="dark"] .ficha-gestion-form{background:var(--surface-alt,#182635);border-color:var(--border,#294356)}
 html[data-theme="dark"] .ficha-gestion-form input,html[data-theme="dark"] .ficha-gestion-form select,html[data-theme="dark"] .ficha-gestion-form textarea{background:var(--surface,#14202d);border-color:var(--border,#294356);color:var(--text,#cdd9e5)}
 
+/* ========================================
+   SISTEMA DE TRANSICIONES
+   Gramática de movimiento: modales, loading, vistas
+   ======================================== */
+
+/* Duración y easing */
+:root {
+  --transition-fast: 160ms;
+  --transition-base: 220ms;
+  --transition-slow: 320ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Respetar preferencias de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ========================================
+   MODALES: estados y transiciones
+   ======================================== */
+
+/* Estado base: oculto completamente */
+.admin-reset-modal.is-hidden,
+.user-modal.is-hidden,
+.avance-modal.is-hidden,
+.socios-modal.is-hidden,
+.organizaciones-modal.is-hidden {
+  display: none;
+}
+
+/* Estado: abriendo */
+.admin-reset-modal.is-opening,
+.user-modal.is-opening,
+.avance-modal.is-opening,
+.socios-modal.is-opening,
+.organizaciones-modal.is-opening {
+  display: flex;
+}
+
+.admin-reset-modal.is-opening .admin-reset-modal__backdrop,
+.user-modal.is-opening .user-modal__backdrop,
+.avance-modal.is-opening .avance-modal__backdrop,
+.socios-modal.is-opening .socios-modal__backdrop,
+.organizaciones-modal.is-opening .organizaciones-modal__backdrop {
+  opacity: 0;
+}
+
+.admin-reset-modal.is-opening .admin-reset-modal__dialog,
+.user-modal.is-opening .user-modal__dialog,
+.avance-modal.is-opening .avance-modal__dialog,
+.socios-modal.is-opening .socios-modal__dialog,
+.organizaciones-modal.is-opening .organizaciones-modal__dialog {
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+}
+
+/* Estado: abierto (animación completa) */
+.admin-reset-modal.is-open,
+.user-modal.is-open,
+.avance-modal.is-open,
+.socios-modal.is-open,
+.organizaciones-modal.is-open {
+  display: flex;
+}
+
+.admin-reset-modal.is-open .admin-reset-modal__backdrop,
+.user-modal.is-open .user-modal__backdrop,
+.avance-modal.is-open .avance-modal__backdrop,
+.socios-modal.is-open .socios-modal__backdrop,
+.organizaciones-modal.is-open .organizaciones-modal__backdrop {
+  opacity: 1;
+  transition: opacity var(--transition-base) var(--ease-out);
+}
+
+.admin-reset-modal.is-open .admin-reset-modal__dialog,
+.user-modal.is-open .user-modal__dialog,
+.avance-modal.is-open .avance-modal__dialog,
+.socios-modal.is-open .socios-modal__dialog,
+.organizaciones-modal.is-open .organizaciones-modal__dialog {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity var(--transition-base) var(--ease-out),
+              transform var(--transition-base) var(--ease-out);
+}
+
+/* Estado: cerrando */
+.admin-reset-modal.is-closing,
+.user-modal.is-closing,
+.avance-modal.is-closing,
+.socios-modal.is-closing,
+.organizaciones-modal.is-closing {
+  display: flex;
+}
+
+.admin-reset-modal.is-closing .admin-reset-modal__backdrop,
+.user-modal.is-closing .user-modal__backdrop,
+.avance-modal.is-closing .avance-modal__backdrop,
+.socios-modal.is-closing .socios-modal__backdrop,
+.organizaciones-modal.is-closing .organizaciones-modal__backdrop {
+  opacity: 0;
+  transition: opacity var(--transition-fast) var(--ease-in-out);
+}
+
+.admin-reset-modal.is-closing .admin-reset-modal__dialog,
+.user-modal.is-closing .user-modal__dialog,
+.avance-modal.is-closing .avance-modal__dialog,
+.socios-modal.is-closing .socios-modal__dialog,
+.organizaciones-modal.is-closing .organizaciones-modal__dialog {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+  transition: opacity var(--transition-fast) var(--ease-in-out),
+              transform var(--transition-fast) var(--ease-in-out);
+}
+
+/* ========================================
+   LOADING OVERLAY: transiciones suaves
+   ======================================== */
+
+.content-loading {
+  transition: opacity var(--transition-base) var(--ease-out);
+}
+
+.content-loading.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Evitar flash al mostrar loading */
+.content-loading:not(.is-hidden) {
+  opacity: 1;
+}
+
 </style>

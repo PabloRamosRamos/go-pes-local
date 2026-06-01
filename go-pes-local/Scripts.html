@@ -1,0 +1,2425 @@
+<script>
+(() => {
+  const root = document.getElementById('app');
+  const BOOTSTRAP = root ? JSON.parse(root.dataset.bootstrap || '{}') : {};
+  const TEMPLATE_SYSTEM_CONFIG =
+    (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.systemConfig) || {};
+  const THEME_STORAGE_KEY = 'goPesTheme';
+  const APP_ZOOM_STORAGE_KEY = 'goPesAppZoom';
+  const APP_ZOOM_OPTIONS = ['1', '0.9', '0.8', '0.7', '0.6'];
+  const APP_DEFAULT_MODULE_PREF_KEY = 'goDefaultModule';
+
+  function normalizeModuleLookupKeyClient_(value) {
+    return String(value == null ? '' : value)
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  }
+
+  function getClientModuleAliasMap_() {
+    const aliasMap = Object.assign({}, (BOOTSTRAP && BOOTSTRAP.moduleAliasMap) || {});
+    (BOOTSTRAP.moduleDefinitions || []).forEach(module => {
+      const keyLookup = normalizeModuleLookupKeyClient_(module && module.key);
+      const viewLookup = normalizeModuleLookupKeyClient_((module && (module.view || module.key)) || '');
+      if (keyLookup) aliasMap[keyLookup] = module.key;
+      if (viewLookup) aliasMap[viewLookup] = module.key;
+    });
+    return aliasMap;
+  }
+
+  const CLIENT_MODULE_ALIAS_MAP = getClientModuleAliasMap_();
+
+  function normalizeModuleKey_(value) {
+    const lookup = normalizeModuleLookupKeyClient_(value);
+    if (!lookup) return '';
+    return CLIENT_MODULE_ALIAS_MAP[lookup] || '';
+  }
+
+  const GLOBAL_MODAL_SELECTOR = [
+    '.admin-reset-modal:not(.is-hidden)',
+    '.user-modal:not(.is-hidden)',
+    '.avance-modal:not(.is-hidden)',
+    '.socios-modal:not(.is-hidden)',
+    '.organizaciones-modal:not(.is-hidden)'
+  ].join(', ');
+
+  function hasOpenGlobalModal_() {
+    return !!document.querySelector(GLOBAL_MODAL_SELECTOR);
+  }
+
+  function syncGlobalUiLayerState_() {
+    const splash = document.getElementById('app-loading');
+    const contentLoading = document.getElementById('content-loading');
+    const hasModal = hasOpenGlobalModal_();
+    const hasModalLoading = !!(
+      contentLoading &&
+      !contentLoading.classList.contains('is-hidden') &&
+      contentLoading.classList.contains('content-loading--modal')
+    );
+    const hasSplash = !!(splash && !splash.classList.contains('is-hidden') && splash.style.display !== 'none');
+    const shouldLock = hasModal || hasModalLoading || hasSplash;
+
+    document.body.classList.toggle('app-has-modal', shouldLock);
+    document.documentElement.classList.toggle('app-has-modal', shouldLock);
+  }
+
+  function setModalVisibility_(modalOrId, visible) {
+    const modal = typeof modalOrId === 'string'
+      ? document.getElementById(modalOrId)
+      : modalOrId;
+    if (!modal) return null;
+
+    modal.classList.toggle('is-hidden', !visible);
+    modal.setAttribute('aria-hidden', visible ? 'false' : 'true');
+    syncGlobalUiLayerState_();
+    return modal;
+  }
+
+  const APP = {
+    state: {
+      bootstrap: BOOTSTRAP,
+      catalogs: {},
+      user: BOOTSTRAP.user || {},
+      theme: document.documentElement.dataset.theme || 'light',
+      zoom: '1',
+      permissions: BOOTSTRAP.permissions || {},
+      systemConfig: BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {},
+      moduleDefinitions: BOOTSTRAP.moduleDefinitions || [],
+      activeView: normalizeModuleKey_(BOOTSTRAP.initialView || 'inicio') || 'inicio',
+      inicioPanelData: null,
+      inicioPanelFetchedAt: 0,
+      dashboardData: null,
+      dashboardDataFetchedAt: 0,
+      calendarioData: null,
+      calendarioFetchedAt: 0,
+      nuevoIngresoPrefill: null,
+      currentFicha: null,
+      buscarModuleRows: [],
+      buscarModuleFetchedAt: 0,
+      currentAvance: null,
+      avanceCatalogos: null,
+      avanceGrupos: [],
+      avanceGruposFetchedAt: 0,
+      avanceOrganizaciones: [],
+      avanceOrganizacionesFetchedAt: 0,
+      organizacionesModulo: [],
+      organizacionesModuloFetchedAt: 0,
+      currentOrganizacionDetalle: null,
+      currentBeneficiosDetalle: null,
+      currentBeneficioCodigo: '',
+      currentBeneficioOrganizacionId: '',
+      historialRequestSeq: 0,
+      sociosOrganizaciones: [],
+      sociosOrganizacionesFetchedAt: 0,
+      sociosModuleRows: [],
+      sociosModuleFetchedAt: 0,
+      sociosModuleQuery: '',
+      currentSocioDetalle: null,
+      pendingSociosRows: [],
+      ingresoMatches: [],
+      configSectionOrder: [],
+      activeConfigSection: '',
+      configLoadedAt: 0,
+      buscarPage: 0,
+      histPage: 0,
+      renderedViews: {},
+      catalogStatus: {
+        app: false,
+        ingreso: false,
+        organizacion: false
+      }
+    }
+  };
+
+  const USER_ROLE_OPTIONS = [
+    { value: 'visor', label: 'Visor' },
+    { value: 'operador', label: 'Operador' },
+    { value: 'coordinador', label: 'Coordinador' }
+  ];
+
+  const USER_ROLE_LABELS = {
+    visor: 'Visor',
+    operador: 'Operador',
+    coordinador: 'Coordinador'
+  };
+
+  const MODULE_DESCRIPTIONS = {
+    'inicio':        'Panel de inicio con estadísticas y accesos rápidos al programa.',
+    'nuevo-ingreso': 'Registro de nuevas solicitudes de vecinos al programa.',
+    'buscar':        'Búsqueda y consulta de fichas de vecinos registrados.',
+    'avance':        'Seguimiento de hitos y progreso de casos activos.',
+    'organizacion':  'Gestión de organizaciones comunitarias y su estado.',
+    'socios':        'Administración de socios y miembros de organizaciones.',
+    'instrumento':   'Consulta y gestión de instrumentos y beneficios aplicados.',
+    'historial':     'Trazabilidad de acciones, accesos y procesamiento del sistema.'
+  };
+
+  const ORGANIZACION_SOCIO_CARGOS = [
+    'Presidente',
+    'Tesorero',
+    'Secretario',
+    'Director',
+    'Comisión electoral',
+    'Comisión de finanzas',
+    'Socio'
+  ];
+
+  const FORM_SCHEMAS = {
+    organizacion: [
+      { name: 'organizacion_id', label: 'Organización', type: 'select', optionsKey: 'organizacionesList', required: true, span: 2 },
+      { name: 'solicitud_id', label: 'ID de solicitud', type: 'hidden' },
+      { name: 'imagen_logo_base64', label: 'Imagen organización', type: 'image_upload_top' },
+      { name: 'nombre_organizacion', label: 'Nombre organización', type: 'text', required: true, span: 2 },
+      { name: 'uv', label: 'UV', type: 'select', optionsKey: 'uvList' },
+      { name: 'direccion_referencia', label: 'Dirección', type: 'text', span: 2 },
+      { name: 'fecha_inicio_acompanamiento', label: 'Fecha inicio acompañamiento', type: 'date' },
+      { name: 'cantidad_socios_declarada', label: 'Cantidad de socios declarada', type: 'number' },
+      { name: 'estado_constitucion', label: 'Estado de constitución', type: 'select', optionsKey: 'estado_constitucion' },
+      { name: 'fecha_asamblea_constitucion', label: 'Fecha asamblea', type: 'date' },
+      { name: 'fecha_ratificacion', label: 'Fecha ratificación', type: 'date' },
+      { name: 'vigencia_directiva_hasta', label: 'Vigencia directiva hasta', type: 'date' },
+      { name: 'personalidad_juridica_flag', label: 'Personalidad jurídica', type: 'select', options: ['Sí', 'No'] },
+      { name: 'directiva_vigente_flag', label: 'Directiva vigente', type: 'select', options: ['Sí', 'No'] },
+      { name: 'organizacion_constituida_flag', label: 'Organización constituida', type: 'select', options: ['Sí', 'No'] },
+      { name: 'observacion_resumen', label: 'Observación resumen', type: 'textarea', span: 2 }
+    ],
+    instrumento: [
+      { name: 'organizacion_id', label: 'ID de organización', type: 'text', required: true },
+      { name: 'org_instrumento_id', label: 'ID de beneficio', type: 'text' },
+      { name: 'instrumento_codigo_catalogo', label: 'Beneficio', type: 'select', optionsKey: 'instrumentosCodigo', required: true },
+      { name: 'instrumento_nombre_otro', label: 'Nombre libre si es OTRO', type: 'text' },
+      { name: 'instrumento_tipo', label: 'Tipo de beneficio', type: 'select', optionsKey: 'instrumentosTipo', required: true },
+      { name: 'origen_instrumento', label: 'Origen', type: 'select', optionsKey: 'instrumentosOrigen', required: true },
+      { name: 'anio_convocatoria', label: 'Año convocatoria', type: 'number', required: true },
+      { name: 'nombre_convocatoria', label: 'Nombre convocatoria', type: 'text' },
+      { name: 'numero_llamado', label: 'Número llamado', type: 'text' },
+      { name: 'fecha_inicio_gestion', label: 'Fecha inicio gestión', type: 'date' },
+      { name: 'fecha_apertura', label: 'Fecha apertura', type: 'date' },
+      { name: 'fecha_cierre', label: 'Fecha cierre', type: 'date' },
+      { name: 'fecha_habilitacion', label: 'Fecha habilitación', type: 'date' },
+      { name: 'fecha_postulacion', label: 'Fecha postulación', type: 'date' },
+      { name: 'fecha_resultado', label: 'Fecha resultado', type: 'date' },
+      { name: 'fecha_cierre_instrumento', label: 'Fecha cierre beneficio', type: 'date' },
+      { name: 'estado_instrumento', label: 'Estado beneficio', type: 'select', optionsKey: 'estado_instrumento' },
+      { name: 'subestado_instrumento', label: 'Subestado', type: 'text' },
+      { name: 'avance_instrumento_pct', label: 'Avance %', type: 'number' },
+      { name: 'proximo_hito_instrumento', label: 'Próximo hito', type: 'textarea', span: 2 },
+      { name: 'resultado_instrumento', label: 'Resultado', type: 'select', optionsKey: 'resultado_instrumento' },
+      { name: 'monto_solicitado', label: 'Monto solicitado', type: 'number' },
+      { name: 'monto_adjudicado', label: 'Monto adjudicado', type: 'number' },
+      { name: 'monto_ejecutado', label: 'Monto ejecutado', type: 'number' },
+      { name: 'responsable_instrumento', label: 'Responsable', type: 'select', optionsKey: 'responsables' },
+      { name: 'contraparte', label: 'Contraparte', type: 'text' },
+      { name: 'observacion_instrumento', label: 'Observación', type: 'textarea', span: 2 },
+      { name: 'documento_respaldo_url', label: 'URL respaldo', type: 'text', span: 2 }
+    ],
+  };
+
+  const CONFIG_SECTIONS = [
+    { key: 'general', label: 'General', icon: 'tune' },
+    { key: 'branding', label: 'Branding', icon: 'palette' },
+    { key: 'accessModules', label: 'Acceso y módulos', icon: 'account_tree' },
+    { key: 'socios', label: 'Socios', icon: 'badge' },
+    { key: 'beneficios', label: 'Beneficios', icon: 'handshake' },
+    { key: 'alertsInicio', label: 'Alertas e Inicio', icon: 'notifications_active' },
+    { key: 'integrations', label: 'Integraciones', icon: 'hub' },
+    { key: 'technical', label: 'Administración técnica', icon: 'admin_panel_settings' },
+    { key: 'migracion', label: 'Migración de datos', icon: 'sync_alt' }
+  ];
+
+  document.addEventListener('DOMContentLoaded', init);
+
+  function init() {
+    hydrateTheme_();
+    hydrateAppZoom_();
+    initTabDetection_();
+    if (!APP.state.user || !APP.state.user.canAccess) {
+      showAccessDenied_();
+      hideAppLoading();
+      hideContentLoading();
+      return;
+    }
+
+    bindGlobalNav();
+    initSidebarCollapse_();
+    syncGlobalUiLayerState_();
+    hydrateStaticUser();
+    applySystemConfigUi_();
+    applyModuleDefinitionsUi_();
+    bindUserMenu_();
+    hydrateAppVersion_();
+    hydrateLogo();
+    renderQuickActions();
+    renderHomeTiles();
+    toggleTopQuickActions_(APP.state.activeView);
+
+    showAppLoading(getLoadingText_());
+
+    // Pre-fetch both dashboard KPIs and inicio panel data in parallel while splash shows.
+    // Route only happens after both resolve so the inicio view renders immediately with full data.
+    var dashPrefetch = api('getDashboardKpis', {}).then(function(data) {
+      APP.state.dashboardData = data || {};
+      APP.state.dashboardDataFetchedAt = Date.now();
+    }).catch(function() {
+      APP.state.dashboardData = {};
+      APP.state.dashboardDataFetchedAt = Date.now();
+    });
+
+    var panelPrefetch = api('getInicioPanelData').then(function(data) {
+      APP.state.inicioPanelData = data || {};
+      APP.state.inicioPanelFetchedAt = Date.now();
+    }).catch(function() {
+      APP.state.inicioPanelData = {};
+      APP.state.inicioPanelFetchedAt = Date.now();
+    });
+
+    var bootstrapWork = Promise.resolve().then(() => {
+      APP.state.user = BOOTSTRAP.user || APP.state.user;
+      APP.state.permissions = BOOTSTRAP.permissions || APP.state.permissions;
+      mergeCatalogs_(BOOTSTRAP.catalogs || {});
+      hydrateStaticUser();
+      applySystemConfigUi_();
+      applyModuleDefinitionsUi_();
+      applyPermissions();
+      setStatus('Listo.', null);
+    }).catch(err => {
+      console.error('Init fatal error:', err);
+      setStatus('Ocurrió un error al iniciar la aplicación.', false);
+    });
+
+    Promise.all([bootstrapWork, dashPrefetch, panelPrefetch]).then(() => {
+      route(APP.state.activeView, BOOTSTRAP.query || {});
+      if ((BOOTSTRAP.query || {}).solicitud_id || (BOOTSTRAP.query || {}).organizacion_id) {
+        loadFicha(BOOTSTRAP.query);
+      }
+    }).finally(() => {
+      setTimeout(() => {
+        hideAppLoading();
+        hideContentLoading();
+      }, 120);
+    });
+  }
+
+  var _tabId = Math.random().toString(36).slice(2);
+  var _TAB_KEY = 'go-pes-v2-active-tab';
+
+  function initTabDetection_() {
+    try {
+      var existing = JSON.parse(localStorage.getItem(_TAB_KEY) || 'null');
+      var now = Date.now();
+      if (existing && existing.tabId !== _tabId && (now - (existing.ts || 0)) < 25000) {
+        var banner = document.getElementById('multi-tab-banner');
+        if (banner) banner.classList.remove('is-hidden');
+      }
+      var claimTab_ = function() {
+        try { localStorage.setItem(_TAB_KEY, JSON.stringify({ tabId: _tabId, ts: Date.now() })); } catch (_) {}
+      };
+      claimTab_();
+      var heartbeat = setInterval(claimTab_, 10000);
+      window.addEventListener('beforeunload', function() {
+        clearInterval(heartbeat);
+        try {
+          var cur = JSON.parse(localStorage.getItem(_TAB_KEY) || 'null');
+          if (cur && cur.tabId === _tabId) localStorage.removeItem(_TAB_KEY);
+        } catch (_) {}
+      });
+      window.addEventListener('storage', function(ev) {
+        if (ev.key !== _TAB_KEY || !ev.newValue) return;
+        try {
+          var data = JSON.parse(ev.newValue);
+          if (data && data.tabId !== _tabId) {
+            var banner = document.getElementById('multi-tab-banner');
+            if (banner) banner.classList.remove('is-hidden');
+          }
+        } catch (_) {}
+      });
+    } catch (_) {}
+  }
+
+  function showAccessDenied_() {
+    const app = document.getElementById('app');
+    const detectedEmail = APP.state.user && (APP.state.user.detected_email || APP.state.user.email)
+      ? (APP.state.user.detected_email || APP.state.user.email)
+      : '';
+    const reason = APP.state.user && APP.state.user.reason
+      ? APP.state.user.reason
+      : 'Usuario no registrado o inactivo.';
+    if (!app) return;
+    app.innerHTML = `
+      <section class="access-denied">
+        <div class="access-denied__card">
+          <span class="material-symbols-outlined">lock</span>
+          <p class="eyebrow">Acceso denegado</p>
+          <h1>No tienes acceso a esta aplicación</h1>
+          <p>Tu usuario no está registrado o se encuentra inactivo. Contacta al administrador para solicitar acceso.</p>
+          <p class="muted"><strong>Correo detectado:</strong> ${escapeHtml(detectedEmail || 'no disponible')}</p>
+          <p class="muted"><strong>Motivo:</strong> ${escapeHtml(reason)}</p>
+        </div>
+      </section>
+    `;
+  }
+
+  function initSidebarCollapse_() {
+    const layout = document.querySelector('.layout');
+    const toggle = document.getElementById('sidebar-toggle');
+    const icon = document.getElementById('sidebar-toggle-icon');
+    const label = document.getElementById('sidebar-toggle-label');
+    if (!layout || !toggle) return;
+
+    const applyState = collapsed => {
+      layout.classList.toggle('is-sidebar-collapsed', collapsed);
+      toggle.setAttribute('aria-expanded', String(!collapsed));
+      toggle.setAttribute('aria-label', collapsed ? 'Expandir menú' : 'Contraer menú');
+      toggle.title = collapsed ? 'Expandir menú' : 'Contraer menú';
+      if (icon) icon.textContent = collapsed ? 'keyboard_double_arrow_right' : 'keyboard_double_arrow_left';
+      if (label) label.textContent = 'Módulos';
+    };
+
+    let stored = false;
+    try {
+      stored = localStorage.getItem('goPesSidebarCollapsed') === 'true';
+    } catch (err) {
+      stored = false;
+    }
+    applyState(stored);
+
+    toggle.addEventListener('click', () => {
+      const collapsed = !layout.classList.contains('is-sidebar-collapsed');
+      try {
+        localStorage.setItem('goPesSidebarCollapsed', String(collapsed));
+      } catch (err) {
+        console.warn('No se pudo persistir el estado del menú lateral.', err);
+      }
+      applyState(collapsed);
+    });
+  }
+
+  function readStoredTheme_() {
+    try {
+      const stored = localStorage.getItem(THEME_STORAGE_KEY);
+      return stored === 'dark' || stored === 'light' ? stored : '';
+    } catch (err) {
+      return '';
+    }
+  }
+
+  function isDarkTheme_() {
+    return String(APP.state.theme || document.documentElement.dataset.theme || 'light') === 'dark';
+  }
+
+  function applyTheme_(theme, persist) {
+    const nextTheme = theme === 'dark' ? 'dark' : 'light';
+    APP.state.theme = nextTheme;
+    document.documentElement.dataset.theme = nextTheme;
+    if (document.body) {
+      document.body.dataset.theme = nextTheme;
+    }
+    if (persist) {
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
+      } catch (err) {
+        console.warn('No se pudo persistir el tema seleccionado.', err);
+      }
+    }
+    updateThemeToggleUi_();
+    applyBrandingRuntimeTheme_();
+    hydrateLogo();
+  }
+
+  function hydrateTheme_() {
+    const bootTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    applyTheme_(readStoredTheme_() || bootTheme, false);
+  }
+
+  function normalizeAppZoom_(zoom) {
+    const normalized = String(zoom == null ? '' : zoom).trim();
+    return APP_ZOOM_OPTIONS.includes(normalized) ? normalized : '1';
+  }
+
+  function readStoredAppZoom_() {
+    try {
+      const raw = localStorage.getItem(APP_ZOOM_STORAGE_KEY);
+      return raw !== null ? normalizeAppZoom_(raw) : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function updateZoomMenuUi_() {
+    const activeZoom = normalizeAppZoom_(APP.state.zoom);
+    document.querySelectorAll('.js-app-zoom-option').forEach(button => {
+      const isActive = normalizeAppZoom_(button.dataset.zoom) === activeZoom;
+      button.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      button.classList.toggle('is-active', isActive);
+    });
+  }
+
+  function applyAppZoom_(zoom, persist) {
+    const nextZoom = normalizeAppZoom_(zoom);
+    APP.state.zoom = nextZoom;
+    document.documentElement.style.setProperty('--app-zoom', nextZoom);
+    document.documentElement.style.zoom = nextZoom;
+    document.documentElement.dataset.appZoom = nextZoom;
+    if (persist) {
+      try {
+        localStorage.setItem(APP_ZOOM_STORAGE_KEY, nextZoom);
+      } catch (err) {
+        console.warn('No se pudo persistir el zoom seleccionado.', err);
+      }
+    }
+    updateZoomMenuUi_();
+  }
+
+  function hydrateAppZoom_() {
+    const stored = readStoredAppZoom_(); // null = nunca guardado
+    applyAppZoom_(stored !== null ? stored : '0.9', false);
+  }
+
+  function updateThemeToggleUi_() {
+    const label = document.getElementById('theme-toggle-label');
+    const icon = document.getElementById('theme-toggle-icon');
+    const dark = isDarkTheme_();
+    if (label) label.textContent = dark ? 'Ver modo claro' : 'Ver en modo oscuro';
+    if (icon) icon.textContent = dark ? 'light_mode' : 'dark_mode';
+  }
+
+  function setUserZoomMenuOpen_(open) {
+    const toggle = document.getElementById('zoom-menu-toggle');
+    const submenu = document.getElementById('zoom-menu-submenu');
+    if (!toggle || !submenu) return;
+    toggle.setAttribute('aria-expanded', String(!!open));
+    submenu.classList.toggle('is-hidden', !open);
+  }
+
+  // ── Módulo de inicio por defecto ──────────────────────────────────────────
+
+  function updateDefaultModuleUi_(key) {
+    document.querySelectorAll('.js-default-module-option').forEach(btn => {
+      const isActive = btn.dataset.module === key;
+      btn.setAttribute('aria-checked', isActive ? 'true' : 'false');
+      btn.classList.toggle('is-active', isActive);
+    });
+  }
+
+  function populateDefaultModuleSubmenu_() {
+    const submenu = document.getElementById('default-module-submenu');
+    if (!submenu || submenu.dataset.populated === '1') return;
+    const perms = (BOOTSTRAP.permissions && BOOTSTRAP.permissions.modules) || {};
+    const defs = (BOOTSTRAP.moduleDefinitions || []).filter(def =>
+      def.navVisible !== false && def.enabled !== false && !def.superOnly && perms[def.view || def.key]
+    );
+    const currentDefault = ((BOOTSTRAP.userPreferences || {})[APP_DEFAULT_MODULE_PREF_KEY]) || '';
+    submenu.innerHTML = defs.map(def => {
+      const key = def.view || def.key;
+      const isActive = key === currentDefault;
+      return `<button type="button" class="user-menu-dropdown__item user-menu-dropdown__item--submenu js-default-module-option" data-module="${escapeHtml(key)}" role="menuitemradio" aria-checked="${isActive ? 'true' : 'false'}">
+        <span class="material-symbols-outlined">${escapeHtml(def.icon || 'circle')}</span>
+        <span class="user-menu-dropdown__label">${escapeHtml(def.label)}</span>
+        <span class="material-symbols-outlined user-menu-dropdown__check" aria-hidden="true">check</span>
+      </button>`;
+    }).join('');
+    submenu.dataset.populated = '1';
+    submenu.querySelectorAll('.js-default-module-option').forEach(btn => {
+      btn.addEventListener('click', ev => {
+        ev.preventDefault();
+        const key = btn.dataset.module;
+        updateDefaultModuleUi_(key);
+        if (!BOOTSTRAP.userPreferences) BOOTSTRAP.userPreferences = {};
+        BOOTSTRAP.userPreferences[APP_DEFAULT_MODULE_PREF_KEY] = key;
+        setUserDefaultModuleMenuOpen_(false);
+        setUserMenuOpen_(false);
+        api('setUserPreference', { key: APP_DEFAULT_MODULE_PREF_KEY, value: key })
+          .then(() => setStatus('Vista inicial guardada.', true))
+          .catch(() => setStatus('No se pudo guardar la preferencia.', false));
+      });
+    });
+  }
+
+  function setUserDefaultModuleMenuOpen_(open) {
+    const toggle = document.getElementById('default-module-menu-toggle');
+    const submenu = document.getElementById('default-module-submenu');
+    if (!toggle || !submenu) return;
+    if (open) populateDefaultModuleSubmenu_();
+    toggle.setAttribute('aria-expanded', String(!!open));
+    submenu.classList.toggle('is-hidden', !open);
+  }
+
+  // ── Información del sistema ───────────────────────────────────────────────
+
+  function buildDevStatsBlock_(d) {
+    if (!d) return '';
+    const fmtN   = n => Number(n || 0).toLocaleString('es-CL');
+    const fmtCLP = n => 'CLP $ ' + Number(n || 0).toLocaleString('es-CL');
+    const stat   = (val, lbl) =>
+      `<div class="sysinfo-dev-stat"><span class="sysinfo-dev-val">${val}</span><span class="sysinfo-dev-lbl">${lbl}</span></div>`;
+    return `
+    <div class="sysinfo-dev-panel">
+      <p class="sysinfo-dev-eyebrow">
+        <span class="material-symbols-outlined" style="font-size:.82rem;vertical-align:-1px">terminal</span>
+        Estadísticas de programación
+      </p>
+      <div class="sysinfo-dev-grid">
+        ${stat('~' + fmtN(d.linesOfCode),   'líneas de código')}
+        ${stat('~' + fmtN(d.devHours) + ' h', 'de desarrollo')}
+        ${stat(fmtN(d.sourceFiles),          'archivos fuente')}
+        ${stat(fmtN(d.definedSheets),        'tablas de datos')}
+        ${stat('~' + fmtN(d.apiEndpoints),   'endpoints API')}
+        ${stat(fmtN(d.testCases),            'tests automatizados')}
+        ${stat(fmtN(d.uiModules),            'módulos UI')}
+        ${stat(fmtN(d.roles),                'roles y permisos')}
+      </div>
+      <div class="sysinfo-dev-value-box">
+        <span class="sysinfo-dev-value-label">Valor estimado de mercado</span>
+        <div class="sysinfo-dev-value-main">${fmtCLP(d.marketValueCLP)} <span class="sysinfo-dev-value-uf">· ≈ ${fmtN(d.marketValueUF)} UF</span></div>
+        <div class="sysinfo-dev-value-ref">Referencia: freelancer senior Chile, ${fmtCLP(d.hourlyRateCLP)}/hr · Internacional: ~USD ${fmtN(d.marketValueUSD)}</div>
+      </div>
+      <div class="sysinfo-dev-note">
+        <span class="material-symbols-outlined" style="font-size:.78rem;vertical-align:-1px;flex-shrink:0">person</span>
+        Desarrollado íntegramente por 1 persona · Solo visible para superuser
+      </div>
+    </div>`;
+  }
+
+  function openSystemInfoModal_() {
+    const modal = document.getElementById('system-info-modal');
+    if (!modal) return;
+    setModalVisibility_(modal, true);
+    const content = document.getElementById('system-info-content');
+    if (!content) return;
+    const buildInfo = BOOTSTRAP.buildInfo || {};
+    const env = String(BOOTSTRAP.environment || '').trim().toUpperCase() || '—';
+    const row = (label, value, cls) =>
+      `<div class="system-info-row"><span class="system-info-label">${escapeHtml(label)}</span><span class="system-info-value ${cls || ''}">${value}</span></div>`;
+    const staticHtml =
+      row('Versión', escapeHtml(buildInfo.baseVersion ? 'v' + buildInfo.baseVersion : '—')) +
+      row('Build', escapeHtml(buildInfo.buildHash || '—')) +
+      row('Actualizado', escapeHtml(buildInfo.buildDate || '—')) +
+      row('Entorno', escapeHtml(env));
+    content.innerHTML = staticHtml + `<p class="muted" style="margin-top:8px;font-size:0.8rem">Consultando servidor…</p>`;
+    api('getSystemInfo').then(info => {
+      if (!info) { content.innerHTML = staticHtml; return; }
+      const sheetsHtml = (info.sheets || []).map(s =>
+        row(s.name, s.ok ? '✓ OK' : '✗ Falta', s.ok ? 'system-info-ok' : 'system-info-fail')
+      ).join('');
+      content.innerHTML =
+        staticHtml +
+        (sheetsHtml ? `<p class="eyebrow" style="margin-top:16px;margin-bottom:8px">Hojas críticas</p>${sheetsHtml}` : '') +
+        buildDevStatsBlock_(info.devStats || null);
+    }).catch(err => {
+      content.innerHTML = staticHtml + `<p class="muted" style="margin-top:8px;font-size:0.8rem;color:#c0392b">Error al consultar el servidor.</p>`;
+      console.error('getSystemInfo error:', err);
+    });
+  }
+
+  function bindManualBtn_() {
+    const btn = document.getElementById('manual-open-btn');
+    if (btn) btn.addEventListener('click', ev => {
+      ev.preventDefault();
+      setUserMenuOpen_(false);
+      if (typeof window.openUserManual === 'function') window.openUserManual();
+    });
+  }
+
+  function bindSystemInfoModal_() {
+    const btn = document.getElementById('system-info-btn');
+    const closeBtn = document.getElementById('system-info-close-btn');
+    const backdrop = document.getElementById('system-info-modal-backdrop');
+    if (btn) btn.addEventListener('click', ev => { ev.preventDefault(); setUserMenuOpen_(false); openSystemInfoModal_(); });
+    if (closeBtn) closeBtn.addEventListener('click', () => setModalVisibility_(document.getElementById('system-info-modal'), false));
+    if (backdrop) backdrop.addEventListener('click', () => setModalVisibility_(document.getElementById('system-info-modal'), false));
+  }
+
+  function setUserMenuOpen_(open) {
+    const trigger = document.getElementById('user-menu-trigger');
+    const menu = document.getElementById('user-menu-dropdown');
+    const chevron = document.getElementById('user-menu-chevron');
+    if (!trigger || !menu) return;
+    trigger.setAttribute('aria-expanded', String(!!open));
+    menu.classList.toggle('is-hidden', !open);
+    if (chevron) chevron.textContent = open ? 'expand_less' : 'expand_more';
+    if (!open) {
+      setUserZoomMenuOpen_(false);
+      setUserDefaultModuleMenuOpen_(false);
+    }
+  }
+
+  function bindUserMenu_() {
+    const trigger = document.getElementById('user-menu-trigger');
+    const menu = document.getElementById('user-menu-dropdown');
+    const toggleBtn = document.getElementById('theme-toggle-btn');
+    const zoomToggle = document.getElementById('zoom-menu-toggle');
+    const zoomSubmenu = document.getElementById('zoom-menu-submenu');
+    const zoomOptions = Array.from(document.querySelectorAll('.js-app-zoom-option'));
+    if (!trigger || !menu || !toggleBtn || !zoomToggle || !zoomSubmenu || !zoomOptions.length || trigger.dataset.bound === '1') return;
+
+    trigger.dataset.bound = '1';
+    updateThemeToggleUi_();
+    updateZoomMenuUi_();
+    setUserMenuOpen_(false);
+
+    trigger.addEventListener('click', ev => {
+      ev.stopPropagation();
+      setUserMenuOpen_(trigger.getAttribute('aria-expanded') !== 'true');
+    });
+
+    toggleBtn.addEventListener('click', ev => {
+      ev.preventDefault();
+      applyTheme_(isDarkTheme_() ? 'light' : 'dark', true);
+      setUserMenuOpen_(false);
+    });
+
+    zoomToggle.addEventListener('click', ev => {
+      ev.preventDefault();
+      const nextOpen = zoomToggle.getAttribute('aria-expanded') !== 'true';
+      setUserZoomMenuOpen_(nextOpen);
+    });
+
+    zoomOptions.forEach(button => {
+      button.addEventListener('click', ev => {
+        ev.preventDefault();
+        applyAppZoom_(button.dataset.zoom, true);
+        setUserMenuOpen_(false);
+      });
+    });
+
+    const defaultModuleToggle = document.getElementById('default-module-menu-toggle');
+    if (defaultModuleToggle) {
+      defaultModuleToggle.addEventListener('click', ev => {
+        ev.preventDefault();
+        const nextOpen = defaultModuleToggle.getAttribute('aria-expanded') !== 'true';
+        setUserDefaultModuleMenuOpen_(nextOpen);
+        if (nextOpen) { setUserZoomMenuOpen_(false); }
+      });
+    }
+
+    bindSystemInfoModal_();
+    bindManualBtn_();
+
+    document.addEventListener('click', ev => {
+      if (!menu.contains(ev.target) && !trigger.contains(ev.target)) {
+        setUserMenuOpen_(false);
+      }
+    });
+
+    document.addEventListener('keydown', ev => {
+      if (ev.key === 'Escape') {
+        setUserMenuOpen_(false);
+      }
+    });
+  }
+
+  function hydrateAppVersion_() {
+    const el = document.getElementById('app-version');
+    if (!el) return;
+    if (!shouldShowVisibleVersionClient_()) {
+      el.textContent = '';
+      el.title = '';
+      el.classList.add('is-hidden');
+      return;
+    }
+    const buildInfo = BOOTSTRAP.buildInfo || {};
+    const path = String(window.location.pathname || '').toLowerCase();
+    const channel = path.endsWith('/dev')
+      ? 'DEV'
+      : path.endsWith('/exec')
+        ? 'EXEC'
+        : String(BOOTSTRAP.environment || '').trim().toUpperCase();
+    const env = String(BOOTSTRAP.environment || '').trim().toUpperCase();
+    const ver = (buildInfo.baseVersion || BOOTSTRAP.version) ? `v${buildInfo.baseVersion || BOOTSTRAP.version}` : '';
+    const label = [ver, env, buildInfo.buildHash ? `build ${buildInfo.buildHash}` : ''].filter(Boolean).join(' · ') || BOOTSTRAP.versionLabel || '';
+    el.textContent = label;
+    el.title = buildInfo.updatedAtIso
+      ? `Versión ${label} · actualizado ${buildInfo.updatedAtIso}`
+      : (label ? `Versión ${label}` : '');
+    el.classList.toggle('is-hidden', !label);
+  }
+
+  function hydrateAppVersionLegacy_() {
+    const el = document.getElementById('app-version');
+    if (!el) return;
+    const label = BOOTSTRAP.versionLabel || (BOOTSTRAP.version ? `v${BOOTSTRAP.version}` : '');
+    el.textContent = label;
+    el.title = label ? `Versión ${label}` : '';
+    el.classList.toggle('is-hidden', !label);
+  }
+
+  function api(fn, payload) {
+    return new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(err => {
+          const msg = String(err && err.message ? err.message : (err || ''));
+          if (/authorization is required|not authorized|you do not have permission|script does not have permission/i.test(msg)) {
+            showSessionExpired_();
+          }
+          reject(msg || 'Ocurrió un error.');
+        })
+        [fn](payload);
+    });
+  }
+
+  function hydrateLogo() {
+    const img = document.getElementById('appLogo');
+    if (!img) return;
+
+    const branding = (APP.state.systemConfig && APP.state.systemConfig.branding) || {};
+    const logo = isDarkTheme_()
+      ? (branding.logoDarkDataUri || branding.logoLightDataUri || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDarkDataUri) || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) || img.getAttribute('src') || '')
+      : (branding.logoLightDataUri || branding.logoDarkDataUri || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) || img.getAttribute('src') || '');
+
+    if (logo) {
+      img.src = logo;
+      img.style.display = 'block';
+    }
+  }
+
+  function normalizeCatalogs(c) {
+    return {
+      ...c,
+      estado_hito: (c.estadosPorTipo || {}).estado_hito || [],
+      estado_constitucion: (c.estadosPorTipo || {}).estado_constitucion || [],
+      estado_general_organizacion: (c.estadosPorTipo || {}).estado_general_organizacion || [],
+      estado_instrumento: (c.estadosPorTipo || {}).estado_instrumento || [],
+      resultado_instrumento: (c.estadosPorTipo || {}).resultado_instrumento || [],
+      estado_requisito: (c.estadosPorTipo || {}).estado_requisito || [],
+      estado_vecino: (c.estadosPorTipo || {}).estado_vecino || [],
+      instrumentosCodigo: (c.instrumentos || []).map(i => i.instrumento_codigo_catalogo),
+      instrumentosTipo: [...new Set((c.instrumentos || []).map(i => i.instrumento_tipo).filter(Boolean))],
+      instrumentosOrigen: [...new Set((c.instrumentos || []).map(i => i.origen_instrumento).filter(Boolean))]
+    };
+  }
+
+  function mergeCatalogs_(catalogs) {
+    APP.state.catalogs = normalizeCatalogs({
+      ...(APP.state.catalogs || {}),
+      ...(catalogs || {})
+    });
+  }
+
+  function ensureIngresoCatalogs_() {
+    if (APP.state.catalogStatus.ingreso) return null;
+
+    return api('getCatalogosNuevoIngresoClient').then(data => {
+      mergeCatalogs_(data || {});
+      APP.state.catalogStatus.ingreso = true;
+    });
+  }
+
+  function ensureAppCatalogs_() {
+    if (APP.state.catalogStatus.app) return null;
+
+    return api('getCatalogosAppClient').then(data => {
+      mergeCatalogs_(data || {});
+      APP.state.catalogStatus.app = true;
+    });
+  }
+
+  function ensureOrganizacionCatalogs_() {
+    if (APP.state.catalogStatus.organizacion) return null;
+
+    return api('getOrganizacionesModuloClient').then(data => {
+      APP.state.organizacionesModulo = (data && data.organizaciones) || [];
+      APP.state.organizacionesModuloFetchedAt = Date.now();
+      mergeCatalogs_({
+        organizacionesList: APP.state.organizacionesModulo
+      });
+      APP.state.catalogStatus.organizacion = true;
+    });
+  }
+
+  function ensureSociosCatalogs_() {
+    const now = Date.now();
+    if (
+      APP.state.sociosOrganizaciones.length &&
+      APP.state.sociosOrganizacionesFetchedAt &&
+      (now - APP.state.sociosOrganizacionesFetchedAt) < 30000
+    ) {
+      return Promise.resolve();
+    }
+
+    return api('getOrganizacionesAvanceClient').then(data => {
+      APP.state.sociosOrganizaciones = (data && data.organizacionesList) || [];
+      APP.state.sociosOrganizacionesFetchedAt = Date.now();
+    });
+  }
+
+  function ensureBuscarData_() {
+    const now = Date.now();
+    if (
+      APP.state.buscarModuleRows.length &&
+      APP.state.buscarModuleFetchedAt &&
+      (now - APP.state.buscarModuleFetchedAt) < 60000
+    ) {
+      return null;
+    }
+    return api('getBuscarModuleData').then(function(data) {
+      APP.state.buscarModuleRows = (data && data.rows) || [];
+      APP.state.buscarModuleFetchedAt = Date.now();
+    });
+  }
+
+  function ensureOrganizacionesModuloList_() {
+    const now = Date.now();
+    if (
+      APP.state.organizacionesModulo.length &&
+      APP.state.organizacionesModuloFetchedAt &&
+      (now - APP.state.organizacionesModuloFetchedAt) < 30000
+    ) {
+      return Promise.resolve();
+    }
+
+    return api('getOrganizacionesConGruposClient').then(data => {
+      APP.state.organizacionesModulo = (data && data.organizaciones) || [];
+      APP.state.organizacionesModuloFetchedAt = Date.now();
+    });
+  }
+
+  function ensureCatalogsForView_(view) {
+    switch (view) {
+      case 'inicio':
+        return ensureInicioPanelData_();
+      case 'nuevo-ingreso':
+        return ensureIngresoCatalogs_();
+      case 'organizacion': {
+        const pending = [ensureAppCatalogs_(), ensureOrganizacionesModuloList_()].filter(Boolean);
+        return pending.length ? Promise.all(pending) : null;
+      }
+      case 'instrumento': {
+        const pending = [ensureAppCatalogs_(), ensureOrganizacionesModuloList_()].filter(Boolean);
+        return pending.length ? Promise.all(pending) : null;
+      }
+      case 'socios':
+        return ensureSociosCatalogs_();
+      case 'buscar':
+        return ensureBuscarData_();
+      default:
+        return null;
+    }
+  }
+
+  function hydrateStaticUser() {
+    const user = APP.state.user || {};
+    const userName = document.getElementById('user-name');
+    const userRole = document.getElementById('user-role');
+    const badgeUser = document.getElementById('ingreso-current-user');
+    const resetBtn = document.getElementById('admin-reset-open-btn');
+
+    if (userName) userName.textContent = user.nombre_visible || user.email || 'Usuario';
+    if (userRole) userRole.textContent = user.roleLabel || user.perfil || 'Sin perfil';
+    if (badgeUser) badgeUser.textContent = user.nombre_visible || user.email || 'Usuario activo';
+    if (resetBtn) {
+      resetBtn.classList.toggle('is-visible', !!APP.state.permissions.canResetData);
+      resetBtn.classList.toggle('is-hidden', !APP.state.permissions.canResetData);
+    }
+  }
+
+  function bindGlobalNav() {
+    document.querySelectorAll('[data-view]').forEach(btn =>
+      btn.addEventListener('click', () => {
+        const view = btn.dataset.view;
+        if (!canOpenView_(view)) {
+          showError('No tienes permisos para acceder a este módulo.');
+          return;
+        }
+        route(view);
+      })
+    );
+
+    const searchBtn = document.getElementById('search-btn');
+    const saveUserBtn = document.getElementById('save-user-btn');
+    const sociosValidateBtn = document.getElementById('socios-validate-btn');
+    const sociosSaveBtn = document.getElementById('socios-save-btn');
+    const adminResetOpenBtn = document.getElementById('admin-reset-open-btn');
+    const adminResetForm = document.getElementById('admin-reset-form');
+    const userEditForm = document.getElementById('user-edit-form');
+    const userDeleteForm = document.getElementById('user-delete-form');
+
+    if (searchBtn) searchBtn.addEventListener('click', runSearch);
+
+    const buscarExportBtn = document.getElementById('buscar-export-btn');
+    if (buscarExportBtn) buscarExportBtn.addEventListener('click', exportBuscarCSV_);
+
+    const fichaPrintBtn = document.getElementById('ficha-print-btn');
+    if (fichaPrintBtn) fichaPrintBtn.addEventListener('click', printFicha_);
+
+    const searchQuery = document.getElementById('search-query');
+    if (searchQuery && !searchQuery.dataset.buscarBound) {
+      searchQuery.dataset.buscarBound = '1';
+      let buscarDebounce = null;
+      searchQuery.addEventListener('input', function() {
+        clearTimeout(buscarDebounce);
+        buscarDebounce = setTimeout(() => updateBuscarTableView_(true), 120);
+      });
+      searchQuery.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { clearTimeout(buscarDebounce); updateBuscarTableView_(true); }
+      });
+    }
+    if (saveUserBtn) saveUserBtn.addEventListener('click', saveUserFromForm);
+    if (sociosValidateBtn) sociosValidateBtn.addEventListener('click', validateSociosInput);
+    if (sociosSaveBtn) sociosSaveBtn.addEventListener('click', saveSociosInput);
+    if (adminResetOpenBtn) adminResetOpenBtn.addEventListener('click', openAdminResetModal_);
+    if (adminResetForm) adminResetForm.addEventListener('submit', submitAdminReset_);
+    if (userEditForm) userEditForm.addEventListener('submit', saveUserEditModal_);
+    if (userDeleteForm) userDeleteForm.addEventListener('submit', confirmDeactivateUser_);
+    document.querySelectorAll('[data-admin-reset-close]').forEach(btn => {
+      btn.addEventListener('click', closeAdminResetModal_);
+    });
+    document.querySelectorAll('[data-user-edit-close]').forEach(btn => {
+      btn.addEventListener('click', closeUserEditModal_);
+    });
+    document.querySelectorAll('[data-user-delete-close]').forEach(btn => {
+      btn.addEventListener('click', closeUserDeleteModal_);
+    });
+  }
+
+
+  function ensureViewRendered_(view) {
+    if (APP.state.renderedViews[view]) return;
+
+    switch (view) {
+      case 'inicio':
+        renderInicioView_();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'nuevo-ingreso':
+        renderIngresoForm();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'avance':
+        renderAvanceView_();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'organizacion':
+        renderOrganizacionesView_();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'instrumento':
+        renderBeneficiosView_();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'socios':
+        renderSociosView_();
+        APP.state.renderedViews[view] = true;
+        break;
+      case 'configuracion':
+        renderConfiguracionView_();
+        APP.state.renderedViews[view] = true;
+        break;
+      default:
+        break;
+    }
+  }
+
+  function arrangeOrganizacionFormLayout_() {
+    const form = document.getElementById('form-organizacion');
+    if (!form || form.dataset.layoutReady === 'true') return;
+
+    form.dataset.layoutReady = 'true';
+    form.classList.add('form-grid--organizacion');
+
+    const orgSelectField = form.querySelector('[name="organizacion_id"]')?.closest('.field');
+    const imageField = form.querySelector('[data-image-field="imagen_logo_base64"]')?.closest('.field');
+
+    if (orgSelectField) orgSelectField.classList.add('field--org-selector');
+    if (imageField) imageField.classList.add('field--org-image');
+  }
+
+  function renderIngresoForm() {
+    const form = document.getElementById('form-ingreso');
+    if (!form || form.dataset.initialized === 'true') return;
+
+    form.dataset.initialized = 'true';
+    form.addEventListener('submit', saveIngresoFromForm);
+
+    fillSelect(document.getElementById('ing-uv'), APP.state.catalogs.uvList || [], 'Seleccionar UV');
+    fillSelect(document.getElementById('ing-sector'), [], 'Seleccionar sector');
+    fillSelect(document.getElementById('ing-tipo_vivienda'), APP.state.catalogs.tipoVivienda || [], 'Seleccionar tipo de vivienda');
+    fillSelect(document.getElementById('ing-medio_solicitud'), APP.state.catalogs.medioSolicitud || [], 'Seleccionar medio');
+    fillSelect(document.getElementById('ing-unidad_origen'), APP.state.catalogs.unidadOrigen || [], 'Seleccionar unidad');
+
+    const fechaInput = document.getElementById('ing-fecha_solicitud');
+    if (fechaInput && !fechaInput.value) fechaInput.value = todayISO_();
+
+    const uvSelect = document.getElementById('ing-uv');
+    const reviewBtn = document.getElementById('ingreso-review-btn');
+    const clearBtn = document.getElementById('ingreso-clear-btn');
+
+    if (uvSelect) uvSelect.addEventListener('change', syncIngresoSectorOptions);
+    if (reviewBtn) reviewBtn.addEventListener('click', reviewIngresoMatches);
+    if (clearBtn) clearBtn.addEventListener('click', clearIngresoForm);
+
+    form.querySelectorAll('input, textarea, select').forEach(el => {
+      el.addEventListener('input', renderIngresoPreview);
+      el.addEventListener('change', renderIngresoPreview);
+      el.addEventListener('blur', () => validateIngresoField(el));
+    });
+
+    syncIngresoSectorOptions();
+    renderIngresoPreview();
+  }
+
+  function buildForm(formId, schema, submitHandler) {
+    const form = document.getElementById(formId);
+    if (!form || form.dataset.initialized === 'true') return;
+
+    form.dataset.initialized = 'true';
+    form.innerHTML = schema.map(f => fieldTemplate(f)).join('') + `
+      <div class="field" data-span="2">
+        <div class="actions">
+          <button type="submit" class="primary-btn">
+            <span class="material-symbols-outlined">save</span>Guardar
+          </button>
+        </div>
+      </div>
+    `;
+
+    form.addEventListener('submit', submitHandler);
+    populateSelectsInForm_(form);
+
+    form.querySelectorAll('select[data-options-key="sectorByUv"]').forEach(select => syncSectorOptions(select));
+
+    form.querySelectorAll('select[name="uv"]').forEach(select =>
+      select.addEventListener('change', () => {
+        const sectorSelect = form.querySelector('select[name="sector"]');
+        if (sectorSelect) syncSectorOptions(sectorSelect, select.value);
+      })
+    );
+  }
+
+  function populateSelectsInForm_(form) {
+    form.querySelectorAll('select').forEach(select => {
+      const key = select.dataset.optionsKey;
+      if (key === 'sectorByUv') return;
+
+      let options = [];
+      if (key && APP.state.catalogs[key]) {
+        options = APP.state.catalogs[key];
+      } else {
+        const schemaField = [...Object.values(FORM_SCHEMAS).flat()].find(f => f.name === select.name);
+        if (schemaField && schemaField.options) options = schemaField.options;
+      }
+
+      fillSelect(select, options);
+    });
+  }
+
+  function fieldTemplate(field) {
+    const spanAttr = field.span === 2 ? ' data-span="2"' : '';
+    const requiredAttr = field.required ? ' required' : '';
+
+    if (field.type === 'hidden') {
+      return `<input name="${field.name}" type="hidden">`;
+    }
+
+    if (field.type === 'image_upload_top') {
+      return `
+        <div class="field field--image-top"${spanAttr}>
+          <label>${field.label}</label>
+          <div class="image-upload image-upload--top" data-image-field="${field.name}">
+            <input type="hidden" name="${field.name}" value="">
+            <input type="file" class="image-upload__file" accept="image/*" hidden>
+            <div class="image-upload__preview image-upload__preview--top empty-state">Sin imagen</div>
+            <div class="image-upload__actions image-upload__actions--stack">
+              <button type="button" class="secondary-btn" data-org-image-action="upload">
+                <span class="material-symbols-outlined">upload</span>Subir imagen
+              </button>
+              <button type="button" class="secondary-btn" data-org-image-action="remove">
+                <span class="material-symbols-outlined">delete</span>Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    if (field.type === 'textarea') {
+      return `<div class="field"${spanAttr}><label>${field.label}</label><textarea name="${field.name}"${requiredAttr}></textarea></div>`;
+    }
+
+    if (field.type === 'select') {
+      return `<div class="field"${spanAttr}><label>${field.label}</label><select name="${field.name}" data-options-key="${field.optionsKey || ''}"${requiredAttr}></select></div>`;
+    }
+
+    return `<div class="field"${spanAttr}><label>${field.label}</label><input name="${field.name}" type="${field.type || 'text'}"${requiredAttr}></div>`;
+  }
+
+  function fillSelect(select, options, placeholder = 'Seleccionar') {
+    if (!select) return;
+
+    select.innerHTML = `<option value="">${placeholder}</option>` + (options || []).map(opt => {
+      const value = typeof opt === 'string'
+        ? opt
+        : (opt.value || opt.codigo || opt.requisito_codigo || opt.instrumento_codigo_catalogo || '');
+      const label = typeof opt === 'string'
+        ? opt
+        : (opt.label || opt.descripcion || opt.nombre || opt.requisito_nombre || opt.instrumento_nombre || opt.requisito_codigo || value);
+
+      return `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+    }).join('');
+  }
+
+  function syncSectorOptions(select, uvValue) {
+    const uv = uvValue || select.form.querySelector('select[name="uv"]')?.value || '';
+    const map = APP.state.catalogs.sectorByUv || {};
+    const options = uv ? (map[uv] || []) : [];
+    fillSelect(select, [...new Set(options)].sort(), uv ? 'Seleccionar sector' : 'Selecciona UV primero');
+  }
+
+  function syncIngresoSectorOptions() {
+    const uvSelect = document.getElementById('ing-uv');
+    const uv = uvSelect ? uvSelect.value : '';
+    const sectors = uv ? (APP.state.catalogs.sectorByUv?.[uv] || []) : [];
+    fillSelect(document.getElementById('ing-sector'), sectors, uv ? 'Seleccionar sector' : 'Selecciona UV primero');
+  }
+
+  function applyPermissions() {
+    applyModuleDefinitionsUi_();
+    document.querySelectorAll('[data-view]').forEach(el => {
+      const view = el.dataset.view;
+      const allowed = canOpenView_(view);
+      el.classList.toggle('is-hidden', !allowed);
+      el.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+    });
+
+    document.querySelectorAll('.is-admin').forEach(el => {
+      el.classList.toggle('show-admin', !!APP.state.permissions.canManageUsers);
+    });
+
+    const resetBtn = document.getElementById('admin-reset-open-btn');
+    if (resetBtn) {
+      resetBtn.classList.toggle('is-visible', !!APP.state.permissions.canResetData);
+      resetBtn.classList.toggle('is-hidden', !APP.state.permissions.canResetData);
+    }
+
+    const usersView = document.getElementById('view-usuarios');
+    if (usersView && !APP.state.permissions.canManageUsers) {
+      usersView.innerHTML = '<div class="empty-state">No tienes permisos para administrar usuarios.</div>';
+    }
+    const configView = document.getElementById('view-configuracion');
+    if (configView && !APP.state.permissions.canManageConfig) {
+      configView.innerHTML = '<div class="empty-state">No tienes permisos para acceder a Configuración.</div>';
+    }
+
+    fillSelect(document.getElementById('user-role-input'), USER_ROLE_OPTIONS, 'Seleccionar perfil');
+    fillSelect(document.getElementById('user-edit-role-input'), USER_ROLE_OPTIONS, 'Seleccionar perfil');
+    initUserEmailField_();
+    bindUserRoleVisibility_('user-role-input', 'user-modules-field', 'user-modules-input');
+    bindUserRoleVisibility_('user-edit-role-input', 'user-edit-modules-panel', 'user-edit-modules-input');
+    const createRoleSelect = document.getElementById('user-role-input');
+    if (createRoleSelect && !createRoleSelect.value) {
+      createRoleSelect.value = getDefaultManagedUserProfile_();
+    }
+    renderUserModuleOptions_();
+    syncUserModulesVisibility_('user-role-input', 'user-modules-field', 'user-modules-input');
+  }
+
+  function getAssignableModuleDefinitions_() {
+    return (APP.state.moduleDefinitions || []).filter(module => !module.superOnly && module.assignable !== false && module.enabled !== false);
+  }
+
+  function getNavigableModuleDefinitions_() {
+    return (APP.state.moduleDefinitions || []).filter(module => module.navVisible !== false && module.enabled !== false);
+  }
+
+  function normalizeEditableUserProfile_(value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    if (normalized === 'visor') return 'visor';
+    if (normalized === 'coordinador' || normalized === 'administrador' || normalized === 'superuser') return 'coordinador';
+    return 'operador';
+  }
+
+  function getUserRoleLabel_(value) {
+    return USER_ROLE_LABELS[normalizeEditableUserProfile_(value)] || 'Operador';
+  }
+
+  function roleAllowsManualModules_(value) {
+    return normalizeEditableUserProfile_(value) !== 'visor';
+  }
+
+  function getCheckedUserModules_(targetId) {
+    return Array.from(document.querySelectorAll(`#${targetId} input[type="checkbox"]:checked`))
+      .map(input => input.value)
+      .filter(Boolean);
+  }
+
+  function bindUserRoleVisibility_(selectId, containerId, targetId) {
+    const select = document.getElementById(selectId);
+    if (!select || select.dataset.boundRoleVisibility === '1') return;
+    select.dataset.boundRoleVisibility = '1';
+    select.addEventListener('change', () => syncUserModulesVisibility_(selectId, containerId, targetId));
+  }
+
+  function syncUserModulesVisibility_(selectId, containerId, targetId) {
+    const select = document.getElementById(selectId);
+    const container = document.getElementById(containerId);
+    const target = targetId || 'user-modules-input';
+    const role = normalizeEditableUserProfile_(select?.value || '');
+    const allowManual = roleAllowsManualModules_(role);
+    const previousSelection = container?.dataset.manualModules || '';
+    const layout = container?.closest('.user-edit-layout');
+
+    if (container) container.classList.toggle('is-hidden', !allowManual);
+    if (layout) {
+      layout.classList.toggle('is-single-column', !allowManual);
+    }
+    if (!allowManual) {
+      if (container) {
+        container.dataset.manualModules = getCheckedUserModules_(target).join(',');
+      }
+      renderUserModuleOptions_(['inicio'], target);
+      return;
+    }
+
+    const selectionToRender = previousSelection || getCheckedUserModules_(target).join(',');
+    renderUserModuleOptions_(selectionToRender, target);
+  }
+
+  function canOpenView_(view) {
+    if (!APP.state.user || !APP.state.user.canAccess) return false;
+    const normalizedView = normalizeModuleKey_(view);
+    if (!normalizedView) return false;
+    if (normalizedView === 'usuarios') return !!APP.state.permissions.canManageUsers;
+    if (normalizedView === 'configuracion') return !!APP.state.permissions.canManageConfig;
+    if (normalizedView === 'ficha') return !!((APP.state.permissions.modules || {}).ficha);
+    return !!((APP.state.permissions.modules || {})[normalizedView]);
+  }
+
+  function initUserEmailField_() {
+    const input = document.getElementById('user-email-local');
+    if (!input || input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+
+    const normalizeLocal = () => {
+      const raw = String(input.value || '').trim().toLowerCase().replace(/\s+/g, '');
+      if (!raw) {
+        input.value = '';
+        return;
+      }
+
+      const parts = raw.split('@').filter(Boolean);
+      if (parts.length === 1) {
+        input.value = parts[0];
+        return;
+      }
+
+      if (parts.length === 2 && parts[1] === 'providencia.cl') {
+        input.value = parts[0];
+        return;
+      }
+    };
+
+    input.addEventListener('blur', normalizeLocal);
+    input.addEventListener('paste', () => setTimeout(normalizeLocal, 0));
+  }
+
+  function renderUserModuleOptions_(selectedModules, targetId) {
+    const root = document.getElementById(targetId || 'user-modules-input');
+    if (!root) return;
+    const selected = Array.isArray(selectedModules)
+      ? selectedModules
+      : String(selectedModules || '').split(',').map(x => x.trim()).filter(Boolean);
+    const allowAll = selected.includes('*');
+    const defs = getAssignableModuleDefinitions_();
+    root.innerHTML = defs.map(m => {
+      const desc = MODULE_DESCRIPTIONS[m.key] || '';
+      return `<label class="module-check">
+        <input
+          class="module-check__input"
+          type="checkbox"
+          value="${escapeHtml(m.key)}"
+          ${allowAll || selected.includes(m.key) || m.required ? 'checked' : ''}
+          ${m.required ? 'disabled' : ''}>
+        <span class="module-check__box">
+          <span class="module-check__title">${escapeHtml(m.label || m.key)}</span>
+          ${desc ? `<span class="module-check__desc">${escapeHtml(desc)}</span>` : ''}
+          <span class="module-check__meta">${escapeHtml(m.required ? 'Siempre visible' : 'Visible en menú')}</span>
+        </span>
+      </label>`;
+    }).join('');
+  }
+
+  function openAdminResetModal_() {
+    if (!APP.state.permissions.canResetData) {
+      showError('Solo un SUPERUSER puede limpiar datos de prueba.');
+      return;
+    }
+
+    const modal = document.getElementById('admin-reset-modal');
+    const form = document.getElementById('admin-reset-form');
+    if (form) form.reset();
+    setModalVisibility_(modal, true);
+    setTimeout(() => document.getElementById('admin-reset-pin')?.focus(), 20);
+  }
+
+  function closeAdminResetModal_() {
+    setModalVisibility_('admin-reset-modal', false);
+  }
+
+  function submitAdminReset_(ev) {
+    ev.preventDefault();
+    if (!APP.state.permissions.canResetData) {
+      showError('Solo un SUPERUSER puede limpiar datos de prueba.');
+      return;
+    }
+
+    const pin = String(document.getElementById('admin-reset-pin')?.value || '').trim();
+    const confirmacion = String(document.getElementById('admin-reset-confirm')?.value || '').trim();
+
+    if (!pin) {
+      showError('Debes ingresar el PIN de seguridad.');
+      return;
+    }
+
+    if (confirmacion.toUpperCase() !== 'LIMPIAR') {
+      showError('Debes escribir LIMPIAR para confirmar.');
+      return;
+    }
+
+    showContentLoading('Limpiando datos de prueba...');
+    api('limpiarDatosPruebaAdmin', { pin, confirmacion }).then(res => {
+      closeAdminResetModal_();
+      const totalRows = (res.cleared || []).reduce((sum, item) => sum + Number(item.rows_cleared || 0), 0);
+      showSuccess(`Datos de prueba limpiados. Hojas: ${(res.cleared || []).length}. Filas: ${totalRows}.`);
+      APP.state.catalogStatus = { app: false, ingreso: false, organizacion: false };
+      APP.state.inicioPanelData = null;
+      APP.state.inicioPanelFetchedAt = 0;
+      APP.state.currentFicha = null;
+      APP.state.buscarModuleRows = [];
+      APP.state.buscarModuleFetchedAt = 0;
+      APP.state.currentAvance = null;
+      APP.state.avanceCatalogos = null;
+      APP.state.avanceGrupos = [];
+      APP.state.avanceGruposFetchedAt = 0;
+      APP.state.avanceOrganizaciones = [];
+      APP.state.avanceOrganizacionesFetchedAt = 0;
+      APP.state.organizacionesModulo = [];
+      APP.state.organizacionesModuloFetchedAt = 0;
+      APP.state.currentBeneficiosDetalle = null;
+      APP.state.currentBeneficioCodigo = '';
+      APP.state.sociosOrganizaciones = [];
+      APP.state.sociosOrganizacionesFetchedAt = 0;
+      APP.state.sociosModuleRows = [];
+      APP.state.sociosModuleFetchedAt = 0;
+      APP.state.sociosModuleQuery = '';
+      APP.state.renderedViews = {};
+      route('inicio');
+    }).catch(showError).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+  function toggleTopQuickActions_(view) {
+    const quick = document.getElementById('quick-actions');
+    if (!quick) return;
+    quick.style.display = view === 'inicio' ? 'grid' : 'none';
+  }
+
+  function route(view, params = {}) {
+    view = normalizeModuleKey_(view) || view;
+    if (!canOpenView_(view)) {
+      showError('No tienes permisos para acceder a este módulo.');
+      view = getFirstAllowedViewClient_();
+      if (!view || !canOpenView_(view)) return;
+    }
+
+    APP.state.activeView = view;
+    const wasRendered = !!APP.state.renderedViews[view];
+
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(`view-${view}`)?.classList.add('active');
+
+    document.querySelectorAll('.nav-btn').forEach(btn =>
+      btn.classList.toggle('is-active', btn.dataset.view === view)
+    );
+
+    toggleTopQuickActions_(view);
+    const finalizeRoute = () => {
+      hideContentLoading();
+      ensureViewRendered_(view);
+
+      if (view === 'ficha' && APP.state.currentFicha && APP.state.currentFicha.summary) {
+        renderFicha(APP.state.currentFicha);
+      }
+
+      if (view === 'avance' && wasRendered) {
+        refreshAvanceViewOnRoute_();
+      }
+
+      if (view === 'organizacion' && wasRendered) {
+        refreshOrganizacionesModuloList_();
+      }
+
+      if (view === 'instrumento' && wasRendered) {
+        APP.state.currentBeneficioCodigo = '';
+        APP.state.currentBeneficioOrganizacionId = '';
+        refreshBeneficiosModuloMinimo_();
+      }
+
+      if (view === 'inicio') {
+        renderInicioView_();
+      }
+
+      if (view === 'socios' && wasRendered) {
+        refreshSociosComites_();
+        loadSociosModuleData_().catch(() => {});
+      }
+
+      if (view === 'buscar') updateBuscarTableView_();
+      if (view === 'historial') loadHistorial();
+      if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
+      if (view === 'configuracion' && APP.state.permissions.canManageConfig) loadConfiguracionView_();
+      if (view === 'nuevo-ingreso') {
+        renderNuevoIngresoView_();
+      }
+
+      setStatus(`Vista actual: ${friendlyViewName_(view)}`);
+    };
+
+    const catalogPromise = ensureCatalogsForView_(view);
+    if (catalogPromise) {
+      showContentLoading(view === 'socios' ? 'Cargando socios' : `Cargando ${friendlyViewName_(view)}...`);
+      catalogPromise.then(finalizeRoute).catch(showError).finally(hideContentLoading);
+      return;
+    }
+
+    finalizeRoute();
+  }
+
+  function normalizeBuscarText_(value) {
+    return String(value == null ? '' : value)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function filterBuscarRows_(rows, query) {
+    const term = normalizeBuscarText_(query);
+    if (!term) return rows;
+    return rows.filter(function(r) {
+      const haystack = normalizeBuscarText_([
+        r.nombre_completo,
+        r.rut_vecino,
+        r.telefono_contacto,
+        r.correo_contacto,
+        r.direccion_original,
+        r.solicitud_id,
+        r.organizacion_id,
+        r.nombre_organizacion
+      ].join(' | '));
+      return haystack.includes(term);
+    });
+  }
+
+  const BUSCAR_PAGE_SIZE = 25;
+
+  function updateBuscarTableView_(resetPage) {
+    const tbody   = document.getElementById('search-results');
+    const countEl = document.getElementById('buscar-count');
+    if (!tbody) return;
+
+    const allRows = APP.state.buscarModuleRows || [];
+    const query   = String((document.getElementById('search-query') || {}).value || '');
+    const rows    = filterBuscarRows_(allRows, query);
+
+    if (resetPage) APP.state.buscarPage = 0;
+
+    if (countEl) {
+      countEl.textContent = query.trim()
+        ? `${rows.length} de ${allRows.length} vecinos`
+        : `${allRows.length} vecinos`;
+    }
+
+    if (!rows.length) {
+      tbody.innerHTML = `<tr><td colspan="6" class="muted">${
+        query.trim() ? 'Sin resultados para la búsqueda.' : (allRows.length ? 'Sin resultados.' : 'No hay vecinos registrados.')
+      }</td></tr>`;
+      return;
+    }
+
+    const totalPages = Math.ceil(rows.length / BUSCAR_PAGE_SIZE);
+    if (APP.state.buscarPage >= totalPages) APP.state.buscarPage = Math.max(0, totalPages - 1);
+    const page = APP.state.buscarPage;
+    const pageRows = rows.slice(page * BUSCAR_PAGE_SIZE, (page + 1) * BUSCAR_PAGE_SIZE);
+
+    tbody.innerHTML = pageRows.map(r => `
+      <tr>
+        <td>${escapeHtml(r.solicitud_id || '')}</td>
+        <td>${escapeHtml(r.nombre_completo || '')}</td>
+        <td>${escapeHtml(r.direccion_original || '')}</td>
+        <td><span class="badge">${escapeHtml(r.estado_actual || '')}</span></td>
+        <td>${escapeHtml(r.nombre_organizacion || '')}</td>
+        <td>
+          <button class="secondary-btn js-open-ficha"
+            data-solicitud="${escapeHtml(r.solicitud_id || '')}"
+            data-organizacion="${escapeHtml(r.organizacion_id || '')}">
+            <span class="material-symbols-outlined">open_in_new</span>Ver ficha
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('.js-open-ficha').forEach(btn =>
+      btn.addEventListener('click', () => loadFicha({
+        solicitud_id: btn.dataset.solicitud,
+        organizacion_id: btn.dataset.organizacion
+      }))
+    );
+
+    const pager = document.getElementById('buscar-pager');
+    if (pager) {
+      pager.innerHTML = goPesPaginatorHtml_(page, totalPages, 'buscar');
+      pager.querySelectorAll('[data-buscar-page]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          APP.state.buscarPage = Number(btn.dataset.buscarPage);
+          updateBuscarTableView_();
+        });
+      });
+    }
+
+    const exportBtn = document.getElementById('buscar-export-btn');
+    if (exportBtn) exportBtn.classList.toggle('is-hidden', !rows.length);
+  }
+
+  function runSearch() {
+    updateBuscarTableView_(true);
+  }
+
+  function loadFicha(params) {
+    APP.state.currentFicha = null;
+
+    const container = document.getElementById('ficha-container');
+    if (container) {
+      container.innerHTML = '<div class="empty-state">Cargando ficha...</div>';
+    }
+
+    route('ficha');
+    showContentLoading('Cargando ficha...');
+
+    api('obtenerFicha', params).then(data => {
+      if (!data || !data.summary) {
+        throw new Error('La ficha no devolvió datos válidos.');
+      }
+
+      APP.state.currentFicha = data;
+      renderFicha(data);
+      setStatus('Ficha cargada correctamente.', true);
+      const fpBtn = document.getElementById('ficha-print-btn');
+      if (fpBtn) fpBtn.classList.remove('is-hidden');
+    }).catch(err => {
+      if (container) {
+        container.innerHTML = '<div class="empty-state">No fue posible cargar la ficha.</div>';
+      }
+      showError(err);
+    }).finally(() => {
+      hideContentLoading();
+    });
+  }
+
+
+  function getFirstAllowedViewClient_() {
+    const modules = APP.state.permissions.modules || {};
+    const priority = getNavigableModuleDefinitions_().map(module => module.view || module.key);
+    return priority.find(view => modules[view]) || '';
+  }
+
+  function formatOrganizacionAntiguedad_(value) {
+    const date = parseDateForAge_(value);
+    if (!date) return 'Sin antigüedad disponible';
+
+    const today = new Date();
+    const diffMs = today.getTime() - date.getTime();
+    const totalDays = Math.max(0, Math.floor(diffMs / 86400000));
+    const totalMonths = Math.floor(totalDays / 30);
+    const years = Math.floor(totalMonths / 12);
+    const months = totalMonths % 12;
+    const days = totalDays % 30;
+
+    const yearText = `${years} ${years === 1 ? 'Año' : 'Años'}`;
+    const monthText = `${months} ${months === 1 ? 'Mes' : 'Meses'}`;
+    const dayText = `${days} ${days === 1 ? 'día' : 'días'}`;
+
+    if (years > 0) {
+      return `${yearText}, ${monthText} y ${dayText}`;
+    }
+
+    if (months > 0) {
+      return `${monthText} y ${dayText}`;
+    }
+
+    return dayText;
+  }
+
+  function parseDateForAge_(value) {
+    if (!value) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+
+    const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+      const d = new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    const d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function formatFechaHoraUi_(value) {
+    if (!value) return '';
+
+    if (value instanceof Date && !isNaN(value.getTime())) {
+      const dd = `${value.getDate()}`.padStart(2, '0');
+      const mm = `${value.getMonth() + 1}`.padStart(2, '0');
+      const yyyy = value.getFullYear();
+      const hh = `${value.getHours()}`.padStart(2, '0');
+      const min = `${value.getMinutes()}`.padStart(2, '0');
+      return `${dd}-${mm}-${yyyy} ${hh}:${min}`;
+    }
+
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const isoDateTime = raw.match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::\d{2})?/);
+    if (isoDateTime) {
+      return `${isoDateTime[3]}-${isoDateTime[2]}-${isoDateTime[1]} ${isoDateTime[4]}:${isoDateTime[5]}`;
+    }
+
+    const isoDate = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoDate) {
+      return `${isoDate[3]}-${isoDate[2]}-${isoDate[1]}`;
+    }
+
+    return raw.replace('T', ' ');
+  }
+
+  function formatUiValue_(value) {
+    if (value instanceof Date) return formatFechaHoraUi_(value);
+    const raw = String(value == null ? '' : value);
+    const trimmed = raw.trim();
+    if (trimmed === 'Constituida sin instrumentos') return 'Constituida sin beneficios';
+    const beneficioLabel = friendlyBeneficioLabel_(trimmed);
+    if (beneficioLabel !== trimmed) return beneficioLabel;
+    return /^\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2})?/.test(raw.trim())
+      ? formatFechaHoraUi_(raw)
+      : raw;
+  }
+
+  function serializeForm(form) {
+    const fd = new FormData(form);
+    const out = {};
+    fd.forEach((v, k) => out[k] = v);
+    return out;
+  }
+
+  function getIngresoPayload() {
+    return serializeForm(document.getElementById('form-ingreso'));
+  }
+
+
+  function renderSelectOptionsHtml_(options, currentValue, placeholder) {
+    const current = String(currentValue || '').trim();
+    const rows = Array.isArray(options) ? options : [];
+    const items = rows.map(option => {
+      const value = typeof option === 'string' ? option : (option.value || option.codigo || option.instrumento_codigo_catalogo || '');
+      const label = typeof option === 'string' ? option : (option.label || option.descripcion || option.nombre || value);
+      return `<option value="${escapeHtml(value)}" ${String(value) === current ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+    }).join('');
+    return `<option value="">${escapeHtml(placeholder || 'Seleccionar')}</option>${items}`;
+  }
+
+  function loadHistorial() {
+    ['hist-periodo', 'hist-origen'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.bound) {
+        el.dataset.bound = 'true';
+        el.addEventListener('change', loadHistorial);
+      }
+    });
+    ['hist-usuario', 'hist-resultado', 'hist-buscar'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el && !el.dataset.bound) {
+        el.dataset.bound = 'true';
+        el.addEventListener(id === 'hist-buscar' ? 'input' : 'change', () => applyHistorialClientFilters_(true));
+      }
+    });
+    const printBtn = document.getElementById('hist-print-btn');
+    if (printBtn && !printBtn.dataset.bound) {
+      printBtn.dataset.bound = 'true';
+      printBtn.addEventListener('click', printHistorialReport_);
+    }
+
+    if (APP.state.historialUsuarios === undefined) {
+      APP.state.historialUsuarios = null;
+      api('getHistorialUsuariosLista').then(function(users) {
+        APP.state.historialUsuarios = Array.isArray(users) ? users : [];
+        populateHistorialUsuarioSelect_();
+      }).catch(function() { APP.state.historialUsuarios = []; });
+    } else if (APP.state.historialUsuarios) {
+      populateHistorialUsuarioSelect_();
+    }
+
+    const periodo = (document.getElementById('hist-periodo') || {}).value || 'last_month';
+    const source_key = (document.getElementById('hist-origen') || {}).value || '';
+    const tbody = document.getElementById('hist-tbody');
+    const requestSeq = (APP.state.historialRequestSeq || 0) + 1;
+    APP.state.historialRequestSeq = requestSeq;
+
+    ['hist-periodo', 'hist-origen'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) el.disabled = true;
+    });
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="muted">Cargando historial...</td></tr>';
+    showContentLoading('Cargando historial...');
+
+    api('listarHistorial', { periodo: periodo, source_key: source_key }).then(function(rows) {
+      if (requestSeq !== APP.state.historialRequestSeq) return;
+      APP.state.historialAllRows = Array.isArray(rows) ? rows : [];
+      applyHistorialClientFilters_(true);
+    }).catch(function(err) {
+      if (requestSeq === APP.state.historialRequestSeq && tbody) {
+        tbody.innerHTML = '<tr><td colspan="8" class="muted">No fue posible cargar el historial.</td></tr>';
+      }
+      showError(err);
+    }).finally(function() {
+      if (requestSeq !== APP.state.historialRequestSeq) return;
+      ['hist-periodo', 'hist-origen'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.disabled = false;
+      });
+      hideContentLoading();
+    });
+  }
+
+  const HIST_PAGE_SIZE = 30;
+
+  function applyHistorialClientFilters_(resetPage) {
+    if (resetPage) APP.state.histPage = 0;
+    const allRows = APP.state.historialAllRows || [];
+    const selectedUser = (document.getElementById('hist-usuario') || {}).value || '';
+    const resultado = (document.getElementById('hist-resultado') || {}).value || '';
+    const buscar = ((document.getElementById('hist-buscar') || {}).value || '').trim().toLowerCase();
+    const tbody = document.getElementById('hist-tbody');
+    if (!tbody) return;
+
+    let filtered = allRows;
+
+    if (selectedUser) {
+      const normalizedUser = selectedUser.toLowerCase().trim();
+      filtered = filtered.filter(function(r) {
+        return (r.email || '').toLowerCase().trim() === normalizedUser;
+      });
+    }
+    const userHasRowsInPeriod = !selectedUser || filtered.length > 0;
+
+    if (resultado) {
+      filtered = filtered.filter(function(r) {
+        const res = (r.result || '').toLowerCase();
+        if (resultado === 'ok') return res === 'ok' || res === 'éxito' || res === 'exito' || res === 'success';
+        if (resultado === 'error') return res === 'error' || res.indexOf('error') !== -1;
+        return true;
+      });
+    }
+    if (buscar) {
+      filtered = filtered.filter(function(r) {
+        return (r.email || '').toLowerCase().indexOf(buscar) !== -1
+          || (r.action || '').toLowerCase().indexOf(buscar) !== -1
+          || (r.entity_type || '').toLowerCase().indexOf(buscar) !== -1
+          || (r.entity_id || '').toLowerCase().indexOf(buscar) !== -1
+          || (r.detail_text || '').toLowerCase().indexOf(buscar) !== -1;
+      });
+    }
+
+    renderHistorialSummaryChips_(allRows, filtered);
+
+    const counterEl = document.getElementById('hist-counter');
+    if (counterEl) {
+      counterEl.textContent = filtered.length === allRows.length
+        ? filtered.length + ' registros'
+        : filtered.length + ' de ' + allRows.length + ' registros';
+    }
+
+    if (!filtered.length) {
+      if (selectedUser && !userHasRowsInPeriod) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted,#6b7a8d)">Verificando historial del usuario...</td></tr>';
+        api('listarHistorial', { periodo: 'all', email: selectedUser }).then(function(allTimeRows) {
+          allTimeRows = Array.isArray(allTimeRows) ? allTimeRows : [];
+          tbody.innerHTML = renderHistorialEmptyUser_(
+            allTimeRows.length === 0 ? 'never' : 'inactive',
+            allTimeRows.length > 0 ? allTimeRows[0].timestamp : null
+          );
+        }).catch(function() {
+          tbody.innerHTML = '<tr><td colspan="8" class="muted" style="text-align:center">No se pudo verificar el historial del usuario.</td></tr>';
+        });
+        return;
+      }
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted,#6b7a8d)">No hay registros para los filtros seleccionados.</td></tr>';
+      return;
+    }
+
+    const totalHistPages = Math.ceil(filtered.length / HIST_PAGE_SIZE);
+    if (APP.state.histPage >= totalHistPages) APP.state.histPage = Math.max(0, totalHistPages - 1);
+    const histPage = APP.state.histPage;
+    const pageRows = filtered.slice(histPage * HIST_PAGE_SIZE, (histPage + 1) * HIST_PAGE_SIZE);
+
+    tbody.innerHTML = pageRows.map(function(r) {
+      const srcCls = histSourceBadgeClass_(r.source_key);
+      const resCls = histResultBadgeClass_(r.result);
+      return '<tr>'
+        + '<td style="white-space:nowrap">' + escapeHtml(formatFechaHoraUi_(r.timestamp || '')) + '</td>'
+        + '<td><span class="hist-badge ' + srcCls + '">' + escapeHtml(r.source_label || r.source_key || '') + '</span></td>'
+        + '<td>' + escapeHtml(r.email || '') + '</td>'
+        + '<td>' + escapeHtml(r.action || '') + '</td>'
+        + '<td>' + escapeHtml(r.entity_type || '') + '</td>'
+        + '<td>' + escapeHtml(r.entity_id || '') + '</td>'
+        + '<td><span class="hist-badge ' + resCls + '">' + escapeHtml(r.result || '') + '</span></td>'
+        + '<td class="hist-detail">' + escapeHtml(r.detail_text || '') + '</td>'
+        + '</tr>';
+    }).join('');
+
+    const histPager = document.getElementById('hist-pager');
+    if (histPager) {
+      histPager.innerHTML = goPesPaginatorHtml_(histPage, totalHistPages, 'hist');
+      histPager.querySelectorAll('[data-hist-page]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          APP.state.histPage = Number(btn.dataset.histPage);
+          applyHistorialClientFilters_();
+        });
+      });
+    }
+  }
+
+  function populateHistorialUsuarioSelect_() {
+    const sel = document.getElementById('hist-usuario');
+    if (!sel || sel.dataset.populated) return;
+    sel.dataset.populated = 'true';
+    const users = APP.state.historialUsuarios || [];
+    sel.innerHTML = '<option value="">Todos los usuarios</option>'
+      + users.map(function(u) {
+        const label = u.nombre && u.nombre !== u.email
+          ? u.nombre + ' (' + u.email + ')'
+          : u.email;
+        return '<option value="' + escapeHtml(u.email) + '">' + escapeHtml(label) + '</option>';
+      }).join('');
+  }
+
+  function renderHistorialEmptyUser_(type, lastTimestamp) {
+    const icon = type === 'never' ? 'person_off' : 'event_busy';
+    const msg = type === 'never'
+      ? 'Este usuario aún no ha registrado actividad en la aplicación'
+      : 'Sin movimientos registrados en el período seleccionado';
+    const sub = type === 'inactive' && lastTimestamp
+      ? '<br><span style="font-size:0.82rem">Última actividad registrada: <strong>'
+          + escapeHtml(formatFechaHoraUi_(lastTimestamp)) + '</strong></span>'
+      : '';
+    return '<tr><td colspan="8" style="text-align:center;padding:40px 16px">'
+      + '<div style="display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--text-muted,#6b7a8d)">'
+      + '<span class="material-symbols-outlined" style="font-size:40px">' + icon + '</span>'
+      + '<span>' + msg + sub + '</span>'
+      + '</div></td></tr>';
+  }
+
+  function renderHistorialSummaryChips_(allRows, filteredRows) {
+    const chipsEl = document.getElementById('hist-chips');
+    if (!chipsEl) return;
+    const rows = filteredRows || [];
+    const total = rows.length;
+    const acciones = rows.filter(function(r) { return r.source_key === 'accion_usuario'; }).length;
+    const accesos = rows.filter(function(r) { return r.source_key === 'acceso'; }).length;
+    const errors = rows.filter(function(r) { return (r.result || '').toLowerCase().indexOf('error') !== -1; }).length;
+    const chips = [
+      { label: 'Total', value: total, cls: '' },
+      { label: 'Acciones usuario', value: acciones, cls: 'hist-chip--acciones' },
+      { label: 'Accesos', value: accesos, cls: 'hist-chip--accesos' },
+      { label: 'Errores', value: errors, cls: 'hist-chip--errores' }
+    ];
+    chipsEl.innerHTML = chips.map(function(c) {
+      return '<div class="hist-chip ' + c.cls + '">'
+        + '<div class="hist-chip__label">' + c.label + '</div>'
+        + '<div class="hist-chip__value">' + c.value + '</div>'
+        + '</div>';
+    }).join('');
+  }
+
+  function histSourceBadgeClass_(sourceKey) {
+    if (sourceKey === 'accion_usuario') return 'hist-badge--accion';
+    if (sourceKey === 'procesamiento') return 'hist-badge--proc';
+    if (sourceKey === 'acceso') return 'hist-badge--acceso';
+    return '';
+  }
+
+  function histResultBadgeClass_(result) {
+    const r = (result || '').toLowerCase();
+    if (r === 'ok' || r === 'éxito' || r === 'exito' || r === 'success') return 'hist-badge--ok';
+    if (r.indexOf('error') !== -1) return 'hist-badge--error';
+    if (r.indexOf('warn') !== -1 || r.indexOf('skip') !== -1) return 'hist-badge--warn';
+    return '';
+  }
+
+  function exportBuscarCSV_() {
+    const allRows = APP.state.buscarModuleRows || [];
+    const query   = String((document.getElementById('search-query') || {}).value || '');
+    const rows    = filterBuscarRows_(allRows, query);
+    if (!rows.length) { showError('No hay registros para exportar.'); return; }
+
+    const headers = ['Solicitud','Vecino','Dirección','Estado','Organización'];
+    const keys    = ['solicitud_id','nombre_completo','direccion_original','estado_actual','nombre_organizacion'];
+    const escape  = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const csv     = [headers.map(escape), ...rows.map(r => keys.map(k => escape(r[k] || '')))].map(r => r.join(',')).join('\r\n');
+    const blob    = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const url     = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    a.href        = url;
+    a.download    = 'GO-PES_busqueda_' + todayISO_() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+    showSuccess('CSV exportado (' + rows.length + ' registros).');
+  }
+
+  function printFicha_() {
+    const data = APP.state.currentFicha;
+    if (!data || !data.summary) { showError('No hay ficha cargada.'); return; }
+    const s = data.summary || {};
+    const now = new Date().toLocaleString('es-CL');
+    const container = document.getElementById('ficha-container');
+    const bodyHtml  = container ? container.innerHTML : '<p>Sin datos</p>';
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8">'
+      + '<title>Ficha ' + escapeHtml(s.solicitud_id || '') + '</title>'
+      + '<style>body{font-family:Inter,sans-serif;font-size:13px;color:#222;padding:24px}'
+      + '.ficha-layout-v2{display:grid;gap:20px}'
+      + '.ficha-universe{border:1px solid #ddd;border-radius:8px;padding:16px;margin-bottom:12px}'
+      + '.ficha-universe__head{margin-bottom:10px}.ficha-universe__head h3{margin:0;font-size:15px}'
+      + '.ficha-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}'
+      + '.ficha-block{border:1px solid #eee;border-radius:6px;padding:12px}'
+      + '.ficha-block h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#666;display:flex;align-items:center;gap:4px}'
+      + '.kv{display:flex;justify-content:space-between;gap:8px;padding:2px 0;border-bottom:1px solid #f0f0f0;font-size:12px}'
+      + '.kv strong{color:#666;white-space:nowrap}.kv span{text-align:right}'
+      + '.material-symbols-outlined{display:none}'
+      + '.footer{margin-top:20px;padding-top:8px;border-top:1px solid #ddd;font-size:11px;color:#888}'
+      + '@media print{body{padding:8px}}</style>'
+      + '</head><body>'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">'
+      + '<div><strong style="font-size:16px">Ficha: ' + escapeHtml(s.solicitud_id || '') + '</strong>'
+      + ' &nbsp;<span style="font-size:13px;color:#555">' + escapeHtml(s.nombre_completo || '') + '</span></div>'
+      + '<div style="font-size:11px;color:#888">GO-PES v2 · Municipalidad de Providencia</div></div>'
+      + bodyHtml
+      + '<div class="footer">Generado el ' + now + '</div>'
+      + '<script>window.onload=function(){window.print();}<\/script>'
+      + '</body></html>';
+    const win = window.open('', '_blank', 'width=900,height=650');
+    if (win) { win.document.write(html); win.document.close(); }
+  }
+
+  function printHistorialReport_() {
+    const rows = APP.state.historialAllRows || [];
+    const total = rows.length;
+    const acciones = rows.filter(function(r) { return r.source_key === 'accion_usuario'; }).length;
+    const accesos = rows.filter(function(r) { return r.source_key === 'acceso'; }).length;
+    const proc = rows.filter(function(r) { return r.source_key === 'procesamiento'; }).length;
+    const errors = rows.filter(function(r) { return (r.result || '').toLowerCase().indexOf('error') !== -1; }).length;
+
+    const periodoEl = document.getElementById('hist-periodo');
+    const periodoLabel = periodoEl && periodoEl.options && periodoEl.selectedIndex >= 0
+      ? periodoEl.options[periodoEl.selectedIndex].text : '';
+    const origenEl = document.getElementById('hist-origen');
+    const origenLabel = origenEl && origenEl.options && origenEl.selectedIndex >= 0
+      ? origenEl.options[origenEl.selectedIndex].text : 'Todos';
+    const now = new Date().toLocaleString('es-CL');
+
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Historial GO-PES</title><style>'
+      + 'body{font-family:Arial,sans-serif;padding:32px;color:#24364B}'
+      + 'h1{font-size:1.4rem;margin-bottom:4px}'
+      + '.subtitle{color:#6b7a8d;font-size:0.9rem;margin-bottom:24px}'
+      + '.cards{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:32px}'
+      + '.card{border:1px solid #D6E0EA;border-radius:10px;padding:16px 24px;min-width:120px}'
+      + '.card__label{font-size:0.72rem;color:#6b7a8d;text-transform:uppercase;letter-spacing:0.05em}'
+      + '.card__value{font-size:2rem;font-weight:700;line-height:1.2}'
+      + '.card--acciones .card__value{color:#214E8A}'
+      + '.card--accesos .card__value{color:#007C4A}'
+      + '.card--proc .card__value{color:#007C4A}'
+      + '.card--errores .card__value{color:#c0392b}'
+      + '.footer{margin-top:32px;font-size:0.75rem;color:#6b7a8d}'
+      + '</style></head><body>'
+      + '<h1>Historial de acciones — GO-PES</h1>'
+      + '<div class="subtitle">Período: ' + periodoLabel + ' · Origen: ' + origenLabel + ' · Generado: ' + now + '</div>'
+      + '<div class="cards">'
+      + '<div class="card"><div class="card__label">Total registros</div><div class="card__value">' + total + '</div></div>'
+      + '<div class="card card--acciones"><div class="card__label">Acciones usuario</div><div class="card__value">' + acciones + '</div></div>'
+      + '<div class="card card--accesos"><div class="card__label">Accesos</div><div class="card__value">' + accesos + '</div></div>'
+      + '<div class="card card--proc"><div class="card__label">Procesamiento</div><div class="card__value">' + proc + '</div></div>'
+      + '<div class="card card--errores"><div class="card__label">Errores</div><div class="card__value">' + errors + '</div></div>'
+      + '</div>'
+      + '<div class="footer">GO-PES v2 · Municipalidad de Providencia · Exportado el ' + now + '</div>'
+      + '<script>window.onload=function(){window.print();}<\/script>'
+      + '</body></html>';
+
+    const win = window.open('', '_blank', 'width=800,height=600');
+    if (win) { win.document.write(html); win.document.close(); }
+  }
+
+  var _sessionExpiredShown = false;
+
+  function showSessionExpired_() {
+    if (_sessionExpiredShown) return;
+    _sessionExpiredShown = true;
+    const overlay = document.getElementById('session-expired-overlay');
+    if (overlay) overlay.classList.remove('is-hidden');
+  }
+
+  function showToast_(message, type, durationMs) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const icons = { error: 'error', success: 'check_circle', session: 'lock_person' };
+    const toast = document.createElement('div');
+    toast.className = 'go-toast go-toast--' + (type || 'error');
+    toast.innerHTML =
+      '<span class="material-symbols-outlined go-toast__icon">' + (icons[type] || 'info') + '</span>' +
+      '<span class="go-toast__body">' + escapeHtml(message) + '</span>' +
+      '<button type="button" class="go-toast__close" aria-label="Cerrar"><span class="material-symbols-outlined" style="font-size:1rem">close</span></button>';
+    const close = () => {
+      toast.classList.add('go-toast--out');
+      setTimeout(() => toast.parentNode && toast.remove(), 200);
+    };
+    toast.querySelector('.go-toast__close').addEventListener('click', close);
+    if (durationMs) setTimeout(close, durationMs);
+    container.appendChild(toast);
+  }
+
+  function showSuccess(message) {
+    setStatus(message, true);
+    showToast_(message, 'success', 4000);
+  }
+
+  function showError(error) {
+    const message = typeof error === 'string'
+      ? error
+      : (error && error.message ? error.message : 'Ocurrió un error.');
+    setStatus(message, false);
+    showToast_(message, 'error', 7000);
+  }
+
+  function setStatus(message, ok) {
+    const el = document.getElementById('status-message');
+    if (!el) return;
+    el.textContent = message;
+    el.style.color = ok === false ? '#A12A2A' : ok === true ? '#0C6844' : '';
+  }
+
+  function friendlyBeneficioLabel_(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const fromCatalog = (APP.state.catalogs.beneficiosBase || []).find(item =>
+      String(item.beneficio_codigo || '').trim() === raw
+    );
+    if (fromCatalog && fromCatalog.beneficio_nombre) return fromCatalog.beneficio_nombre;
+
+    const fallback = {
+      CHARLAS_CAPACITACIONES: 'CAPACITACIONES',
+      FONDESE: 'FONDESE',
+      CAMARAS_1414: 'Cámaras 1414'
+    };
+    return fallback[raw] || raw;
+  }
+
+  function buildFullName(name, last) {
+    return [name, last].map(v => String(v || '').trim()).filter(Boolean).join(' ');
+  }
+
+  function todayISO_() {
+    const d = new Date();
+    const m = `${d.getMonth() + 1}`.padStart(2, '0');
+    const day = `${d.getDate()}`.padStart(2, '0');
+    return `${d.getFullYear()}-${m}-${day}`;
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? '' : value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  // Genera un empty-state completo (ícono + título + mensaje opcional)
+  function goPesEmptyStateHtml_(icon, title, msg, extraClass) {
+    const cls = ['empty-state', extraClass].filter(Boolean).join(' ');
+    return `<div class="${cls}">
+      <span class="material-symbols-outlined" style="font-size:2rem;opacity:.35;display:block">${icon || 'inbox'}</span>
+      <strong>${escapeHtml(title || '')}</strong>
+      ${msg ? `<p class="muted" style="font-size:.82rem;margin:0">${escapeHtml(msg)}</p>` : ''}
+    </div>`;
+  }
+
+  // Genera una fila vacía para <tbody> (no puede usar el box de empty-state)
+  function goPesTableEmptyRowHtml_(icon, msg, colspan) {
+    return `<tr><td colspan="${colspan || 1}" style="padding:0;border:0">
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:28px 16px;color:var(--text-muted,#6b7a8d);font-size:.85rem">
+        <span class="material-symbols-outlined" style="opacity:.4;font-size:1.2rem">${icon || 'inbox'}</span>
+        <span>${escapeHtml(msg || 'Sin registros.')}</span>
+      </div>
+    </td></tr>`;
+  }
+
+  function goPesFieldError_(el, message) {
+    if (!el) return;
+    const wrapper = el.closest('.field');
+    if (!wrapper) return;
+    let span = wrapper.querySelector('.field-error');
+    if (!span) {
+      span = document.createElement('span');
+      span.className = 'field-error';
+      span.setAttribute('role', 'alert');
+      el.insertAdjacentElement('afterend', span);
+    }
+    span.textContent = message || '';
+    wrapper.classList.toggle('has-error', !!message);
+  }
+
+  function goPesFieldClearError_(el) { goPesFieldError_(el, ''); }
+
+  function goPesPaginatorHtml_(current, total, prefix) {
+    if (total <= 1) return '';
+    const MAX_VISIBLE = 7;
+    const makeBtn = (page, label, active, disabled) =>
+      '<button type="button" class="go-pager__btn' + (active ? ' go-pager__btn--active' : '') + '"'
+      + (disabled ? ' disabled' : '')
+      + ' data-' + prefix + '-page="' + page + '">' + escapeHtml(String(label)) + '</button>';
+
+    let pages = '';
+    if (total <= MAX_VISIBLE) {
+      for (let i = 0; i < total; i++) pages += makeBtn(i, i + 1, i === current, false);
+    } else {
+      pages += makeBtn(0, 1, current === 0, false);
+      if (current > 2) pages += '<span class="go-pager__info">…</span>';
+      for (let i = Math.max(1, current - 1); i <= Math.min(total - 2, current + 1); i++) {
+        pages += makeBtn(i, i + 1, i === current, false);
+      }
+      if (current < total - 3) pages += '<span class="go-pager__info">…</span>';
+      pages += makeBtn(total - 1, total, current === total - 1, false);
+    }
+
+    return makeBtn(current - 1, '‹', false, current === 0)
+      + pages
+      + makeBtn(current + 1, '›', false, current === total - 1);
+  }
+
+  function getSystemConfig_() {
+    return APP.state.systemConfig || BOOTSTRAP.systemConfig || TEMPLATE_SYSTEM_CONFIG || {};
+  }
+
+  function getSystemGeneralConfig_() {
+    return getSystemConfig_().general || {};
+  }
+
+  function getSystemBrandingConfig_() {
+    return getSystemConfig_().branding || {};
+  }
+
+  function shouldShowVisibleVersionClient_() {
+    const general = getSystemGeneralConfig_();
+    return general.showVisibleVersion !== false;
+  }
+
+  function getLoadingText_() {
+    return getSystemGeneralConfig_().loadingText || 'Iniciando Gestor Operativo';
+  }
+
+  function getAllowedUserDomain_() {
+    return String((((getSystemConfig_().accessModules || {}).allowedDomain) || 'providencia.cl')).trim().replace(/^@+/, '') || 'providencia.cl';
+  }
+
+  function initUserEmailField_() {
+    const input = document.getElementById('user-email-local');
+    if (!input || input.dataset.bound === '1') return;
+    input.dataset.bound = '1';
+
+    const normalizeLocal = () => {
+      const raw = String(input.value || '').trim().toLowerCase().replace(/\s+/g, '');
+      const domain = getAllowedUserDomain_();
+      if (!raw) {
+        input.value = '';
+        return;
+      }
+
+      const parts = raw.split('@').filter(Boolean);
+      if (parts.length === 1) {
+        input.value = parts[0];
+        return;
+      }
+
+      if (parts.length === 2 && parts[1] === domain) {
+        input.value = parts[0];
+      }
+    };
+
+    input.addEventListener('blur', normalizeLocal);
+    input.addEventListener('paste', () => setTimeout(normalizeLocal, 0));
+  }
+
+  function buildProvidenciaEmailFromInput_() {
+    const input = document.getElementById('user-email-local');
+    const raw = String(input?.value || '').trim().toLowerCase().replace(/\s+/g, '');
+    const domain = getAllowedUserDomain_();
+    if (!raw) throw new Error('Debes ingresar el email del usuario.');
+
+    let localPart = raw;
+    if (raw.includes('@')) {
+      const parts = raw.split('@').filter(Boolean);
+      if (parts.length !== 2 || parts[1] !== domain) {
+        throw new Error(`Solo se permiten usuarios con correo @${domain}.`);
+      }
+      localPart = parts[0];
+    }
+
+    if (!/^[a-z0-9._-]+$/.test(localPart)) {
+      throw new Error('El correo solo puede contener letras, números, puntos, guiones y guion bajo.');
+    }
+
+    if (input) input.value = localPart;
+    return `${localPart}@${domain}`;
+  }
+
+  function getDefaultManagedUserProfile_() {
+    const profile = String((((getSystemConfig_().accessModules || {}).defaultUserProfile) || 'operador')).trim().toLowerCase();
+    return ['visor', 'operador', 'coordinador'].includes(profile) ? profile : 'operador';
+  }
+
+  function getHomeDashboardUrl_() {
+    return String((((getSystemConfig_().integrations || {}).homeDashboardUrl) || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.homeDashboardUrl) || '')).trim();
+  }
+
+  function getSociosDashboardUrl_() {
+    return String((((getSystemConfig_().integrations || {}).sociosDashboardUrl) || (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.sociosDashboardUrl) || '')).trim();
+  }
+
+  function getSociosDashboardHeight_() {
+    const value = Number((((getSystemConfig_().socios || {}).dashboardHeight) || 443));
+    return Number.isFinite(value) && value > 0 ? value : 443;
+  }
+
+  function getSocioCargoOptions_() {
+    const configured = (((getSystemConfig_().socios || {}).allowedRoles) || []).filter(Boolean);
+    return configured.length ? configured : ORGANIZACION_SOCIO_CARGOS.slice();
+  }
+
+  function applyBrandingRuntimeTheme_() {
+    const branding = getSystemBrandingConfig_();
+    const rootStyle = document.documentElement && document.documentElement.style;
+    if (!rootStyle) return;
+    const runtimeAccent = isDarkTheme_()
+      ? '#8CC63F'
+      : (normalizeHexColor_(branding.accentColor) || '#03C2AE');
+    const tokens = {
+      '--runtime-brand-primary': normalizeHexColor_(branding.primaryColor) || '#3D96B4',
+      '--runtime-brand-secondary': normalizeHexColor_(branding.secondaryColor) || '#8CC63F',
+      '--runtime-brand-accent': runtimeAccent,
+      '--runtime-brand-progress': normalizeHexColor_(branding.loadingProgressColor) || '#8CC63F',
+      '--runtime-brand-light': normalizeHexColor_(branding.lightBackground) || '#F7FAFC',
+      '--runtime-brand-dark': normalizeHexColor_(branding.darkBackground) || '#0D2940'
+    };
+    Object.keys(tokens).forEach(key => rootStyle.setProperty(key, tokens[key]));
+  }
+
+  function getViewDefinition_(view) {
+    const normalizedView = normalizeModuleKey_(view) || view;
+    return (APP.state.moduleDefinitions || []).find(module => module.view === normalizedView || module.key === normalizedView) || null;
+  }
+
+  function getViewLabel_(view, fallback) {
+    const def = getViewDefinition_(view);
+    return (def && def.label) || fallback || friendlyViewName_(view);
+  }
+
+  function applySystemConfigUi_() {
+    const config = getSystemConfig_();
+    const general = config.general || {};
+    const heroTitle = document.querySelector('.hero__title');
+    const heroSubtitle = document.querySelector('.hero__subtitle');
+    const splashText = document.querySelector('#app-loading .app-loading__text');
+    const contentText = document.querySelector('#content-loading .content-loading__text');
+    const emailSuffix = document.querySelector('.email-input-group__suffix');
+
+    if (heroTitle) heroTitle.textContent = general.appName || 'Gestor Operativo PES';
+    if (heroSubtitle) heroSubtitle.textContent = [
+      general.programName || '',
+      general.appSubtitle || ''
+    ].filter(Boolean).join(' · ');
+    if (splashText) splashText.textContent = getLoadingText_();
+    if (contentText) contentText.textContent = getLoadingText_();
+    if (emailSuffix) emailSuffix.textContent = '@' + getAllowedUserDomain_();
+    applyBrandingRuntimeTheme_();
+  }
+
+  function applyModuleDefinitionsUi_() {
+    const sidebar = document.querySelector('.sidebar');
+    const version = document.getElementById('app-version');
+    if (!sidebar) return;
+
+    const buttons = Array.from(sidebar.querySelectorAll('.nav-btn'));
+    const defs = getNavigableModuleDefinitions_().slice().sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+    const defMap = defs.reduce((acc, def) => {
+      acc[def.view || def.key] = def;
+      return acc;
+    }, {});
+
+    buttons.forEach(button => {
+      const view = button.dataset.view;
+      const def = defMap[view];
+      if (!def) return;
+      const label = def.label || view;
+      const navLabel = button.querySelector('.nav-label');
+      const navIcon = button.querySelector('.material-symbols-outlined');
+      if (navLabel) navLabel.textContent = label;
+      if (navIcon && def.icon) navIcon.textContent = def.icon;
+      button.title = label;
+    });
+
+    defs.forEach(def => {
+      const button = sidebar.querySelector(`.nav-btn[data-view="${def.view || def.key}"]`);
+      if (!button || !version) return;
+      sidebar.insertBefore(button, version);
+    });
+
+    renderQuickActions();
+    renderHomeTiles();
+  }
+
+
+  function friendlyViewName_(view) {
+    const def = getViewDefinition_(view);
+    if (def && def.label) return def.label;
+    const names = {
+      inicio: 'Inicio',
+      buscar: 'Buscar vecino',
+      ficha: 'Ficha',
+      'nuevo-ingreso': 'Nuevo ingreso',
+      avance: 'Avance',
+      organizacion: 'Organizaciones',
+      instrumento: 'Beneficios',
+      socios: 'Socios',
+      historial: 'Historial',
+      usuarios: 'Gestión de usuarios',
+      configuracion: 'Configuración'
+    };
+    return names[view] || view;
+  }
+
+  <?!= include('Scripts_Inicio') ?>
+  <?!= include('Scripts_Calendario') ?>
+  <?!= include('Scripts_Ficha') ?>
+  <?!= include('Scripts_NuevoIngreso') ?>
+  <?!= include('Scripts_Organizaciones') ?>
+  <?!= include('Scripts_Beneficios') ?>
+  <?!= include('Scripts_Socios') ?>
+  <?!= include('Scripts_Avance') ?>
+  <?!= include('Scripts_Admin') ?>
+
+})();
+</script>

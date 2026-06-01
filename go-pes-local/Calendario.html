@@ -1,0 +1,150 @@
+<script>
+window.GO_PES_CALENDARIO = (function() {
+
+  function render(root, data, esc, onAction, onRefresh) {
+    if (!root) return;
+    if (data === null || data === undefined) {
+      root.innerHTML =
+        '<section class="inicio-card inicio-cal-card">' +
+          '<div class="inicio-card__head">' +
+            '<span class="material-symbols-outlined">calendar_month</span>' +
+            '<div><h3>Calendario de reuniones</h3><p>Cargando eventos...</p></div>' +
+          '</div>' +
+          '<div class="inicio-cal-loading"><span class="material-symbols-outlined dash-spin">refresh</span></div>' +
+        '</section>';
+      return;
+    }
+    var eventos = Array.isArray(data.eventos) ? data.eventos : [];
+    root.innerHTML = buildCard_(eventos, data.fetchedAt || '', esc);
+
+    if (!root.dataset.calActionsWired) {
+      root.dataset.calActionsWired = '1';
+      if (typeof onAction === 'function') {
+        root.addEventListener('click', function(e) {
+          var btn = e.target.closest('.inicio-cal-action');
+          if (!btn) return;
+          onAction(btn.dataset.calId);
+        });
+      }
+      if (typeof onRefresh === 'function') {
+        root.addEventListener('click', function(e) {
+          if (e.target.closest('.inicio-cal-refresh-btn')) onRefresh();
+        });
+      }
+    }
+  }
+
+  function buildCard_(eventos, fetchedAt, esc) {
+    var body = eventos.length === 0
+      ? '<div class="inicio-cal-empty">' +
+          '<span class="material-symbols-outlined">event_busy</span>' +
+          '<p>Sin reuniones próximas en los próximos 60 días</p>' +
+        '</div>'
+      : '<ul class="inicio-cal-list">' +
+          eventos.map(function(ev) { return buildItem_(ev, esc); }).join('') +
+        '</ul>';
+
+    return '<section class="inicio-card inicio-cal-card">' +
+      '<div class="inicio-card__head">' +
+        '<span class="material-symbols-outlined">calendar_month</span>' +
+        '<div><h3>Calendario de reuniones</h3>' +
+        '<p>Reuniones CS y Ministro de fe proximas</p></div>' +
+        '<button class="inicio-cal-refresh-btn secondary-btn btn--sm" type="button" title="Actualizar calendario">' +
+          '<span class="material-symbols-outlined">refresh</span>' +
+        '</button>' +
+      '</div>' +
+      body +
+      (fetchedAt
+        ? '<p class="inicio-cal-footer">' +
+            '<span class="material-symbols-outlined">update</span>' +
+            esc(fetchedAt) +
+          '</p>'
+        : '') +
+      buildDialog_(esc) +
+    '</section>';
+  }
+
+  function buildItem_(ev, esc) {
+    var esReunion = ev.tipo === 'reunion';
+    var partesFecha = ev.fechaLabel.split(' de ');
+    var numDia = partesFecha[0] || '';
+    var mesDia = partesFecha[1] || '';
+    var hora   = ev.allDay ? 'Todo el dia'
+               : ev.horaInicio + (ev.horaFin ? ' - ' + ev.horaFin : '');
+
+    var dayMod = esReunion ? 'inicio-cal-badge--reunion' : 'inicio-cal-badge--ministro';
+    var yaRegistrado = esReunion && ev.registrado;
+    var actionBtn = !esReunion
+      ? '<button class="inicio-cal-action inicio-cal-action--pending" type="button" disabled ' +
+          'title="Para programar este evento, primero se deben completar los hitos previos en la app">' +
+          '<span class="material-symbols-outlined">how_to_reg</span>' +
+        '</button>'
+      : yaRegistrado
+      ? '<button class="inicio-cal-action inicio-cal-action--registered" data-cal-id="' + esc(ev.id) + '" type="button" ' +
+          'title="Asistencia registrada - click para continuar con el ingreso">' +
+          '<span class="material-symbols-outlined">how_to_reg</span>' +
+        '</button>'
+      : '<button class="inicio-cal-action" data-cal-id="' + esc(ev.id) + '" type="button" ' +
+          'title="Registrar asistencia y crear nuevo ingreso">' +
+          '<span class="material-symbols-outlined">person_add</span>' +
+        '</button>';
+
+    return '<li class="inicio-cal-item">' +
+      '<div class="inicio-cal-day ' + dayMod + '">' +
+        '<span class="inicio-cal-diasem">' + esc(ev.diaSemana) + '</span>' +
+        '<span class="inicio-cal-num">' + esc(numDia) + '</span>' +
+        '<span class="inicio-cal-mes">' + esc(mesDia) + '</span>' +
+      '</div>' +
+      '<div class="inicio-cal-body">' +
+        '<div class="inicio-cal-titulo-row">' +
+          '<p class="inicio-cal-titulo">' + esc(ev.titulo) + '</p>' +
+        '</div>' +
+        '<div class="inicio-cal-meta-row">' +
+          '<p class="inicio-cal-meta">' +
+            (hora ? '<span class="inicio-cal-hora">' + esc(hora) + '</span>' : '') +
+            (ev.lugar ? '<span class="inicio-cal-lugar">' + esc(ev.lugar) + '</span>' : '') +
+          '</p>' +
+          actionBtn +
+        '</div>' +
+      '</div>' +
+    '</li>';
+  }
+
+  function buildDialog_(esc) {
+    return '<div id="inicio-cal-dialog" class="inicio-cal-dialog is-hidden" role="dialog" aria-modal="true">' +
+      '<div class="inicio-cal-dialog__box">' +
+        '<p id="cal-dialog-titulo" class="inicio-cal-dialog__titulo"></p>' +
+        '<div id="cal-coincidencias" class="cal-coincidencias is-hidden">' +
+          '<p class="cal-coincidencias__label">' +
+            '<span class="material-symbols-outlined">manage_search</span>' +
+            'Coincidencias en el sistema' +
+          '</p>' +
+          '<div id="cal-coincidencias-content" class="cal-coincidencias__content"></div>' +
+        '</div>' +
+        '<div id="cal-step-1">' +
+          '<p class="inicio-cal-dialog__q">¿Se realizó esta reunión?</p>' +
+          '<div class="inicio-cal-dialog__btns">' +
+            '<button id="cal-btn-si"  class="btn primary-btn   btn--sm">Sí, se realizó</button>' +
+            '<button id="cal-btn-no"  class="btn secondary-btn btn--sm">No se realizó</button>' +
+            '<button id="cal-btn-cancel-1" class="inicio-cal-dialog__cancel">Cancelar</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="cal-step-2" class="is-hidden">' +
+          '<p class="inicio-cal-dialog__q">¿Cuántas personas asistieron?</p>' +
+          '<input id="cal-asistentes" type="number" min="0" class="inicio-cal-dialog__input" placeholder="Ej: 15" autocomplete="off">' +
+          '<div class="inicio-cal-dialog__btns">' +
+            '<button id="cal-btn-continuar" class="btn primary-btn btn--sm">Continuar</button>' +
+            '<button id="cal-btn-cancel-2"  class="inicio-cal-dialog__cancel">Cancelar</button>' +
+          '</div>' +
+        '</div>' +
+        '<div id="cal-step-loading" class="is-hidden">' +
+          '<span class="material-symbols-outlined dash-spin">refresh</span>' +
+          '<span>Registrando...</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  return { render: render };
+})();
+</script>

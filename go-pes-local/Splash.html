@@ -1,0 +1,414 @@
+<div id="app-loading" class="app-loading" aria-live="polite" aria-busy="true">
+  <div class="splash-screen" role="status" aria-label="Pantalla de inicio de la aplicación">
+    <div class="splash-screen__ambient" aria-hidden="true">
+      <span class="splash-screen__ambient-orb splash-screen__ambient-orb--one"></span>
+      <span class="splash-screen__ambient-orb splash-screen__ambient-orb--two"></span>
+      <span class="splash-screen__ambient-grid"></span>
+    </div>
+
+    <div class="splash-screen__content">
+      <div class="splash-screen__brand">
+        <div class="splash-screen__logo-wrap" aria-hidden="true">
+          <span class="splash-screen__logo-ring splash-screen__logo-ring--outer"></span>
+          <span class="splash-screen__logo-ring splash-screen__logo-ring--inner"></span>
+          <span class="splash-screen__logo-sheen"></span>
+          <div class="splash-screen__logo-core">
+            <img id="splash-logo" class="splash-screen__logo" alt="Municipalidad de Providencia" />
+          </div>
+        </div>
+
+        <div class="splash-screen__copy">
+          <p class="splash-screen__eyebrow" id="splash-program-name">Programa Estamos Seguros</p>
+          <h1 class="splash-screen__title" id="splash-app-title">Gestor Operativo PES</h1>
+          <div class="splash-screen__meta">
+            <span class="splash-screen__version" id="splash-version">v0 · build 00000000</span>
+            <span class="splash-screen__divider" aria-hidden="true"></span>
+            <span class="splash-screen__institution">Municipalidad de Providencia</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="splash-screen__progress-block">
+        <div class="splash-screen__progress-head">
+          <div>
+            <p class="splash-screen__progress-label">Cargando sistema</p>
+            <p class="app-loading__text">Iniciando Gestor Operativo</p>
+          </div>
+          <div class="splash-screen__percent" id="splash-progress-percent">0%</div>
+        </div>
+
+        <div class="splash-screen__progress-track" aria-hidden="true">
+          <span class="splash-screen__progress-bar" id="splash-progress-bar"></span>
+        </div>
+
+        <div class="splash-screen__progress-footer">
+          <p class="splash-screen__status" id="splash-status-text">Preparando entorno operativo.</p>
+          <p class="splash-screen__powered">POWERED BY PABLO RAMOS</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const APP_SPLASH_STATE = {
+    visible: true,
+    hideRequested: false,
+    startedAt: 0,
+    progress: 0,
+    message: '',
+    minDurationMs: 5000,
+    rafId: 0,
+    hideTimerId: 0,
+    forceHideTimerId: 0
+  };
+
+  function getSplashElements_() {
+    const root = document.getElementById('app-loading');
+    if (!root) return null;
+    return {
+      root,
+      logo: document.getElementById('splash-logo'),
+      title: document.getElementById('splash-app-title'),
+      program: document.getElementById('splash-program-name'),
+      version: document.getElementById('splash-version'),
+      percent: document.getElementById('splash-progress-percent'),
+      bar: document.getElementById('splash-progress-bar'),
+      text: root.querySelector('.app-loading__text'),
+      status: document.getElementById('splash-status-text')
+    };
+  }
+
+  function readSplashBootstrap_() {
+    const app = document.getElementById('app');
+    if (!app) return {};
+    try {
+      return JSON.parse(app.dataset.bootstrap || '{}');
+    } catch (err) {
+      return {};
+    }
+  }
+
+  function getSplashSystemConfig_() {
+    const bootstrap = readSplashBootstrap_();
+    return (bootstrap && bootstrap.systemConfig) || {};
+  }
+
+  function getSplashLoadingText_() {
+    const general = (getSplashSystemConfig_().general || {});
+    return general.loadingText || 'Iniciando Gestor Operativo';
+  }
+
+  function getSplashMinDurationMs_() {
+    const general = (getSplashSystemConfig_().general || {});
+    const value = Number((general.splashMinDurationMs) || 5000);
+    return Number.isFinite(value) && value >= 500 ? value : 5000;
+  }
+
+  function extractSplashProgramName_(subtitle) {
+    const value = String(subtitle || '').trim();
+    if (!value) return 'Programa Estamos Seguros';
+    return value.split('·')[0].trim() || value;
+  }
+
+  function applySplashRuntimeTheme_() {
+    const branding = (getSplashSystemConfig_().branding || {});
+    const rootStyle = document.documentElement && document.documentElement.style;
+    if (!rootStyle) return;
+    const tokens = {
+      '--runtime-brand-primary': String(branding.primaryColor || '#3D96B4').trim(),
+      '--runtime-brand-secondary': String(branding.secondaryColor || '#8CC63F').trim(),
+      '--runtime-brand-accent': String(branding.accentColor || '#03C2AE').trim(),
+      '--runtime-brand-progress': String(branding.loadingProgressColor || '#8CC63F').trim(),
+      '--runtime-brand-light': String(branding.lightBackground || '#F7FAFC').trim(),
+      '--runtime-brand-dark': String(branding.darkBackground || '#0D2940').trim()
+    };
+    Object.keys(tokens).forEach(key => rootStyle.setProperty(key, tokens[key]));
+  }
+
+  function getSplashStatusCopy_(progress, hideRequested) {
+    if (hideRequested && progress >= 96) return 'Finalizando la carga inicial.';
+    if (progress >= 84) return 'Validando módulos y permisos.';
+    if (progress >= 60) return 'Sincronizando estructura operativa.';
+    if (progress >= 34) return 'Cargando configuración institucional.';
+    return 'Preparando entorno operativo.';
+  }
+
+  function renderSplashProgress_() {
+    const els = getSplashElements_();
+    if (!els) return;
+    const progressValue = Math.max(0, Math.min(100, APP_SPLASH_STATE.progress));
+    const rounded = Math.round(progressValue);
+
+    if (els.bar) {
+      els.bar.style.width = `${progressValue}%`;
+      els.bar.setAttribute('aria-valuenow', String(rounded));
+    }
+    if (els.percent) els.percent.textContent = `${rounded}%`;
+    if (els.status) els.status.textContent = getSplashStatusCopy_(progressValue, APP_SPLASH_STATE.hideRequested);
+    if (els.text) els.text.textContent = APP_SPLASH_STATE.message || getSplashLoadingText_();
+  }
+
+  function easeOutCubic_(value) {
+    const t = Math.max(0, Math.min(1, Number(value) || 0));
+    return 1 - Math.pow(1 - t, 3);
+  }
+
+  function getSplashVisualTarget_(elapsed, minDurationMs, hideRequested) {
+    const safeDuration = Math.max(500, Number(minDurationMs) || 5000);
+    const normalized = Math.max(0, Math.min(1, elapsed / safeDuration));
+
+    if (hideRequested) {
+      if (normalized < 0.82) {
+        return 4 + easeOutCubic_(normalized / 0.82) * 84;
+      }
+      return 88 + easeOutCubic_((normalized - 0.82) / 0.18) * 12;
+    }
+
+    if (elapsed <= safeDuration) {
+      return 4 + easeOutCubic_(normalized) * 88;
+    }
+
+    const extraElapsed = elapsed - safeDuration;
+    const settlingWindow = Math.max(1800, safeDuration * 0.9);
+    const extraNormalized = 1 - Math.exp(-extraElapsed / settlingWindow);
+    return 92 + (extraNormalized * 6);
+  }
+
+  function getSplashStatusCopy_(elapsed, minDurationMs, hideRequested) {
+    if (hideRequested && elapsed >= minDurationMs) return 'Finalizando la carga inicial.';
+
+    const statuses = [
+      'Preparando entorno operativo.',
+      'Cargando configuracion institucional.',
+      'Sincronizando estructura operativa.',
+      'Validando modulos y permisos.'
+    ];
+    const safeDuration = Math.max(500, Number(minDurationMs) || 5000);
+    const normalized = Math.max(0, Math.min(0.999, elapsed / safeDuration));
+    const index = Math.min(statuses.length - 1, Math.floor(normalized * statuses.length));
+    return statuses[index];
+  }
+
+  function renderSplashProgress_() {
+    const els = getSplashElements_();
+    if (!els) return;
+    const progressValue = Math.max(0, Math.min(100, APP_SPLASH_STATE.progress));
+    const rounded = Math.round(progressValue);
+    const elapsed = getSplashElapsed_();
+    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
+
+    if (els.bar) {
+      els.bar.style.width = `${progressValue}%`;
+      els.bar.setAttribute('aria-valuenow', String(rounded));
+    }
+    if (els.percent) els.percent.textContent = `${rounded}%`;
+    if (els.status) els.status.textContent = getSplashStatusCopy_(elapsed, minDurationMs, APP_SPLASH_STATE.hideRequested);
+    if (els.text) els.text.textContent = APP_SPLASH_STATE.message || getSplashLoadingText_();
+  }
+
+  function clearSplashTimers_() {
+    window.clearTimeout(APP_SPLASH_STATE.hideTimerId);
+    window.clearTimeout(APP_SPLASH_STATE.forceHideTimerId);
+    APP_SPLASH_STATE.hideTimerId = 0;
+    APP_SPLASH_STATE.forceHideTimerId = 0;
+  }
+
+  function syncSplashVisibilityLock_() {
+    const splash = document.getElementById('app-loading');
+    const visible = !!(
+      splash &&
+      APP_SPLASH_STATE.visible &&
+      !splash.classList.contains('is-hidden') &&
+      splash.style.display !== 'none'
+    );
+    document.body.classList.toggle('app-has-modal', visible);
+    document.documentElement.classList.toggle('app-has-modal', visible);
+  }
+
+  function getSplashElapsed_(now) {
+    const currentTime = typeof now === 'number' ? now : performance.now();
+    return Math.max(0, currentTime - (APP_SPLASH_STATE.startedAt || currentTime));
+  }
+
+  function finalizeSplashHide_() {
+    const els = getSplashElements_();
+    if (!els) return;
+
+    clearSplashTimers_();
+    if (APP_SPLASH_STATE.rafId) {
+      window.cancelAnimationFrame(APP_SPLASH_STATE.rafId);
+      APP_SPLASH_STATE.rafId = 0;
+    }
+    APP_SPLASH_STATE.visible = false;
+    APP_SPLASH_STATE.hideRequested = false;
+    APP_SPLASH_STATE.progress = 100;
+    renderSplashProgress_();
+
+    els.root.setAttribute('aria-busy', 'false');
+    els.root.classList.add('is-hidden');
+    syncSplashVisibilityLock_();
+
+    APP_SPLASH_STATE.hideTimerId = window.setTimeout(() => {
+      els.root.style.display = 'none';
+      syncSplashVisibilityLock_();
+      APP_SPLASH_STATE.hideTimerId = 0;
+    }, 260);
+  }
+
+  function scheduleSplashForceHide_() {
+    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
+    const remainingMs = Math.max(0, minDurationMs - getSplashElapsed_());
+
+    window.clearTimeout(APP_SPLASH_STATE.forceHideTimerId);
+    APP_SPLASH_STATE.forceHideTimerId = window.setTimeout(() => {
+      if (!APP_SPLASH_STATE.visible || !APP_SPLASH_STATE.hideRequested) return;
+      APP_SPLASH_STATE.progress = 100;
+      renderSplashProgress_();
+      finalizeSplashHide_();
+    }, remainingMs + 260);
+  }
+
+  function tickSplashProgress_(now) {
+    const els = getSplashElements_();
+    if (!els || !APP_SPLASH_STATE.visible) {
+      APP_SPLASH_STATE.rafId = 0;
+      return;
+    }
+
+    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
+    const elapsed = now - APP_SPLASH_STATE.startedAt;
+    let target = Math.min(91, 9 + (elapsed / minDurationMs) * 82);
+
+    if (APP_SPLASH_STATE.hideRequested) {
+      target = elapsed >= minDurationMs ? 100 : Math.max(target, 94);
+    }
+
+    const easing = APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs ? 0.18 : 0.075;
+    APP_SPLASH_STATE.progress += (target - APP_SPLASH_STATE.progress) * easing;
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && (100 - APP_SPLASH_STATE.progress) < 0.4) {
+      APP_SPLASH_STATE.progress = 100;
+    }
+
+    renderSplashProgress_();
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && APP_SPLASH_STATE.progress >= 100) {
+      finalizeSplashHide_();
+      APP_SPLASH_STATE.rafId = 0;
+      return;
+    }
+
+    APP_SPLASH_STATE.rafId = window.requestAnimationFrame(tickSplashProgress_);
+  }
+
+  function tickSplashProgress_(now) {
+    const els = getSplashElements_();
+    if (!els || !APP_SPLASH_STATE.visible) {
+      APP_SPLASH_STATE.rafId = 0;
+      return;
+    }
+
+    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
+    const elapsed = now - APP_SPLASH_STATE.startedAt;
+    let target = getSplashVisualTarget_(elapsed, minDurationMs, APP_SPLASH_STATE.hideRequested);
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs) {
+      target = 100;
+    }
+
+    const easing = APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs ? 0.22 : 0.065;
+    APP_SPLASH_STATE.progress += (target - APP_SPLASH_STATE.progress) * easing;
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && (100 - APP_SPLASH_STATE.progress) < 0.4) {
+      APP_SPLASH_STATE.progress = 100;
+    }
+
+    renderSplashProgress_();
+
+    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && APP_SPLASH_STATE.progress >= 100) {
+      finalizeSplashHide_();
+      APP_SPLASH_STATE.rafId = 0;
+      return;
+    }
+
+    APP_SPLASH_STATE.rafId = window.requestAnimationFrame(tickSplashProgress_);
+  }
+
+  function ensureSplashLoop_() {
+    if (APP_SPLASH_STATE.rafId) return;
+    APP_SPLASH_STATE.rafId = window.requestAnimationFrame(tickSplashProgress_);
+  }
+
+  function showAppLoading(message) {
+    const els = getSplashElements_();
+    if (!els) return;
+
+    clearSplashTimers_();
+    APP_SPLASH_STATE.minDurationMs = getSplashMinDurationMs_();
+    APP_SPLASH_STATE.message = message || APP_SPLASH_STATE.message || getSplashLoadingText_();
+    APP_SPLASH_STATE.hideRequested = false;
+
+    if (!APP_SPLASH_STATE.visible) {
+      APP_SPLASH_STATE.startedAt = performance.now();
+      APP_SPLASH_STATE.progress = 0;
+      APP_SPLASH_STATE.visible = true;
+      els.root.classList.remove('is-hidden');
+      els.root.style.display = 'grid';
+    }
+
+    updateSplashBranding_();
+    els.root.setAttribute('aria-busy', 'true');
+    renderSplashProgress_();
+    syncSplashVisibilityLock_();
+    ensureSplashLoop_();
+  }
+
+  function hideAppLoading() {
+    const els = getSplashElements_();
+    if (!els || !APP_SPLASH_STATE.visible) return;
+
+    APP_SPLASH_STATE.message = APP_SPLASH_STATE.message || getSplashLoadingText_();
+    APP_SPLASH_STATE.hideRequested = true;
+    scheduleSplashForceHide_();
+    renderSplashProgress_();
+    ensureSplashLoop_();
+  }
+
+  function updateSplashBranding_() {
+    const els = getSplashElements_();
+    if (!els) return;
+
+    const bootstrap = readSplashBootstrap_();
+    const general = ((bootstrap.systemConfig || {}).general || {});
+    const buildInfo = bootstrap.buildInfo || {};
+    const version = buildInfo.baseVersion || bootstrap.version || '';
+    const buildHash = buildInfo.buildHash ? `build ${buildInfo.buildHash}` : '';
+    const versionLabel = [version ? `v${version}` : '', buildHash].filter(Boolean).join(' · ');
+    const logo =
+      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDarkDataUri) ||
+      (window.GO_PES_TEMPLATE && window.GO_PES_TEMPLATE.logoDataUri) ||
+      document.getElementById('appLogo')?.getAttribute('src') ||
+      '';
+
+    applySplashRuntimeTheme_();
+    if (els.logo && logo) els.logo.src = logo;
+    if (els.title) els.title.textContent = bootstrap.appName || general.appName || 'Gestor Operativo PES';
+    if (els.program) els.program.textContent = bootstrap.programName || general.programName || extractSplashProgramName_(bootstrap.subtitle);
+    if (els.version) {
+      const showVersion = general.showVisibleVersion !== false;
+      els.version.textContent = showVersion ? (versionLabel || 'Versión disponible al iniciar') : '';
+      els.version.style.display = showVersion ? '' : 'none';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    APP_SPLASH_STATE.startedAt = performance.now();
+    APP_SPLASH_STATE.minDurationMs = getSplashMinDurationMs_();
+    APP_SPLASH_STATE.message = getSplashLoadingText_();
+    updateSplashBranding_();
+    renderSplashProgress_();
+    syncSplashVisibilityLock_();
+    ensureSplashLoop_();
+  });
+</script>

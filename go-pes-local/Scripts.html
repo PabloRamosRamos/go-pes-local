@@ -1,4 +1,36 @@
 <script>
+/**
+ * Scripts.html — Core JavaScript del frontend
+ *
+ * ARQUITECTURA ACTUAL (2,451 líneas, 127 funciones):
+ * ├─ Constantes globales (1-50)
+ * ├─ Helpers de módulos (50-100)
+ * ├─ Gestión de modales legacy (100-250)
+ * ├─ Init y bootstrap (250-400)
+ * ├─ Tab detection / multi-tab (400-500)
+ * ├─ Sidebar collapse + tema + zoom (500-600)
+ * ├─ System info modal + manual (600-700)
+ * ├─ User menu + versión (700-800)
+ * ├─ API wrapper + logo (800-850)
+ * ├─ Gestión de catálogos (850-1200)
+ * ├─ Routing + navegación (1200-1350)
+ * ├─ Admin reset modal (1350-1400)
+ * ├─ Módulo Búsqueda (1400-1900)
+ * ├─ Módulo Historial (1900-2100)
+ * ├─ Toast + status + utils (2100-2200)
+ * └─ Session expired + cleanup (2200-2451)
+ *
+ * TODO FASE 3: Dividir en módulos cohesivos
+ * Propuesta conservadora (3 archivos):
+ *   1. Scripts_Core.html — Init, routing, shell, utils (mantener junto)
+ *   2. Scripts_Modals.html — Toast, system-info, session-expired
+ *   3. Scripts_Catalogs.html — Gestión de catálogos + cache
+ *
+ * RIESGO: Alto (muchas interdependencias globales)
+ * VALOR: Alto (mantenibilidad a largo plazo)
+ *
+ * Fecha última actualización: 2026-05-31
+ */
 (() => {
   const root = document.getElementById('app');
   const BOOTSTRAP = root ? JSON.parse(root.dataset.bootstrap || '{}') : {};

@@ -451,12 +451,12 @@
           </div>
 
           <div class="field">
-            <label>PIN de seguridad</label>
+            <label for="admin-reset-pin">PIN de seguridad</label>
             <input id="admin-reset-pin" type="password" autocomplete="off" required>
           </div>
 
           <div class="field">
-            <label>Confirmación</label>
+            <label for="admin-reset-confirm">Confirmación</label>
             <input id="admin-reset-confirm" type="text" placeholder="Escribe LIMPIAR" autocomplete="off" required>
             <p class="field-help">Para continuar debes escribir exactamente LIMPIAR.</p>
           </div>
@@ -531,7 +531,7 @@
             </div>
             <div class="panel search-panel">
               <div class="field field--grow">
-                <label>Nombre, RUT, teléfono, dirección, ID de solicitud u organización</label>
+                <label for="search-query">Nombre, RUT, teléfono, dirección, ID de solicitud u organización</label>
                 <input id="search-query" type="text" placeholder="Ej.: María, 12.345.678-9, SOL-000001, Pedro de Valdivia 1234" autocomplete="off">
               </div>
               <div class="field field--auto" style="align-self:flex-end">
@@ -806,9 +806,9 @@
                       </div>
                       <small id="user-email-help" class="field-help">Ingresa solo la parte anterior al dominio.</small>
                     </div>
-                    <div class="field field--full"><label>Nombre visible</label><input id="user-name-input" type="text"></div>
-                    <div class="field field--full"><label>Perfil</label><select id="user-role-input"></select></div>
-                    <div class="field field--full"><label>Activo</label><select id="user-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>
+                    <div class="field field--full"><label for="user-name-input">Nombre visible</label><input id="user-name-input" type="text"></div>
+                    <div class="field field--full"><label for="user-role-input">Perfil</label><select id="user-role-input"></select></div>
+                    <div class="field field--full"><label for="user-active-input">Activo</label><select id="user-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>
                   </div>
                 </div>
                 <div class="user-edit-layout__modules" id="user-modules-field">
@@ -846,10 +846,10 @@
                 <div class="user-edit-layout">
                   <div class="user-edit-layout__main">
                     <div class="user-edit-layout__main-fields">
-                      <div class="field field--full"><label>Email</label><input id="user-edit-email" type="email" readonly></div>
-                      <div class="field field--full"><label>Nombre visible</label><input id="user-edit-name-input" type="text"></div>
-                      <div class="field field--full"><label>Perfil</label><select id="user-edit-role-input"></select></div>
-                      <div class="field field--full"><label>Activo</label><select id="user-edit-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>
+                      <div class="field field--full"><label for="user-edit-email">Email</label><input id="user-edit-email" type="email" readonly></div>
+                      <div class="field field--full"><label for="user-edit-name-input">Nombre visible</label><input id="user-edit-name-input" type="text"></div>
+                      <div class="field field--full"><label for="user-edit-role-input">Perfil</label><select id="user-edit-role-input"></select></div>
+                      <div class="field field--full"><label for="user-edit-active-input">Activo</label><select id="user-edit-active-input"><option value="true">Sí</option><option value="false">No</option></select></div>
                     </div>
                     <div class="actions user-edit-layout__actions">
                       <button type="button" class="secondary-btn" data-user-edit-close="true">
@@ -888,7 +888,7 @@
                   Esta acción desactivará el acceso del usuario <strong id="user-delete-label"></strong>. Ingresa la clave de SUPERUSER para confirmar.
                 </div>
                 <div class="field">
-                  <label>Clave SUPERUSER</label>
+                  <label for="user-delete-pin">Clave SUPERUSER</label>
                   <input id="user-delete-pin" type="password" autocomplete="off">
                 </div>
                 <div class="actions">

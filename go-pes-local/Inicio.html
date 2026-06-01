@@ -207,7 +207,7 @@
       var total = data.reduce(function(s,d){ return s + (d.count||0); }, 0);
       if (total === 0) return emptyChart_();
       var cx = 90, cy = 90, r = 65, ri = 40, angle = -Math.PI / 2;
-      var paths = [], legend = [];
+      var paths = [], legend = [], a11yRows = [];
       data.forEach(function(d, i) {
         var pct   = Math.min((d.count||0)/total, 0.9999);
         var sweep = pct * 2 * Math.PI;
@@ -219,9 +219,11 @@
         paths.push('<path d="M ' + f_(x1)+' '+f_(y1)+' A '+r+' '+r+' 0 '+large+' 1 '+f_(x2)+' '+f_(y2)+' L '+f_(xi2)+' '+f_(yi2)+' A '+ri+' '+ri+' 0 '+large+' 0 '+f_(xi1)+' '+f_(yi1)+' Z" fill="' + color + '" stroke="var(--surface,#fff)" stroke-width="1.2"/>');
         var lbl = (d.label||'').length > 16 ? (d.label||'').slice(0,15)+'…' : (d.label||'');
         legend.push('<li class="dash-donut-legend-item"><span class="dash-donut-legend-dot" style="background:' + color + '"></span><span class="dash-donut-legend-label" title="'+xAttr_(d.label||'')+'">' + xSvg_(lbl) + '</span><span class="dash-donut-legend-count">'+d.count+' <em>('+Math.round(pct*100)+'%)</em></span></li>');
+        a11yRows.push('<tr><td>'+xSvg_(d.label||'')+'</td><td>'+d.count+'</td><td>'+Math.round(pct*100)+'%</td></tr>');
         angle = end;
       });
-      return '<div class="dash-donut-wrap"><div class="dash-donut-svg-wrap"><svg viewBox="0 0 180 180" class="dash-donut-svg" aria-hidden="true">' + paths.join('') + '<text x="90" y="86" class="dash-donut-center-value" text-anchor="middle">' + xSvg_(total.toLocaleString('es-CL')) + '</text><text x="90" y="104" class="dash-donut-center-label" text-anchor="middle">total</text></svg></div><ul class="dash-donut-legend">' + legend.join('') + '</ul></div>';
+      var a11yTable = '<table class="sr-only"><caption>Distribución de organizaciones por estado de constitución</caption><thead><tr><th>Estado</th><th>Cantidad</th><th>Porcentaje</th></tr></thead><tbody>'+a11yRows.join('')+'<tr><th scope="row">Total</th><td>'+total+'</td><td>100%</td></tr></tbody></table>';
+      return a11yTable + '<div class="dash-donut-wrap" aria-hidden="true"><div class="dash-donut-svg-wrap"><svg viewBox="0 0 180 180" class="dash-donut-svg">' + paths.join('') + '<text x="90" y="86" class="dash-donut-center-value" text-anchor="middle">' + xSvg_(total.toLocaleString('es-CL')) + '</text><text x="90" y="104" class="dash-donut-center-label" text-anchor="middle">total</text></svg></div><ul class="dash-donut-legend">' + legend.join('') + '</ul></div>';
     }
 
     /* ══════════════════════════════════════════
@@ -234,15 +236,19 @@
       var lW=120, bW=150, vW=34, pad=2, bH=20, gap=7;
       var svgW = lW + bW + vW + pad;
       var svgH = data.length * (bH + gap) - gap + 4;
+      var a11yRows = [];
       var rows = data.map(function(d, i) {
         var w   = Math.max((d.count/max)*bW, 2);
         var y   = i*(bH+gap)+2;
         var lbl = (d.label||'').length > 17 ? (d.label||'').slice(0,16)+'…' : (d.label||'');
+        a11yRows.push('<tr><td>'+xSvg_(d.label||'')+'</td><td>'+d.count+'</td></tr>');
         return '<text x="'+(lW-6)+'" y="'+f_(y+bH*0.68)+'" class="dash-bar-label" text-anchor="end">'+xSvg_(lbl)+'</text>' +
                '<rect x="'+(lW+pad)+'" y="'+y+'" width="'+f_(w)+'" height="'+bH+'" rx="3" fill="'+PALETTE[i%PALETTE.length]+'"/>' +
                '<text x="'+(lW+pad+w+5)+'" y="'+f_(y+bH*0.68)+'" class="dash-bar-value">'+d.count+'</text>';
       }).join('');
-      return '<svg viewBox="0 0 ' + svgW + ' ' + f_(svgH) + '" class="dash-bar-h-svg" aria-hidden="true">' + rows + '</svg>';
+      var total = data.reduce(function(s,d){ return s + (d.count||0); }, 0);
+      var a11yTable = '<table class="sr-only"><caption>Organizaciones por Unidad Vecinal</caption><thead><tr><th>Unidad Vecinal</th><th>Cantidad</th></tr></thead><tbody>'+a11yRows.join('')+'<tr><th scope="row">Total</th><td>'+total+'</td></tr></tbody></table>';
+      return a11yTable + '<svg viewBox="0 0 ' + svgW + ' ' + f_(svgH) + '" class="dash-bar-h-svg" aria-hidden="true">' + rows + '</svg>';
     }
 
     /* ══════════════════════════════════════════
@@ -250,11 +256,13 @@
     ══════════════════════════════════════════ */
     function drawRadialGauges_(data) {
       if (!data || !data.length) return emptyChart_();
+      var a11yRows = [];
       var gauges = data.map(function(d, i) {
         var pct    = Math.min(Math.max(d.pct || 0, 0), 100);
         var offset = f_((1 - pct / 100) * GAUGE_C);
         var color  = PALETTE[i % PALETTE.length];
         var lbl    = (d.hito||'').length > 13 ? (d.hito||'').slice(0,12)+'…' : (d.hito||'');
+        a11yRows.push('<tr><td>'+xSvg_(d.hito||'')+'</td><td>'+d.completados+'</td><td>'+(d.total||0)+'</td><td>'+pct+'%</td></tr>');
         return [
           '<div class="dash-gauge-item">',
             '<svg viewBox="0 0 90 90" class="dash-gauge-svg" aria-hidden="true">',
@@ -269,7 +277,8 @@
           '</div>'
         ].join('');
       }).join('');
-      return '<div class="dash-gauge-grid">' + gauges + '</div>';
+      var a11yTable = '<table class="sr-only"><caption>Avance administrativo por hito</caption><thead><tr><th>Hito</th><th>Completados</th><th>Total</th><th>Porcentaje</th></tr></thead><tbody>'+a11yRows.join('')+'</tbody></table>';
+      return a11yTable + '<div class="dash-gauge-grid" aria-hidden="true">' + gauges + '</div>';
     }
 
     /* ══════════════════════════════════════════
@@ -295,9 +304,13 @@
       var ingDots  = data.map(function(d,i){ return '<circle cx="'+f_(xp(i))+'" cy="'+f_(yp(d.ingresos||0))+'" r="3" fill="#3D96B4"/>'; }).join('');
       var gestDots = data.map(function(d,i){ return '<circle cx="'+f_(xp(i))+'" cy="'+f_(yp(d.gestiones||0))+'" r="3" fill="#8CC63F"/>'; }).join('');
       var xLbls    = data.map(function(d,i){ return '<text x="'+f_(xp(i))+'" y="'+(H-8)+'" class="dash-bar-x-label" text-anchor="middle">'+xSvg_(d.label)+'</text>'; }).join('');
-      return [
-        '<div class="dash-line-wrap">',
-          '<svg viewBox="0 0 '+W+' '+H+'" class="dash-line-svg" aria-hidden="true">',
+      var a11yRows = data.map(function(d){
+        return '<tr><td>'+xSvg_(d.label)+'</td><td>'+(d.ingresos||0)+'</td><td>'+(d.gestiones||0)+'</td></tr>';
+      }).join('');
+      var a11yTable = '<table class="sr-only"><caption>Tendencia mensual de ingresos y gestiones</caption><thead><tr><th>Mes</th><th>Ingresos</th><th>Gestiones</th></tr></thead><tbody>'+a11yRows+'</tbody></table>';
+      return a11yTable + [
+        '<div class="dash-line-wrap" aria-hidden="true">',
+          '<svg viewBox="0 0 '+W+' '+H+'" class="dash-line-svg">',
             grids,
             '<polyline points="'+ingPts+'"  fill="none" stroke="#3D96B4" stroke-width="2"/>',
             '<polyline points="'+gestPts+'" fill="none" stroke="#8CC63F" stroke-width="2"/>',
@@ -323,7 +336,10 @@
         { label:'Por vencer', count:p, cls:'por-vencer', icon:'schedule',     sub:'Próx. 30 días' },
         { label:'Atrasados',  count:a, cls:'atrasado',   icon:'warning',      sub:'Requieren atención' }
       ];
-      return '<div class="dash-bstat-grid">' + items.map(function(it){
+      var a11yTable = '<table class="sr-only"><caption>Estado de beneficios</caption><thead><tr><th>Estado</th><th>Cantidad</th><th>Porcentaje</th></tr></thead><tbody>' +
+        items.map(function(it){ return '<tr><td>'+it.label+'</td><td>'+it.count+'</td><td>'+pct_(it.count)+'%</td></tr>'; }).join('') +
+        '<tr><th scope="row">Total</th><td>'+tot+'</td><td>100%</td></tr></tbody></table>';
+      return a11yTable + '<div class="dash-bstat-grid" aria-hidden="true">' + items.map(function(it){
         return [
           '<div class="dash-bstat-card dash-bstat-card--' + it.cls + '">',
             '<div class="dash-bstat-header"><span class="material-symbols-outlined">' + it.icon + '</span><span>' + it.label + '</span></div>',

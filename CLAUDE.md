@@ -439,14 +439,38 @@ Jerarquía: h1 (2rem/700), h2 (1.5rem/600), h3 (1.25rem/600), h4 (1rem/600), bod
 - **Orden de propiedades:** Posicionamiento → Box model → Tipografía → Visual → Otros
 - **Comentarios:** Secciones con separador `/* ======== SECCIÓN ======== */`
 
+### Sistema de transiciones
+
+**Gramática de movimiento completa** (3 fases implementadas 2026-06-01):
+
+| Elemento | Entrada | Salida | Duración |
+|----------|---------|--------|----------|
+| Modal backdrop | fade 0→1 | fade 1→0 | 220ms / 160ms |
+| Modal dialog | Y+16 scale 0.96→1 | Y+8 scale 0.98 | 220ms / 160ms |
+| Loading overlay | fade 0→1 | fade 1→0 | 220ms / 220ms |
+| Vista módulo | Y+12 fade 0→1 | inmediato | 220ms / 0ms |
+| Cards stagger | Y+8 fade 0→1 + delay 0-480ms | inmediato | 220ms / 0ms |
+
+**Estados CSS:**
+- Modales: `.is-opening`, `.is-open`, `.is-closing`
+- Vistas: `.view-enter`, `.view-enter-active`
+- Stagger: `.stagger-item`, `.stagger-animate`
+
+**Variables CSS:**
+- `--transition-fast` (160ms), `--transition-base` (220ms), `--transition-slow` (320ms)
+- `--ease-out`, `--ease-in-out`
+- Soporte automático `@media (prefers-reduced-motion: reduce)`
+
+**Documentación completa:** [`docs/design-system.md`](../docs/design-system.md) sección "Transiciones y Animaciones"
+
 ### Archivos del Design System
 
 | Archivo | Propósito |
 |---------|-----------|
-| `docs/design-system.md` | Documentación completa del sistema de diseño |
-| `Styles.html` | CSS global (modo claro) + variables + componentes base |
+| `docs/design-system.md` | Documentación completa del sistema de diseño + transiciones |
+| `Styles.html` | CSS global (modo claro) + variables + componentes + transiciones |
 | `ThemeDark.html` | Overrides para modo oscuro |
-| `Scripts_A11y.html` | Sistema de accesibilidad (focus trap, modales, ARIA) |
+| `Scripts_A11y.html` | Sistema de accesibilidad (focus trap, modales con transiciones) |
 | `Scripts_UI.html` | Helpers de UI (toasts, empty states, paginador) |
 | `Scripts_Utils.html` | Utilidades (nombres, fechas, config, labels) |
 | `Scripts_CatalogCache.html` | Cache de catálogos con TTL |

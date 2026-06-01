@@ -677,7 +677,215 @@ A11Y.updatePageTitle(title)        // Actualiza <title>
 
 ---
 
+## Transiciones y Animaciones
+
+### Principios
+
+1. **Suaves y rápidas** — Duraciones entre 160-220ms para mantener sensación ágil
+2. **Propósito claro** — Cada transición comunica un cambio de estado
+3. **Enter-only cuando sea posible** — Evitar exit animations en contenido que cambia frecuentemente
+4. **Respetar preferencias** — Soporte automático para `prefers-reduced-motion: reduce`
+
+### Variables de duración
+
+```css
+--transition-fast: 160ms    /* Salidas, cambios rápidos */
+--transition-base: 220ms    /* Entradas, cambios estándar */
+--transition-slow: 320ms    /* Reservado, raramente usado */
+```
+
+### Easings
+
+```css
+--ease-out: cubic-bezier(0.16, 1, 0.3, 1)        /* Entradas (rápido al inicio) */
+--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1)     /* Salidas/bidireccional */
+```
+
+### Sistema de estados para modales
+
+**Estados:**
+- `.is-hidden` — Completamente oculto (`display: none`)
+- `.is-opening` — Estado inicial antes de transición (opacity 0, transform inicial)
+- `.is-open` — Estado final con transición activa (opacity 1, transform 0)
+- `.is-closing` — Cerrando con transición de salida
+
+**Uso en JavaScript:**
+```javascript
+// Apertura
+A11Y.openModal('mi-modal');
+// Internamente:
+// 1. Remove is-hidden, add is-opening
+// 2. requestAnimationFrame(() => remove is-opening, add is-open)
+// 3. Transición CSS de 220ms se ejecuta
+
+// Cierre
+A11Y.closeModal('mi-modal');
+// Internamente:
+// 1. Add is-closing
+// 2. Esperar transitionend (160ms)
+// 3. Add is-hidden, remove is-closing
+```
+
+**Transición aplicada:**
+```
+Backdrop: fade opacity 0 → 1 (entrada), 1 → 0 (salida)
+Dialog:   translateY(16px) scale(0.96) → translateY(0) scale(1) (entrada)
+          translateY(0) → translateY(8px) scale(0.98) (salida)
+```
+
+### Sistema de transiciones para vistas
+
+**Estados:**
+- `.view` — Base, `display: none`
+- `.view.active` — Visible, `display: block`
+- `.view.view-enter` — Estado inicial (opacity 0, translateY 12px)
+- `.view.view-enter-active` — Animando entrada
+
+**Uso automático:**
+El router (`route()` en Scripts.html) aplica automáticamente la transición al cambiar de módulo.
+
+**No requiere JavaScript manual** — El sistema lo maneja transparentemente.
+
+### Sistema de stagger para listas
+
+**Clases:**
+- `.stagger-item` — Elemento individual (opacity 0, translateY 8px)
+- `.stagger-item.stagger-animate` — Elemento animado con delay incremental
+
+**Delays incrementales:**
+```css
+.stagger-item:nth-child(1).stagger-animate { transition-delay: 0ms; }
+.stagger-item:nth-child(2).stagger-animate { transition-delay: 40ms; }
+.stagger-item:nth-child(3).stagger-animate { transition-delay: 80ms; }
+/* ... hasta 12 items */
+.stagger-item:nth-child(n+13).stagger-animate { transition-delay: 480ms; }
+```
+
+**Uso:**
+```javascript
+// Después de innerHTML render
+requestAnimationFrame(() => {
+  document.querySelectorAll('.stagger-item').forEach(item => {
+    item.classList.add('stagger-animate');
+  });
+});
+```
+
+**Módulos con stagger:**
+- Inicio: KPI cards, chart cards, table cards
+- Organizaciones: cards de organizaciones y grupos
+
+### Loading overlay
+
+**Transición:** fade opacity con duración 220ms
+
+**Mecánica:**
+```javascript
+// Mostrar
+showContentLoading('Cargando...');
+// Internamente:
+// 1. display: flex
+// 2. offsetHeight (fuerza reflow)
+// 3. classList.remove('is-hidden') → opacity 0 → 1 (220ms)
+
+// Ocultar
+hideContentLoading();
+// Internamente:
+// 1. classList.add('is-hidden') → opacity 1 → 0 (220ms)
+// 2. setTimeout(250ms) → display: none
+```
+
+### Guía de uso
+
+#### ¿Cuándo usar transiciones?
+
+✅ **Sí usar:**
+- Modales (apertura/cierre)
+- Cambio de módulo/vista
+- Cards/listas que aparecen por primera vez
+- Loading overlays
+
+❌ **No usar:**
+- Tooltips (demasiado rápidos, mejor instant)
+- Filtros que cambian contenido frecuentemente
+- Scroll interno de contenedores
+- Hover states simples
+
+#### ¿Cuándo usar stagger?
+
+✅ **Sí usar:**
+- Listas de 3+ elementos visuales (cards, rows)
+- Dashboard con múltiples KPIs
+- Grillas de elementos
+
+❌ **No usar:**
+- Listas que se actualizan frecuentemente (búsqueda en vivo)
+- Tablas con paginación rápida
+- Listas de más de 20 elementos (percibido como lento)
+
+### Accesibilidad
+
+**Soporte automático para `prefers-reduced-motion`:**
+```css
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```
+
+**Impacto:** Usuarios con sensibilidad a movimiento ven cambios casi instantáneos (0.01ms) en lugar de transiciones completas.
+
+### Performance
+
+**Buenas prácticas aplicadas:**
+- ✅ Transiciones solo en `opacity` y `transform` (GPU-accelerated)
+- ✅ Uso de `requestAnimationFrame` para forzar reflow antes de transiciones
+- ✅ Duraciones cortas (< 250ms) para mantener sensación ágil
+- ✅ Stagger limitado a 12 items con delay cap
+- ✅ Sin transiciones en propiedades que causan reflow (`width`, `height`, `top`, `left`)
+
+### Depuración
+
+**Ver estados en DevTools:**
+```javascript
+// Inspeccionar modal
+document.querySelector('.user-modal').classList;
+// Debería mostrar: is-open (cuando está abierto)
+
+// Inspeccionar vista
+document.querySelector('#view-inicio').classList;
+// Debería mostrar: view, active, view-enter-active (después de entrada)
+
+// Inspeccionar stagger item
+document.querySelector('.stagger-item').classList;
+// Debería mostrar: stagger-item, stagger-animate (después de activación)
+```
+
+**Problemas comunes:**
+
+| Síntoma | Causa probable | Solución |
+|---------|----------------|----------|
+| Modal aparece sin transición | Falta `requestAnimationFrame` | Verificar `A11Y.openModal()` |
+| Stagger no funciona | Clase `.stagger-animate` no aplicada | Verificar activación en `requestAnimationFrame` |
+| Vista salta sin fade | Estado `view-enter` no aplicado | Verificar `route()` en Scripts.html |
+| Transición muy lenta | Usuario tiene `prefers-reduced-motion: no-preference` pero transición > 250ms | Revisar duración custom |
+
+---
+
 ## Changelog
+
+### v1.1 (2026-06-01)
+
+- ✅ Sistema de transiciones completo (3 fases)
+- ✅ Modales con estados intermedios (is-opening, is-open, is-closing)
+- ✅ Vistas con enter-only transition (view-enter, view-enter-active)
+- ✅ Stagger system para listas (delays incrementales 0-480ms)
+- ✅ Loading overlay con fade suave
+- ✅ Documentación de uso y depuración
 
 ### v1.0 (2026-05-31)
 
@@ -690,4 +898,4 @@ A11Y.updatePageTitle(title)        // Actualiza <title>
 ---
 
 **Mantenido por:** Equipo Frontend GO-PES  
-**Última revisión:** 2026-05-31
+**Última revisión:** 2026-06-01

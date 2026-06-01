@@ -250,7 +250,7 @@
     if (org.sector)             meta += '<span><strong>Sector:</strong> ' + escapeHtml(org.sector) + '</span>';
     if (org.responsable_actual) meta += '<span class="full"><strong>Responsable:</strong> ' + escapeHtml(org.responsable_actual) + '</span>';
 
-    return '<div class="panel org-card">' +
+    return '<div class="panel org-card stagger-item">' +
       '<div class="org-card__header">' +
         '<div class="org-card__title-row">' +
           '<h4 class="org-card__title">' + escapeHtml(org.label || 'Sin nombre') + '</h4>' +
@@ -296,7 +296,7 @@
     if (org.fecha_ingreso)      meta += '<span class="full"><strong>Ingreso:</strong> ' + escapeHtml(org.fecha_ingreso) + '</span>';
     if (org.responsable_actual) meta += '<span class="full"><strong>Responsable:</strong> ' + escapeHtml(org.responsable_actual) + '</span>';
 
-    return '<div class="panel org-card">' +
+    return '<div class="panel org-card stagger-item">' +
       '<div class="org-card__header">' +
         '<div class="org-card__title-row">' +
           '<h4 class="org-card__title">' + escapeHtml(org.label || 'Grupo de vecinos') + '</h4>' +
@@ -392,6 +392,13 @@
           loadFicha({ solicitud_id: solId });
           route('ficha');
         }
+      });
+    });
+
+    // Activar animación stagger
+    requestAnimationFrame(function() {
+      gridEl.querySelectorAll('.stagger-item').forEach(function(item) {
+        item.classList.add('stagger-animate');
       });
     });
   }

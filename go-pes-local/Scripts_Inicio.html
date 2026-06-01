@@ -68,6 +68,14 @@
       }
     });
     renderCalendarioRoot_();
+
+    // Activar animación stagger después del render
+    requestAnimationFrame(function() {
+      const staggerItems = document.querySelectorAll('#view-inicio .stagger-item');
+      staggerItems.forEach(function(item) {
+        item.classList.add('stagger-animate');
+      });
+    });
   }
 
   function ensureInicioPanelData_(force) {

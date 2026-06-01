@@ -7657,4 +7657,46 @@ html[data-theme="dark"] .ficha-gestion-form input,html[data-theme="dark"] .ficha
               transform var(--transition-base) var(--ease-out);
 }
 
+/* ========================================
+   STAGGER: animación escalonada de listas
+   ======================================== */
+
+/* Container: marca el contexto donde se aplica stagger */
+.stagger-container {
+  /* No necesita estilos propios, solo marca el scope */
+}
+
+/* Item: estado inicial (antes de animar) */
+.stagger-item {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* Item: estado animado */
+.stagger-item.stagger-animate {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--transition-base) var(--ease-out),
+              transform var(--transition-base) var(--ease-out);
+}
+
+/* Delays incrementales para efecto stagger (max 12 items visibles) */
+.stagger-item:nth-child(1).stagger-animate { transition-delay: 0ms; }
+.stagger-item:nth-child(2).stagger-animate { transition-delay: 40ms; }
+.stagger-item:nth-child(3).stagger-animate { transition-delay: 80ms; }
+.stagger-item:nth-child(4).stagger-animate { transition-delay: 120ms; }
+.stagger-item:nth-child(5).stagger-animate { transition-delay: 160ms; }
+.stagger-item:nth-child(6).stagger-animate { transition-delay: 200ms; }
+.stagger-item:nth-child(7).stagger-animate { transition-delay: 240ms; }
+.stagger-item:nth-child(8).stagger-animate { transition-delay: 280ms; }
+.stagger-item:nth-child(9).stagger-animate { transition-delay: 320ms; }
+.stagger-item:nth-child(10).stagger-animate { transition-delay: 360ms; }
+.stagger-item:nth-child(11).stagger-animate { transition-delay: 400ms; }
+.stagger-item:nth-child(12).stagger-animate { transition-delay: 440ms; }
+
+/* Items después del 12: sin delay adicional para evitar espera excesiva */
+.stagger-item:nth-child(n+13).stagger-animate {
+  transition-delay: 480ms;
+}
+
 </style>

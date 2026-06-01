@@ -146,7 +146,7 @@
           trendHtml = '<span class="dash-kpi__trend ' + cls + '">' + (up ? '↑' : '↓') + ' ' + Math.abs(c.trend) + '% <em>vs mes ant.</em></span>';
         }
         return [
-          '<div class="dash-kpi">',
+          '<div class="dash-kpi stagger-item">',
             '<div class="dash-kpi__icon" style="color:' + c.color + '">',
               '<span class="material-symbols-outlined">' + c.icon + '</span>',
             '</div>',
@@ -168,26 +168,26 @@
     function buildChartsTop_(charts) {
       if (!charts) return '<div class="dash-loading-zone" style="grid-column:span 3"><span class="material-symbols-outlined dash-spin">refresh</span></div>';
       return [
-        buildChartCard_('Estado de constitución',   drawDonut_(charts.estadosConstitucion || [], true),  'dash-chart-card', 'dash-chart-card__body--donut'),
-        buildChartCard_('Organizaciones por UV',    drawBarH_(charts.porUv || []),                       'dash-chart-card', 'dash-chart-card__body--bar-h'),
-        buildChartCard_('Estado de beneficios',     drawEstadoBeneficios_(charts.estadoBeneficios || {}), 'dash-chart-card', 'dash-chart-card__body'),
+        buildChartCard_('Estado de constitución',   drawDonut_(charts.estadosConstitucion || [], true),  'dash-chart-card stagger-item', 'dash-chart-card__body--donut'),
+        buildChartCard_('Organizaciones por UV',    drawBarH_(charts.porUv || []),                       'dash-chart-card stagger-item', 'dash-chart-card__body--bar-h'),
+        buildChartCard_('Estado de beneficios',     drawEstadoBeneficios_(charts.estadoBeneficios || {}), 'dash-chart-card stagger-item', 'dash-chart-card__body'),
       ].join('');
     }
 
     function buildChartsMid_(charts) {
       if (!charts) return '<div class="dash-loading-zone" style="grid-column:span 2"><span class="material-symbols-outlined dash-spin">refresh</span></div>';
       return [
-        buildChartCard_('Avance administrativo por hito', drawRadialGauges_(charts.avancePorHito || []),  'dash-chart-card', 'dash-chart-card__body'),
-        buildChartCard_('Tendencia mensual',              drawLineChart_(charts.tendenciaMensual || []),   'dash-chart-card', 'dash-chart-card__body'),
+        buildChartCard_('Avance administrativo por hito', drawRadialGauges_(charts.avancePorHito || []),  'dash-chart-card stagger-item', 'dash-chart-card__body'),
+        buildChartCard_('Tendencia mensual',              drawLineChart_(charts.tendenciaMensual || []),   'dash-chart-card stagger-item', 'dash-chart-card__body'),
       ].join('');
     }
 
     function buildTablesRow_(tables, esc) {
       if (!tables) return '';
       return [
-        buildTableCard_('Próximos vencimientos',          buildTableVencimientos_(tables.proximosVencimientos || [], esc)),
-        buildTableCard_('Comités con atención prioritaria', buildTableAtencion_(tables.atencionPrioritaria || [], esc)),
-        buildTableCard_('Últimas gestiones registradas',  buildTableGestiones_(tables.ultimasGestiones || [], esc)),
+        buildTableCard_('Próximos vencimientos',          buildTableVencimientos_(tables.proximosVencimientos || [], esc), 'stagger-item'),
+        buildTableCard_('Comités con atención prioritaria', buildTableAtencion_(tables.atencionPrioritaria || [], esc), 'stagger-item'),
+        buildTableCard_('Últimas gestiones registradas',  buildTableGestiones_(tables.ultimasGestiones || [], esc), 'stagger-item'),
       ].join('');
     }
 
@@ -195,8 +195,9 @@
       return '<div class="' + cardCls + '"><div class="dash-chart-card__head"><h4>' + xSvg_(title) + '</h4></div><div class="dash-chart-card__body ' + bodyCls + '">' + content + '</div></div>';
     }
 
-    function buildTableCard_(title, content) {
-      return '<div class="dash-table-card"><div class="dash-table-card__head"><h4>' + xSvg_(title) + '</h4></div><div class="dash-table-card__body">' + content + '</div></div>';
+    function buildTableCard_(title, content, extraCls) {
+      var cls = 'dash-table-card' + (extraCls ? ' ' + extraCls : '');
+      return '<div class="' + cls + '"><div class="dash-table-card__head"><h4>' + xSvg_(title) + '</h4></div><div class="dash-table-card__body">' + content + '</div></div>';
     }
 
     /* ══════════════════════════════════════════

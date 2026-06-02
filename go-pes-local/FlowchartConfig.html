@@ -1,0 +1,148 @@
+/**
+ * FlowchartConfig.js
+ * Configuración de plazos y parámetros para los flowcharts de procedimientos
+ *
+ * Esta configuración alimenta los diagramas de flujo visuales en el Manual de Procedimientos.
+ * Los plazos se expresan en días calendario salvo indicación contraria.
+ */
+
+var FLOWCHART_CONFIG = {
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // BENEFICIOS
+  // ══════════════════════════════════════════════════════════════════════════
+
+  beneficios: {
+
+    // ── Cámaras de Seguridad (Ley 14.114) ──
+    camaras: {
+      nombre: 'Cámaras de Seguridad (Ley 14.114)',
+      responsable: 'Pablo Ramos',
+
+      estados: [
+        'Elegible por certificado definitivo',
+        'Solicitud enviada',
+        'Visita técnica agendada',
+        'Visita técnica realizada',
+        'Convenio firmado',
+        'Instalación completada',
+        'Rechazado',
+        'No aplica'
+      ],
+
+      requisitos_estados: ['Pendiente', 'Solicitado', 'Entregado', 'Validado', 'Rechazado', 'Vencido'],
+
+      plazos: {
+        alerta_elegibilidad: 0,              // Días desde cert. definitivo para enviar recordatorio
+        max_envio_solicitud: 30,             // Días máx para enviar solicitud después de elegibilidad
+        max_respuesta_visita: 15,            // Días máx para recibir respuesta de visita técnica
+        max_seguimiento_post_visita: 7,      // Días máx para seguimiento después de visita
+        max_firma_convenio: 30,              // Días máx para firma de convenio
+        max_sin_avance: 60,                  // Días máx sin progreso antes de alerta
+        alerta_alta_dias: 45,                // Umbral para alerta de prioridad alta
+        alerta_media_dias: 30                // Umbral para alerta de prioridad media
+      },
+
+      hitos: [
+        { codigo: 'CAM_ELEGIBLE', nombre: 'Organización elegible', descripcion: 'Cert. definitivo obtenido' },
+        { codigo: 'CAM_SOL_ENVIADA', nombre: 'Solicitud enviada', descripcion: 'Correo + cert. vigencia definitivo' },
+        { codigo: 'CAM_VISITA_AGENDADA', nombre: 'Visita técnica agendada', descripcion: 'Fecha y hora confirmadas' },
+        { codigo: 'CAM_VISITA_REALIZADA', nombre: 'Visita realizada', descripcion: 'Acta de visita firmada' },
+        { codigo: 'CAM_CONVENIO_FIRMADO', nombre: 'Convenio firmado', descripcion: 'Convenio de colaboración firmado' },
+        { codigo: 'CAM_INSTALACION', nombre: 'Instalación completada', descripcion: 'Cámaras instaladas y operativas' }
+      ]
+    },
+
+    // ── FONDESE (Fondo de Seguridad) ──
+    fondese: {
+      nombre: 'FONDESE - Fondo de Seguridad',
+      responsable: 'Pablo Ramos',
+
+      estados: [
+        'Pendiente',
+        'Manifestó interés',
+        'Postulación enviada',
+        'En evaluación',
+        'Adjudicado',
+        'No adjudicado',
+        'En ejecución',
+        'Rendición enviada',
+        'Rendición aceptada',
+        'Rendición con observaciones',
+        'Finalizado'
+      ],
+
+      requisitos_estados: ['Pendiente', 'Solicitado', 'Entregado', 'Validado', 'Rechazado', 'Vencido'],
+
+      plazos: {
+        convocatorias_por_año: 2,            // Número de convocatorias anuales
+        alerta_dias_antes: 10,               // Días de alerta antes de cierre convocatoria
+        max_postulacion: 30,                 // Días máx para enviar postulación desde apertura
+        evaluacion: 45,                      // Días estimados de evaluación
+        ejecucion: 180,                      // Días máx para ejecución del proyecto
+        rendicion_dias: 30                   // Días máx para enviar rendición desde término ejecución
+      },
+
+      hitos: [
+        { codigo: 'FON_INTERES', nombre: 'Manifestación de interés', descripcion: 'Organización inscrita en convocatoria' },
+        { codigo: 'FON_POSTULACION', nombre: 'Postulación enviada', descripcion: 'Proyecto + presupuesto + requisitos' },
+        { codigo: 'FON_EVALUACION', nombre: 'En evaluación', descripcion: 'Comisión evalúa proyecto' },
+        { codigo: 'FON_RESULTADO', nombre: 'Resultado publicado', descripcion: 'Adjudicación comunicada' },
+        { codigo: 'FON_EJECUCION', nombre: 'Ejecución proyecto', descripcion: 'Proyecto en desarrollo' },
+        { codigo: 'FON_RENDICION', nombre: 'Rendición enviada', descripcion: 'Informe final + respaldos' },
+        { codigo: 'FON_APROBADA', nombre: 'Rendición aceptada', descripcion: 'Sin observaciones' }
+      ]
+    },
+
+    // ── Capacitaciones ──
+    capacitacion: {
+      nombre: 'Capacitaciones y Formación',
+      responsable: 'Pablo Ramos',
+
+      estados: [
+        'Planificada',
+        'Inscripción abierta',
+        'En gestión',
+        'Ejecutada',
+        'Cancelada'
+      ],
+
+      requisitos_estados: ['Pendiente', 'Solicitado', 'Entregado', 'Validado', 'Rechazado'],
+
+      plazos: {
+        capacitaciones_año: 4,               // Número de capacitaciones planificadas por año
+        inscripcion_dias: 15,                // Días de plazo para inscripción
+        cierre_lista_anticipado: 3,          // Días antes del evento para cerrar lista
+        entrega_certificado: 15              // Días máx para entregar certificado post-evento
+      },
+
+      hitos: [
+        { codigo: 'CAP_PLANIFICADA', nombre: 'Capacitación planificada', descripcion: 'Fecha y temática definidas' },
+        { codigo: 'CAP_INSCRIPCION', nombre: 'Inscripción abierta', descripcion: 'Organizaciones pueden inscribirse' },
+        { codigo: 'CAP_CONFIRMADA', nombre: 'Lista confirmada', descripcion: 'Asistentes confirmados' },
+        { codigo: 'CAP_EJECUTADA', nombre: 'Capacitación ejecutada', descripcion: 'Evento realizado' },
+        { codigo: 'CAP_CERTIFICADO', nombre: 'Certificado entregado', descripcion: 'Diploma o certificado emitido' }
+      ]
+    }
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // FORMALIZACIÓN (placeholder - configurar después)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  formalizacion: {
+    enabled: false,
+    plazos: {},
+    hitos: []
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // PRE-FORMALIZACIÓN (placeholder - configurar después)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  preFormalizacion: {
+    enabled: false,
+    plazos: {},
+    hitos: []
+  }
+};

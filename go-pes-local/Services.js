@@ -882,6 +882,42 @@ function guardarIngreso(payload) {
     logProcessing_('INFO', 'guardarIngreso', 'solicitud', solicitudId, user.email || '', 'OK', clean);
     logUserAction_('CREATE_INGRESO', 'solicitud', solicitudId, 'OK', clean);
 
+    // Si viene desde calendario, crear automáticamente el hito 1 (PRE_01)
+    if (payload.calendarioEvento) {
+      ensureSheetsSubset_([GO_PES_V2.SHEETS.FACT_AVANCE_HITOS]);
+      const calEv = payload.calendarioEvento;
+      const avanceHitoId = nextId_('avance_hito', 'AVH');
+      const fechaHito = asDateOrBlank_(calEv.fecha) || now;
+
+      const observacionHito = [
+        calEv.titulo || 'Reunión informativa',
+        calEv.lugar ? ('Lugar: ' + calEv.lugar) : '',
+        calEv.asistentes ? ('Asistentes: ' + calEv.asistentes) : '',
+        calEv.descripcion || ''
+      ].filter(function(x) { return x; }).join(' · ');
+
+      appendRowObject_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, {
+        avance_hito_id: avanceHitoId,
+        organizacion_id: '',
+        solicitud_id: solicitudId,
+        codigo_hito: 'PRE_01',
+        tramo: 'Preconstitución',
+        orden_hito: 1,
+        nombre_hito: 'Reunión informativa realizada',
+        fecha_hito: fechaHito,
+        usuario_registro: user.email || '',
+        timestamp_registro: now,
+        observacion: observacionHito,
+        numero_ingreso: ''
+      });
+
+      logProcessing_('INFO', 'guardarIngreso.hitoCalendario', 'avance_hito', avanceHitoId, user.email || '', 'OK', {
+        solicitud_id: solicitudId,
+        codigo_hito: 'PRE_01',
+        fecha_hito: fechaHito
+      });
+    }
+
     refreshPartialArtifacts_({
       masterSolicitudIds: [solicitudId],
       vistaTerritorialPairs: [{ uv: clean.uv, sector: clean.sector }],

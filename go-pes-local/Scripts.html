@@ -713,6 +713,15 @@
       setUserMenuOpen_(false);
       if (typeof window.openUserManual === 'function') window.openUserManual();
     });
+
+    const procBtn = document.getElementById('manual-proc-open-btn');
+    if (procBtn) procBtn.addEventListener('click', ev => {
+      ev.preventDefault();
+      setUserMenuOpen_(false);
+      if (window.openManualProcedimientos) {
+        window.openManualProcedimientos();
+      }
+    });
   }
 
   function bindSystemInfoModal_() {

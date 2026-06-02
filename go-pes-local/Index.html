@@ -94,6 +94,10 @@
                 <span class="material-symbols-outlined">menu_book</span>
                 <span>Manual de usuario</span>
               </button>
+              <button type="button" class="user-menu-dropdown__item" id="manual-proc-open-btn" role="menuitem">
+                <span class="material-symbols-outlined">account_tree</span>
+                <span>Manual de Procesos</span>
+              </button>
               <button type="button" class="user-menu-dropdown__item" id="system-info-btn" role="menuitem">
                 <span class="material-symbols-outlined">info</span>
                 <span>Información del sistema</span>
@@ -597,10 +601,12 @@
     <?!= include('Inicio'); ?>
     <?!= include('Calendario'); ?>
     <?!= include('Manual'); ?>
+    <?!= include('ManualProcedimientos'); ?>
     <?!= includeModule_('Scripts_A11y'); ?>
     <?!= includeModule_('Scripts_UI'); ?>
     <?!= includeModule_('Scripts_Utils'); ?>
     <?!= includeModule_('Scripts_CatalogCache'); ?>
+    <script><?!= include('FlowchartConfig'); ?></script>
     <?!= includeModule_('Scripts'); ?>
     <div id="multi-tab-banner" class="is-hidden" role="alert">
       <span class="material-symbols-outlined">tab_unselected</span>

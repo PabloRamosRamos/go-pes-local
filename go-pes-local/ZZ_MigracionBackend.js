@@ -377,9 +377,36 @@ function ejecutarMigracionIngresos(payload) {
     appendRowObjects_(GO_PES_V2.SHEETS.RAW_INGRESO, rawRows);
     appendRowObjects_(GO_PES_V2.SHEETS.MAE_CASOS, maeRows);
 
+    // Crear hito PRE_01 para todos los ingresos migrados
+    ensureSheetsSubset_([GO_PES_V2.SHEETS.FACT_AVANCE_HITOS]);
+    const avanceHitoIds = bulkNextIds_('avance_hito', 'AVH', toImport.length);
+    const hitoRows = [];
+
+    toImport.forEach(function(mapped, i) {
+      const solicitudId = solicitudIds[i];
+      const fechaHito = asDateOrBlank_(mapped.fecha_solicitud) || now;
+
+      hitoRows.push({
+        avance_hito_id: avanceHitoIds[i],
+        organizacion_id: '',
+        solicitud_id: solicitudId,
+        codigo_hito: 'PRE_01',
+        tramo: 'Preconstitución',
+        orden_hito: 1,
+        nombre_hito: 'Reunión informativa realizada',
+        fecha_hito: fechaHito,
+        usuario_registro: user.email || '',
+        timestamp_registro: now,
+        observacion: 'Migración automática - Reunión informativa inicial',
+        numero_ingreso: ''
+      });
+    });
+
+    appendRowObjects_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, hitoRows);
+
     logProcessing_('INFO', 'ejecutarMigracionIngresos', 'migracion', '',
       user.email, errors.length || duplicates.length ? 'PARCIAL' : 'OK',
-      { total: src.rows.length, imported: toImport.length, duplicates: duplicates.length, errors: errors.length });
+      { total: src.rows.length, imported: toImport.length, duplicates: duplicates.length, errors: errors.length, hitos_creados: hitoRows.length });
     logUserAction_('MIGRACION_INGRESOS', 'migracion', '',
       errors.length || duplicates.length ? 'PARCIAL' : 'OK',
       { total: src.rows.length, imported: toImport.length });
@@ -393,7 +420,7 @@ function ejecutarMigracionIngresos(payload) {
       errorDetails: errors.slice(0, 50),
       duplicateDetails: duplicates.slice(0, 50),
       needsRebuild: true,
-      message: 'Migración completada: ' + toImport.length + ' ingresos importados. Reconstruye las vistas para ver los datos en el sistema.'
+      message: 'Migración completada: ' + toImport.length + ' ingresos importados con hito inicial. Reconstruye las vistas para ver los datos en el sistema.'
     });
   } finally {
     lock.releaseLock();
@@ -569,6 +596,87 @@ function ejecutarMigracionSocios(payload) {
       orgNotFoundDetails: orgNotFound.slice(0, 50),
       needsRebuild: true,
       message: 'Migración completada: ' + toImport.length + ' socios importados. Reconstruye las vistas para ver los datos en el sistema.'
+    });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/**
+ * Crea el hito PRE_01 para todos los casos que no lo tienen.
+ * Solo superusers pueden ejecutar esta función.
+ * Se puede llamar desde el módulo Configuración o desde el editor de Apps Script.
+ */
+function goPesBackfillHitoPRE01() {
+  const user = requireRole_(['superuser']);
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(60000);
+
+  try {
+    ensureSheetsSubset_([GO_PES_V2.SHEETS.MAE_CASOS, GO_PES_V2.SHEETS.FACT_AVANCE_HITOS]);
+
+    const now = new Date();
+
+    // Obtener todos los casos
+    const casos = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS);
+
+    // Obtener todos los hitos PRE_01 existentes
+    const hitosExistentes = {};
+    getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS).forEach(function(h) {
+      if (h.codigo_hito === 'PRE_01' && h.solicitud_id) {
+        hitosExistentes[h.solicitud_id] = true;
+      }
+    });
+
+    // Filtrar casos sin hito PRE_01
+    const casosSinHito = casos.filter(function(c) {
+      return c.solicitud_id && !hitosExistentes[c.solicitud_id];
+    });
+
+    if (!casosSinHito.length) {
+      return serializeForClient_({
+        ok: true,
+        total_casos: casos.length,
+        casos_procesados: 0,
+        message: 'Todos los casos ya tienen el hito PRE_01.'
+      });
+    }
+
+    // Crear hitos para los casos sin hito
+    const avanceHitoIds = bulkNextIds_('avance_hito', 'AVH', casosSinHito.length);
+    const hitoRows = [];
+
+    casosSinHito.forEach(function(caso, i) {
+      const fechaHito = asDateOrBlank_(caso.fecha_ingreso) || now;
+
+      hitoRows.push({
+        avance_hito_id: avanceHitoIds[i],
+        organizacion_id: '',
+        solicitud_id: caso.solicitud_id,
+        codigo_hito: 'PRE_01',
+        tramo: 'Preconstitución',
+        orden_hito: 1,
+        nombre_hito: 'Reunión informativa realizada',
+        fecha_hito: fechaHito,
+        usuario_registro: user.email || '',
+        timestamp_registro: now,
+        observacion: 'Backfill automático - Reunión informativa inicial',
+        numero_ingreso: ''
+      });
+    });
+
+    appendRowObjects_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, hitoRows);
+
+    logProcessing_('INFO', 'goPesBackfillHitoPRE01', 'backfill', '', user.email, 'OK',
+      { total_casos: casos.length, hitos_creados: hitoRows.length });
+    logUserAction_('BACKFILL_HITO_PRE01', 'backfill', '', 'OK',
+      { total_casos: casos.length, hitos_creados: hitoRows.length });
+
+    return serializeForClient_({
+      ok: true,
+      total_casos: casos.length,
+      casos_procesados: hitoRows.length,
+      message: 'Backfill completado: ' + hitoRows.length + ' hitos PRE_01 creados.'
     });
   } finally {
     lock.releaseLock();

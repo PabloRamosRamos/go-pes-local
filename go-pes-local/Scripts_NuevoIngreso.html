@@ -115,6 +115,19 @@
     }
 
     const proceed = () => {
+      // Si viene desde calendario, agregar datos del evento al payload
+      if (APP.state.calendarioPendingEvent) {
+        const calEv = APP.state.calendarioPendingEvent;
+        payload.calendarioEvento = {
+          eventId:    calEv.id,
+          titulo:     calEv.titulo,
+          fecha:      calEv.fecha,
+          asistentes: calEv.asistentes || 0,
+          lugar:      calEv.lugar || '',
+          descripcion: calEv.descripcion || ''
+        };
+      }
+
       api('guardarIngreso', payload).then(res => {
         showSuccess('Solicitud guardada correctamente.');
 

@@ -1,0 +1,260 @@
+<!-- ════════════════════════════════════════════════════════════════════════════
+     MANUAL DE PROCEDIMIENTOS
+     Estructura idéntica al Manual de Usuario
+════════════════════════════════════════════════════════════════════════════ -->
+
+<div id="manual-proc-modal" class="man-modal" role="dialog" aria-modal="true" aria-labelledby="manual-proc-heading">
+  <div class="man-container">
+
+    <!-- HEADER -->
+    <div class="man-header">
+      <div class="man-header__brand">
+        <img id="manual-proc-logo-img" class="man-logo" alt="GO-PES" src="">
+        <div>
+          <h2 id="manual-proc-heading">Manual de Procedimientos</h2>
+          <span class="man-header__sub">Flowcharts Operativos · Protocolos de Gestión</span>
+        </div>
+      </div>
+      <div class="man-header__actions">
+        <button type="button" id="manual-proc-close-btn" class="man-close-btn" aria-label="Cerrar manual de procedimientos">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="man-body">
+
+      <!-- SIDEBAR -->
+      <nav class="man-nav" id="manual-proc-sidebar" aria-label="Tipos de procedimientos">
+        <div class="man-nav__section">
+          <p class="man-nav__group-label">Beneficios</p>
+          <a class="man-nav__link" data-target="proc-camaras">Cámaras de Seguridad</a>
+          <a class="man-nav__link" data-target="proc-fondese">FONDESE</a>
+          <a class="man-nav__link" data-target="proc-capacitacion">Capacitaciones</a>
+        </div>
+        <div class="man-nav__section">
+          <p class="man-nav__group-label">Formalización</p>
+          <a class="man-nav__link man-nav__link--disabled">Proceso de Constitución</a>
+          <span class="man-nav__badge" style="display:block;padding:2px 16px;font-size:0.7rem;color:var(--text-muted);">Próximamente</span>
+        </div>
+        <div class="man-nav__section">
+          <p class="man-nav__group-label">Difusión y Contacto</p>
+          <a class="man-nav__link man-nav__link--disabled">Contacto Inicial</a>
+          <span class="man-nav__badge" style="display:block;padding:2px 16px;font-size:0.7rem;color:var(--text-muted);">Próximamente</span>
+        </div>
+      </nav>
+
+      <!-- CONTENT -->
+      <div class="man-content" id="manual-proc-content-area">
+
+        <!-- ============================================
+             CÁMARAS DE SEGURIDAD
+             ============================================ -->
+        <div class="man-section" id="proc-camaras">
+          <h3 class="man-section-title"><span class="material-symbols-outlined">videocam</span>Cámaras de Seguridad (Ley 14.114)</h3>
+          <p class="man-p"><strong>Responsable:</strong> Pablo Ramos</p>
+          <p class="man-p">Proceso completo desde la solicitud de instalación de cámaras hasta la firma del convenio de colaboración con la organización.</p>
+
+          <div style="margin:2rem 0;padding:2rem;background:var(--surface-alt,#F7FAFC);border-radius:8px;overflow-x:auto;">
+            <svg width="1200" height="700" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto;">
+              <text x="600" y="25" text-anchor="middle" style="font-size:18px;font-weight:700;fill:var(--text,#2c3e50);">Cámaras de Seguridad (Ley 14.114)</text>
+              <text x="600" y="45" text-anchor="middle" style="font-size:12px;fill:var(--text-muted,#6b7a8d);">Responsable: Pablo Ramos</text>
+
+              <!-- Hito 1 -->
+              <rect x="50" y="90" width="200" height="80" rx="8" fill="#E8F4F8" stroke="#3D96B4" stroke-width="2" />
+              <circle cx="70" cy="110" r="14" fill="#3D96B4" />
+              <text x="70" y="115" text-anchor="middle" style="font-size:12px;font-weight:700;fill:#fff;">1</text>
+              <text x="95" y="115" style="font-size:13px;font-weight:600;fill:var(--text,#2c3e50);">Cert. definitivo obtenido</text>
+              <text x="95" y="135" style="font-size:11px;fill:var(--text-muted,#6b7a8d);">Organización obtiene certificado vigente</text>
+
+              <!-- Hito 2 -->
+              <rect x="50" y="230" width="200" height="80" rx="8" fill="#E8F4F8" stroke="#3D96B4" stroke-width="2" />
+              <circle cx="70" cy="250" r="14" fill="#3D96B4" />
+              <text x="70" y="255" text-anchor="middle" style="font-size:12px;font-weight:700;fill:#fff;">2</text>
+              <text x="95" y="255" style="font-size:13px;font-weight:600;fill:var(--text,#2c3e50);">Como + cert. vigencia definitiva</text>
+              <text x="95" y="275" style="font-size:11px;fill:var(--text-muted,#6b7a8d);">Municipio evalúa factibilidad técnica</text>
+              <text x="270" y="270" style="font-size:11px;fill:var(--warning,#f59e0b);font-weight:600;">⏱ 30 días</text>
+
+              <!-- Hito 3 -->
+              <rect x="50" y="370" width="200" height="80" rx="8" fill="#E8F4F8" stroke="#3D96B4" stroke-width="2" />
+              <circle cx="70" cy="390" r="14" fill="#3D96B4" />
+              <text x="70" y="395" text-anchor="middle" style="font-size:12px;font-weight:700;fill:#fff;">3</text>
+              <text x="95" y="395" style="font-size:13px;font-weight:600;fill:var(--text,#2c3e50);">Fecha y hora confirmadas</text>
+              <text x="95" y="415" style="font-size:11px;fill:var(--text-muted,#6b7a8d);">Se coordina visita técnica con dirigencia</text>
+              <text x="270" y="410" style="font-size:11px;fill:var(--warning,#f59e0b);font-weight:600;">⏱ 15 días</text>
+
+              <!-- Hito 4 -->
+              <rect x="50" y="510" width="200" height="80" rx="8" fill="#E8F4F8" stroke="#3D96B4" stroke-width="2" />
+              <circle cx="70" cy="530" r="14" fill="#3D96B4" />
+              <text x="70" y="535" text-anchor="middle" style="font-size:12px;font-weight:700;fill:#fff;">4</text>
+              <text x="95" y="535" style="font-size:13px;font-weight:600;fill:var(--text,#2c3e50);">Acta de visita firmada</text>
+              <text x="95" y="555" style="font-size:11px;fill:var(--text-muted,#6b7a8d);">Municipio elabora acta y comparte borrador convenio</text>
+              <text x="270" y="550" style="font-size:11px;fill:var(--warning,#f59e0b);font-weight:600;">⏱ 7 días</text>
+
+              <!-- Hito 5 -->
+              <rect x="50" y="650" width="200" height="80" rx="8" fill="#E8F4F8" stroke="#3D96B4" stroke-width="2" />
+              <circle cx="70" cy="670" r="14" fill="#3D96B4" />
+              <text x="70" y="675" text-anchor="middle" style="font-size:12px;font-weight:700;fill:#fff;">5</text>
+              <text x="95" y="675" style="font-size:13px;font-weight:600;fill:var(--text,#2c3e50);">Convenio de colaboración firmado</text>
+              <text x="95" y="695" style="font-size:11px;fill:var(--text-muted,#6b7a8d);">Documento firmado por ambas partes. Fin del proceso.</text>
+              <text x="270" y="690" style="font-size:11px;fill:var(--warning,#f59e0b);font-weight:600;">⏱ 30 días</text>
+
+              <!-- Flechas -->
+              <line x1="150" y1="170" x2="150" y2="220" stroke="#3D96B4" stroke-width="2" marker-end="url(#arrow-camaras)" />
+              <line x1="150" y1="310" x2="150" y2="360" stroke="#3D96B4" stroke-width="2" marker-end="url(#arrow-camaras)" />
+              <line x1="150" y1="450" x2="150" y2="500" stroke="#3D96B4" stroke-width="2" marker-end="url(#arrow-camaras)" />
+              <line x1="150" y1="590" x2="150" y2="640" stroke="#3D96B4" stroke-width="2" marker-end="url(#arrow-camaras)" />
+
+              <defs>
+                <marker id="arrow-camaras" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                  <polygon points="0 0, 10 5, 0 10" fill="#3D96B4" />
+                </marker>
+              </defs>
+            </svg>
+          </div>
+
+          <p class="man-section-subtitle"><span class="material-symbols-outlined">checklist</span>Detalle de Hitos</p>
+          <div class="man-field-list" style="display:flex;flex-direction:column;gap:10px;">
+            <div class="man-field-item" style="padding:10px 14px;background:var(--surface-alt,#f7fafc);border-radius:6px;">
+              <strong>1. Certificado definitivo obtenido</strong>
+              <span style="display:block;font-size:0.82rem;color:var(--text-muted,#6b7a8d);margin-top:4px;">La organización obtiene su certificado de vigencia definitivo y lo presenta al municipio.</span>
+            </div>
+            <div class="man-field-item" style="padding:10px 14px;background:var(--surface-alt,#f7fafc);border-radius:6px;">
+              <strong>2. Como + cert. vigencia definitiva</strong>
+              <span style="display:block;font-size:0.82rem;color:var(--text-muted,#6b7a8d);margin-top:4px;">Municipio evalúa la solicitud y verifica la factibilidad técnica de instalación.</span>
+              <span style="color:var(--warning,#f59e0b);font-weight:600;font-size:0.8rem;margin-top:4px;display:block;">⏱ Plazo máximo: 30 días</span>
+            </div>
+            <div class="man-field-item" style="padding:10px 14px;background:var(--surface-alt,#f7fafc);border-radius:6px;">
+              <strong>3. Fecha y hora confirmadas</strong>
+              <span style="display:block;font-size:0.82rem;color:var(--text-muted,#6b7a8d);margin-top:4px;">Se coordina visita técnica con la dirigencia para evaluar puntos de instalación.</span>
+              <span style="color:var(--warning,#f59e0b);font-weight:600;font-size:0.8rem;margin-top:4px;display:block;">⏱ Plazo máximo: 15 días</span>
+            </div>
+            <div class="man-field-item" style="padding:10px 14px;background:var(--surface-alt,#f7fafc);border-radius:6px;">
+              <strong>4. Acta de visita firmada</strong>
+              <span style="display:block;font-size:0.82rem;color:var(--text-muted,#6b7a8d);margin-top:4px;">Municipio elabora acta de visita y comparte borrador del convenio de colaboración con la organización.</span>
+              <span style="color:var(--warning,#f59e0b);font-weight:600;font-size:0.8rem;margin-top:4px;display:block;">⏱ Plazo máximo: 7 días</span>
+            </div>
+            <div class="man-field-item" style="padding:10px 14px;background:var(--surface-alt,#f7fafc);border-radius:6px;">
+              <strong>5. Convenio de colaboración firmado</strong>
+              <span style="display:block;font-size:0.82rem;color:var(--text-muted,#6b7a8d);margin-top:4px;">Documento firmado por ambas partes. Fin del proceso. Se procede a instalación.</span>
+              <span style="color:var(--warning,#f59e0b);font-weight:600;font-size:0.8rem;margin-top:4px;display:block;">⏱ Plazo máximo: 30 días</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================
+             FONDESE
+             ============================================ -->
+        <div class="man-section" id="proc-fondese">
+          <h3 class="man-section-title"><span class="material-symbols-outlined">monetization_on</span>FONDESE</h3>
+          <p class="man-p"><strong>Responsable:</strong> Constanza Acevedo</p>
+          <p class="man-p">Fondo de Desarrollo de Espacios de Seguridad — proceso de postulación, evaluación y ejecución de proyectos comunitarios.</p>
+
+          <div class="man-callout man-callout--info">
+            <span class="material-symbols-outlined">info</span>
+            <div>Flowchart en desarrollo. Pronto estará disponible con el detalle completo del proceso FONDESE.</div>
+          </div>
+        </div>
+
+        <!-- ============================================
+             CAPACITACIONES
+             ============================================ -->
+        <div class="man-section" id="proc-capacitacion">
+          <h3 class="man-section-title"><span class="material-symbols-outlined">school</span>Capacitaciones</h3>
+          <p class="man-p"><strong>Responsable:</strong> Constanza Acevedo</p>
+          <p class="man-p">Proceso de inscripción, realización y certificación de eventos de formación para organizaciones y vecinos.</p>
+
+          <div class="man-callout man-callout--info">
+            <span class="material-symbols-outlined">info</span>
+            <div>Flowchart en desarrollo. Pronto estará disponible con el detalle completo del proceso de Capacitaciones.</div>
+          </div>
+        </div>
+
+      </div><!-- /man-content -->
+
+    </div><!-- /man-body -->
+
+  </div><!-- /man-container -->
+
+</div><!-- /manual-proc-modal -->
+
+<script>
+(function() {
+  'use strict';
+
+  var modal = document.getElementById('manual-proc-modal');
+  var closeBtn = document.getElementById('manual-proc-close-btn');
+  var sidebar = document.getElementById('manual-proc-sidebar');
+  var contentArea = document.getElementById('manual-proc-content-area');
+
+  // ---- LOGO ----
+  function updateLogo_() {
+    var img = document.getElementById('manual-proc-logo-img');
+    if (!img) return;
+    var isDark = document.documentElement.dataset.theme === 'dark';
+    var tpl = window.GO_PES_TEMPLATE || {};
+    img.src = (isDark && tpl.logoDarkDataUri) ? tpl.logoDarkDataUri : (tpl.logoDataUri || '');
+    img.style.display = img.src ? '' : 'none';
+  }
+
+  new MutationObserver(function(ms) {
+    ms.forEach(function(m) { if (m.attributeName === 'data-theme') updateLogo_(); });
+  }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  // ---- OPEN / CLOSE ----
+  function open_() {
+    if (!modal) return;
+    modal.classList.add('man-modal--open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    updateLogo_();
+  }
+
+  function close_() {
+    if (!modal) return;
+    modal.classList.remove('man-modal--open');
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  if (closeBtn) closeBtn.addEventListener('click', close_);
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal || e.target.classList.contains('man-modal__backdrop')) close_();
+    });
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal && modal.classList.contains('man-modal--open')) close_();
+  });
+
+  // ---- SIDEBAR NAVIGATION ----
+  if (sidebar) {
+    sidebar.addEventListener('click', function(e) {
+      var link = e.target.closest('[data-target]');
+      if (!link || link.classList.contains('man-nav__link--disabled')) return;
+      e.preventDefault();
+
+      var targetId = link.dataset.target;
+      var targetEl = document.getElementById(targetId);
+      if (!targetEl) return;
+
+      // Scroll al target
+      if (contentArea) {
+        contentArea.scrollTo({ top: targetEl.offsetTop - 20, behavior: 'smooth' });
+      }
+
+      // Actualizar link activo
+      sidebar.querySelectorAll('.man-nav__link').forEach(function(l) {
+        l.classList.remove('is-active');
+      });
+      link.classList.add('is-active');
+    });
+  }
+
+  // ---- EXPORT API ----
+  window.openManualProcedimientos = open_;
+
+})();
+</script>

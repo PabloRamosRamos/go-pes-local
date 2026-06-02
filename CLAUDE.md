@@ -192,7 +192,7 @@ No hay REST API, no hay URL configurable. Todas las funciones públicas del back
 
 El flujo de trabajo es: desarrollar y verificar en DEV → ejecutar batería de tests → push a PROD.
 
-> **`appsscript.json` — access: "ANYONE" es intencional en DEV.** La cuenta de desarrollo (`p.e.ramos.ramos@gmail.com`) está fuera del dominio `providencia.cl`, por lo que el acceso debe quedar abierto para poder desarrollar y probar sin restricciones de dominio. **Al hacer deploy a PROD, cambiar a `"DOMAIN"` para restringir el acceso solo a cuentas `@providencia.cl`.**
+> **`appsscript.json` — access: "ANYONE" es intencional en DEV y PROD.** El sistema usa autenticación interna a través de `DIM_Usuarios`, lo que permite control granular de acceso independiente del dominio de Google. Esto facilita el acceso a usuarios externos (dirigentes, vecinos) y permite desarrollo sin restricciones de dominio.
 
 ### Comandos de deploy
 

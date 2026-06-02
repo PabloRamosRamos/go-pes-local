@@ -1,6 +1,8 @@
 <script>
 window.GO_PES_CALENDARIO = (function() {
 
+  var _currentFilter = 'todos';
+
   function render(root, data, esc, onAction, onRefresh) {
     if (!root) return;
     if (data === null || data === undefined) {
@@ -14,7 +16,15 @@ window.GO_PES_CALENDARIO = (function() {
         '</section>';
       return;
     }
-    var eventos = Array.isArray(data.eventos) ? data.eventos : [];
+
+    var allEventos = Array.isArray(data.eventos) ? data.eventos : [];
+    var eventos = allEventos.filter(function(ev) {
+      if (_currentFilter === 'todos') return true;
+      if (_currentFilter === 'asambleas') return ev.tipo === 'ministro';
+      if (_currentFilter === 'visitas') return ev.tipo === 'reunion';
+      return true;
+    });
+
     root.innerHTML = buildCard_(eventos, data.fetchedAt || '', esc);
 
     if (!root.dataset.calActionsWired) {
@@ -31,7 +41,17 @@ window.GO_PES_CALENDARIO = (function() {
           if (e.target.closest('.inicio-cal-refresh-btn')) onRefresh();
         });
       }
+      root.addEventListener('change', function(e) {
+        if (e.target.id === 'inicio-cal-filter') {
+          _currentFilter = e.target.value;
+          render(root, data, esc, onAction, onRefresh);
+        }
+      });
     }
+
+    // Restaurar valor del filtro
+    var filterSelect = root.querySelector('#inicio-cal-filter');
+    if (filterSelect) filterSelect.value = _currentFilter;
   }
 
   function buildCard_(eventos, fetchedAt, esc) {
@@ -45,13 +65,22 @@ window.GO_PES_CALENDARIO = (function() {
         '</ul>';
 
     return '<section class="inicio-card inicio-cal-card">' +
-      '<div class="inicio-card__head">' +
-        '<span class="material-symbols-outlined">calendar_month</span>' +
-        '<div><h3>Calendario de reuniones</h3>' +
-        '<p>Reuniones CS y Ministro de fe proximas</p></div>' +
-        '<button class="inicio-cal-refresh-btn secondary-btn btn--sm" type="button" title="Actualizar calendario">' +
-          '<span class="material-symbols-outlined">refresh</span>' +
-        '</button>' +
+      '<div class="inicio-card__head" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">' +
+        '<div style="display:flex;align-items:center;gap:1rem;">' +
+          '<span class="material-symbols-outlined">calendar_month</span>' +
+          '<div><h3>Calendario de reuniones</h3>' +
+          '<p>Reuniones CS y Ministro de fe próximas</p></div>' +
+        '</div>' +
+        '<div style="display:flex;gap:0.5rem;align-items:stretch;">' +
+          '<select id="inicio-cal-filter" class="inicio-cal-filter" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-size:0.8rem;height:32px;">' +
+            '<option value="todos">Todos</option>' +
+            '<option value="visitas">Visitas</option>' +
+            '<option value="asambleas">Asambleas</option>' +
+          '</select>' +
+          '<button class="inicio-cal-refresh-btn secondary-btn" type="button" title="Actualizar calendario" style="padding:6px 12px;height:32px;min-height:32px;">' +
+            '<span class="material-symbols-outlined">refresh</span>' +
+          '</button>' +
+        '</div>' +
       '</div>' +
       body +
       (fetchedAt

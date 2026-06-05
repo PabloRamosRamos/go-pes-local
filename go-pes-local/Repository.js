@@ -123,7 +123,7 @@ function buildSheetDefinitions_() {
     [S.LOG_ACCIONES]: ['timestamp', 'email', 'action', 'entity_type', 'entity_id', 'result', 'detail_json'],
 
     [S.CAT_HITOS_AVANCE]: ['codigo_hito', 'tramo', 'orden_hito', 'nombre_hito', 'descripcion', 'codigo_hito_previo', 'permite_saltar', 'activo_flag'],
-    [S.FACT_AVANCE_HITOS]: ['avance_hito_id', 'organizacion_id', 'solicitud_id', 'codigo_hito', 'tramo', 'orden_hito', 'nombre_hito', 'fecha_hito', 'usuario_registro', 'timestamp_registro', 'observacion', 'numero_ingreso'],
+    [S.FACT_AVANCE_HITOS]: ['avance_hito_id', 'organizacion_id', 'solicitud_id', 'codigo_hito', 'tramo', 'orden_hito', 'nombre_hito', 'fecha_hito', 'usuario_registro', 'timestamp_registro', 'observacion', 'numero_ingreso', 'fecha_asamblea_asignada', 'numero_registro', 'rut_organizacion', 'numero_cuenta', 'banco'],
     [S.FACT_AVANCE_ESTADO]: ['avance_estado_id', 'organizacion_id', 'solicitud_id', 'estado_avance', 'motivo_estado', 'fecha_estado', 'usuario_estado', 'timestamp_registro', 'activo_flag'],
     [S.VW_AVANCE_ORGANIZACION]: ['organizacion_id', 'solicitud_id', 'nombre_organizacion', 'estado_avance', 'ultimo_hito_codigo', 'ultimo_hito_nombre', 'ultimo_hito_fecha', 'usuario_ultimo_hito', 'total_hitos_cumplidos', 'total_hitos_tramo_pre', 'total_hitos_tramo_for'],
 

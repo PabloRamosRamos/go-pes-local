@@ -106,6 +106,56 @@
             <p class="muted">El anio se toma de la fecha del hito. Se mostrara como <strong>4762/26</strong>.</p>
           </div>
 
+          <div class="field is-hidden" id="avance-modal-fecha-asamblea-field">
+            <label>Fecha asignada para la asamblea</label>
+            <input id="avance-modal-fecha-asamblea" type="date">
+            <p class="muted">Fecha programada para la asamblea de constitución.</p>
+          </div>
+
+          <div class="field is-hidden" id="avance-modal-num-registro-field">
+            <label>N° de registro</label>
+            <input id="avance-modal-num-registro" type="text" placeholder="Ej: 1234">
+            <p class="muted">Número de registro del certificado.</p>
+          </div>
+
+          <div class="field is-hidden" id="avance-modal-rut-field">
+            <label>RUT de la organización</label>
+            <input id="avance-modal-rut" type="text" placeholder="00000000-0" maxlength="10">
+            <p class="muted">Formato: 12345678-9 (sin puntos, con guión).</p>
+          </div>
+
+          <div class="field is-hidden" id="avance-modal-cuenta-field">
+            <label>N° de Cuenta bancaria</label>
+            <input id="avance-modal-num-cuenta" type="text" placeholder="Número de cuenta">
+          </div>
+
+          <div class="field is-hidden" id="avance-modal-banco-field">
+            <label>Banco</label>
+            <select id="avance-modal-banco">
+              <option value="">Seleccionar banco</option>
+              <option value="Banco de Chile">Banco de Chile</option>
+              <option value="Banco Estado">Banco Estado</option>
+              <option value="BancoEstado Microempresas">BancoEstado Microempresas</option>
+              <option value="Banco Santander">Banco Santander</option>
+              <option value="Banco BCI">Banco BCI</option>
+              <option value="Banco Scotiabank">Banco Scotiabank</option>
+              <option value="Banco Itaú">Banco Itaú</option>
+              <option value="Banco Security">Banco Security</option>
+              <option value="BancoFalabella">Banco Falabella</option>
+              <option value="Banco Ripley">Banco Ripley</option>
+              <option value="Banco Consorcio">Banco Consorcio</option>
+              <option value="Banco BICE">Banco BICE</option>
+              <option value="Banco Internacional">Banco Internacional</option>
+              <option value="Banco BTG Pactual">Banco BTG Pactual</option>
+              <option value="Banco Invest">Banco Invest</option>
+              <option value="Coopeuch">Coopeuch</option>
+              <option value="Prepago Los Héroes">Prepago Los Héroes</option>
+              <option value="Tenpo">Tenpo</option>
+              <option value="Mercado Pago">Mercado Pago</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </div>
+
           <div class="field">
             <label>Observación</label>
             <textarea id="avance-modal-observacion" rows="4" placeholder="Observación opcional"></textarea>
@@ -622,6 +672,11 @@
         <p><strong>Fecha:</strong> ${escapeHtml(formatFechaHoraUi_(r.fecha_hito || ''))}</p>
         <p><strong>Usuario:</strong> ${escapeHtml(r.usuario_registro || '')}</p>
         ${r.numero_ingreso ? '<p><strong>N&ordm; ingreso:</strong> ' + escapeHtml(formatNumIngreso_(r.numero_ingreso)) + '</p>' : ''}
+        ${r.fecha_asamblea_asignada ? '<p><strong>Fecha asamblea:</strong> ' + escapeHtml(formatFechaHoraUi_(r.fecha_asamblea_asignada)) + '</p>' : ''}
+        ${r.numero_registro ? '<p><strong>N&ordm; registro:</strong> ' + escapeHtml(r.numero_registro) + '</p>' : ''}
+        ${r.rut_organizacion ? '<p><strong>RUT:</strong> ' + escapeHtml(r.rut_organizacion) + '</p>' : ''}
+        ${r.numero_cuenta ? '<p><strong>N&ordm; cuenta:</strong> ' + escapeHtml(r.numero_cuenta) + '</p>' : ''}
+        ${r.banco ? '<p><strong>Banco:</strong> ' + escapeHtml(r.banco) + '</p>' : ''}
         <p><strong>Observación:</strong> ${escapeHtml(r.observacion || '')}</p>
       </div>
     `).join('');
@@ -689,6 +744,58 @@
       numIngresoInput.value = '';
     }
 
+    const fechaAsambleaField = document.getElementById('avance-modal-fecha-asamblea-field');
+    const fechaAsambleaInput = document.getElementById('avance-modal-fecha-asamblea');
+    if (fechaAsambleaField && fechaAsambleaInput) {
+      const esFechaAsignada = String(item.codigo_hito || '') === 'PRE_03';
+      fechaAsambleaField.classList.toggle('is-hidden', !esFechaAsignada);
+      fechaAsambleaInput.required = esFechaAsignada;
+      fechaAsambleaInput.value = '';
+    }
+
+    const numRegistroField = document.getElementById('avance-modal-num-registro-field');
+    const numRegistroInput = document.getElementById('avance-modal-num-registro');
+    if (numRegistroField && numRegistroInput) {
+      const codigoHito = String(item.codigo_hito || '');
+      const esCertificadoProvisorio = codigoHito === 'PRE_07';
+      const esCertificadoDefinitivo = codigoHito === 'FOR_04';
+      const mostrarNumRegistro = esCertificadoProvisorio || esCertificadoDefinitivo;
+      numRegistroField.classList.toggle('is-hidden', !mostrarNumRegistro);
+      numRegistroInput.required = mostrarNumRegistro;
+      numRegistroInput.value = '';
+
+      if (esCertificadoDefinitivo) {
+        const hitosTimeline = (((APP.state.currentAvance || {}).timeline || {}).rows || []);
+        const hitoPre07 = hitosTimeline.find(h => String(h.codigo_hito || '') === 'PRE_07');
+        if (hitoPre07 && hitoPre07.numero_registro) {
+          numRegistroInput.value = String(hitoPre07.numero_registro || '');
+        }
+      }
+    }
+
+    const rutField = document.getElementById('avance-modal-rut-field');
+    const rutInput = document.getElementById('avance-modal-rut');
+    if (rutField && rutInput) {
+      const esObtencionRut = String(item.codigo_hito || '') === 'FOR_07';
+      rutField.classList.toggle('is-hidden', !esObtencionRut);
+      rutInput.required = esObtencionRut;
+      rutInput.value = '';
+    }
+
+    const cuentaField = document.getElementById('avance-modal-cuenta-field');
+    const cuentaInput = document.getElementById('avance-modal-num-cuenta');
+    const bancoField = document.getElementById('avance-modal-banco-field');
+    const bancoSelect = document.getElementById('avance-modal-banco');
+    if (cuentaField && cuentaInput && bancoField && bancoSelect) {
+      const esCuentaBancaria = String(item.codigo_hito || '') === 'FOR_08';
+      cuentaField.classList.toggle('is-hidden', !esCuentaBancaria);
+      bancoField.classList.toggle('is-hidden', !esCuentaBancaria);
+      cuentaInput.required = esCuentaBancaria;
+      bancoSelect.required = esCuentaBancaria;
+      cuentaInput.value = '';
+      bancoSelect.value = '';
+    }
+
     setModalVisibility_(modal, true);
   }
 
@@ -738,6 +845,11 @@
     const orgNombreError = document.getElementById('avance-modal-org-nombre-error');
 
     const numIngresoInput = document.getElementById('avance-modal-num-ingreso');
+    const fechaAsambleaInput = document.getElementById('avance-modal-fecha-asamblea');
+    const numRegistroInput = document.getElementById('avance-modal-num-registro');
+    const rutInput = document.getElementById('avance-modal-rut');
+    const numCuentaInput = document.getElementById('avance-modal-num-cuenta');
+    const bancoSelect = document.getElementById('avance-modal-banco');
 
     const organizacionId = String(orgSelect?.value || '').trim();
     const solicitudId = String(grupoSelect?.value || '').trim();
@@ -746,6 +858,11 @@
     const observacion = String(obs?.value || '').trim();
     const nombreOrganizacionVariable = String(orgNombre?.value || '').trim();
     const numIngresoRaw = String(numIngresoInput?.value || '').trim();
+    const fechaAsambleaAsignada = String(fechaAsambleaInput?.value || '').trim();
+    const numeroRegistro = String(numRegistroInput?.value || '').trim();
+    const rutOrganizacion = String(rutInput?.value || '').trim();
+    const numeroCuenta = String(numCuentaInput?.value || '').trim();
+    const banco = String(bancoSelect?.value || '').trim();
 
     if (isGrupo && !solicitudId) {
       showError('Debes seleccionar un Grupo de vecinos.');
@@ -790,6 +907,42 @@
       numeroIngreso = numIngresoRaw + '/' + anioHito;
     }
 
+    const esFechaAsignada = codigoHito === 'PRE_03';
+    if (esFechaAsignada && !fechaAsambleaAsignada) {
+      showError('Debes ingresar la fecha asignada para la asamblea.');
+      return;
+    }
+
+    const esCertificadoProvisorio = codigoHito === 'PRE_07';
+    const esCertificadoDefinitivo = codigoHito === 'FOR_04';
+    if ((esCertificadoProvisorio || esCertificadoDefinitivo) && !numeroRegistro) {
+      showError('Debes ingresar el número de registro del certificado.');
+      return;
+    }
+
+    const esObtencionRut = codigoHito === 'FOR_07';
+    if (esObtencionRut && !rutOrganizacion) {
+      showError('Debes ingresar el RUT de la organización.');
+      return;
+    }
+    if (esObtencionRut && rutOrganizacion) {
+      const rutPattern = /^\d{7,8}-[\dkK]$/;
+      if (!rutPattern.test(rutOrganizacion)) {
+        showError('El RUT debe tener el formato 00000000-0 (sin puntos, con guión).');
+        return;
+      }
+    }
+
+    const esCuentaBancaria = codigoHito === 'FOR_08';
+    if (esCuentaBancaria && !numeroCuenta) {
+      showError('Debes ingresar el número de cuenta bancaria.');
+      return;
+    }
+    if (esCuentaBancaria && !banco) {
+      showError('Debes seleccionar el banco.');
+      return;
+    }
+
     const nombreOrganizacionAsamblea = requiereNombreOrganizacion
       ? `COMITE DE SEGURIDAD ${nombreOrganizacionVariable}`.replace(/\s+/g, ' ').trim()
       : '';
@@ -804,7 +957,12 @@
       fecha_hito: fechaHito,
       observacion: observacion,
       nombre_organizacion_asamblea: nombreOrganizacionAsamblea,
-      numero_ingreso: numeroIngreso
+      numero_ingreso: numeroIngreso,
+      fecha_asamblea_asignada: fechaAsambleaAsignada,
+      numero_registro: numeroRegistro,
+      rut_organizacion: rutOrganizacion,
+      numero_cuenta: numeroCuenta,
+      banco: banco
     }).then(res => {
       showSuccess(res && res.warning_nombre_duplicado
         ? `Hito registrado correctamente. Advertencia: ${res.warning_nombre_duplicado}`

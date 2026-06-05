@@ -212,6 +212,11 @@ function registrarHitoAvance(payload) {
   const observacion = String(payload.observacion || '').trim();
   const numeroIngreso = String(payload.numero_ingreso || '').trim();
   const fechaHito = asDateOrBlank_(payload.fecha_hito);
+  const fechaAsambleaAsignada = asDateOrBlank_(payload.fecha_asamblea_asignada);
+  const numeroRegistro = String(payload.numero_registro || '').trim();
+  const rutOrganizacion = String(payload.rut_organizacion || '').trim();
+  const numeroCuenta = String(payload.numero_cuenta || '').trim();
+  const banco = String(payload.banco || '').trim();
 
   if (!codigoHito) throw new Error('Falta codigo_hito.');
   if (!fechaHito) throw new Error('Debes indicar una fecha del hito.');
@@ -246,6 +251,13 @@ function registrarHitoAvance(payload) {
     throw new Error(validacion.message || 'No se puede registrar el hito.');
   }
 
+  if (codigoHito === 'FOR_07' && rutOrganizacion) {
+    const rutPattern = /^\d{7,8}-[\dkK]$/;
+    if (!rutPattern.test(rutOrganizacion)) {
+      throw new Error('El RUT debe tener el formato 00000000-0');
+    }
+  }
+
   if (goPesIsHitoCreacionOrganizacion_(hitoCatalogo)) {
     org = goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user);
     solicitudId = String(org.solicitud_id || '').trim();
@@ -266,7 +278,12 @@ function registrarHitoAvance(payload) {
     usuario_registro: goPesGetUserEmail_(user),
     timestamp_registro: now,
     observacion: observacion,
-    numero_ingreso: numeroIngreso
+    numero_ingreso: numeroIngreso,
+    fecha_asamblea_asignada: fechaAsambleaAsignada,
+    numero_registro: numeroRegistro,
+    rut_organizacion: rutOrganizacion,
+    numero_cuenta: numeroCuenta,
+    banco: banco
   });
 
   upsertVistaAvanceOrganizacionRowById_(organizacionId);
@@ -323,6 +340,11 @@ function registrarHitoAvanceGrupoVecinos_(payload, user, diag) {
   const observacion = String(payload.observacion || '').trim();
   const numeroIngreso = String(payload.numero_ingreso || '').trim();
   const fechaHito = asDateOrBlank_(payload.fecha_hito);
+  const fechaAsambleaAsignada = asDateOrBlank_(payload.fecha_asamblea_asignada);
+  const numeroRegistro = String(payload.numero_registro || '').trim();
+  const rutOrganizacion = String(payload.rut_organizacion || '').trim();
+  const numeroCuenta = String(payload.numero_cuenta || '').trim();
+  const banco = String(payload.banco || '').trim();
 
   const caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
   if (!caso) throw new Error('No se encontró el Grupo de vecinos indicado.');
@@ -367,7 +389,12 @@ function registrarHitoAvanceGrupoVecinos_(payload, user, diag) {
     usuario_registro: goPesGetUserEmail_(user),
     timestamp_registro: now,
     observacion: observacion,
-    numero_ingreso: numeroIngreso
+    numero_ingreso: numeroIngreso,
+    fecha_asamblea_asignada: fechaAsambleaAsignada,
+    numero_registro: numeroRegistro,
+    rut_organizacion: rutOrganizacion,
+    numero_cuenta: numeroCuenta,
+    banco: banco
   });
 
   if (organizacionId) {

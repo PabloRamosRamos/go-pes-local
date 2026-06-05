@@ -5080,7 +5080,7 @@
   }
 
   .organizaciones-grid--profile > .organizaciones-block--wide {
-    grid-column: span 8;
+    grid-column: span 12;
   }
 
   .organizaciones-grid--profile > .organizaciones-block--aside {
@@ -5170,6 +5170,30 @@
 
   .organizaciones-kv--double > div {
     grid-template-columns: 132px minmax(0, 1fr);
+  }
+
+  .organizaciones-kv--triple {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: var(--space-6);
+    row-gap: var(--space-3);
+  }
+
+  .organizaciones-kv--triple > div {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .organizaciones-kv--triple > div > strong {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    color: var(--text-muted);
+  }
+
+  .organizaciones-kv--triple > div > span {
+    font-size: 0.95rem;
+    font-weight: 600;
   }
 
   .organizaciones-modal {

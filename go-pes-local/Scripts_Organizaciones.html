@@ -539,6 +539,30 @@
     const org = data.organizacion || {};
     const r   = data.resumen     || {};
 
+    // Extraer datos clave de los hitos para mostrar en el detalle
+    const avanceHitos = (data.avance && data.avance.hitos) || [];
+
+    // Hito 3 (PRE_03): Fecha asignada asamblea
+    const hitoPre03 = avanceHitos.find(h => String(h.codigo_hito || '') === 'PRE_03');
+    const fechaAsambleaAsignada = hitoPre03 ? (hitoPre03.fecha_asamblea_asignada || 'Sin registrar') : 'Sin registrar';
+
+    // Hito 7 (PRE_07): Certificado provisorio - N° de registro
+    const hitoPre07 = avanceHitos.find(h => String(h.codigo_hito || '') === 'PRE_07');
+    const numeroRegistroProvisorio = hitoPre07 ? (hitoPre07.numero_registro || 'Sin registrar') : 'Sin registrar';
+
+    // Hito 11 (FOR_04): Certificado definitivo - N° de registro
+    const hitoFor04 = avanceHitos.find(h => String(h.codigo_hito || '') === 'FOR_04');
+    const numeroRegistroDefinitivo = hitoFor04 ? (hitoFor04.numero_registro || 'Sin registrar') : 'Sin registrar';
+
+    // Hito 12 (FOR_07): RUT de la organización
+    const hitoFor07 = avanceHitos.find(h => String(h.codigo_hito || '') === 'FOR_07');
+    const rutOrganizacion = hitoFor07 ? (hitoFor07.rut_organizacion || 'Sin registrar') : 'Sin registrar';
+
+    // Hito 14 (FOR_08): Cuenta bancaria
+    const hitoFor08 = avanceHitos.find(h => String(h.codigo_hito || '') === 'FOR_08');
+    const numeroCuenta = hitoFor08 ? (hitoFor08.numero_cuenta || 'Sin registrar') : 'Sin registrar';
+    const banco = hitoFor08 ? (hitoFor08.banco || 'Sin especificar') : 'Sin especificar';
+
     detail.innerHTML = `
       <section class="organizaciones-hero-card" style="grid-template-columns:88px minmax(0,1.1fr) minmax(0,0.9fr);">
         <div class="organizaciones-hero-card__icon" aria-hidden="true">
@@ -581,7 +605,8 @@
           ['Estado avance',      r.estado_avance],
           ['Último hito',        r.ultimo_hito],
           ['Hitos registrados',  r.cantidad_avance_hitos],
-          ['Gestiones legacy',   r.cantidad_hitos_legacy]
+          ['Gestiones legacy',   r.cantidad_hitos_legacy],
+          ['Fecha asignada asamblea (Hito 3)', fechaAsambleaAsignada]
         ])}
         ${organizacionBlockHtml_('Observaciones', [
           ['Resumen', org.observacion_resumen]
@@ -596,6 +621,14 @@
           ['Certificado provisorio', org.certificado_provisorio_flag],
           ['Certificado definitivo', org.certificado_definitivo_flag]
         ], 'organizaciones-block--wide', 'organizaciones-kv--double')}
+        ${organizacionBlockHtml_('Datos administrativos y financieros', [
+          ['RUT organización (Hito 12)', rutOrganizacion],
+          ['N° Registro cert. provisorio (Hito 7)', numeroRegistroProvisorio],
+          ['Cuenta bancaria (Hito 14)', numeroCuenta],
+          ['', ''],
+          ['N° Registro cert. definitivo (Hito 11)', numeroRegistroDefinitivo],
+          ['Banco', banco]
+        ], 'organizaciones-block--wide', 'organizaciones-kv--triple')}
       </div>
 
       <div class="organizaciones-lower-grid">

@@ -5271,8 +5271,8 @@
     position: relative;
     z-index: 2;
     width: min(900px, calc(100vw - 32px));
-    max-height: calc(100vh - 40px);
-    overflow: auto;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-2xl);
@@ -7885,6 +7885,51 @@ html[data-theme="dark"] .ficha-gestion-form input,html[data-theme="dark"] .ficha
 
 .search-select__dropdown::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted, #6b7a8d);
+}
+
+/* ======== SORTABLE TABLE HEADERS (headers ordenables) ======== */
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 24px;
+  transition: background-color 120ms;
+}
+
+th.sortable:hover {
+  background: var(--surface-alt, #f7fafc);
+}
+
+th.sortable .sort-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  opacity: 0.3;
+  transition: opacity 120ms;
+}
+
+/* Estado inicial: flecha neutral hacia abajo */
+th.sortable .sort-icon {
+  border-top: 5px solid var(--text-muted, #6b7a8d);
+}
+
+/* Estado ascendente */
+th.sortable.sort-asc .sort-icon {
+  opacity: 1;
+  border-top: 5px solid var(--runtime-brand-primary, #3D96B4);
+  border-bottom: none;
+}
+
+/* Estado descendente */
+th.sortable.sort-desc .sort-icon {
+  opacity: 1;
+  border-top: none;
+  border-bottom: 5px solid var(--runtime-brand-primary, #3D96B4);
 }
 
 </style>

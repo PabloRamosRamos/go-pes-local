@@ -45,16 +45,15 @@ function validateSeguimientoV2_(p) {
 }
 
 function validateOrganizacionV2_(p) {
-  const requiredFields = {
-    tipo_organizacion: 'Tipo de organización',
-    nombre_organizacion: 'Nombre de organización'
-  };
+  // Solo validar nombre como obligatorio siempre
+  if (!String(p.nombre_organizacion || '').trim()) {
+    throw new Error('Debes completar el campo Nombre de organización.');
+  }
 
-  Object.keys(requiredFields).forEach(field => {
-    if (!String(p[field] || '').trim()) {
-      throw new Error(`Debes completar el campo ${requiredFields[field]}.`);
-    }
-  });
+  // Tipo de organización solo es obligatorio al crear (no al editar)
+  if (!p.organizacion_id && !String(p.tipo_organizacion || '').trim()) {
+    throw new Error('Debes completar el campo Tipo de organización.');
+  }
 }
 
 function validateInstrumentoV2_(p) {

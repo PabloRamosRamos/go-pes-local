@@ -217,7 +217,22 @@
               </div>
             </div>
             <div style="display:flex;justify-content:flex-end;padding:0 2px 6px"><span id="buscar-count" class="muted" style="font-size:0.82rem"></span></div>
-            <div class="table-wrap"><table class="data-table"><thead><tr><th>Solicitud</th><th>Vecino</th><th>Dirección</th><th>Estado actual</th><th>Organización</th><th></th></tr></thead><tbody id="search-results"></tbody></table></div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="sortable" data-sort="solicitud_id">Solicitud <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="fecha_solicitud">Fecha <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="nombre_completo">Vecino <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="direccion_original">Dirección <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="estado_actual">Estado actual <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="nombre_organizacion">Organización <span class="sort-icon"></span></th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="search-results"></tbody>
+              </table>
+            </div>
             <div id="buscar-pager" class="go-pager" style="justify-content:flex-end"></div>
           </section>
 
@@ -394,35 +409,19 @@
           </section>
 
           <section class="view" id="view-avance">
-            <div class="view-loader is-hidden">
-              <div class="view-loader__spinner"></div>
-              <p class="view-loader__text">Cargando avance...</p>
-            </div>
             <div class="section-head"><div><p class="eyebrow">Avance</p><h2>Registrar hitos y gestionar el proceso</h2></div></div>
             <form id="form-avance" class="form-grid"></form>
           </section>
 
           <section class="view" id="view-organizacion">
-            <div class="view-loader is-hidden">
-              <div class="view-loader__spinner"></div>
-              <p class="view-loader__text">Cargando organizaciones...</p>
-            </div>
             <div id="organizaciones-root"></div>
           </section>
 
           <section class="view" id="view-instrumento">
-            <div class="view-loader is-hidden">
-              <div class="view-loader__spinner"></div>
-              <p class="view-loader__text">Cargando beneficios...</p>
-            </div>
             <div id="beneficios-root"></div>
           </section>
 
           <section class="view" id="view-socios">
-            <div class="view-loader is-hidden">
-              <div class="view-loader__spinner"></div>
-              <p class="view-loader__text">Cargando socios...</p>
-            </div>
             <div id="socios-root"></div>
           </section>
 

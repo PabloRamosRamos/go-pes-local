@@ -182,6 +182,8 @@
       activeConfigSection: '',
       configLoadedAt: 0,
       buscarPage: 0,
+      buscarSortColumn: null,
+      buscarSortDirection: 'asc',
       histPage: 0,
       renderedViews: {},
       catalogStatus: {
@@ -1398,22 +1400,25 @@
     quick.style.display = view === 'inicio' ? 'grid' : 'none';
   }
 
-  function showViewLoader_(view) {
-    const viewEl = document.getElementById('view-' + view);
-    if (!viewEl) return;
-    const loader = viewEl.querySelector('.view-loader');
-    if (loader) {
-      loader.classList.remove('is-hidden');
-    }
-  }
+  function closeAllModals_() {
+    // Lista de todos los modales del sistema
+    const modalSelectors = [
+      '#organizaciones-modal',
+      '#org-socio-cargo-modal',
+      '#avance-modal',
+      '#avance-hito-modal',
+      '#admin-reset-modal',
+      '#user-modal',
+      '#socios-modal'
+    ];
 
-  function hideViewLoader_(view) {
-    const viewEl = document.getElementById('view-' + view);
-    if (!viewEl) return;
-    const loader = viewEl.querySelector('.view-loader');
-    if (loader) {
-      loader.classList.add('is-hidden');
-    }
+    modalSelectors.forEach(selector => {
+      const modal = document.querySelector(selector);
+      if (modal && !modal.classList.contains('is-hidden')) {
+        modal.classList.add('is-hidden');
+        modal.classList.remove('is-open', 'is-opening', 'is-closing');
+      }
+    });
   }
 
   function route(view, params = {}) {
@@ -1426,6 +1431,9 @@
 
     APP.state.activeView = view;
     const wasRendered = !!APP.state.renderedViews[view];
+
+    // Cerrar todos los modales abiertos al cambiar de módulo
+    closeAllModals_();
 
     // Desactivar todas las vistas y limpiar estados de transición
     document.querySelectorAll('.view').forEach(v => {
@@ -1480,7 +1488,10 @@
         loadSociosModuleData_().catch(() => {});
       }
 
-      if (view === 'buscar') updateBuscarTableView_();
+      if (view === 'buscar') {
+        if (!wasRendered) initBuscarSortableHeaders_();
+        updateBuscarTableView_();
+      }
       if (view === 'historial') loadHistorial();
       if (view === 'usuarios' && APP.state.permissions.canManageUsers) loadUsers();
       if (view === 'configuracion' && APP.state.permissions.canManageConfig) loadConfiguracionView_();
@@ -1493,17 +1504,7 @@
 
     const catalogPromise = ensureCatalogsForView_(view);
     if (catalogPromise) {
-      // Mostrar loader local del módulo en lugar de fullscreen
-      const viewsWithLocalLoader = ['avance', 'organizacion', 'instrumento', 'socios'];
-      const useLocalLoader = viewsWithLocalLoader.indexOf(view) !== -1;
-
-      if (useLocalLoader) {
-        showViewLoader_(view);
-        catalogPromise.then(finalizeRoute).catch(showError).finally(() => hideViewLoader_(view));
-      } else {
-        showContentLoading(view === 'socios' ? 'Cargando socios' : `Cargando ${friendlyViewName_(view)}...`);
-        catalogPromise.then(finalizeRoute).catch(showError).finally(hideContentLoading);
-      }
+      catalogPromise.then(finalizeRoute).catch(showError);
       return;
     }
 
@@ -1546,7 +1547,12 @@
 
     const allRows = APP.state.buscarModuleRows || [];
     const query   = String((document.getElementById('search-query') || {}).value || '');
-    const rows    = filterBuscarRows_(allRows, query);
+    let rows = filterBuscarRows_(allRows, query);
+
+    // Aplicar ordenamiento si existe
+    if (APP.state.buscarSortColumn) {
+      rows = sortBuscarRows_(rows, APP.state.buscarSortColumn, APP.state.buscarSortDirection);
+    }
 
     if (resetPage) APP.state.buscarPage = 0;
 
@@ -1557,7 +1563,7 @@
     }
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="6" class="muted">${
+      tbody.innerHTML = `<tr><td colspan="7" class="muted">${
         query.trim() ? 'Sin resultados para la búsqueda.' : (allRows.length ? 'Sin resultados.' : 'No hay vecinos registrados.')
       }</td></tr>`;
       return;
@@ -1571,6 +1577,7 @@
     tbody.innerHTML = pageRows.map(r => `
       <tr>
         <td>${escapeHtml(r.solicitud_id || '')}</td>
+        <td>${escapeHtml(formatFechaBuscar_(r.fecha_solicitud) || '')}</td>
         <td>${escapeHtml(r.nombre_completo || '')}</td>
         <td>${escapeHtml(r.direccion_original || '')}</td>
         <td><span class="badge">${escapeHtml(r.estado_actual || '')}</span></td>
@@ -1592,6 +1599,9 @@
       }))
     );
 
+    // Actualizar indicadores de ordenamiento en headers
+    updateBuscarSortIndicators_();
+
     const pager = document.getElementById('buscar-pager');
     if (pager) {
       pager.innerHTML = goPesPaginatorHtml_(page, totalPages, 'buscar');
@@ -1605,6 +1615,79 @@
 
     const exportBtn = document.getElementById('buscar-export-btn');
     if (exportBtn) exportBtn.classList.toggle('is-hidden', !rows.length);
+  }
+
+  function formatFechaBuscar_(fecha) {
+    if (!fecha) return '-';
+    try {
+      const d = new Date(fecha);
+      if (isNaN(d.getTime())) return '-';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return '-';
+    }
+  }
+
+  function sortBuscarRows_(rows, column, direction) {
+    return rows.slice().sort((a, b) => {
+      let valA = a[column];
+      let valB = b[column];
+
+      // Manejar valores vacíos
+      if (valA == null) valA = '';
+      if (valB == null) valB = '';
+
+      // Convertir a string para comparación
+      valA = String(valA).toLowerCase();
+      valB = String(valB).toLowerCase();
+
+      // Para fechas, convertir a timestamp
+      if (column === 'fecha_solicitud') {
+        const dateA = new Date(a[column]);
+        const dateB = new Date(b[column]);
+        valA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+        valB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+      }
+
+      if (valA < valB) return direction === 'asc' ? -1 : 1;
+      if (valA > valB) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  function updateBuscarSortIndicators_() {
+    const headers = document.querySelectorAll('#view-buscar th.sortable');
+    headers.forEach(th => {
+      th.classList.remove('sort-asc', 'sort-desc');
+      if (th.dataset.sort === APP.state.buscarSortColumn) {
+        th.classList.add('sort-' + APP.state.buscarSortDirection);
+      }
+    });
+  }
+
+  function initBuscarSortableHeaders_() {
+    const headers = document.querySelectorAll('#view-buscar th.sortable');
+    headers.forEach(th => {
+      if (th.dataset.bound) return;
+      th.dataset.bound = 'true';
+      th.addEventListener('click', function() {
+        const column = this.dataset.sort;
+
+        // Si ya está ordenado por esta columna, invertir dirección
+        if (APP.state.buscarSortColumn === column) {
+          APP.state.buscarSortDirection = APP.state.buscarSortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+          // Nueva columna: empezar con ascendente
+          APP.state.buscarSortColumn = column;
+          APP.state.buscarSortDirection = 'asc';
+        }
+
+        updateBuscarTableView_();
+      });
+    });
   }
 
   function runSearch() {

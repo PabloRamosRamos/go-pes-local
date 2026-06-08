@@ -283,4 +283,21 @@
   html[data-theme="dark"] .search-select__dropdown::-webkit-scrollbar-thumb:hover {
     background: var(--text-muted);
   }
+
+  /* ===== Sortable Table Headers — dark mode ===== */
+  html[data-theme="dark"] th.sortable:hover {
+    background: var(--surface-alt);
+  }
+
+  html[data-theme="dark"] th.sortable .sort-icon {
+    border-top-color: var(--text-muted);
+  }
+
+  html[data-theme="dark"] th.sortable.sort-asc .sort-icon {
+    border-top-color: var(--runtime-brand-primary, var(--brand-blue));
+  }
+
+  html[data-theme="dark"] th.sortable.sort-desc .sort-icon {
+    border-bottom-color: var(--runtime-brand-primary, var(--brand-blue));
+  }
 </style>

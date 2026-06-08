@@ -55,7 +55,7 @@ function getCalendarioEventos(payload) {
   var raw          = calendar.getEvents(desde, hasta);
 
   // Cargar hitos PRE_04 (Reunión CS) del período para cruce
-  var hitosSheet = getSheetSafe_(GO_PES_V2.AVANCE.FACT_HITOS);
+  var hitosSheet = getSheet_(GO_PES_V2.AVANCE.FACT_HITOS);
   var hitosRows  = hitosSheet ? getSheetRows_(hitosSheet) : [];
   var hitosPRE04 = hitosRows.filter(function(h) {
     if (h.hito_key !== 'PRE_04') return false;
@@ -66,14 +66,14 @@ function getCalendarioEventos(payload) {
   });
 
   // Cargar info de casos y organizaciones para enriquecer los hitos
-  var casosSheet = getSheetSafe_(GO_PES_V2.SHEETS.MAE_CASOS);
+  var casosSheet = getSheet_(GO_PES_V2.SHEETS.MAE_CASOS);
   var casosRows  = casosSheet ? getSheetRows_(casosSheet) : [];
   var casosBySol = {};
   casosRows.forEach(function(c) {
     if (c.solicitud_id) casosBySol[c.solicitud_id] = c;
   });
 
-  var orgsSheet = getSheetSafe_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES);
+  var orgsSheet = getSheet_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES);
   var orgsRows  = orgsSheet ? getSheetRows_(orgsSheet) : [];
   var orgsByOrgId = {};
   orgsRows.forEach(function(o) {

@@ -7790,4 +7790,101 @@ html[data-theme="dark"] .ficha-gestion-form input,html[data-theme="dark"] .ficha
   display: none;
 }
 
+/* ======== SEARCH SELECT (select con búsqueda integrada) ======== */
+.search-select {
+  position: relative;
+  width: 100%;
+}
+
+.search-select__input {
+  width: 100%;
+  padding-right: 40px; /* Espacio para la flecha */
+  cursor: pointer;
+  background: var(--surface, #fff);
+}
+
+.search-select__input:focus {
+  cursor: text;
+}
+
+.search-select__input[readonly] {
+  cursor: pointer;
+}
+
+.search-select__arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  color: var(--text-muted, #6b7a8d);
+  pointer-events: none;
+  transition: transform 160ms;
+}
+
+.search-select.is-open .search-select__arrow {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+.search-select__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e1e4e8);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: var(--shadow-lg, 0 4px 12px rgba(0,0,0,0.1));
+  z-index: 100;
+}
+
+.search-select__dropdown.is-hidden {
+  display: none;
+}
+
+.search-select__option {
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  color: var(--text, #1f2937);
+  cursor: pointer;
+  transition: background-color 120ms;
+}
+
+.search-select__option:hover {
+  background: var(--surface-alt, #f7fafc);
+}
+
+.search-select__option.is-selected {
+  background: var(--runtime-brand-primary, #3D96B4);
+  color: #fff;
+}
+
+.search-select__empty {
+  padding: 24px 12px;
+  font-size: 0.875rem;
+  color: var(--text-muted, #6b7a8d);
+  text-align: center;
+}
+
+/* Scrollbar del dropdown */
+.search-select__dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.search-select__dropdown::-webkit-scrollbar-track {
+  background: var(--surface-alt, #f7fafc);
+  border-radius: 4px;
+}
+
+.search-select__dropdown::-webkit-scrollbar-thumb {
+  background: var(--border, #e1e4e8);
+  border-radius: 4px;
+}
+
+.search-select__dropdown::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted, #6b7a8d);
+}
+
 </style>

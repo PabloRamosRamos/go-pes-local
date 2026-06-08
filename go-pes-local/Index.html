@@ -640,9 +640,16 @@
         var b = document.createElement('div');
         b.id = 'browser-compat-warning';
         b.setAttribute('role', 'alert');
-        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:9px 48px 9px 16px;background:#f59e0b;color:#1a1000;font-size:.8rem;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.18)';
+        b.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:9px 48px 9px 16px;background:#f59e0b;color:#1a1000;font-size:.8rem;text-align:center;display:flex;align-items:center;justify-content:center;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.18);transition:opacity 320ms,transform 320ms;opacity:1;transform:translateY(0)';
         b.innerHTML = '<span style="font-size:1rem">&#9888;</span> Tu navegador puede no ser compatible con esta aplicación. Se recomienda <strong>Chrome 111+</strong>, <strong>Edge 111+</strong> o <strong>Safari 16.2+</strong>. <button onclick="this.parentElement.remove()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-weight:700;font-size:1rem;padding:4px 6px;color:inherit;line-height:1">&#x2715;</button>';
         document.body.appendChild(b);
+
+        // Auto-cerrar después de 8 segundos
+        setTimeout(function() {
+          b.style.opacity = '0';
+          b.style.transform = 'translateY(-100%)';
+          setTimeout(function() { b.remove(); }, 320);
+        }, 8000);
       })();
     </script>
     <div id="session-expired-overlay" class="is-hidden" role="alertdialog" aria-modal="true" aria-labelledby="session-expired-title">

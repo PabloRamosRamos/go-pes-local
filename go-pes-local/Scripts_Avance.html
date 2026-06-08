@@ -24,13 +24,37 @@
 
       <div class="avance-header">
         <div class="field field--grow">
-          <label>Tramo 1 - Grupo de vecinos</label>
-          <select id="avance-grupo-select"></select>
+          <label for="avance-grupo-search">Tramo 1 - Grupo de vecinos</label>
+          <div class="search-select" id="avance-grupo-wrapper">
+            <input
+              type="text"
+              id="avance-grupo-search"
+              class="search-select__input"
+              placeholder="Seleccionar Grupo de vecinos"
+              autocomplete="off"
+              readonly
+            />
+            <span class="search-select__arrow material-symbols-outlined">arrow_drop_down</span>
+            <div class="search-select__dropdown is-hidden" id="avance-grupo-dropdown"></div>
+            <input type="hidden" id="avance-grupo-select" />
+          </div>
         </div>
 
         <div class="field field--grow">
-          <label>Tramo 2 - Organización</label>
-          <select id="avance-organizacion-select"></select>
+          <label for="avance-organizacion-search">Tramo 2 - Organización</label>
+          <div class="search-select" id="avance-organizacion-wrapper">
+            <input
+              type="text"
+              id="avance-organizacion-search"
+              class="search-select__input"
+              placeholder="Seleccionar organización"
+              autocomplete="off"
+              readonly
+            />
+            <span class="search-select__arrow material-symbols-outlined">arrow_drop_down</span>
+            <div class="search-select__dropdown is-hidden" id="avance-organizacion-dropdown"></div>
+            <input type="hidden" id="avance-organizacion-select" />
+          </div>
         </div>
       </div>
 
@@ -293,29 +317,32 @@
     }
 
     loadAvanceCatalogos_().then(() => {
-      fillSelect(
-        grupoSelect,
-        APP.state.avanceGrupos.map(x => ({
-          value: x.value,
-          label: x.label
-        })),
-        'Seleccionar Grupo de vecinos'
+      // Inicializar search-select para grupos
+      initSearchSelect_(
+        'avance-grupo-search',
+        'avance-grupo-select',
+        'avance-grupo-dropdown',
+        APP.state.avanceGrupos.map(x => ({ value: x.value, label: x.label }))
       );
 
-      fillSelect(
-        select,
-        APP.state.avanceOrganizaciones.map(x => ({
-          value: x.value,
-          label: x.label
-        })),
-        'Seleccionar organización'
+      // Inicializar search-select para organizaciones
+      initSearchSelect_(
+        'avance-organizacion-search',
+        'avance-organizacion-select',
+        'avance-organizacion-dropdown',
+        APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label }))
       );
 
       if (grupoSelect && !grupoSelect.dataset.bound) {
         grupoSelect.dataset.bound = 'true';
         grupoSelect.addEventListener('change', () => {
           const solicitudId = String(grupoSelect.value || '').trim();
+
+          // Limpiar el otro selector (organizaciones)
           if (select) select.value = '';
+          const orgSearchInput = document.getElementById('avance-organizacion-search');
+          if (orgSearchInput) orgSearchInput.value = '';
+
           if (!solicitudId) {
             clearAvanceView_();
             return;
@@ -328,7 +355,12 @@
         select.dataset.bound = 'true';
         select.addEventListener('change', () => {
           const orgId = String(select.value || '').trim();
+
+          // Limpiar el otro selector (grupos)
           if (grupoSelect) grupoSelect.value = '';
+          const grupoSearchInput = document.getElementById('avance-grupo-search');
+          if (grupoSearchInput) grupoSearchInput.value = '';
+
           if (!orgId) {
             clearAvanceView_();
             return;
@@ -354,6 +386,133 @@
     const n = Number(value || 0);
     if (!isFinite(n)) return 0;
     return Math.max(0, Math.min(100, Math.round(n)));
+  }
+
+  /**
+   * Inicializa un select con búsqueda integrada
+   * @param {string} searchId - ID del input
+   * @param {string} hiddenId - ID del input hidden que mantiene el value
+   * @param {string} dropdownId - ID del dropdown
+   * @param {Array} options - Array de {value, label}
+   */
+  function initSearchSelect_(searchId, hiddenId, dropdownId, options) {
+    const searchInput = document.getElementById(searchId);
+    const hiddenInput = document.getElementById(hiddenId);
+    const dropdown = document.getElementById(dropdownId);
+    const wrapper = searchInput?.closest('.search-select');
+
+    if (!searchInput || !hiddenInput || !dropdown || !wrapper) return;
+
+    // Guardar opciones en el elemento para uso posterior
+    dropdown.dataset.options = JSON.stringify(options || []);
+
+    if (!searchInput.dataset.bound) {
+      searchInput.dataset.bound = 'true';
+
+      // Click: abrir dropdown y activar edición
+      searchInput.addEventListener('click', function() {
+        if (this.hasAttribute('readonly')) {
+          // Primera vez: abrir con todas las opciones
+          const allOptions = JSON.parse(dropdown.dataset.options || '[]');
+          renderSearchSelectDropdown_(dropdown, allOptions, hiddenInput, searchInput);
+          dropdown.classList.remove('is-hidden');
+          wrapper.classList.add('is-open');
+
+          // Activar edición
+          this.removeAttribute('readonly');
+          this.select(); // Seleccionar texto para facilitar búsqueda
+        }
+      });
+
+      // Input: filtrar en tiempo real
+      searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase().trim();
+        const allOptions = JSON.parse(dropdown.dataset.options || '[]');
+
+        if (!query) {
+          // Sin query: mostrar todas
+          renderSearchSelectDropdown_(dropdown, allOptions, hiddenInput, searchInput);
+        } else {
+          // Filtrar
+          const filtered = allOptions.filter(opt =>
+            String(opt.label || '').toLowerCase().includes(query)
+          );
+          renderSearchSelectDropdown_(dropdown, filtered, hiddenInput, searchInput);
+        }
+      });
+
+      // Blur: cerrar dropdown y volver a readonly
+      searchInput.addEventListener('blur', function() {
+        setTimeout(() => {
+          dropdown.classList.add('is-hidden');
+          wrapper.classList.remove('is-open');
+
+          // Si no hay valor seleccionado, restaurar placeholder
+          if (!hiddenInput.value) {
+            this.value = '';
+            this.setAttribute('readonly', 'readonly');
+          } else {
+            // Restaurar el label del valor seleccionado
+            const allOptions = JSON.parse(dropdown.dataset.options || '[]');
+            const selected = allOptions.find(opt => String(opt.value) === String(hiddenInput.value));
+            if (selected) {
+              this.value = selected.label;
+            }
+            this.setAttribute('readonly', 'readonly');
+          }
+        }, 200);
+      });
+    }
+  }
+
+  /**
+   * Renderiza las opciones del dropdown
+   */
+  function renderSearchSelectDropdown_(dropdown, options, hiddenInput, searchInput) {
+    if (!dropdown) return;
+
+    if (!options || options.length === 0) {
+      dropdown.innerHTML = '<div class="search-select__empty">No se encontraron resultados</div>';
+      return;
+    }
+
+    const currentValue = String(hiddenInput.value || '').trim();
+
+    dropdown.innerHTML = options.map(opt => {
+      const isSelected = String(opt.value) === currentValue;
+      return `
+        <div
+          class="search-select__option ${isSelected ? 'is-selected' : ''}"
+          data-value="${escapeHtml(opt.value)}"
+        >
+          ${escapeHtml(opt.label)}
+        </div>
+      `;
+    }).join('');
+
+    // Agregar eventos click a cada opción
+    dropdown.querySelectorAll('.search-select__option').forEach(optEl => {
+      optEl.addEventListener('click', function() {
+        const value = this.dataset.value;
+        const label = this.textContent.trim();
+        const wrapper = dropdown.closest('.search-select');
+
+        // Actualizar valor hidden
+        hiddenInput.value = value;
+
+        // Actualizar input con el label y volver a readonly
+        searchInput.value = label;
+        searchInput.setAttribute('readonly', 'readonly');
+
+        // Cerrar dropdown
+        dropdown.classList.add('is-hidden');
+        if (wrapper) wrapper.classList.remove('is-open');
+
+        // Disparar evento change en el input hidden para que el código existente reaccione
+        const event = new Event('change', { bubbles: true });
+        hiddenInput.dispatchEvent(event);
+      });
+    });
   }
 
   function buildProgressBarHtml_(label, done, total) {
@@ -408,22 +567,33 @@
       APP.state.avanceGruposFetchedAt = Date.now();
       APP.state.avanceOrganizaciones = (data && data.organizacionesList) || [];
       APP.state.avanceOrganizacionesFetchedAt = Date.now();
-      fillSelect(
-        grupoSelect,
-        APP.state.avanceGrupos.map(x => ({ value: x.value, label: x.label })),
-        'Seleccionar Grupo de vecinos'
-      );
-      fillSelect(
-        select,
-        APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label })),
-        'Seleccionar organización'
+
+      // Inicializar search-select para grupos
+      initSearchSelect_(
+        'avance-grupo-search',
+        'avance-grupo-select',
+        'avance-grupo-dropdown',
+        APP.state.avanceGrupos.map(x => ({ value: x.value, label: x.label }))
       );
 
+      // Inicializar search-select para organizaciones
+      initSearchSelect_(
+        'avance-organizacion-search',
+        'avance-organizacion-select',
+        'avance-organizacion-dropdown',
+        APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label }))
+      );
+
+      // Restaurar valores previos si existen
       if (currentValue && APP.state.avanceOrganizaciones.some(x => String(x.value) === currentValue)) {
         select.value = currentValue;
+        const org = APP.state.avanceOrganizaciones.find(x => String(x.value) === currentValue);
+        if (org) document.getElementById('avance-organizacion-search').value = org.label;
       }
       if (currentGrupoValue && APP.state.avanceGrupos.some(x => String(x.value) === currentGrupoValue)) {
         grupoSelect.value = currentGrupoValue;
+        const grupo = APP.state.avanceGrupos.find(x => String(x.value) === currentGrupoValue);
+        if (grupo) document.getElementById('avance-grupo-search').value = grupo.label;
       }
 
       if (typeof window.hideModalLoading === 'function') {
@@ -973,18 +1143,29 @@
         APP.state.avanceGruposFetchedAt = 0;
         if (res && res.organizacion_id) {
           return loadAvanceCatalogos_().then(() => {
-            fillSelect(
-              document.getElementById('avance-organizacion-select'),
-              APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label })),
-              'Seleccionar organización'
+            // Re-inicializar search-select con datos actualizados
+            initSearchSelect_(
+              'avance-organizacion-search',
+              'avance-organizacion-select',
+              'avance-organizacion-dropdown',
+              APP.state.avanceOrganizaciones.map(x => ({ value: x.value, label: x.label }))
             );
-            fillSelect(
-              document.getElementById('avance-grupo-select'),
-              APP.state.avanceGrupos.map(x => ({ value: x.value, label: x.label })),
-              'Seleccionar Grupo de vecinos'
+            initSearchSelect_(
+              'avance-grupo-search',
+              'avance-grupo-select',
+              'avance-grupo-dropdown',
+              APP.state.avanceGrupos.map(x => ({ value: x.value, label: x.label }))
             );
+
+            // Seleccionar la organización recién creada
             const orgSelect = document.getElementById('avance-organizacion-select');
-            if (orgSelect) orgSelect.value = res.organizacion_id;
+            const orgSearchInput = document.getElementById('avance-organizacion-search');
+            if (orgSelect && res.organizacion_id) {
+              orgSelect.value = res.organizacion_id;
+              const org = APP.state.avanceOrganizaciones.find(x => String(x.value) === String(res.organizacion_id));
+              if (org && orgSearchInput) orgSearchInput.value = org.label;
+            }
+
             return loadAvanceOrganizacion_(res.organizacion_id).then(() => {
               if (benefitReminder) openAvanceBeneficioReminderModal_(benefitReminder);
             });

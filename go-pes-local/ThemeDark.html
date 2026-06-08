@@ -239,4 +239,48 @@
   html[data-theme="dark"] .view-loader__text {
     color: var(--text-muted);
   }
+
+  /* ===== Search Select — dark mode ===== */
+  html[data-theme="dark"] .search-select__input {
+    background: var(--surface);
+  }
+
+  html[data-theme="dark"] .search-select__arrow {
+    color: var(--text-muted);
+  }
+
+  html[data-theme="dark"] .search-select__dropdown {
+    background: var(--surface);
+    border-color: var(--border);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  html[data-theme="dark"] .search-select__option {
+    color: var(--text);
+  }
+
+  html[data-theme="dark"] .search-select__option:hover {
+    background: var(--surface-alt);
+  }
+
+  html[data-theme="dark"] .search-select__option.is-selected {
+    background: var(--runtime-brand-primary, var(--brand-blue));
+    color: #fff;
+  }
+
+  html[data-theme="dark"] .search-select__empty {
+    color: var(--text-muted);
+  }
+
+  html[data-theme="dark"] .search-select__dropdown::-webkit-scrollbar-track {
+    background: var(--surface-alt);
+  }
+
+  html[data-theme="dark"] .search-select__dropdown::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+
+  html[data-theme="dark"] .search-select__dropdown::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
 </style>

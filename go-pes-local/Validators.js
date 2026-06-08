@@ -151,7 +151,15 @@ function isNumberBetween_(value, min, max) {
 function asDateOrBlank_(value) {
   if (!value) return '';
   if (Object.prototype.toString.call(value) === '[object Date]' && !isNaN(value)) return value;
-  const d = new Date(value);
+
+  // Si el valor es un string en formato YYYY-MM-DD (típico de input type="date"),
+  // agregar T12:00:00 para evitar problemas de zona horaria (UTC medianoche → día anterior en Chile)
+  let dateValue = value;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    dateValue = value.trim() + 'T12:00:00';
+  }
+
+  const d = new Date(dateValue);
   return isNaN(d) ? '' : d;
 }
 

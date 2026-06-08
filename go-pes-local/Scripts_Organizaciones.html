@@ -112,6 +112,12 @@
               <span class="material-symbols-outlined">save</span>Guardar organización
             </button>
           </div>
+
+          <!-- Loader dentro del modal -->
+          <div id="org-edit-modal-loading" class="modal-loading is-hidden">
+            <div class="modal-loading__spinner"></div>
+            <p class="modal-loading__text">Guardando organización...</p>
+          </div>
         </form>
       </div>
     `;
@@ -867,6 +873,11 @@
       showError('El módulo Organizaciones solo permite editar organizaciones existentes.');
       return;
     }
+
+    // Mostrar loader dentro del modal
+    const modalLoader = document.getElementById('org-edit-modal-loading');
+    if (modalLoader) modalLoader.classList.remove('is-hidden');
+
     api('guardarOrganizacion', payload).then(res => {
       showSuccess('Organización guardada correctamente.');
       closeOrganizacionEditModal_();
@@ -875,7 +886,10 @@
         renderOrganizacionesGridFromState_();
         return loadOrganizacionDetalle_(res.organizacion_id);
       });
-    }).catch(showError);
+    }).catch(showError).finally(() => {
+      // Ocultar loader del modal
+      if (modalLoader) modalLoader.classList.add('is-hidden');
+    });
   }
 
   function cambiarEstadoOrganizacionUi_(fn, actionLabel) {

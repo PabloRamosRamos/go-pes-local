@@ -608,9 +608,6 @@
           ['Gestiones legacy',   r.cantidad_hitos_legacy],
           ['Fecha asignada asamblea (Hito 3)', fechaAsambleaAsignada]
         ])}
-        ${organizacionBlockHtml_('Observaciones', [
-          ['Resumen', org.observacion_resumen]
-        ])}
         ${organizacionBlockHtml_('Directiva y constitución', [
           ['Fecha inicio',           org.fecha_inicio_acompanamiento],
           ['Asamblea constitución',  org.fecha_asamblea_constitucion],
@@ -621,6 +618,9 @@
           ['Certificado provisorio', org.certificado_provisorio_flag],
           ['Certificado definitivo', org.certificado_definitivo_flag]
         ], 'organizaciones-block--wide', 'organizaciones-kv--double')}
+        ${organizacionBlockHtml_('Observaciones', [
+          ['Resumen', org.observacion_resumen]
+        ], 'organizaciones-block--wide')}
         ${organizacionBlockHtml_('Datos administrativos y financieros', [
           ['RUT organización (Hito 12)', rutOrganizacion],
           ['N° Registro cert. provisorio (Hito 7)', numeroRegistroProvisorio],

@@ -1398,6 +1398,24 @@
     quick.style.display = view === 'inicio' ? 'grid' : 'none';
   }
 
+  function showViewLoader_(view) {
+    const viewEl = document.getElementById('view-' + view);
+    if (!viewEl) return;
+    const loader = viewEl.querySelector('.view-loader');
+    if (loader) {
+      loader.classList.remove('is-hidden');
+    }
+  }
+
+  function hideViewLoader_(view) {
+    const viewEl = document.getElementById('view-' + view);
+    if (!viewEl) return;
+    const loader = viewEl.querySelector('.view-loader');
+    if (loader) {
+      loader.classList.add('is-hidden');
+    }
+  }
+
   function route(view, params = {}) {
     view = normalizeModuleKey_(view) || view;
     if (!canOpenView_(view)) {
@@ -1475,8 +1493,17 @@
 
     const catalogPromise = ensureCatalogsForView_(view);
     if (catalogPromise) {
-      showContentLoading(view === 'socios' ? 'Cargando socios' : `Cargando ${friendlyViewName_(view)}...`);
-      catalogPromise.then(finalizeRoute).catch(showError).finally(hideContentLoading);
+      // Mostrar loader local del módulo en lugar de fullscreen
+      const viewsWithLocalLoader = ['avance', 'organizacion', 'instrumento', 'socios'];
+      const useLocalLoader = viewsWithLocalLoader.indexOf(view) !== -1;
+
+      if (useLocalLoader) {
+        showViewLoader_(view);
+        catalogPromise.then(finalizeRoute).catch(showError).finally(() => hideViewLoader_(view));
+      } else {
+        showContentLoading(view === 'socios' ? 'Cargando socios' : `Cargando ${friendlyViewName_(view)}...`);
+        catalogPromise.then(finalizeRoute).catch(showError).finally(hideContentLoading);
+      }
       return;
     }
 

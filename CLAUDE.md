@@ -185,12 +185,49 @@ No hay REST API, no hay URL configurable. Todas las funciones públicas del back
 
 ## Entornos
 
-| Entorno | Script ID | Cuenta | Archivo config | Estado |
-|---------|-----------|--------|---------------|--------|
-| DEV | `12ZfNLyF...` | p.e.ramos.ramos@gmail.com | `.clasp.json` / `.clasp.dev.json` | Desarrollo y pruebas |
-| PROD | `10Lzrg2G...` | pablo.ramos@providencia.cl | `.clasp.prod.json` | **Activo — datos reales** |
+| Entorno | Script ID | Cuenta | Archivo config | URL Web App | Estado |
+|---------|-----------|--------|----------------|-------------|--------|
+| DEV | `12ZfNLyFSEpF5uAvwSwtqR8_zYZK9E6_TO0QhTaSYLO1AYsKHCN1eCdaB` | p.e.ramos.ramos@gmail.com | `.clasp.json` / `.clasp.dev.json` | *(desarrollo local)* | Desarrollo y pruebas |
+| PROD | `10Lzrg2GyPlkB0Wk6yLCshhtwv53dCSKLxDc8dDaOOpJgM2euLoKjRPOG` | pablo.ramos@providencia.cl | `.clasp.prod.json` | `https://script.google.com/a/macros/providencia.cl/s/AKfycbwCGOUG1badbRUOonNVEpGJjNVG1lFtvkFpnQNmBg1G239u-qsoEaYWeuyQdRbANiGQ-w/exec` | **✅ ACTIVO — datos reales** |
 
 El flujo de trabajo es: desarrollar y verificar en DEV → ejecutar batería de tests → push a PROD.
+
+### 📌 Mantener la URL de PROD al actualizar
+
+**IMPORTANTE:** Para mantener la misma URL de producción después de hacer cambios:
+
+1. **NO crear un nuevo deployment** — Esto genera una URL nueva
+2. **Actualizar el deployment existente:**
+   - Después de `.\push-prod.ps1`, abrir el editor de Apps Script de PROD
+   - Ir a **Implementar** → **Administrar implementaciones**
+   - Hacer clic en el ícono **✏️ (editar)** del deployment activo
+   - Seleccionar **Nueva versión** en el desplegable de versión
+   - Agregar descripción de cambios (ej: "v2.1.1 - Campos hitos + loaders locales")
+   - Hacer clic en **Implementar**
+   - ✅ La URL permanece idéntica, solo cambia el contenido
+
+3. **Verificar el deployment activo:**
+   ```powershell
+   clasp -u prod -P .clasp.prod.json deployments
+   ```
+
+### 🔄 Proceso completo de actualización a PROD
+
+```powershell
+# 1. Subir código a PROD
+.\push-prod.ps1
+
+# 2. Abrir editor de PROD
+clasp -u prod -P .clasp.prod.json open
+
+# 3. En el editor web:
+#    - Implementar → Administrar implementaciones
+#    - Editar deployment activo (no crear nuevo)
+#    - Nueva versión + descripción
+#    - Implementar
+
+# 4. Verificar en la URL de PROD que los cambios estén aplicados
+```
 
 > **`appsscript.json` — access: "ANYONE" es intencional en DEV y PROD.** El sistema usa autenticación interna a través de `DIM_Usuarios`, lo que permite control granular de acceso independiente del dominio de Google. Esto facilita el acceso a usuarios externos (dirigentes, vecinos) y permite desarrollo sin restricciones de dominio.
 

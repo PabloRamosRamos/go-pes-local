@@ -32,14 +32,16 @@ function getCalendarioEventos(payload) {
   var diasAdelante = Math.min(Number(filters.diasAdelante || 60), 365);
   var tz           = Session.getScriptTimeZone();
 
-  var email = '';
-  try { email = Session.getActiveUser().getEmail().toLowerCase(); } catch (e) {}
-  if (!email || email.indexOf('@providencia.cl') === -1) {
-    return serializeForClient_({
-      ok: true, eventos: [], calendarName: '',
-      nota: 'Solo disponible para cuentas @providencia.cl'
-    });
-  }
+  // NOTA: Validación de email @providencia.cl comentada temporalmente
+  // para permitir acceso con USER_ACCESSING de cualquier cuenta
+  // var email = '';
+  // try { email = Session.getActiveUser().getEmail().toLowerCase(); } catch (e) {}
+  // if (!email || email.indexOf('@providencia.cl') === -1) {
+  //   return serializeForClient_({
+  //     ok: true, eventos: [], calendarName: '',
+  //     nota: 'Solo disponible para cuentas @providencia.cl'
+  //   });
+  // }
 
   // Leer eventos ya procesados por este usuario
   var procesados = {};

@@ -18,6 +18,13 @@ window.GO_PES_CALENDARIO = (function() {
     }
 
     var allEventos = Array.isArray(data.eventos) ? data.eventos : [];
+
+    // Mostrar mensaje de error o nota si existe
+    if (data.error || data.nota) {
+      root.innerHTML = buildErrorCard_(data.error || data.nota, esc);
+      return;
+    }
+
     var eventos = allEventos.filter(function(ev) {
       if (_currentFilter === 'todos') return true;
       if (_currentFilter === 'asambleas') return ev.tipo === 'ministro';
@@ -361,6 +368,20 @@ window.GO_PES_CALENDARIO = (function() {
     }
 
     return '<div class="cal-details-grid">' + calSide + appSide + '</div>';
+  }
+
+  function buildErrorCard_(message, esc) {
+    return '<section class="inicio-card inicio-cal-card">' +
+      '<div class="inicio-card__head">' +
+        '<span class="material-symbols-outlined">calendar_month</span>' +
+        '<div><h3>Calendario de reuniones</h3><p>Error al cargar</p></div>' +
+      '</div>' +
+      '<div class="inicio-cal-empty">' +
+        '<span class="material-symbols-outlined">warning</span>' +
+        '<p>' + esc(String(message)) + '</p>' +
+        '<p style="font-size:0.75rem;color:var(--text-muted,#666);margin-top:0.5rem;">Revisa los permisos de acceso al calendario o la consola del navegador para más detalles.</p>' +
+      '</div>' +
+    '</section>';
   }
 
   return { render: render };

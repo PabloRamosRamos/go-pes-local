@@ -254,10 +254,19 @@
       .then(function(data) {
         APP.state.calendarioData      = data || {};
         APP.state.calendarioFetchedAt = Date.now();
+
+        // Mostrar nota de advertencia si existe (ej: falta de permisos)
+        if (data && data.nota && typeof console !== 'undefined') {
+          console.warn('[Calendario] ' + data.nota);
+        }
+
         GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml, onCalAction);
       })
-      .catch(function() {
-        APP.state.calendarioData      = { eventos: [] };
+      .catch(function(err) {
+        if (typeof console !== 'undefined' && console.error) {
+          console.error('[Calendario] Error al cargar eventos:', err);
+        }
+        APP.state.calendarioData      = { eventos: [], error: String(err || 'Error desconocido') };
         APP.state.calendarioFetchedAt = Date.now();
         GO_PES_CALENDARIO.render(root, APP.state.calendarioData, escapeHtml, onCalAction);
       });

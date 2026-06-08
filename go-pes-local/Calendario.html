@@ -47,6 +47,14 @@ window.GO_PES_CALENDARIO = (function() {
           render(root, data, esc, onAction, onRefresh);
         }
       });
+      // Handler para botón de lupa (detalles)
+      root.addEventListener('click', function(e) {
+        var detailsBtn = e.target.closest('.inicio-cal-details-btn');
+        if (!detailsBtn) return;
+        var eventId = detailsBtn.dataset.calDetails;
+        var evento = allEventos.find(function(ev) { return ev.id === eventId; });
+        if (evento) openDetailsModal_(evento, esc);
+      });
     }
 
     // Restaurar valor del filtro
@@ -103,6 +111,27 @@ window.GO_PES_CALENDARIO = (function() {
 
     var dayMod = esReunion ? 'inicio-cal-badge--reunion' : 'inicio-cal-badge--ministro';
     var yaRegistrado = esReunion && ev.registrado;
+
+    // Badge de estado (solo para Reuniones CS)
+    var estadoBadge = '';
+    if (esReunion) {
+      estadoBadge = ev.yaIngresado
+        ? '<span class="cal-status-badge cal-status-badge--ingresada" title="Reunión ingresada en el sistema">' +
+            '<span class="material-symbols-outlined">check_circle</span> Ingresada' +
+          '</span>'
+        : '<span class="cal-status-badge cal-status-badge--pendiente" title="Reunión pendiente de ingresar">' +
+            '<span class="material-symbols-outlined">schedule</span> Pendiente' +
+          '</span>';
+    }
+
+    // Botón de lupa (solo para Reuniones CS)
+    var lupaBtn = esReunion
+      ? '<button class="inicio-cal-details-btn" data-cal-details="' + esc(ev.id) + '" type="button" ' +
+          'title="Ver detalles comparativos">' +
+          '<span class="material-symbols-outlined">search</span>' +
+        '</button>'
+      : '';
+
     var actionBtn = !esReunion
       ? '<button class="inicio-cal-action inicio-cal-action--pending" type="button" disabled ' +
           'title="Para programar este evento, primero se deben completar los hitos previos en la app">' +
@@ -127,13 +156,17 @@ window.GO_PES_CALENDARIO = (function() {
       '<div class="inicio-cal-body">' +
         '<div class="inicio-cal-titulo-row">' +
           '<p class="inicio-cal-titulo">' + esc(ev.titulo) + '</p>' +
+          estadoBadge +
         '</div>' +
         '<div class="inicio-cal-meta-row">' +
           '<p class="inicio-cal-meta">' +
             (hora ? '<span class="inicio-cal-hora">' + esc(hora) + '</span>' : '') +
             (ev.lugar ? '<span class="inicio-cal-lugar">' + esc(ev.lugar) + '</span>' : '') +
           '</p>' +
-          actionBtn +
+          '<div style="display:flex;gap:0.5rem;">' +
+            lupaBtn +
+            actionBtn +
+          '</div>' +
         '</div>' +
       '</div>' +
     '</li>';
@@ -172,6 +205,162 @@ window.GO_PES_CALENDARIO = (function() {
         '</div>' +
       '</div>' +
     '</div>';
+  }
+
+  function openDetailsModal_(evento, esc) {
+    var modal = document.getElementById('cal-details-modal');
+    if (!modal) {
+      var modalHtml = '<div id="cal-details-modal" class="modal" role="dialog" aria-modal="true">' +
+        '<div class="modal__backdrop"></div>' +
+        '<div class="cal-details-modal__dialog">' +
+          '<div class="cal-details-modal__header">' +
+            '<h3>Detalles comparativos</h3>' +
+            '<button class="modal__close" type="button" aria-label="Cerrar">' +
+              '<span class="material-symbols-outlined">close</span>' +
+            '</button>' +
+          '</div>' +
+          '<div id="cal-details-modal-body" class="cal-details-modal__body"></div>' +
+        '</div>' +
+      '</div>';
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+      modal = document.getElementById('cal-details-modal');
+
+      // Event listeners
+      modal.querySelector('.modal__close').addEventListener('click', function() {
+        closeDetailsModal_();
+      });
+      modal.querySelector('.modal__backdrop').addEventListener('click', function() {
+        closeDetailsModal_();
+      });
+    }
+
+    var body = modal.querySelector('#cal-details-modal-body');
+    body.innerHTML = buildDetailsModalBody_(evento, esc);
+
+    modal.classList.remove('is-hidden');
+    modal.classList.add('is-opening');
+    requestAnimationFrame(function() {
+      modal.classList.remove('is-opening');
+      modal.classList.add('is-open');
+    });
+  }
+
+  function closeDetailsModal_() {
+    var modal = document.getElementById('cal-details-modal');
+    if (!modal) return;
+    modal.classList.add('is-closing');
+    modal.classList.remove('is-open');
+    setTimeout(function() {
+      modal.classList.add('is-hidden');
+      modal.classList.remove('is-closing');
+    }, 160);
+  }
+
+  function buildDetailsModalBody_(evento, esc) {
+    var calSide = '<div class="cal-details-side">' +
+      '<div class="cal-details-side__header">' +
+        '<span class="material-symbols-outlined">event</span>' +
+        '<h4>Evento de Calendario</h4>' +
+      '</div>' +
+      '<div class="cal-details-side__content">' +
+        '<div class="cal-details-field">' +
+          '<label>Título</label>' +
+          '<p>' + esc(evento.titulo) + '</p>' +
+        '</div>' +
+        '<div class="cal-details-field">' +
+          '<label>Fecha</label>' +
+          '<p>' + esc(evento.fechaLabel) + '</p>' +
+        '</div>' +
+        '<div class="cal-details-field">' +
+          '<label>Hora</label>' +
+          '<p>' + (evento.allDay ? 'Todo el día' : esc(evento.horaInicio + (evento.horaFin ? ' - ' + evento.horaFin : ''))) + '</p>' +
+        '</div>' +
+        (evento.lugar
+          ? '<div class="cal-details-field">' +
+              '<label>Lugar</label>' +
+              '<p>' + esc(evento.lugar) + '</p>' +
+            '</div>'
+          : '') +
+        (evento.descripcion
+          ? '<div class="cal-details-field">' +
+              '<label>Descripción</label>' +
+              '<p style="white-space:pre-wrap;">' + esc(evento.descripcion) + '</p>' +
+            '</div>'
+          : '') +
+      '</div>' +
+    '</div>';
+
+    var appSide = '';
+    if (evento.yaIngresado && evento.hitoInfo) {
+      var hi = evento.hitoInfo;
+      appSide = '<div class="cal-details-side cal-details-side--ingresada">' +
+        '<div class="cal-details-side__header">' +
+          '<span class="material-symbols-outlined">check_circle</span>' +
+          '<h4>Ingresada en GO-PES</h4>' +
+        '</div>' +
+        '<div class="cal-details-side__content">' +
+          '<div class="cal-details-field">' +
+            '<label>Solicitud ID</label>' +
+            '<p><a href="#" onclick="window.GO_PES_ROUTER && window.GO_PES_ROUTER.push(\'ficha\', {id:\'' + esc(hi.solicitud_id) + '\'}); return false;">' +
+              esc(hi.solicitud_id) +
+            '</a></p>' +
+          '</div>' +
+          (hi.organizacion_nombre
+            ? '<div class="cal-details-field">' +
+                '<label>Organización</label>' +
+                '<p>' + esc(hi.organizacion_nombre) + '</p>' +
+              '</div>'
+            : '') +
+          (hi.vecino_nombre
+            ? '<div class="cal-details-field">' +
+                '<label>Vecino</label>' +
+                '<p>' + esc(hi.vecino_nombre) + '</p>' +
+              '</div>'
+            : '') +
+          (hi.vecino_uv
+            ? '<div class="cal-details-field">' +
+                '<label>Unidad Vecinal</label>' +
+                '<p>' + esc(hi.vecino_uv) + '</p>' +
+              '</div>'
+            : '') +
+          (hi.vecino_direccion
+            ? '<div class="cal-details-field">' +
+                '<label>Dirección</label>' +
+                '<p>' + esc(hi.vecino_direccion) + '</p>' +
+              '</div>'
+            : '') +
+          '<div class="cal-details-field">' +
+            '<label>Fecha registrada</label>' +
+            '<p>' + esc(hi.fecha_hito) + '</p>' +
+          '</div>' +
+          (hi.responsable
+            ? '<div class="cal-details-field">' +
+                '<label>Responsable</label>' +
+                '<p>' + esc(hi.responsable) + '</p>' +
+              '</div>'
+            : '') +
+          (hi.observacion
+            ? '<div class="cal-details-field">' +
+                '<label>Observación</label>' +
+                '<p style="white-space:pre-wrap;">' + esc(hi.observacion) + '</p>' +
+              '</div>'
+            : '') +
+        '</div>' +
+      '</div>';
+    } else {
+      appSide = '<div class="cal-details-side cal-details-side--pendiente">' +
+        '<div class="cal-details-side__header">' +
+          '<span class="material-symbols-outlined">schedule</span>' +
+          '<h4>No ingresada</h4>' +
+        '</div>' +
+        '<div class="cal-details-side__content">' +
+          '<p class="cal-details-empty">Esta reunión aún no ha sido ingresada en el sistema.</p>' +
+          '<p class="cal-details-hint">Para registrarla, haz clic en el botón <strong>Registrar asistencia</strong> del calendario.</p>' +
+        '</div>' +
+      '</div>';
+    }
+
+    return '<div class="cal-details-grid">' + calSide + appSide + '</div>';
   }
 
   return { render: render };

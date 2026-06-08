@@ -42,7 +42,7 @@
     return `
       <div id="org-detalle-modal" class="organizaciones-modal is-hidden" aria-hidden="true">
         <div class="organizaciones-modal__backdrop" data-org-detalle-close="true"></div>
-        <div class="organizaciones-modal__dialog" style="max-width:980px;width:95vw;max-height:92vh;display:flex;flex-direction:column;">
+        <div class="organizaciones-modal__dialog" style="width:95vw;max-height:92vh;display:flex;flex-direction:column;">
           <div class="organizaciones-modal__head" style="flex-shrink:0;">
             <div>
               <p class="eyebrow">Ficha de organización</p>
@@ -64,6 +64,12 @@
             </div>
           </div>
           <div id="org-detalle-modal-content" style="overflow-y:auto;padding:0 1.5rem 1.5rem;flex:1 1 auto;"></div>
+
+          <!-- Loader dentro del modal -->
+          <div id="org-detalle-modal-loading" class="modal-loading is-hidden">
+            <div class="modal-loading__spinner"></div>
+            <p class="modal-loading__text">Cargando organización...</p>
+          </div>
         </div>
       </div>
     `;
@@ -502,7 +508,11 @@
   // -- DETALLE --
 
   function loadOrganizacionDetalle_(organizacionId) {
-    showModalLoading('Cargando organización...');
+    // Primero abrir el modal con el loader visible
+    openOrganizacionDetalleModal_();
+    const modalLoader = document.getElementById('org-detalle-modal-loading');
+    if (modalLoader) modalLoader.classList.remove('is-hidden');
+
     return api('getOrganizacionModuloDetalle', { organizacion_id: organizacionId }).then(data => {
       APP.state.currentOrganizacionDetalle = data || {};
       const titleEl = document.getElementById('org-detalle-modal-title');
@@ -510,9 +520,10 @@
         titleEl.textContent = data.organizacion.nombre_organizacion || 'Organización';
       }
       renderOrganizacionDetalle_(APP.state.currentOrganizacionDetalle);
-      openOrganizacionDetalleModal_();
       setOrganizacionesActionState_(true);
-    }).catch(showError).finally(hideModalLoading);
+    }).catch(showError).finally(() => {
+      if (modalLoader) modalLoader.classList.add('is-hidden');
+    });
   }
 
   function openOrganizacionDetalleModal_() {

@@ -5262,7 +5262,7 @@
   }
 
   .organizaciones-modal__backdrop {
-    position: absolute;
+    position: fixed;
     inset: 0;
     background: rgba(17, 24, 39, 0.4);
   }
@@ -7525,6 +7525,57 @@ html[data-theme="dark"] .inicio-cal-badge--ministro{background:rgba(140,198,63,.
 html[data-theme="dark"] .inicio-cal-num{color:var(--text,#d4e4f0)}
 html[data-theme="dark"] .inicio-cal-titulo{color:var(--text,#d4e4f0)}
 
+/* Badge de estado y botón de detalles */
+.cal-status-badge{flex-shrink:0;display:inline-flex;align-items:center;gap:3px;padding:2px 7px;font-size:.68rem;font-weight:600;letter-spacing:.02em;border-radius:4px}
+.cal-status-badge .material-symbols-outlined{font-size:.8rem}
+.cal-status-badge--ingresada{background:rgba(34,197,94,.15);color:#16a34a}
+.cal-status-badge--pendiente{background:rgba(245,158,11,.15);color:#d97706}
+.inicio-cal-details-btn{flex-shrink:0;display:flex;align-items:center;justify-content:center;width:38px;height:38px;border:1px solid var(--border,#D6E0EA);border-radius:6px;background:none;cursor:pointer;color:var(--text-muted,#6b7a8d);transition:background .12s,color .12s,border-color .12s}
+.inicio-cal-details-btn:hover{background:rgba(140,198,63,.12);color:#5c8c1e;border-color:#8CC63F}
+.inicio-cal-details-btn .material-symbols-outlined{font-size:1.05rem;pointer-events:none}
+html[data-theme="dark"] .cal-status-badge--ingresada{background:rgba(34,197,94,.22);color:#4ade80}
+html[data-theme="dark"] .cal-status-badge--pendiente{background:rgba(245,158,11,.22);color:#fbbf24}
+html[data-theme="dark"] .inicio-cal-details-btn:hover{background:rgba(159,216,90,.15);color:#9fd85a;border-color:#9fd85a}
+
+/* Modal de detalles comparativos */
+.cal-details-modal__dialog{position:relative;z-index:2;width:min(900px,calc(100vw - 32px));max-height:calc(100vh - 80px);overflow:auto;background:var(--surface,#fff);border:1px solid var(--border,#D6E0EA);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);padding:0}
+.cal-details-modal__header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border,#D6E0EA)}
+.cal-details-modal__header h3{margin:0;font-size:1.1rem;font-weight:600;color:var(--text,#24364B)}
+.cal-details-modal__header .modal__close{background:none;border:none;cursor:pointer;color:var(--text-muted,#6b7a8d);padding:4px;display:flex;align-items:center;border-radius:4px;transition:background .12s}
+.cal-details-modal__header .modal__close:hover{background:var(--surface-alt,#f7fafc)}
+.cal-details-modal__body{padding:24px}
+.cal-details-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.cal-details-side{display:flex;flex-direction:column;gap:12px}
+.cal-details-side__header{display:flex;align-items:center;gap:8px;padding-bottom:8px;border-bottom:2px solid var(--border,#D6E0EA)}
+.cal-details-side__header .material-symbols-outlined{font-size:1.2rem;color:var(--text-muted,#6b7a8d)}
+.cal-details-side__header h4{margin:0;font-size:.9rem;font-weight:600;color:var(--text,#24364B)}
+.cal-details-side--ingresada .cal-details-side__header{border-color:rgba(34,197,94,.3)}
+.cal-details-side--ingresada .cal-details-side__header .material-symbols-outlined{color:#16a34a}
+.cal-details-side--pendiente .cal-details-side__header{border-color:rgba(245,158,11,.3)}
+.cal-details-side--pendiente .cal-details-side__header .material-symbols-outlined{color:#d97706}
+.cal-details-side__content{display:flex;flex-direction:column;gap:10px}
+.cal-details-field{display:flex;flex-direction:column;gap:2px}
+.cal-details-field label{font-size:.72rem;font-weight:600;color:var(--text-muted,#6b7a8d);text-transform:uppercase;letter-spacing:.04em}
+.cal-details-field p{margin:0;font-size:.88rem;color:var(--text,#24364B)}
+.cal-details-field a{color:#3D96B4;text-decoration:none;font-weight:600}
+.cal-details-field a:hover{text-decoration:underline}
+.cal-details-empty{margin:0;font-size:.88rem;color:var(--text-muted,#6b7a8d);font-style:italic}
+.cal-details-hint{margin:8px 0 0;font-size:.82rem;color:var(--text-muted,#6b7a8d);padding:10px;background:rgba(61,150,180,.08);border-radius:6px}
+html[data-theme="dark"] .cal-details-modal__dialog{background:var(--surface,#14202d);border-color:var(--border,#294356);box-shadow:0 26px 56px rgba(0,0,0,.42)}
+html[data-theme="dark"] .cal-details-modal__header{border-color:var(--border,#294356)}
+html[data-theme="dark"] .cal-details-modal__header h3{color:var(--text,#e8eff6)}
+html[data-theme="dark"] .cal-details-modal__header .modal__close:hover{background:var(--surface-alt,#182635)}
+html[data-theme="dark"] .cal-details-side__header{border-color:var(--border,#294356)}
+html[data-theme="dark"] .cal-details-side__header h4{color:var(--text,#e8eff6)}
+html[data-theme="dark"] .cal-details-side--ingresada .cal-details-side__header{border-color:rgba(34,197,94,.35)}
+html[data-theme="dark"] .cal-details-side--ingresada .cal-details-side__header .material-symbols-outlined{color:#4ade80}
+html[data-theme="dark"] .cal-details-side--pendiente .cal-details-side__header{border-color:rgba(245,158,11,.35)}
+html[data-theme="dark"] .cal-details-side--pendiente .cal-details-side__header .material-symbols-outlined{color:#fbbf24}
+html[data-theme="dark"] .cal-details-field p{color:var(--text,#c4d2e1)}
+html[data-theme="dark"] .cal-details-field a{color:#74c8e6}
+html[data-theme="dark"] .cal-details-hint{background:rgba(116,200,230,.12)}
+@media(max-width:768px){.cal-details-grid{grid-template-columns:1fr;gap:16px}.cal-details-modal__dialog{padding:0;max-height:calc(100vh - 40px)}.cal-details-modal__header{padding:16px 20px}.cal-details-modal__body{padding:20px}}
+
 /* Multi-tab banner */
 #multi-tab-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 9995; display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: #fff3cd; color: #664d03; border-bottom: 2px solid #ffc107; font-size: .83rem; font-weight: 500; line-height: 1.4; }
 #multi-tab-banner.is-hidden { display: none; }
@@ -7731,6 +7782,16 @@ html[data-theme="dark"] .ficha-gestion-form input,html[data-theme="dark"] .ficha
   transform: translateY(0);
   transition: opacity var(--transition-base) var(--ease-out),
               transform var(--transition-base) var(--ease-out);
+}
+
+/* Ocultar scrollbar del módulo Organizaciones */
+#organizaciones-root {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+#organizaciones-root::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
 }
 
 /* ========================================

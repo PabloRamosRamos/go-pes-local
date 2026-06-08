@@ -49,9 +49,36 @@ function getCalendarioEventos(payload) {
 
   var patronesNorm = CAL_PATRONES_.map(normalizeCalText_);
   var ahora        = new Date();
+  var desde        = new Date(ahora.getTime() - 14 * 24 * 60 * 60 * 1000); // 14 días previos
   var hasta        = new Date(ahora.getTime() + diasAdelante * 24 * 60 * 60 * 1000);
   var calendar     = CalendarApp.getDefaultCalendar();
-  var raw          = calendar.getEvents(ahora, hasta);
+  var raw          = calendar.getEvents(desde, hasta);
+
+  // Cargar hitos PRE_04 (Reunión CS) del período para cruce
+  var hitosSheet = getSheetSafe_(GO_PES_V2.AVANCE.FACT_HITOS);
+  var hitosRows  = hitosSheet ? getSheetRows_(hitosSheet) : [];
+  var hitosPRE04 = hitosRows.filter(function(h) {
+    if (h.hito_key !== 'PRE_04') return false;
+    var fh = h.fecha_hito;
+    if (!fh) return false;
+    var d = fh instanceof Date ? fh : new Date(fh);
+    return d >= desde && d <= hasta;
+  });
+
+  // Cargar info de casos y organizaciones para enriquecer los hitos
+  var casosSheet = getSheetSafe_(GO_PES_V2.SHEETS.MAE_CASOS);
+  var casosRows  = casosSheet ? getSheetRows_(casosSheet) : [];
+  var casosBySol = {};
+  casosRows.forEach(function(c) {
+    if (c.solicitud_id) casosBySol[c.solicitud_id] = c;
+  });
+
+  var orgsSheet = getSheetSafe_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES);
+  var orgsRows  = orgsSheet ? getSheetRows_(orgsSheet) : [];
+  var orgsByOrgId = {};
+  orgsRows.forEach(function(o) {
+    if (o.organizacion_id) orgsByOrgId[o.organizacion_id] = o;
+  });
 
   var eventos = raw
     .filter(function(ev) {
@@ -67,10 +94,25 @@ function getCalendarioEventos(payload) {
       var tNorm  = normalizeCalText_(titulo);
       var m      = start.getMonth();
       var d      = start.getDate();
-      return {
+      var fechaEvento = Utilities.formatDate(start, tz, 'yyyy-MM-dd');
+      var esReunion   = tNorm.indexOf(normalizeCalText_('Reunion CS')) !== -1;
+
+      // Buscar hito PRE_04 coincidente (±1 día)
+      var hitoMatch = null;
+      if (esReunion) {
+        var fechaEventoTs = start.getTime();
+        var unDia = 24 * 60 * 60 * 1000;
+        hitoMatch = hitosPRE04.find(function(h) {
+          var fh = h.fecha_hito instanceof Date ? h.fecha_hito : new Date(h.fecha_hito);
+          var diff = Math.abs(fh.getTime() - fechaEventoTs);
+          return diff <= unDia; // Tolerancia ±1 día
+        });
+      }
+
+      var resultado = {
         id:          ev.getId(),
         titulo:      titulo,
-        fecha:       Utilities.formatDate(start, tz, 'yyyy-MM-dd'),
+        fecha:       fechaEvento,
         fechaLabel:  d + ' de ' + CAL_MESES_ES_[m],
         diaSemana:   ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][start.getDay()],
         horaInicio:  allDay ? '' : Utilities.formatDate(start, tz, 'HH:mm'),
@@ -78,8 +120,31 @@ function getCalendarioEventos(payload) {
         lugar:       (ev.getLocation()    || '').trim(),
         descripcion: stripCalHtml_(ev.getDescription()).trim(),
         allDay:      allDay,
-        tipo:        tNorm.indexOf(normalizeCalText_('Reunion CS')) !== -1 ? 'reunion' : 'ministro'
+        tipo:        esReunion ? 'reunion' : 'ministro',
+        yaIngresado: !!hitoMatch
       };
+
+      // Si hay match, agregar detalles del hito
+      if (hitoMatch) {
+        var caso = casosBySol[hitoMatch.solicitud_id] || {};
+        var org  = hitoMatch.organizacion_id ? orgsByOrgId[hitoMatch.organizacion_id] : null;
+        resultado.hitoInfo = {
+          solicitud_id:       hitoMatch.solicitud_id || '',
+          organizacion_id:    hitoMatch.organizacion_id || '',
+          organizacion_nombre: org ? org.nombre_organizacion : '',
+          fecha_hito:         Utilities.formatDate(
+            hitoMatch.fecha_hito instanceof Date ? hitoMatch.fecha_hito : new Date(hitoMatch.fecha_hito),
+            tz, 'dd/MM/yyyy'
+          ),
+          responsable:        hitoMatch.responsable_gestion || '',
+          observacion:        hitoMatch.observacion || '',
+          vecino_nombre:      caso.nombre_completo || '',
+          vecino_uv:          caso.uv || '',
+          vecino_direccion:   caso.direccion_original || ''
+        };
+      }
+
+      return resultado;
     })
     .sort(function(a, b) { return a.fecha.localeCompare(b.fecha); });
 

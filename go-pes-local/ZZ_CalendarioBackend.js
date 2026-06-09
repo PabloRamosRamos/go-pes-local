@@ -2,6 +2,19 @@ var CAL_PATRONES_  = ['Reunion CS', 'Ministro de fe'];
 var CAL_MESES_ES_  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 var CAL_PROP_KEY_  = 'goPesCalEventos';
 
+// Script IDs de cada entorno (ver CLAUDE.md)
+var SCRIPT_ID_DEV_  = '12ZfNLyFSEpF5uAvwSwtqR8_zYZK9E6_TO0QhTaSYLO1AYsKHCN1eCdaB';
+var SCRIPT_ID_PROD_ = '10Lzrg2GyPlkB0Wk6yLCshhtwv53dCSKLxDc8dDaOOpJgM2euLoKjRPOG';
+
+/**
+ * Detecta si el código está corriendo en DEV o PROD
+ * @returns {boolean} true si es DEV, false si es PROD
+ */
+function isDevEnvironment_() {
+  var currentScriptId = ScriptApp.getScriptId();
+  return currentScriptId === SCRIPT_ID_DEV_;
+}
+
 function normalizeCalText_(s) {
   return normalizeText_(String(s || ''))
     .replace(/[\/\-]+/g, ' ')
@@ -25,8 +38,140 @@ function stripCalHtml_(html) {
     .replace(/&#39;/g,       "'");
 }
 
+/**
+ * Retorna eventos simulados para testing sin acceder a Calendar API
+ * Para activar: cambiar CAL_USE_MOCK_ = true
+ */
+function getCalendarioEventosMock_() {
+  var ahora = new Date();
+  var tz = Session.getScriptTimeZone();
+
+  // Crear 8 eventos simulados
+  var mockEvents = [
+    {
+      id: 'mock-1',
+      titulo: 'Reunión CS - Comité Test UV 1',
+      fecha: Utilities.formatDate(new Date(ahora.getTime() + 2 * 24 * 60 * 60 * 1000), tz, 'yyyy-MM-dd'),
+      fechaLabel: '11 de junio',
+      diaSemana: 'Mié',
+      horaInicio: '15:30',
+      horaFin: '16:30',
+      lugar: 'Av. Providencia 1234',
+      descripcion: 'Reunión con dirigentes del comité',
+      allDay: false,
+      tipo: 'reunion',
+      yaIngresado: false
+    },
+    {
+      id: 'mock-2',
+      titulo: 'Ministro de Fe Comité de Seguridad María González (4500)',
+      fecha: Utilities.formatDate(new Date(ahora.getTime() + 5 * 24 * 60 * 60 * 1000), tz, 'yyyy-MM-dd'),
+      fechaLabel: '14 de junio',
+      diaSemana: 'Sáb',
+      horaInicio: '10:30',
+      horaFin: '11:30',
+      lugar: 'Antonio Varas 850',
+      descripcion: '',
+      allDay: false,
+      tipo: 'ministro',
+      yaIngresado: false
+    },
+    {
+      id: 'mock-3',
+      titulo: 'Reunión CS - Los Castaños 125',
+      fecha: Utilities.formatDate(new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000), tz, 'yyyy-MM-dd'),
+      fechaLabel: '16 de junio',
+      diaSemana: 'Lun',
+      horaInicio: '18:00',
+      horaFin: '19:00',
+      lugar: 'Los Castaños 125',
+      descripcion: '',
+      allDay: false,
+      tipo: 'reunion',
+      yaIngresado: true,
+      hitoInfo: {
+        solicitud_id: 'SOL-TEST-001',
+        organizacion_id: '',
+        organizacion_nombre: '',
+        fecha_hito: '16/06/2026',
+        responsable: 'Test User',
+        observacion: 'Reunión ingresada desde el calendario',
+        vecino_nombre: 'Juan Pérez',
+        vecino_uv: 'UV-1',
+        vecino_direccion: 'Los Castaños 125'
+      }
+    },
+    {
+      id: 'mock-4',
+      titulo: 'Ministro de Fe Comité Nuevo Amanecer (4600)',
+      fecha: Utilities.formatDate(new Date(ahora.getTime() + 10 * 24 * 60 * 60 * 1000), tz, 'yyyy-MM-dd'),
+      fechaLabel: '19 de junio',
+      diaSemana: 'Jue',
+      horaInicio: '11:00',
+      horaFin: '',
+      lugar: 'Los Leones 3400',
+      descripcion: '',
+      allDay: false,
+      tipo: 'ministro',
+      yaIngresado: false
+    },
+    {
+      id: 'mock-5',
+      titulo: 'Reunión CS - Santa Isabel 0180',
+      fecha: Utilities.formatDate(new Date(ahora.getTime() + 12 * 24 * 60 * 60 * 1000), tz, 'yyyy-MM-dd'),
+      fechaLabel: '21 de junio',
+      diaSemana: 'Sáb',
+      horaInicio: '16:00',
+      horaFin: '17:30',
+      lugar: 'Santa Isabel 0180',
+      descripcion: 'Primera reunión constitutiva',
+      allDay: false,
+      tipo: 'reunion',
+      yaIngresado: false
+    },
+    {
+      id: 'mock-6',
+      titulo: 'Ministro de Fe Comité Los Aromos (4700)',
+      fecha: Utilities.formatDate(new Date(ahora.getTime() + 15 * 24 * 60 * 60 * 1000), tz, 'yyyy-MM-dd'),
+      fechaLabel: '24 de junio',
+      diaSemana: 'Mar',
+      horaInicio: '10:00',
+      horaFin: '11:00',
+      lugar: 'Los Aromos 234',
+      descripcion: '',
+      allDay: false,
+      tipo: 'ministro',
+      yaIngresado: true,
+      hitoInfo: {
+        solicitud_id: 'SOL-TEST-002',
+        organizacion_id: 'ORG-TEST-001',
+        organizacion_nombre: 'Comité Los Aromos',
+        fecha_hito: '24/06/2026',
+        responsable: 'Admin Test',
+        observacion: 'Asamblea constitutiva realizada',
+        vecino_nombre: 'María López',
+        vecino_uv: 'UV-3',
+        vecino_direccion: 'Los Aromos 234'
+      }
+    }
+  ];
+
+  return serializeForClient_({
+    ok: true,
+    eventos: mockEvents,
+    calendarName: 'Calendario Mock (Testing)',
+    fetchedAt: Utilities.formatDate(ahora, tz, 'dd/MM/yyyy HH:mm'),
+    nota: 'MODO TEST: Eventos simulados. Cambiar CAL_USE_MOCK_ = false para usar calendario real.'
+  });
+}
+
 function getCalendarioEventos(payload) {
   requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'superuser']);
+
+  // En DEV: usar datos simulados automáticamente (no requiere Calendar API)
+  if (isDevEnvironment_()) {
+    return getCalendarioEventosMock_();
+  }
 
   var filters      = payload || {};
   var diasAdelante = Math.min(Number(filters.diasAdelante || 60), 365);

@@ -91,6 +91,29 @@ const GO_PES_V2 = {
     TRAMOS: ['Preconstitución', 'Formalización posterior'],
     ESTADOS: ['Activo', 'Stand by', 'Detenido', 'Finalizado']
   },
+  ALERTAS: {
+    CONFIG_SECTION: 'alertas_operativas',
+    CACHE_TTL_MS: 5 * 60 * 1000, // 5 minutos
+    TIPOS: { DANGER: 'danger', WARNING: 'warning', INFO: 'info' },
+    AREAS: { FORMALIZACION: 'formalizacion', BENEFICIOS: 'beneficios' },
+    HITOS: {
+      PRE_04: 'PRE_04',
+      PRE_05: 'PRE_05',
+      PRE_07: 'PRE_07',
+      PRE_08: 'PRE_08',
+      PRE_09: 'PRE_09',
+      PRE_10: 'PRE_10',
+      PRE_11: 'PRE_11'
+    },
+    ALERTAS_IDS: {
+      FORM_HITO4A5: 'form_hito4a5',
+      FORM_HITO5A9: 'form_hito5a9',
+      FORM_HITO8ANTES9: 'form_hito8antes9',
+      FORM_HITO7POST5: 'form_hito7post5',
+      FORM_HITO11POST10: 'form_hito11post10',
+      BEN_CAMARAS_POST_CERT: 'ben_camaras_post_cert'
+    }
+  },
   TRUSTED_DOMAIN_AUTO_ACTIVE: false,
   DEFAULT_VIEW: 'inicio',
 

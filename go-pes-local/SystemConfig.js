@@ -124,6 +124,7 @@ function getSystemConfigSectionOrder_() {
     'socios',
     'beneficios',
     'alertsInicio',
+    'alertas_operativas',
     'integrations',
     'technical'
   ];

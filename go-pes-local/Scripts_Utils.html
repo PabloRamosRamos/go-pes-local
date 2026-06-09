@@ -19,6 +19,20 @@
   // HELPERS BÁSICOS
   // ══════════════════════════════════════════════════════════════════════════
 
+  /**
+   * Normaliza texto para búsquedas: elimina acentos, convierte a minúsculas
+   * @param {string} value - Texto a normalizar
+   * @returns {string} Texto normalizado
+   */
+  function normalizeText(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/['"´`]/g, '') // Eliminar comillas y tildes invertidas
+      .toLowerCase()
+      .trim();
+  }
+
   function buildFullName(firstName, lastName) {
     return [firstName, lastName]
       .map(v => String(v || '').trim())

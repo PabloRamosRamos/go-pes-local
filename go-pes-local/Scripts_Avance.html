@@ -426,16 +426,16 @@
 
       // Input: filtrar en tiempo real
       searchInput.addEventListener('input', function() {
-        const query = this.value.toLowerCase().trim();
+        const query = normalizeText(this.value);
         const allOptions = JSON.parse(dropdown.dataset.options || '[]');
 
         if (!query) {
           // Sin query: mostrar todas
           renderSearchSelectDropdown_(dropdown, allOptions, hiddenInput, searchInput);
         } else {
-          // Filtrar
+          // Filtrar con normalización (ignora acentos, mayúsculas, comillas)
           const filtered = allOptions.filter(opt =>
-            String(opt.label || '').toLowerCase().includes(query)
+            normalizeText(opt.label || '').includes(query)
           );
           renderSearchSelectDropdown_(dropdown, filtered, hiddenInput, searchInput);
         }

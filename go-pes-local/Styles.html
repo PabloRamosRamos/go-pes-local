@@ -7538,6 +7538,8 @@ html[data-theme="dark"] .cal-status-badge--pendiente{background:rgba(245,158,11,
 html[data-theme="dark"] .inicio-cal-details-btn:hover{background:rgba(159,216,90,.15);color:#9fd85a;border-color:#9fd85a}
 
 /* Modal de detalles comparativos */
+#cal-details-modal{position:fixed;inset:0;z-index:var(--layer-modal);display:flex;align-items:center;justify-content:center}
+#cal-details-modal .modal__backdrop{position:absolute;inset:0;background:rgba(17,24,39,.4);z-index:1}
 .cal-details-modal__dialog{position:relative;z-index:2;width:min(900px,calc(100vw - 32px));max-height:calc(100vh - 80px);overflow:auto;background:var(--surface,#fff);border:1px solid var(--border,#D6E0EA);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);padding:0}
 .cal-details-modal__header{display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border,#D6E0EA)}
 .cal-details-modal__header h3{margin:0;font-size:1.1rem;font-weight:600;color:var(--text,#24364B)}

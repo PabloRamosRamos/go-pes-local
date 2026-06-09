@@ -96,17 +96,15 @@ function getCalendarioEventos(payload) {
       var fechaEvento = Utilities.formatDate(start, tz, 'yyyy-MM-dd');
       var esReunion   = tNorm.indexOf(normalizeCalText_('Reunion CS')) !== -1;
 
-      // Buscar hito PRE_04 coincidente (±1 día)
+      // Buscar hito PRE_04 coincidente (±1 día) para TODOS los eventos
       var hitoMatch = null;
-      if (esReunion) {
-        var fechaEventoTs = start.getTime();
-        var unDia = 24 * 60 * 60 * 1000;
-        hitoMatch = hitosPRE04.find(function(h) {
-          var fh = h.fecha_hito instanceof Date ? h.fecha_hito : new Date(h.fecha_hito);
-          var diff = Math.abs(fh.getTime() - fechaEventoTs);
-          return diff <= unDia; // Tolerancia ±1 día
-        });
-      }
+      var fechaEventoTs = start.getTime();
+      var unDia = 24 * 60 * 60 * 1000;
+      hitoMatch = hitosPRE04.find(function(h) {
+        var fh = h.fecha_hito instanceof Date ? h.fecha_hito : new Date(h.fecha_hito);
+        var diff = Math.abs(fh.getTime() - fechaEventoTs);
+        return diff <= unDia; // Tolerancia ±1 día
+      });
 
       var resultado = {
         id:          ev.getId(),

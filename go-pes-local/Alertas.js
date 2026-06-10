@@ -9,6 +9,18 @@
  */
 
 // ══════════════════════════════════════════════════════════════════════════
+// DETECCIÓN DE ENTORNO (DEV vs PROD)
+// ══════════════════════════════════════════════════════════════════════════
+
+var SCRIPT_ID_DEV_ = '12ZfNLyFSEpF5uAvwSwtqR8_zYZK9E6_TO0QhTaSYLO1AYsKHCN1eCdaB';
+var SCRIPT_ID_PROD_ = '10Lzrg2GyPlkB0Wk6yLCshhtwv53dCSKLxDc8dDaOOpJgM2euLoKjRPOG';
+
+function isDevEnvironmentAlertas_() {
+  var currentScriptId = ScriptApp.getScriptId();
+  return currentScriptId === SCRIPT_ID_DEV_;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // CONFIGURACIÓN Y DEFAULTS
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -76,6 +88,13 @@ function invalidateAlertasCache_() {
 function getPerfilUsuario_(email) {
   if (!email) return null;
 
+  // Superusers y coordinadores ven TODAS las alertas (ambas áreas)
+  var user = getUsuarioActual();
+  if (user && (user.superuser_flag || user.perfil === 'coordinador')) {
+    return 'todas'; // Perfil especial que combina ambas áreas
+  }
+
+  // Usuarios normales buscan en configuración
   var config = getAlertasConfig_();
   var perfil = config.usuarios_perfiles.find(function(p) {
     return normalizeEmail_(p.email) === normalizeEmail_(email);
@@ -402,52 +421,163 @@ function evaluarBenCamarasPostCert_(hitos, casos, orgs, instrumentos, umbralDias
 // FUNCIONES PÚBLICAS (sin sufijo _, accesibles desde frontend)
 // ══════════════════════════════════════════════════════════════════════════
 
-function getAlertasUsuario() {
-  requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'superuser']);
-
-  // Cache
-  var cacheKey = 'alertasUsuario_' + getCurrentUserEmail_();
-  if (GO_PES_RUNTIME[cacheKey]) {
-    var cached = GO_PES_RUNTIME[cacheKey];
-    if (cached.timestamp && (Date.now() - cached.timestamp < GO_PES_V2.ALERTAS.CACHE_TTL_MS)) {
-      return serializeForClient_(cached.data);
-    }
-  }
-
+/**
+ * Mock data para entorno DEV (similar al calendario)
+ */
+function getAlertasMock_() {
   var email = getCurrentUserEmail_();
   var area = getPerfilUsuario_(email);
 
-  // Si no tiene perfil asignado, retornar vacío
+  // Si no tiene perfil, usar formalizacion por defecto en DEV
   if (!area) {
-    return serializeForClient_({
-      ok: true,
-      area: null,
-      alertas: []
-    });
+    area = GO_PES_V2.ALERTAS.AREAS.FORMALIZACION;
   }
 
-  var config = getAlertasConfig_();
-  var alertas = [];
+  var alertasFormalizacion = [
+    {
+      id: GO_PES_V2.ALERTAS.ALERTAS_IDS.FORM_HITO4A5,
+      titulo: 'Plazo crítico entre hito 4 y 5 excedido',
+      descripcion: '3 organizaciones superan los 14 días entre acta constitutiva y escritura pública',
+      tipo: GO_PES_V2.ALERTAS.TIPOS.DANGER,
+      conteo: 3,
+      umbral: 14,
+      casos: [
+        { id: 'ORG-001', nombre: 'Comité de Seguridad Los Castaños', detalle: '18 días transcurridos (4 días de atraso)' },
+        { id: 'ORG-002', nombre: 'Junta de Vecinos Sector Norte', detalle: '21 días transcurridos (7 días de atraso)' },
+        { id: 'ORG-003', nombre: 'Comité Nueva Providencia', detalle: '16 días transcurridos (2 días de atraso)' }
+      ]
+    },
+    {
+      id: GO_PES_V2.ALERTAS.ALERTAS_IDS.FORM_HITO7POST5,
+      titulo: 'Certificado de directorio pendiente',
+      descripcion: '2 organizaciones sin certificado de directorio vigente después de 10 días',
+      tipo: GO_PES_V2.ALERTAS.TIPOS.WARNING,
+      conteo: 2,
+      umbral: 10,
+      casos: [
+        { id: 'ORG-004', nombre: 'Comité Test UV 15', detalle: '12 días desde escritura pública' },
+        { id: 'ORG-005', nombre: 'Agrupación Vecinal Central', detalle: '14 días desde escritura pública' }
+      ]
+    }
+  ];
 
-  if (area === GO_PES_V2.ALERTAS.AREAS.FORMALIZACION) {
-    alertas = evaluarAlertasFormalizacion_(config.umbrales);
+  var alertasBeneficios = [
+    {
+      id: GO_PES_V2.ALERTAS.ALERTAS_IDS.BEN_CAMARAS_POST_CERT,
+      titulo: 'Solicitud Cámaras 1414 fuera de plazo',
+      descripcion: '1 organización con solicitud pendiente después de 5 días del certificado definitivo',
+      tipo: GO_PES_V2.ALERTAS.TIPOS.INFO,
+      conteo: 1,
+      umbral: 5,
+      casos: [
+        { id: 'ORG-006', nombre: 'Comité Los Leones', detalle: '7 días desde certificado definitivo (2 días de atraso)' }
+      ]
+    }
+  ];
+
+  var alertasMock = [];
+
+  if (area === 'todas') {
+    // Superusers y coordinadores ven TODAS las alertas
+    alertasMock = alertasFormalizacion.concat(alertasBeneficios);
+  } else if (area === GO_PES_V2.ALERTAS.AREAS.FORMALIZACION) {
+    alertasMock = alertasFormalizacion;
   } else if (area === GO_PES_V2.ALERTAS.AREAS.BENEFICIOS) {
-    alertas = evaluarAlertasBeneficios_(config.umbrales);
+    alertasMock = alertasBeneficios;
   }
 
-  var result = {
+  return {
     ok: true,
     area: area,
-    alertas: alertas
+    alertas: alertasMock
   };
+}
 
-  // Guardar en cache
-  GO_PES_RUNTIME[cacheKey] = {
-    timestamp: Date.now(),
-    data: result
-  };
+function getAlertasUsuario() {
+  try {
+    requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'superuser']);
 
-  return serializeForClient_(result);
+    // En DEV, retornar mock data automáticamente
+    if (isDevEnvironmentAlertas_()) {
+      Logger.log('[ALERTAS] Entorno DEV detectado, retornando mock data');
+      return serializeForClient_(getAlertasMock_());
+    }
+
+    // Cache
+    var cacheKey = 'alertasUsuario_' + getCurrentUserEmail_();
+    if (GO_PES_RUNTIME[cacheKey]) {
+      var cached = GO_PES_RUNTIME[cacheKey];
+      if (cached.timestamp && (Date.now() - cached.timestamp < GO_PES_V2.ALERTAS.CACHE_TTL_MS)) {
+        Logger.log('[ALERTAS] Retornando datos del cache');
+        return serializeForClient_(cached.data);
+      }
+    }
+
+    var email = getCurrentUserEmail_();
+    Logger.log('[ALERTAS] Obteniendo perfil para usuario: ' + email);
+
+    var area = getPerfilUsuario_(email);
+    Logger.log('[ALERTAS] Área asignada: ' + area);
+
+    // Si no tiene perfil asignado, retornar vacío
+    if (!area) {
+      Logger.log('[ALERTAS] Usuario sin perfil asignado, retornando array vacío');
+      return serializeForClient_({
+        ok: true,
+        area: null,
+        alertas: []
+      });
+    }
+
+    Logger.log('[ALERTAS] Obteniendo configuración de umbrales');
+    var config = getAlertasConfig_();
+    var alertas = [];
+
+    if (area === 'todas') {
+      Logger.log('[ALERTAS] Evaluando alertas para TODAS las áreas (superuser/coordinador)');
+      var alertasForm = evaluarAlertasFormalizacion_(config.umbrales);
+      var alertasBen = evaluarAlertasBeneficios_(config.umbrales);
+      alertas = alertasForm.concat(alertasBen);
+      Logger.log('[ALERTAS] Total alertas combinadas: ' + alertas.length);
+    } else if (area === GO_PES_V2.ALERTAS.AREAS.FORMALIZACION) {
+      Logger.log('[ALERTAS] Evaluando alertas de FORMALIZACIÓN');
+      alertas = evaluarAlertasFormalizacion_(config.umbrales);
+    } else if (area === GO_PES_V2.ALERTAS.AREAS.BENEFICIOS) {
+      Logger.log('[ALERTAS] Evaluando alertas de BENEFICIOS');
+      alertas = evaluarAlertasBeneficios_(config.umbrales);
+    }
+
+    Logger.log('[ALERTAS] Total alertas evaluadas: ' + alertas.length);
+
+    var result = {
+      ok: true,
+      area: area,
+      alertas: alertas
+    };
+
+    // Guardar en cache
+    GO_PES_RUNTIME[cacheKey] = {
+      timestamp: Date.now(),
+      data: result
+    };
+
+    Logger.log('[ALERTAS] Datos guardados en cache y listos para enviar');
+    return serializeForClient_(result);
+
+  } catch (error) {
+    Logger.log('[ALERTAS] ERROR en getAlertasUsuario: ' + error.toString());
+    Logger.log('[ALERTAS] Stack trace: ' + error.stack);
+
+    // Loguear en LOG_Procesamiento para auditoría
+    logError_('getAlertasUsuario', error, { email: getCurrentUserEmail_() });
+
+    // Retornar error estructurado al cliente
+    return serializeForClient_({
+      ok: false,
+      error: error.toString(),
+      message: 'Error al cargar alertas: ' + error.message
+    });
+  }
 }
 
 function getAlertasConfigAdmin() {

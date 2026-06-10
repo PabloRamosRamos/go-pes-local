@@ -331,6 +331,7 @@
 
     bindConfiguracionBrandingSection_();
     bindMigracionSection_();
+    bindAlertasOperativasSection_();
   }
 
   function submitConfiguracionSection_(ev) {
@@ -1546,6 +1547,23 @@
     `;
   }
 
+  function renderConfigAlertasOperativasSection_() {
+    return `
+      <section class="config-section" id="config-section-alertas">
+        <div class="config-section__head">
+          <p class="eyebrow">Alertas Operativas</p>
+          <h3>Sistema de alertas por área operativa</h3>
+          <p class="muted">Define los umbrales críticos para alertas de formalización y beneficios. Asigna perfiles operativos a usuarios para determinar qué alertas verán en el dashboard.</p>
+        </div>
+        <div id="alertas-config-loading" class="alertas-config-loading">
+          <span class="material-symbols-outlined">hourglass_empty</span>
+          <p>Cargando configuración...</p>
+        </div>
+        <div id="alertas-config-content" style="display:none;"></div>
+      </section>
+    `;
+  }
+
   function renderConfigIntegrationsSection_(section) {
     return `
       <section class="config-section" id="config-section-integrations">
@@ -1618,6 +1636,8 @@
         return renderConfigBeneficiosSection_(config.beneficios || {});
       case 'alertsInicio':
         return renderConfigAlertsInicioSection_(config.alertsInicio || {});
+      case 'alertas_operativas':
+        return renderConfigAlertasOperativasSection_();
       case 'integrations':
         return renderConfigIntegrationsSection_(config.integrations || {});
       case 'technical':
@@ -1955,6 +1975,226 @@
           .ejecutarMigracionSocios({ columnMap: getMigColumnMap_('socios') });
       });
     }
+  }
+
+  function bindAlertasOperativasSection_() {
+    const loadingEl = document.getElementById('alertas-config-loading');
+    const contentEl = document.getElementById('alertas-config-content');
+    if (!loadingEl || !contentEl) return;
+
+    // Cargar configuración
+    api('getAlertasConfigAdmin')
+      .then(data => {
+        if (!data || !data.ok) {
+          loadingEl.innerHTML = '<p style="color:var(--danger);text-align:center">Error al cargar configuración</p>';
+          return;
+        }
+
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+        contentEl.innerHTML = renderAlertasOperativasForm_(data);
+        bindAlertasOperativasForm_(data);
+      })
+      .catch(err => {
+        loadingEl.innerHTML = `<p style="color:var(--danger);text-align:center">Error: ${escapeHtml(err.message || 'Error desconocido')}</p>`;
+      });
+  }
+
+  function renderAlertasOperativasForm_(data) {
+    const config = data.config || {};
+    const umbrales = config.umbrales || {};
+    const perfiles = config.usuarios_perfiles || [];
+    const usuarios = data.usuarios_disponibles || [];
+    const areas = data.areas_disponibles || [];
+
+    return `
+      <form class="config-form" id="alertas-operativas-form">
+        <div class="config-subgrid">
+          <article class="config-subcard">
+            <h4>ALERTAS DE FORMALIZACIÓN (críticas)</h4>
+            <div class="config-grid">
+              ${configInput_('form_hito4a5_dias', 'Hito 4 → 5 (días máximos)', umbrales.form_hito4a5_dias || 14, 'number')}
+              ${configInput_('form_hito5a9_dias', 'Hito 5 → 9 (días máximos)', umbrales.form_hito5a9_dias || 60, 'number')}
+              ${configInput_('form_hito8antes9_dias', 'Hito 8 antes de 9 (días mínimos)', umbrales.form_hito8antes9_dias || 15, 'number')}
+            </div>
+          </article>
+          <article class="config-subcard">
+            <h4>ALERTAS DE FORMALIZACIÓN (advertencias)</h4>
+            <div class="config-grid">
+              ${configInput_('form_hito7despues5_dias', 'Hito 7 después de 5 (días máximos)', umbrales.form_hito7despues5_dias || 10, 'number')}
+              ${configInput_('form_hito11despues10_dias', 'Hito 11 después de 10 (días máximos)', umbrales.form_hito11despues10_dias || 30, 'number')}
+            </div>
+          </article>
+          <article class="config-subcard">
+            <h4>ALERTAS DE BENEFICIOS</h4>
+            <div class="config-grid">
+              ${configInput_('ben_camaras_post_cert_dias', 'Cámaras post-certificado (días máximos)', umbrales.ben_camaras_post_cert_dias || 5, 'number')}
+            </div>
+          </article>
+        </div>
+
+        <div class="config-subcard" style="margin-top:24px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <h4 style="margin:0">PERFILES OPERATIVOS</h4>
+            <button type="button" class="secondary-btn btn--sm" id="alertas-add-perfil-btn">
+              <span class="material-symbols-outlined">add</span> Agregar usuario
+            </button>
+          </div>
+          <div id="alertas-perfiles-table-container">
+            ${renderAlertasPerfilesTable_(perfiles, usuarios, areas)}
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="submit" class="primary-btn">
+            <span class="material-symbols-outlined">save</span> Guardar Alertas Operativas
+          </button>
+        </div>
+      </form>
+    `;
+  }
+
+  function renderAlertasPerfilesTable_(perfiles, usuarios, areas) {
+    if (!perfiles || perfiles.length === 0) {
+      return `<p class="muted" style="text-align:center;padding:16px">No hay usuarios con perfil operativo asignado</p>`;
+    }
+
+    return `
+      <table class="data-table" style="width:100%">
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Área operativa</th>
+            <th style="width:80px;text-align:center">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="alertas-perfiles-tbody">
+          ${perfiles.map((perfil, idx) => renderAlertasPerfilRow_(perfil, idx, usuarios, areas)).join('')}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function renderAlertasPerfilRow_(perfil, idx, usuarios, areas) {
+    const usuarioOptions = usuarios.map(u => {
+      const selected = u.email === perfil.email ? ' selected' : '';
+      return `<option value="${escapeHtml(u.email)}"${selected}>${escapeHtml(u.nombre_visible || u.email)}</option>`;
+    }).join('');
+
+    const areaOptions = areas.map(a => {
+      const selected = a === perfil.area ? ' selected' : '';
+      const label = a === 'formalizacion' ? 'Formalización' : a === 'beneficios' ? 'Beneficios' : a;
+      return `<option value="${escapeHtml(a)}"${selected}>${escapeHtml(label)}</option>`;
+    }).join('');
+
+    return `
+      <tr data-perfil-idx="${idx}">
+        <td>
+          <select class="perfil-usuario-select" data-perfil-field="email" style="width:100%">
+            <option value="">Seleccionar usuario...</option>
+            ${usuarioOptions}
+          </select>
+        </td>
+        <td>
+          <select class="perfil-area-select" data-perfil-field="area" style="width:100%">
+            <option value="">Seleccionar área...</option>
+            ${areaOptions}
+          </select>
+        </td>
+        <td style="text-align:center">
+          <button type="button" class="secondary-btn btn--sm perfil-delete-btn" data-perfil-idx="${idx}" style="padding:4px 8px">
+            <span class="material-symbols-outlined" style="font-size:1rem">delete</span>
+          </button>
+        </td>
+      </tr>
+    `;
+  }
+
+  function bindAlertasOperativasForm_(data) {
+    const form = document.getElementById('alertas-operativas-form');
+    const addBtn = document.getElementById('alertas-add-perfil-btn');
+    const tbody = document.getElementById('alertas-perfiles-tbody');
+    const usuarios = data.usuarios_disponibles || [];
+    const areas = data.areas_disponibles || [];
+
+    if (!form) return;
+
+    // Botón agregar perfil
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        const container = document.getElementById('alertas-perfiles-table-container');
+        if (!container) return;
+
+        const config = data.config || {};
+        const perfiles = config.usuarios_perfiles || [];
+        perfiles.push({ email: '', area: '' });
+
+        container.innerHTML = renderAlertasPerfilesTable_(perfiles, usuarios, areas);
+        bindAlertasPerfilesDeleteBtns_();
+      });
+    }
+
+    // Botones eliminar perfil
+    bindAlertasPerfilesDeleteBtns_();
+
+    function bindAlertasPerfilesDeleteBtns_() {
+      document.querySelectorAll('.perfil-delete-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const row = btn.closest('tr');
+          if (row) row.remove();
+        });
+      });
+    }
+
+    // Submit form
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+
+      const payload = {
+        form_hito4a5_dias: parseInt(form.elements['form_hito4a5_dias'].value || 14),
+        form_hito5a9_dias: parseInt(form.elements['form_hito5a9_dias'].value || 60),
+        form_hito8antes9_dias: parseInt(form.elements['form_hito8antes9_dias'].value || 15),
+        form_hito7despues5_dias: parseInt(form.elements['form_hito7despues5_dias'].value || 10),
+        form_hito11despues10_dias: parseInt(form.elements['form_hito11despues10_dias'].value || 30),
+        ben_camaras_post_cert_dias: parseInt(form.elements['ben_camaras_post_cert_dias'].value || 5),
+        usuarios_perfiles: []
+      };
+
+      // Recolectar perfiles desde la tabla
+      document.querySelectorAll('#alertas-perfiles-tbody tr').forEach(row => {
+        const emailSelect = row.querySelector('[data-perfil-field="email"]');
+        const areaSelect = row.querySelector('[data-perfil-field="area"]');
+        const email = emailSelect ? emailSelect.value.trim() : '';
+        const area = areaSelect ? areaSelect.value.trim() : '';
+        if (email && area) {
+          payload.usuarios_perfiles.push({ email, area });
+        }
+      });
+
+      showContentLoading('Guardando configuración...');
+      api('saveAlertasConfigAdmin', payload)
+        .then(result => {
+          hideContentLoading();
+          if (result && result.ok) {
+            showSuccess('Configuración de alertas guardada correctamente');
+            // Invalidar cache de alertas
+            if (APP.state.alertasData) {
+              delete APP.state.alertasData;
+              delete APP.state.alertasDataFetchedAt;
+            }
+            // Recargar configuración para mostrar datos guardados
+            setTimeout(() => {
+              bindAlertasOperativasSection_();
+            }, 500);
+          } else {
+            showError('Error al guardar configuración');
+          }
+        })
+        .catch(err => {
+          hideContentLoading();
+          showError(err);
+        });
+    });
   }
 
   function renderMigSourceInfo_(result) {

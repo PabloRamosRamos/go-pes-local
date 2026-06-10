@@ -32,24 +32,11 @@
           '</div>',
           '<div class="inicio-layout">',
 
-            /* ── Panel lateral: alertas + calendario ── */
+            /* ── Panel lateral: alertas operativas + calendario ── */
             '<aside class="inicio-alerts-panel">',
-              '<div class="inicio-summary-grid">',
-                renderMetric_('Alertas activas',        summary.activeAlertsCount      || 0, 'warning',   esc),
-                renderMetric_('Beneficios a revisar',   summary.benefitsToReviewCount  || 0, 'handshake', esc),
-              '</div>',
-              '<section class="inicio-card">',
-                '<div class="inicio-card__head">',
-                  '<span class="material-symbols-outlined">notifications_active</span>',
-                  '<div><h3>Alertas de beneficios</h3>',
-                  '<p>' + esc(meta.alertsDescription || 'Sin alertas operativas conectadas aún.') + '</p></div>',
-                '</div>',
-                '<div class="inicio-alert-list">',
-                  alerts.length ? alerts.map(function(i){ return renderAlertItem_(i, esc); }).join('') : renderEmptyAlertState_(meta.alertsEmptyMessage, esc),
-                '</div>',
-              '</section>',
-            '<div id="inicio-calendario-root"></div>',
-          '</aside>',
+              '<div id="alertas-panel-root"></div>',
+              '<div id="inicio-calendario-root"></div>',
+            '</aside>',
 
             /* ── Panel dashboard ── */
             '<section class="inicio-dashboard-panel">',

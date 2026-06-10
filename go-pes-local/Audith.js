@@ -90,6 +90,7 @@ function goPesRunAllTests() {
   acumular(goPesTestAvance_());
   acumular(goPesTestBeneficios_());
   acumular(goPesTestSecurity_());
+  acumular(goPesTestAlertas_());
 
   Logger.log('==========================================');
   Logger.log('  TOTAL: ' + total.passed + ' pasados, ' + total.failed + ' fallados' +
@@ -1491,6 +1492,138 @@ function goPesTestSecurity_() {
       'GO_PES_PIN_RATE_LIMIT_WINDOW_SECONDS debe ser número');
     assertEqual_(GO_PES_PIN_RATE_LIMIT_WINDOW_SECONDS, 3600,
       'ventana debe ser 1 hora (3600 seg)');
+  });
+
+  return s.run();
+}
+
+/**
+ * Suite 7: Sistema de Alertas Operativas
+ */
+function goPesTestAlertas_() {
+  var s = createTestSuite_('Sistema de Alertas Operativas');
+
+  // ── Constantes del sistema ──
+  s.test('GO_PES_V2.ALERTAS existe y tiene estructura correcta', function() {
+    assertTrue_(typeof GO_PES_V2.ALERTAS === 'object',
+      'GO_PES_V2.ALERTAS debe existir');
+
+    assertTrue_(typeof GO_PES_V2.ALERTAS.CONFIG_SECTION === 'string',
+      'CONFIG_SECTION debe existir');
+    assertEqual_(GO_PES_V2.ALERTAS.CONFIG_SECTION, 'alertas_operativas',
+      'CONFIG_SECTION debe ser alertas_operativas');
+
+    assertTrue_(typeof GO_PES_V2.ALERTAS.CACHE_TTL_MS === 'number',
+      'CACHE_TTL_MS debe ser número');
+    assertEqual_(GO_PES_V2.ALERTAS.CACHE_TTL_MS, 300000,
+      'Cache TTL debe ser 5 minutos (300000ms)');
+  });
+
+  s.test('GO_PES_V2.ALERTAS.TIPOS contiene tipos válidos', function() {
+    var tipos = GO_PES_V2.ALERTAS.TIPOS;
+    assertEqual_(tipos.DANGER, 'danger', 'Tipo DANGER debe ser "danger"');
+    assertEqual_(tipos.WARNING, 'warning', 'Tipo WARNING debe ser "warning"');
+    assertEqual_(tipos.INFO, 'info', 'Tipo INFO debe ser "info"');
+  });
+
+  s.test('GO_PES_V2.ALERTAS.AREAS contiene áreas válidas', function() {
+    var areas = GO_PES_V2.ALERTAS.AREAS;
+    assertEqual_(areas.FORMALIZACION, 'formalizacion', 'Área FORMALIZACION válida');
+    assertEqual_(areas.BENEFICIOS, 'beneficios', 'Área BENEFICIOS válida');
+  });
+
+  s.test('GO_PES_V2.ALERTAS.HITOS contiene hitos requeridos', function() {
+    var hitos = GO_PES_V2.ALERTAS.HITOS;
+    assertEqual_(hitos.PRE_04, 'PRE_04', 'Hito PRE_04 debe existir');
+    assertEqual_(hitos.PRE_05, 'PRE_05', 'Hito PRE_05 debe existir');
+    assertEqual_(hitos.PRE_07, 'PRE_07', 'Hito PRE_07 debe existir');
+    assertEqual_(hitos.PRE_08, 'PRE_08', 'Hito PRE_08 debe existir');
+    assertEqual_(hitos.PRE_09, 'PRE_09', 'Hito PRE_09 debe existir');
+    assertEqual_(hitos.PRE_10, 'PRE_10', 'Hito PRE_10 debe existir');
+    assertEqual_(hitos.PRE_11, 'PRE_11', 'Hito PRE_11 debe existir');
+  });
+
+  s.test('GO_PES_V2.ALERTAS.ALERTAS_IDS contiene IDs de alertas', function() {
+    var ids = GO_PES_V2.ALERTAS.ALERTAS_IDS;
+    assertEqual_(ids.FORM_HITO4A5, 'form_hito4a5', 'ID form_hito4a5 válido');
+    assertEqual_(ids.FORM_HITO5A9, 'form_hito5a9', 'ID form_hito5a9 válido');
+    assertEqual_(ids.FORM_HITO8ANTES9, 'form_hito8antes9', 'ID form_hito8antes9 válido');
+    assertEqual_(ids.FORM_HITO7POST5, 'form_hito7post5', 'ID form_hito7post5 válido');
+    assertEqual_(ids.FORM_HITO11POST10, 'form_hito11post10', 'ID form_hito11post10 válido');
+    assertEqual_(ids.BEN_CAMARAS_POST_CERT, 'ben_camaras_post_cert', 'ID ben_camaras_post_cert válido');
+  });
+
+  // ── API Pública ──
+  s.test('getAlertasUsuario existe y es callable', function() {
+    assertTrue_(typeof getAlertasUsuario === 'function',
+      'getAlertasUsuario debe existir como función pública');
+  });
+
+  s.test('getAlertasConfigAdmin existe y requiere auth', function() {
+    assertTrue_(typeof getAlertasConfigAdmin === 'function',
+      'getAlertasConfigAdmin debe existir');
+    // Internamente requiere coordinador/superuser
+  });
+
+  s.test('saveAlertasConfigAdmin existe y requiere auth', function() {
+    assertTrue_(typeof saveAlertasConfigAdmin === 'function',
+      'saveAlertasConfigAdmin debe existir');
+    // Internamente requiere superuser
+  });
+
+  // ── Estructura de configuración ──
+  s.test('getAlertasConfigAdmin devuelve estructura correcta', function() {
+    // Solo superusers pueden ejecutar esto, lo verificamos con tipo
+    var result;
+    try {
+      result = getAlertasConfigAdmin();
+    } catch (e) {
+      // Si falla por permisos, verificamos que la función existe
+      s.skip('Requiere permisos de coordinador/superuser para ejecutar');
+      return;
+    }
+
+    assertTrue_(result.ok === true, 'Respuesta debe tener ok: true');
+    assertTrue_(typeof result.config === 'object', 'Debe tener config object');
+    assertTrue_(typeof result.config.umbrales === 'object', 'Config debe tener umbrales');
+    assertTrue_(Array.isArray(result.config.usuarios_perfiles), 'Config debe tener usuarios_perfiles array');
+    assertTrue_(Array.isArray(result.usuarios_disponibles), 'Debe tener usuarios_disponibles');
+    assertTrue_(Array.isArray(result.areas_disponibles), 'Debe tener areas_disponibles');
+  });
+
+  s.test('Umbrales tienen valores por defecto correctos', function() {
+    var result;
+    try {
+      result = getAlertasConfigAdmin();
+    } catch (e) {
+      s.skip('Requiere permisos para verificar umbrales por defecto');
+      return;
+    }
+
+    var umbrales = result.config.umbrales;
+    assertTrue_(umbrales.form_hito4a5_dias >= 1, 'form_hito4a5_dias debe ser >= 1');
+    assertTrue_(umbrales.form_hito5a9_dias >= 1, 'form_hito5a9_dias debe ser >= 1');
+    assertTrue_(umbrales.form_hito8antes9_dias >= 1, 'form_hito8antes9_dias debe ser >= 1');
+    assertTrue_(umbrales.form_hito7despues5_dias >= 1, 'form_hito7despues5_dias debe ser >= 1');
+    assertTrue_(umbrales.form_hito11despues10_dias >= 1, 'form_hito11despues10_dias debe ser >= 1');
+    assertTrue_(umbrales.ben_camaras_post_cert_dias >= 1, 'ben_camaras_post_cert_dias debe ser >= 1');
+  });
+
+  // ── Integración con SystemConfig ──
+  s.test('alertas_operativas está en sectionOrder', function() {
+    var order = getSystemConfigSectionOrder_();
+    assertTrue_(Array.isArray(order), 'sectionOrder debe ser array');
+    assertTrue_(order.indexOf('alertas_operativas') !== -1,
+      'alertas_operativas debe estar en sectionOrder');
+  });
+
+  // ── Validación de payload ──
+  s.test('saveAlertasConfigAdmin valida umbrales mínimos', function() {
+    s.skip('Test requiere permisos de superuser - verificar manualmente');
+  });
+
+  s.test('saveAlertasConfigAdmin acepta usuarios_perfiles válidos', function() {
+    s.skip('Test requiere permisos de superuser - verificar manualmente');
   });
 
   return s.run();

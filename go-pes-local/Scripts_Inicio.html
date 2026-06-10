@@ -68,6 +68,7 @@
       }
     });
     renderCalendarioRoot_();
+    renderAlertasPanel();
 
     // Activar animación stagger después del render
     requestAnimationFrame(function() {
@@ -100,5 +101,193 @@
       }));
     }
     return Promise.all(tasks);
+  }
+
+  /**
+   * Renderiza el panel de alertas operativas (Fase 4 — Sistema de Alertas)
+   */
+  function renderAlertasPanel() {
+    const container = document.getElementById('alertas-panel-root');
+    if (!container) return;
+
+    // Mostrar loader inicial
+    container.innerHTML = `
+      <div class="alertas-operativas-panel">
+        <div class="alertas-operativas-loading">
+          <span class="material-symbols-outlined">hourglass_empty</span>
+          <p>Cargando alertas...</p>
+        </div>
+      </div>
+    `;
+
+    // Verificar cache (TTL 5 minutos)
+    const now = Date.now();
+    const TTL = 5 * 60 * 1000;
+    const isFresh = APP.state.alertasData &&
+                    APP.state.alertasDataFetchedAt &&
+                    (now - APP.state.alertasDataFetchedAt) < TTL;
+
+    const dataPromise = isFresh
+      ? Promise.resolve(APP.state.alertasData)
+      : api('getAlertasUsuario').then(data => {
+          APP.state.alertasData = data || {};
+          APP.state.alertasDataFetchedAt = Date.now();
+          return data;
+        });
+
+    dataPromise
+      .then(data => {
+        console.log('[ALERTAS] Datos recibidos del backend:', data);
+        renderAlertasPanelContent_(data);
+      })
+      .catch(err => {
+        console.error('[ALERTAS] Error al cargar alertas:', err);
+        container.innerHTML = `
+          <div class="alertas-operativas-panel">
+            <div class="alertas-operativas-empty">
+              <span class="material-symbols-outlined">error</span>
+              <p>Error al cargar alertas: ${escapeHtml(err.message || err.toString() || 'Error desconocido')}</p>
+            </div>
+          </div>
+        `;
+      });
+  }
+
+  function renderAlertasPanelContent_(data) {
+    const container = document.getElementById('alertas-panel-root');
+    if (!container) return;
+
+    if (!data || !data.ok) {
+      const errorMsg = data && data.message
+        ? escapeHtml(data.message)
+        : 'No se pudo cargar el sistema de alertas';
+
+      console.error('[ALERTAS] Error en respuesta del backend:', data);
+
+      container.innerHTML = `
+        <div class="alertas-operativas-panel">
+          <div class="alertas-operativas-empty">
+            <span class="material-symbols-outlined">error</span>
+            <p>${errorMsg}</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const alertas = data.alertas || [];
+    const area = data.area || '';
+    const areaTitulo = area === 'todas'
+      ? 'ALERTAS OPERATIVAS'
+      : area === 'formalizacion'
+      ? 'ALERTAS DE FORMALIZACIÓN'
+      : area === 'beneficios'
+      ? 'ALERTAS DE BENEFICIOS'
+      : 'ALERTAS OPERATIVAS';
+
+    const areaBadge = area === 'todas'
+      ? 'Todas las áreas'
+      : area === 'formalizacion'
+      ? 'Formalización'
+      : area === 'beneficios'
+      ? 'Beneficios'
+      : area;
+
+    if (alertas.length === 0) {
+      container.innerHTML = `
+        <div class="alertas-operativas-panel">
+          <div class="alertas-operativas-panel__header">
+            <h2 class="alertas-operativas-panel__titulo">
+              <span class="material-symbols-outlined">verified_user</span>
+              ${areaTitulo}
+            </h2>
+          </div>
+          <div class="alertas-operativas-empty">
+            <span class="material-symbols-outlined">check_circle</span>
+            <p>No hay alertas pendientes</p>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    const alertasHtml = alertas.map((alerta, idx) => {
+      const icon = alerta.tipo === 'danger' ? 'error'
+                 : alerta.tipo === 'warning' ? 'warning'
+                 : 'info';
+
+      const casosHtml = (alerta.casos && alerta.casos.length > 0)
+        ? `
+          <div class="alerta-operativa-card__detalle">
+            <table class="alerta-operativa-detalle-table">
+              <thead>
+                <tr>
+                  <th>Caso</th>
+                  <th>Organización / Vecino</th>
+                  <th>Detalle</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${alerta.casos.map(caso => `
+                  <tr>
+                    <td>${escapeHtml(caso.id || 'N/A')}</td>
+                    <td>${escapeHtml(caso.nombre || 'Sin nombre')}</td>
+                    <td>${escapeHtml(caso.detalle || '')}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `
+        : '';
+
+      return `
+        <div class="alerta-operativa-card alerta-operativa-card--${alerta.tipo}"
+             data-alerta-id="${alerta.id}"
+             data-alerta-idx="${idx}">
+          <div class="alerta-operativa-card__header">
+            <div class="alerta-operativa-card__icon">
+              <span class="material-symbols-outlined">${icon}</span>
+            </div>
+            <div class="alerta-operativa-card__content">
+              <h3 class="alerta-operativa-card__titulo">${escapeHtml(alerta.titulo || '')}</h3>
+              <p class="alerta-operativa-card__descripcion">${escapeHtml(alerta.descripcion || '')}</p>
+            </div>
+            <div class="alerta-operativa-card__count">${alerta.conteo || 0}</div>
+          </div>
+          ${casosHtml}
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = `
+      <div class="alertas-operativas-panel">
+        <div class="alertas-operativas-panel__header">
+          <h2 class="alertas-operativas-panel__titulo">
+            <span class="material-symbols-outlined">notifications_active</span>
+            ${areaTitulo}
+          </h2>
+          <span class="alertas-operativas-panel__area-badge">${areaBadge}</span>
+        </div>
+        <div class="alertas-operativas-lista">
+          ${alertasHtml}
+        </div>
+      </div>
+    `;
+
+    // Agregar listeners de expansión
+    container.querySelectorAll('.alerta-operativa-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const wasExpanded = this.classList.contains('is-expanded');
+        // Colapsar todas
+        container.querySelectorAll('.alerta-operativa-card').forEach(c => {
+          c.classList.remove('is-expanded');
+        });
+        // Expandir esta si no estaba expandida
+        if (!wasExpanded) {
+          this.classList.add('is-expanded');
+        }
+      });
+    });
   }
 

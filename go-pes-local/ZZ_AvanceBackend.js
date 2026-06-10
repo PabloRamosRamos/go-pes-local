@@ -804,15 +804,19 @@ function goPesCrearOrganizacionDesdeGrupoVecinos_(caso, payload, user) {
     throw new Error('La solicitud ya tiene una organización asociada: ' + String(caso.organizacion_id || ''));
   }
 
-  const existingBySolicitud = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).filter(function(row) {
+  // OPTIMIZACIÓN: Leer organizaciones una sola vez y pre-normalizar nombres
+  const allOrgs = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES);
+
+  const existingBySolicitud = allOrgs.filter(function(row) {
     return String(row.solicitud_id || '').trim() === solicitudId;
   });
   if (existingBySolicitud.length) {
     throw new Error('Ya existe una organización asociada a esta solicitud/proceso: ' + String(existingBySolicitud[0].nombre_organizacion || existingBySolicitud[0].organizacion_id));
   }
 
+  // Pre-normalizar nombres para evitar normalización en loop
   const nombreNormalizado = goPesNormalizeOrganizacionNombre_(nombreAsamblea);
-  const existingByName = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).find(function(row) {
+  const existingByName = allOrgs.find(function(row) {
     return goPesNormalizeOrganizacionNombre_(row.nombre_organizacion) === nombreNormalizado;
   });
   const warningNombreDuplicado = existingByName
@@ -1129,11 +1133,19 @@ function goPesDeactivateEstadosAvanceActivos_(organizacionId) {
     }
   }
 
-  updates.forEach(function(rowIndex) {
-    sh.getRange(rowIndex, idxActivo + 1).setValue(false);
-  });
+  // OPTIMIZACIÓN: Batch setValues usando getRangeList para filas no consecutivas
+  if (updates.length > 0) {
+    // Construir A1 notations para cada celda a actualizar
+    const a1Notations = updates.map(function(rowIndex) {
+      // Convertir índice de columna a letra (A=1, B=2, etc)
+      const colLetter = String.fromCharCode(65 + idxActivo);
+      return colLetter + rowIndex;
+    });
 
-  if (updates.length) {
+    // Usar getRangeList para actualizar múltiples celdas no consecutivas en batch
+    const rangeList = sh.getRangeList(a1Notations);
+    rangeList.setValue(false);
+
     invalidateSheetRuntimeCache_(sheetName);
   }
 }

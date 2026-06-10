@@ -77,7 +77,15 @@ function ensureSheetsSubset_(sheetNames) {
   });
 }
 
+// OPTIMIZACIÓN: Cache global para buildSheetDefinitions_ (se llama 25+ veces)
+var GO_PES_SHEET_DEFS_CACHE_ = null;
+
 function buildSheetDefinitions_() {
+  // Retornar cache si existe
+  if (GO_PES_SHEET_DEFS_CACHE_) {
+    return GO_PES_SHEET_DEFS_CACHE_;
+  }
+
   const S = GO_PES_V2.SHEETS;
   const defs = {
     [S.RAW_INGRESO]: ['created_at', 'source', 'user_email', 'vecino_id', 'solicitud_id', 'nombre_vecino', 'apellido_vecino', 'rut_vecino', 'telefono_contacto', 'correo_contacto', 'direccion_original', 'uv', 'sector', 'tipo_vivienda', 'requerimiento_inicial', 'medio_solicitud', 'unidad_origen', 'fecha_solicitud', 'observaciones_form', 'estado_vecino', 'legacy_source', 'legacy_key'],
@@ -133,7 +141,16 @@ function buildSheetDefinitions_() {
     [S.FACT_FORM_INSCRIPCIONES]: ['inscripcion_id', 'evento_id', 'tipo_inscrito', 'socio_id', 'rut', 'nombre', 'telefono', 'correo', 'organizacion_vinculada', 'estado_inscripcion', 'created_by', 'created_at', 'updated_by', 'updated_at']
   };
 
+  // Guardar en cache y retornar
+  GO_PES_SHEET_DEFS_CACHE_ = defs;
   return defs;
+}
+
+/**
+ * Invalida el cache de buildSheetDefinitions_ (llamar después de modificar GO_PES_V2.SHEETS)
+ */
+function invalidateBuildSheetDefinitionsCache_() {
+  GO_PES_SHEET_DEFS_CACHE_ = null;
 }
 
 function ensureSheetWithHeaders_(name, headers) {

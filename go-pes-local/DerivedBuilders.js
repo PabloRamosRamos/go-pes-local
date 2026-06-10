@@ -121,6 +121,11 @@ function refreshPartialArtifacts_(options) {
   if (config.invalidateCatalogs && typeof invalidateCatalogClientCaches_ === 'function') {
     invalidateCatalogClientCaches_();
   }
+
+  // Invalidar cache del dashboard (depende de vistas derivadas)
+  if (typeof invalidateDashboardCache_ === 'function') {
+    invalidateDashboardCache_();
+  }
 }
 
 function uniqueCompositePairs_(pairs) {

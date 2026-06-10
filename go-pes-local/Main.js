@@ -6,7 +6,7 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
   VERSION: '2.1.860',
-  BUILD: '7efb0ad',
+  BUILD: 'f65522c',
   BUILD_DATE: '20260609',
   ENVIRONMENT: 'DEV',
   SUPERUSERS: [
@@ -113,6 +113,12 @@ const GO_PES_V2 = {
       FORM_HITO11POST10: 'form_hito11post10',
       BEN_CAMARAS_POST_CERT: 'ben_camaras_post_cert'
     }
+  },
+  DASHBOARD: {
+    HITOS_VISIBLES: [2, 4, 7, 11, 12, 13, 14, 15],
+    HITO_COMITE_COMPLETO: 11,
+    HITO_ASAMBLEA: 3,
+    CACHE_TTL_MS: 3 * 60 * 1000 // 3 minutos
   },
   TRUSTED_DOMAIN_AUTO_ACTIVE: false,
   DEFAULT_VIEW: 'inicio',

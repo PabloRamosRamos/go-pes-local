@@ -146,7 +146,7 @@
       return [
         buildChartCard_('Estado de constitución',   drawDonut_(charts.estadosConstitucion || [], true),  'dash-chart-card stagger-item', 'dash-chart-card__body--donut'),
         buildChartCard_('Organizaciones por UV',    drawBarH_(charts.porUv || []),                       'dash-chart-card stagger-item', 'dash-chart-card__body--bar-h'),
-        buildChartCard_('Estado de beneficios',     drawEstadoBeneficios_(charts.estadoBeneficios || {}), 'dash-chart-card stagger-item', 'dash-chart-card__body'),
+        buildChartCard_('Estado de formalización',  drawEstadoBeneficios_(charts.estadoBeneficios || {}), 'dash-chart-card stagger-item', 'dash-chart-card__body'),
       ].join('');
     }
 
@@ -309,11 +309,11 @@
       var tot = v + p + a;
       function pct_(n){ return tot > 0 ? Math.round(n/tot*100) : 0; }
       var items = [
-        { label:'Vigentes',   count:v, cls:'vigente',    icon:'check_circle', color:'#22c55e', sub:null },
-        { label:'Por vencer', count:p, cls:'por-vencer', icon:'schedule',     color:'#f59e0b', sub:'Próx. 30 días' },
-        { label:'Atrasados',  count:a, cls:'atrasado',   icon:'warning',      color:'#cb2431', sub:'Requieren atención' }
+        { label:'Vigentes',   count:v, cls:'vigente',    icon:'check_circle', color:'#22c55e', sub:'En plazo' },
+        { label:'Por vencer', count:p, cls:'por-vencer', icon:'schedule',     color:'#f59e0b', sub:'Próximas a vencer' },
+        { label:'Vencidos',   count:a, cls:'atrasado',   icon:'warning',      color:'#cb2431', sub:'Plazo cumplido' }
       ];
-      var a11yTable = '<table class="sr-only"><caption>Estado de beneficios</caption><thead><tr><th>Estado</th><th>Cantidad</th><th>Porcentaje</th></tr></thead><tbody>' +
+      var a11yTable = '<table class="sr-only"><caption>Estado de formalización</caption><thead><tr><th>Estado</th><th>Cantidad</th><th>Porcentaje</th></tr></thead><tbody>' +
         items.map(function(it){ return '<tr><td>'+it.label+'</td><td>'+it.count+'</td><td>'+pct_(it.count)+'%</td></tr>'; }).join('') +
         '<tr><th scope="row">Total</th><td>'+tot+'</td><td>100%</td></tr></tbody></table>';
       return a11yTable + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1rem;" aria-hidden="true">' + items.map(function(it){

@@ -79,6 +79,10 @@ function saveAlertasConfig_(config) {
 function invalidateAlertasCache_() {
   delete GO_PES_RUNTIME.alertasUsuario;
   delete GO_PES_RUNTIME.alertasConfig;
+  // Invalidar también cache del dashboard (depende de alertas)
+  if (typeof invalidateDashboardCache_ === 'function') {
+    invalidateDashboardCache_();
+  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════

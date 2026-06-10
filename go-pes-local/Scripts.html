@@ -337,7 +337,7 @@
 
     // Pre-fetch both dashboard KPIs and inicio panel data in parallel while splash shows.
     // Route only happens after both resolve so the inicio view renders immediately with full data.
-    var dashPrefetch = api('getDashboardKpis', {}).then(function(data) {
+    var dashPrefetch = api('getDashboardData', {}).then(function(data) {
       APP.state.dashboardData = data || {};
       APP.state.dashboardDataFetchedAt = Date.now();
     }).catch(function() {

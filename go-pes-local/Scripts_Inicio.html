@@ -58,7 +58,7 @@
       panelData: APP.state.inicioPanelData || {},
       dashData:  APP.state.dashboardData   || {},
       onDashRefresh: function(filters, cb) {
-        api('getDashboardKpis', filters || {}).then(function(data) {
+        api('getDashboardData', filters || {}).then(function(data) {
           APP.state.dashboardData          = data || {};
           APP.state.dashboardDataFetchedAt = Date.now();
           if (typeof cb === 'function') cb(data);
@@ -95,7 +95,7 @@
       }));
     }
     if (!dashFresh) {
-      tasks.push(api('getDashboardKpis', {}).then(data => {
+      tasks.push(api('getDashboardData', {}).then(data => {
         APP.state.dashboardData          = data || {};
         APP.state.dashboardDataFetchedAt = Date.now();
       }));

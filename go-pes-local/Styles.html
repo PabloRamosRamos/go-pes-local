@@ -7505,6 +7505,26 @@ html[data-theme="dark"] .dash-status-pill{background:var(--surface-alt,#182635);
 .inicio-cal-action .material-symbols-outlined{font-size:1.1rem;pointer-events:none}
 .inicio-cal-action--pending{cursor:not-allowed;opacity:.38}
 html[data-theme="dark"] .inicio-cal-action:hover:not(:disabled){background:rgba(116,200,230,.15);color:#74c8e6;border-color:#74c8e6}
+
+/* Summary box y colapsar */
+.inicio-cal-summary{display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--surface-alt,#F7FAFC);border:1px solid var(--border,#D6E0EA);border-radius:8px;margin-bottom:16px;cursor:pointer;transition:background .15s ease}
+.inicio-cal-summary:hover{background:var(--surface-soft,#EEF3F8)}
+.inicio-cal-summary-left{display:flex;align-items:center;gap:12px}
+.inicio-cal-total-count{display:flex;align-items:center;justify-content:center;min-width:48px;height:48px;padding:0 12px;border-radius:8px;font-size:1.3rem;font-weight:700;background:var(--runtime-brand-primary,#3D96B4);color:#fff}
+.inicio-cal-summary-text{display:flex;flex-direction:column;gap:2px}
+.inicio-cal-summary-title{font-size:.95rem;font-weight:600;color:var(--text,#24364B)}
+.inicio-cal-summary-subtitle{font-size:.8rem;color:var(--text-muted,#738497)}
+.inicio-cal-toggle-icon{font-size:1.5rem;color:var(--text-muted,#738497);transition:transform .2s ease}
+#inicio-cal-panel.is-collapsed .inicio-cal-toggle-icon{transform:rotate(-90deg)}
+.inicio-cal-controls{display:flex;gap:8px;margin-bottom:12px}
+.inicio-cal-filter{flex:1;padding:8px 12px;border-radius:6px;border:1px solid var(--border,#D6E0EA);background:var(--surface,#fff);font-size:.85rem}
+.inicio-cal-content{overflow:hidden;transition:max-height .3s ease,opacity .3s ease}
+#inicio-cal-panel.is-collapsed .inicio-cal-content{max-height:0;opacity:0}
+html[data-theme="dark"] .inicio-cal-summary{background:var(--surface-alt,#182635);border-color:var(--border,#294356)}
+html[data-theme="dark"] .inicio-cal-summary:hover{background:var(--surface-soft,#1b2a39)}
+html[data-theme="dark"] .inicio-cal-summary-title{color:var(--text,#e8eff6)}
+html[data-theme="dark"] .inicio-cal-filter{background:var(--surface,#14202d);border-color:var(--border,#294356)}
+
 .inicio-cal-card{position:relative}
 .inicio-cal-dialog{position:absolute;inset:0;background:var(--surface,#fff);border-radius:inherit;z-index:20;display:flex;align-items:center;justify-content:center;padding:16px}
 .inicio-cal-dialog.is-hidden{display:none}
@@ -8081,10 +8101,82 @@ th.sortable.sort-desc .sort-icon {
   color: #fff;
 }
 
+.alertas-operativas-panel__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--surface-alt, #F7FAFC);
+  border: 1px solid var(--border, #D6E0EA);
+  border-radius: 8px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.alertas-operativas-panel__summary:hover {
+  background: var(--surface-soft, #EEF3F8);
+}
+
+.alertas-operativas-panel__summary-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.alertas-operativas-panel__total-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 1.3rem;
+  font-weight: 700;
+  background: var(--runtime-brand-primary, #3D96B4);
+  color: #fff;
+}
+
+.alertas-operativas-panel__summary-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.alertas-operativas-panel__summary-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text, #24364B);
+}
+
+.alertas-operativas-panel__summary-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted, #738497);
+}
+
+.alertas-operativas-panel__toggle-icon {
+  font-size: 1.5rem;
+  color: var(--text-muted, #738497);
+  transition: transform 0.2s ease;
+}
+
+.alertas-operativas-panel.is-collapsed .alertas-operativas-panel__toggle-icon {
+  transform: rotate(-90deg);
+}
+
 .alertas-operativas-lista {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
+}
+
+.alertas-operativas-panel.is-collapsed .alertas-operativas-lista {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
 }
 
 .alerta-operativa-card {
@@ -8127,22 +8219,18 @@ th.sortable.sort-desc .sort-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
   font-size: 1.2rem;
 }
 
 .alerta-operativa-card--danger .alerta-operativa-card__icon {
-  background: var(--danger-soft, #FFF0F0);
   color: var(--danger, #B42318);
 }
 
 .alerta-operativa-card--warning .alerta-operativa-card__icon {
-  background: var(--warning-soft, #FFF7E6);
   color: var(--warning, #B7791F);
 }
 
 .alerta-operativa-card--info .alerta-operativa-card__icon {
-  background: var(--info-soft, #EAF7FB);
   color: var(--info, #3D96B4);
 }
 

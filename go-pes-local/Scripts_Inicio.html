@@ -137,11 +137,9 @@
 
     dataPromise
       .then(data => {
-        console.log('[ALERTAS] Datos recibidos del backend:', data);
         renderAlertasPanelContent_(data);
       })
       .catch(err => {
-        console.error('[ALERTAS] Error al cargar alertas:', err);
         container.innerHTML = `
           <div class="alertas-operativas-panel">
             <div class="alertas-operativas-empty">
@@ -161,8 +159,6 @@
       const errorMsg = data && data.message
         ? escapeHtml(data.message)
         : 'No se pudo cargar el sistema de alertas';
-
-      console.error('[ALERTAS] Error en respuesta del backend:', data);
 
       container.innerHTML = `
         <div class="alertas-operativas-panel">
@@ -193,18 +189,19 @@
       ? 'Beneficios'
       : area;
 
+    const totalAlertas = alertas.reduce((sum, a) => sum + (a.conteo || 0), 0);
+
     if (alertas.length === 0) {
       container.innerHTML = `
         <div class="alertas-operativas-panel">
-          <div class="alertas-operativas-panel__header">
-            <h2 class="alertas-operativas-panel__titulo">
-              <span class="material-symbols-outlined">verified_user</span>
-              ${areaTitulo}
-            </h2>
-          </div>
-          <div class="alertas-operativas-empty">
-            <span class="material-symbols-outlined">check_circle</span>
-            <p>No hay alertas pendientes</p>
+          <div class="alertas-operativas-panel__summary">
+            <div class="alertas-operativas-panel__summary-left">
+              <div class="alertas-operativas-panel__total-count">0</div>
+              <div class="alertas-operativas-panel__summary-text">
+                <div class="alertas-operativas-panel__summary-title">Sin alertas pendientes</div>
+                <div class="alertas-operativas-panel__summary-subtitle">${areaBadge}</div>
+              </div>
+            </div>
           </div>
         </div>
       `;
@@ -261,13 +258,16 @@
     }).join('');
 
     container.innerHTML = `
-      <div class="alertas-operativas-panel">
-        <div class="alertas-operativas-panel__header">
-          <h2 class="alertas-operativas-panel__titulo">
-            <span class="material-symbols-outlined">notifications_active</span>
-            ${areaTitulo}
-          </h2>
-          <span class="alertas-operativas-panel__area-badge">${areaBadge}</span>
+      <div class="alertas-operativas-panel" id="alertas-panel">
+        <div class="alertas-operativas-panel__summary" id="alertas-summary-toggle">
+          <div class="alertas-operativas-panel__summary-left">
+            <div class="alertas-operativas-panel__total-count">${totalAlertas}</div>
+            <div class="alertas-operativas-panel__summary-text">
+              <div class="alertas-operativas-panel__summary-title">Alertas pendientes</div>
+              <div class="alertas-operativas-panel__summary-subtitle">${areaBadge} · ${alertas.length} tipo${alertas.length !== 1 ? 's' : ''} de alerta</div>
+            </div>
+          </div>
+          <span class="material-symbols-outlined alertas-operativas-panel__toggle-icon">expand_more</span>
         </div>
         <div class="alertas-operativas-lista">
           ${alertasHtml}
@@ -275,15 +275,22 @@
       </div>
     `;
 
-    // Agregar listeners de expansión
+    // Toggle colapsar/expandir
+    const summaryToggle = document.getElementById('alertas-summary-toggle');
+    const panel = document.getElementById('alertas-panel');
+    if (summaryToggle && panel) {
+      summaryToggle.addEventListener('click', function() {
+        panel.classList.toggle('is-collapsed');
+      });
+    }
+
+    // Agregar listeners de expansión de cards
     container.querySelectorAll('.alerta-operativa-card').forEach(card => {
       card.addEventListener('click', function() {
         const wasExpanded = this.classList.contains('is-expanded');
-        // Colapsar todas
         container.querySelectorAll('.alerta-operativa-card').forEach(c => {
           c.classList.remove('is-expanded');
         });
-        // Expandir esta si no estaba expandida
         if (!wasExpanded) {
           this.classList.add('is-expanded');
         }

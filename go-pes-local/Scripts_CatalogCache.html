@@ -36,7 +36,6 @@
 
   function mergeCatalogs_(catalogs) {
     if (!window.APP || !window.APP.state) {
-      console.warn('GO_PES_CATALOGS: APP.state no disponible aún');
       return;
     }
     window.APP.state.catalogs = normalizeCatalogs({

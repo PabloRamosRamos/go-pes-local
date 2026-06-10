@@ -600,7 +600,6 @@
         hideAvanceLoading_();
       }
     }).catch(err => {
-      console.error(err);
       if (typeof window.hideModalLoading === 'function') {
         hideAvanceLoading_();
       }
@@ -1117,7 +1116,7 @@
       ? `COMITE DE SEGURIDAD ${nombreOrganizacionVariable}`.replace(/\s+/g, ' ').trim()
       : '';
 
-    closeAvanceHitoModal_();
+    // Mostrar loader (se detecta automáticamente que hay modal abierto)
     showModalLoading(requiereNombreOrganizacion ? 'Creando organización...' : 'Registrando hito...');
 
     api('registrarHitoAvance', {
@@ -1134,6 +1133,8 @@
       numero_cuenta: numeroCuenta,
       banco: banco
     }).then(res => {
+      // Cerrar modal solo después de éxito
+      closeAvanceHitoModal_();
       showSuccess(res && res.warning_nombre_duplicado
         ? `Hito registrado correctamente. Advertencia: ${res.warning_nombre_duplicado}`
         : 'Hito registrado correctamente.');
@@ -1176,8 +1177,10 @@
       return loadAvanceOrganizacion_(organizacionId).then(() => {
         if (benefitReminder) openAvanceBeneficioReminderModal_(benefitReminder);
       });
-    }).catch(showError).finally(() => {
-      hideModalLoading();
+    }).catch(err => {
+      showError(err);
+    }).finally(() => {
+      hideContentLoading();
     });
   }
 

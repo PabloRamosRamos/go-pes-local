@@ -363,7 +363,6 @@
       applyPermissions();
       setStatus('Listo.', null);
     }).catch(err => {
-      console.error('Init fatal error:', err);
       setStatus('Ocurrió un error al iniciar la aplicación.', false);
     });
 
@@ -485,7 +484,6 @@
       try {
         localStorage.setItem('goPesSidebarCollapsed', String(collapsed));
       } catch (err) {
-        console.warn('No se pudo persistir el estado del menú lateral.', err);
       }
       applyState(collapsed);
     });
@@ -515,7 +513,6 @@
       try {
         localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
       } catch (err) {
-        console.warn('No se pudo persistir el tema seleccionado.', err);
       }
     }
     updateThemeToggleUi_();
@@ -561,7 +558,6 @@
       try {
         localStorage.setItem(APP_ZOOM_STORAGE_KEY, nextZoom);
       } catch (err) {
-        console.warn('No se pudo persistir el zoom seleccionado.', err);
       }
     }
     updateZoomMenuUi_();
@@ -704,7 +700,6 @@
         buildDevStatsBlock_(info.devStats || null);
     }).catch(err => {
       content.innerHTML = staticHtml + `<p class="muted" style="margin-top:8px;font-size:0.8rem;color:#c0392b">Error al consultar el servidor.</p>`;
-      console.error('getSystemInfo error:', err);
     });
   }
 

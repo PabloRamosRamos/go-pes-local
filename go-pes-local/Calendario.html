@@ -55,6 +55,13 @@ window.GO_PES_CALENDARIO = (function() {
         var evento = allEventos.find(function(ev) { return ev.id === eventId; });
         if (evento) openDetailsModal_(evento, esc);
       });
+      // Handler para toggle colapsar/expandir
+      root.addEventListener('click', function(e) {
+        if (e.target.closest('#inicio-cal-summary-toggle')) {
+          var panel = document.getElementById('inicio-cal-panel');
+          if (panel) panel.classList.toggle('is-collapsed');
+        }
+      });
     }
 
     // Restaurar valor del filtro
@@ -63,6 +70,32 @@ window.GO_PES_CALENDARIO = (function() {
   }
 
   function buildCard_(eventos, fetchedAt, esc) {
+    var totalEventos = eventos.length;
+    var tipoLabel = _currentFilter === 'visitas' ? 'Visitas'
+                  : _currentFilter === 'asambleas' ? 'Asambleas'
+                  : 'Eventos';
+
+    var summaryBox = totalEventos === 0
+      ? '<div class="inicio-cal-summary">' +
+          '<div class="inicio-cal-summary-left">' +
+            '<div class="inicio-cal-total-count">0</div>' +
+            '<div class="inicio-cal-summary-text">' +
+              '<div class="inicio-cal-summary-title">Sin reuniones próximas</div>' +
+              '<div class="inicio-cal-summary-subtitle">60 días</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      : '<div class="inicio-cal-summary" id="inicio-cal-summary-toggle">' +
+          '<div class="inicio-cal-summary-left">' +
+            '<div class="inicio-cal-total-count">' + totalEventos + '</div>' +
+            '<div class="inicio-cal-summary-text">' +
+              '<div class="inicio-cal-summary-title">' + tipoLabel + ' próxim' + (totalEventos !== 1 ? 'os' : 'o') + '</div>' +
+              '<div class="inicio-cal-summary-subtitle">60 días · ' + totalEventos + ' evento' + (totalEventos !== 1 ? 's' : '') + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<span class="material-symbols-outlined inicio-cal-toggle-icon">expand_more</span>' +
+        '</div>';
+
     var body = eventos.length === 0
       ? '<div class="inicio-cal-empty">' +
           '<span class="material-symbols-outlined">event_busy</span>' +
@@ -72,25 +105,23 @@ window.GO_PES_CALENDARIO = (function() {
           eventos.map(function(ev) { return buildItem_(ev, esc); }).join('') +
         '</ul>';
 
-    return '<section class="inicio-card inicio-cal-card">' +
-      '<div class="inicio-card__head" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;">' +
-        '<div style="display:flex;align-items:center;gap:1rem;">' +
-          '<span class="material-symbols-outlined">calendar_month</span>' +
-          '<div><h3>Calendario de reuniones</h3>' +
-          '<p>Visitas y Asambleas</p></div>' +
-        '</div>' +
-        '<div style="display:flex;gap:0.5rem;align-items:stretch;">' +
-          '<select id="inicio-cal-filter" class="inicio-cal-filter" style="padding:6px 12px;border-radius:6px;border:1px solid var(--border);background:var(--surface);font-size:0.8rem;height:32px;">' +
-            '<option value="todos">Todos</option>' +
-            '<option value="visitas">Visitas</option>' +
-            '<option value="asambleas">Asambleas</option>' +
-          '</select>' +
-          '<button class="inicio-cal-refresh-btn secondary-btn" type="button" title="Actualizar calendario" style="padding:6px 12px;height:42px;min-height:42px;">' +
-            '<span class="material-symbols-outlined">refresh</span>' +
-          '</button>' +
-        '</div>' +
+    var controls = '<div class="inicio-cal-controls">' +
+      '<select id="inicio-cal-filter" class="inicio-cal-filter">' +
+        '<option value="todos">Todos</option>' +
+        '<option value="visitas">Visitas</option>' +
+        '<option value="asambleas">Asambleas</option>' +
+      '</select>' +
+      '<button class="inicio-cal-refresh-btn secondary-btn" type="button" title="Actualizar calendario">' +
+        '<span class="material-symbols-outlined">refresh</span>' +
+      '</button>' +
+    '</div>';
+
+    return '<section class="inicio-card inicio-cal-card" id="inicio-cal-panel">' +
+      summaryBox +
+      controls +
+      '<div class="inicio-cal-content">' +
+        body +
       '</div>' +
-      body +
       (fetchedAt
         ? '<p class="inicio-cal-footer">' +
             '<span class="material-symbols-outlined">update</span>' +

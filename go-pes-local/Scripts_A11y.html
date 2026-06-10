@@ -73,7 +73,6 @@
 
     const focusableElements = getFocusableElements(modal);
     if (focusableElements.length === 0) {
-      console.warn('A11Y: Modal sin elementos focusables', modal.id);
       return function() {};
     }
 
@@ -146,7 +145,6 @@
       : modalIdOrElement;
 
     if (!modal) {
-      console.error('A11Y: Modal no encontrado', modalIdOrElement);
       return;
     }
 
@@ -196,14 +194,6 @@
       restoreFocus: opts.restoreFocus
     });
 
-    // Log para debug
-    if (window.APP && window.APP.config && window.APP.config.debug) {
-      console.log('A11Y: Modal abierto', modal.id, {
-        focusableCount: getFocusableElements(modal).length,
-        trapActive: opts.trapFocus,
-        stackDepth: window.A11Y.activeModals.length
-      });
-    }
   }
 
   /**
@@ -216,14 +206,12 @@
       : modalIdOrElement;
 
     if (!modal) {
-      console.error('A11Y: Modal no encontrado para cerrar', modalIdOrElement);
       return;
     }
 
     // Buscar el modal en el stack
     const index = window.A11Y.activeModals.findIndex(m => m.element === modal);
     if (index === -1) {
-      console.warn('A11Y: Modal no está en el stack de activos', modal.id);
       return;
     }
 
@@ -291,13 +279,6 @@
         }
       }
     }, 250);
-
-    // Log para debug
-    if (window.APP && window.APP.config && window.APP.config.debug) {
-      console.log('A11Y: Modal cerrado', modal.id, {
-        stackDepth: window.A11Y.activeModals.length
-      });
-    }
   }
 
   // ══════════════════════════════════════════════════════════════════════════

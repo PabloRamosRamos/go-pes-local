@@ -7,6 +7,49 @@
  */
 
 // ══════════════════════════════════════════════════════════════════════════
+// FUNCIÓN DE DIAGNÓSTICO (ejecutar desde editor de Apps Script)
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Diagnóstico del dashboard - ejecutar desde el editor para verificar
+ */
+function goPesDiagnosticoDashboard() {
+  try {
+    Logger.log('=== DIAGNÓSTICO DASHBOARD ===');
+    Logger.log('1. Verificando acceso a GO_PES_V2.DASHBOARD...');
+    Logger.log(JSON.stringify(GO_PES_V2.DASHBOARD, null, 2));
+
+    Logger.log('2. Ejecutando getDashboardData({})...');
+    var resultado = getDashboardData({});
+
+    Logger.log('3. Estructura retornada:');
+    Logger.log('   - kpis: ' + (resultado.kpis ? 'OK' : 'FALTA'));
+    Logger.log('   - charts: ' + (resultado.charts ? 'OK' : 'FALTA'));
+    Logger.log('   - tables: ' + (resultado.tables ? 'OK' : 'FALTA'));
+    Logger.log('   - filters: ' + (resultado.filters ? 'OK' : 'FALTA'));
+
+    Logger.log('4. KPIs:');
+    Logger.log(JSON.stringify(resultado.kpis, null, 2));
+
+    Logger.log('5. Avance por hito (debe tener 8 elementos):');
+    Logger.log('   Total hitos: ' + (resultado.charts.avancePorHito || []).length);
+    (resultado.charts.avancePorHito || []).forEach(function(h, i) {
+      Logger.log('   ' + (i+1) + '. ' + h.hito + ' - ' + h.completados + '/' + h.total + ' (' + h.pct + '%)');
+    });
+
+    Logger.log('6. Estado de formalización:');
+    Logger.log(JSON.stringify(resultado.charts.estadoBeneficios, null, 2));
+
+    Logger.log('=== DIAGNÓSTICO COMPLETO ===');
+    return { ok: true, message: 'Dashboard funciona correctamente', data: resultado };
+  } catch (e) {
+    Logger.log('ERROR: ' + e.toString());
+    Logger.log('Stack: ' + e.stack);
+    return { ok: false, error: e.toString(), stack: e.stack };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // API PÚBLICA
 // ══════════════════════════════════════════════════════════════════════════
 

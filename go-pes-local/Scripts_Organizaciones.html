@@ -41,15 +41,16 @@
 
   function renderOrganizacionDetalleModal_() {
     return `
-      <div id="org-detalle-modal" class="organizaciones-modal is-hidden" aria-hidden="true">
+      <div id="org-detalle-modal" class="organizaciones-modal is-hidden" aria-hidden="true" data-mode="view">
         <div class="organizaciones-modal__backdrop" data-org-detalle-close="true"></div>
         <div class="organizaciones-modal__dialog" style="width:95vw;max-height:92vh;display:flex;flex-direction:column;">
           <div class="organizaciones-modal__head" style="flex-shrink:0;">
             <div>
-              <p class="eyebrow">Ficha de organización</p>
+              <p class="eyebrow" id="org-detalle-modal-eyebrow">Ficha de organización</p>
               <h3 id="org-detalle-modal-title">Organización</h3>
             </div>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+            <!-- Botones modo vista -->
+            <div id="org-detalle-view-actions" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
               <button type="button" class="secondary-btn" id="org-ver-socios-btn" disabled>
                 <span class="material-symbols-outlined">badge</span>Ver socios
               </button>
@@ -64,6 +65,15 @@
               </button>
               <button type="button" class="secondary-btn" data-org-detalle-close="true">
                 <span class="material-symbols-outlined">close</span>Cerrar
+              </button>
+            </div>
+            <!-- Botones modo edición (ocultos por defecto) -->
+            <div id="org-detalle-edit-actions" style="display:none;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+              <button type="button" class="secondary-btn" id="org-edit-cancel-btn">
+                <span class="material-symbols-outlined">undo</span>Cancelar
+              </button>
+              <button type="button" class="primary-btn" id="org-edit-save-btn">
+                <span class="material-symbols-outlined">save</span>Guardar organización
               </button>
             </div>
           </div>
@@ -596,16 +606,26 @@
       closeOrganizacionDetalleModal_();
       route('socios');
     });
-    document.getElementById('org-edit-btn')?.addEventListener('click', () => {
-      const data = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.organizacion;
-      if (data) openOrganizacionEditModal_(data);
-    });
+    document.getElementById('org-edit-btn')?.addEventListener('click', switchToEditMode_);
+    document.getElementById('org-edit-cancel-btn')?.addEventListener('click', switchToViewMode_);
+    document.getElementById('org-edit-save-btn')?.addEventListener('click', saveInlineOrganizacion_);
     document.getElementById('org-suspend-btn')?.addEventListener('click', () => cambiarEstadoOrganizacionUi_('suspenderOrganizacion', 'suspender'));
     document.getElementById('org-edit-form')?.addEventListener('submit', saveOrganizacionDesdeModulo_);
     document.getElementById('org-socio-cargo-form')?.addEventListener('submit', saveOrganizacionSocioCargo_);
 
     document.querySelectorAll('[data-org-detalle-close]').forEach(btn => {
-      btn.addEventListener('click', closeOrganizacionDetalleModal_);
+      btn.addEventListener('click', (ev) => {
+        const modal = document.getElementById('org-detalle-modal');
+        const mode = modal ? modal.getAttribute('data-mode') : 'view';
+
+        // Solo permitir cerrar con backdrop/botón si está en modo vista
+        if (mode === 'edit' && ev.target.hasAttribute('data-org-detalle-close')) {
+          showError('Debes guardar o cancelar los cambios antes de cerrar.');
+          return;
+        }
+
+        closeOrganizacionDetalleModal_();
+      });
     });
     document.querySelectorAll('[data-org-modal-close]').forEach(btn => {
       btn.addEventListener('click', closeOrganizacionEditModal_);
@@ -799,6 +819,206 @@
     `;
 
     bindOrganizacionSocioCargoButtons_();
+  }
+
+  // -- MODO EDICIÓN INLINE --
+
+  function switchToEditMode_() {
+    const modal = document.getElementById('org-detalle-modal');
+    const content = document.getElementById('org-detalle-modal-content');
+    const viewActions = document.getElementById('org-detalle-view-actions');
+    const editActions = document.getElementById('org-detalle-edit-actions');
+    const eyebrow = document.getElementById('org-detalle-modal-eyebrow');
+
+    if (!modal || !content) return;
+
+    const data = APP.state.currentOrganizacionDetalle;
+    if (!data || !data.organizacion) {
+      showError('No hay datos de organización para editar.');
+      return;
+    }
+
+    // Cambiar modo del modal
+    modal.setAttribute('data-mode', 'edit');
+
+    // Cambiar eyebrow y ocultar/mostrar botones
+    if (eyebrow) eyebrow.textContent = 'Editar organización';
+    if (viewActions) viewActions.style.display = 'none';
+    if (editActions) editActions.style.display = 'flex';
+
+    // Renderizar formulario de edición
+    content.innerHTML = renderOrganizacionEditForm_(data.organizacion);
+
+    // Popular los selects y sincronizar UV/Sector
+    populateEditFormSelects_();
+  }
+
+  function switchToViewMode_() {
+    const modal = document.getElementById('org-detalle-modal');
+    const viewActions = document.getElementById('org-detalle-view-actions');
+    const editActions = document.getElementById('org-detalle-edit-actions');
+    const eyebrow = document.getElementById('org-detalle-modal-eyebrow');
+
+    if (!modal) return;
+
+    // Cambiar modo del modal
+    modal.setAttribute('data-mode', 'view');
+
+    // Cambiar eyebrow y ocultar/mostrar botones
+    if (eyebrow) eyebrow.textContent = 'Ficha de organización';
+    if (viewActions) viewActions.style.display = 'flex';
+    if (editActions) editActions.style.display = 'none';
+
+    // Renderizar detalle de solo lectura
+    const data = APP.state.currentOrganizacionDetalle;
+    if (data) renderOrganizacionDetalle_(data);
+  }
+
+  function renderOrganizacionEditForm_(org) {
+    org = org || {};
+    return `
+      <form id="org-inline-edit-form" style="padding-top:1rem;">
+        <div class="form-grid organizaciones-form-grid">
+          <div class="field field--full">
+            <label>Nombre organización</label>
+            <input name="nombre_organizacion" type="text" required value="${escapeHtml(org.nombre_organizacion || '')}">
+          </div>
+
+          <div class="field field--half">
+            <label>UV</label>
+            <select name="uv" id="inline-edit-uv"></select>
+          </div>
+
+          <div class="field field--half">
+            <label>Sector</label>
+            <select name="sector" id="inline-edit-sector"></select>
+          </div>
+
+          <div class="field field--full">
+            <label>Dirección referencia</label>
+            <input name="direccion_referencia" type="text" value="${escapeHtml(org.direccion_referencia || '')}">
+          </div>
+
+          <div class="field field--half">
+            <label>Fecha inicio acompañamiento</label>
+            <input name="fecha_inicio_acompanamiento" type="date" value="${org.fecha_inicio_acompanamiento || ''}">
+          </div>
+
+          <div class="field field--half">
+            <label>Fecha asamblea constitución</label>
+            <input name="fecha_asamblea_constitucion" type="date" value="${org.fecha_asamblea_constitucion || ''}">
+          </div>
+
+          <div class="field field--half">
+            <label>Fecha ratificación</label>
+            <input name="fecha_ratificacion" type="date" value="${org.fecha_ratificacion || ''}">
+          </div>
+
+          <div class="field field--half">
+            <label>Vigencia directiva hasta</label>
+            <input name="vigencia_directiva_hasta" type="date" value="${org.vigencia_directiva_hasta || ''}">
+          </div>
+
+          <div class="field field--half">
+            <label>Personalidad jurídica</label>
+            <select name="personalidad_juridica_flag">
+              <option value="">Seleccionar</option>
+              <option ${org.personalidad_juridica_flag === 'Sí' ? 'selected' : ''}>Sí</option>
+              <option ${org.personalidad_juridica_flag === 'No' ? 'selected' : ''}>No</option>
+            </select>
+          </div>
+
+          <div class="field field--half">
+            <label>Directiva vigente</label>
+            <select name="directiva_vigente_flag">
+              <option value="">Seleccionar</option>
+              <option ${org.directiva_vigente_flag === 'Sí' ? 'selected' : ''}>Sí</option>
+              <option ${org.directiva_vigente_flag === 'No' ? 'selected' : ''}>No</option>
+            </select>
+          </div>
+
+          <div class="field field--half">
+            <label>Organización constituida</label>
+            <select name="organizacion_constituida_flag">
+              <option value="">Seleccionar</option>
+              <option ${org.organizacion_constituida_flag === 'Sí' ? 'selected' : ''}>Sí</option>
+              <option ${org.organizacion_constituida_flag === 'No' ? 'selected' : ''}>No</option>
+            </select>
+          </div>
+
+          <div class="field field--full">
+            <label>Observaciones</label>
+            <textarea name="observacion_resumen" rows="4">${escapeHtml(org.observacion_resumen || '')}</textarea>
+          </div>
+        </div>
+
+        <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">
+        <input type="hidden" name="solicitud_id" value="${escapeHtml(org.solicitud_id || '')}">
+      </form>
+    `;
+  }
+
+  function populateEditFormSelects_() {
+    const form = document.getElementById('org-inline-edit-form');
+    if (!form) return;
+
+    const data = APP.state.currentOrganizacionDetalle;
+    const org = data && data.organizacion;
+    if (!org) return;
+
+    // Popular selects con catálogos
+    const uvSelect = document.getElementById('inline-edit-uv');
+    const sectorSelect = document.getElementById('inline-edit-sector');
+
+    if (uvSelect) {
+      const uvList = getCatalogOptions_('uvList');
+      fillSelect(uvSelect, uvList, 'Seleccionar UV');
+      uvSelect.value = org.uv || '';
+    }
+
+    if (sectorSelect && uvSelect) {
+      syncSectorOptions(sectorSelect, uvSelect.value);
+      sectorSelect.value = org.sector || '';
+
+      // Listener para sincronizar sector cuando cambia UV
+      uvSelect.addEventListener('change', () => {
+        syncSectorOptions(sectorSelect, uvSelect.value);
+      });
+    }
+  }
+
+  function saveInlineOrganizacion_() {
+    const form = document.getElementById('org-inline-edit-form');
+    if (!form) return;
+
+    const payload = serializeForm(form);
+
+    if (!String(payload.organizacion_id || '').trim()) {
+      showError('No se encontró el ID de la organización.');
+      return;
+    }
+
+    showModalLoading('Guardando organización...');
+
+    api('guardarOrganizacion', payload).then(() => {
+      hideModalLoading();
+      showSuccess('Organización actualizada correctamente.');
+
+      // Recargar el detalle en modo vista
+      const orgId = payload.organizacion_id;
+      return api('getOrganizacionModuloDetalle', { organizacion_id: orgId }).then(data => {
+        APP.state.currentOrganizacionDetalle = data || {};
+        switchToViewMode_();
+
+        // Refrescar la lista de organizaciones en el fondo
+        ensureOrganizacionesModuloList_().then(() => {
+          renderOrganizacionesGridFromState_();
+        }).catch(() => {});
+      });
+    }).catch(err => {
+      hideModalLoading();
+      showError(err);
+    });
   }
 
   // -- MAPA --

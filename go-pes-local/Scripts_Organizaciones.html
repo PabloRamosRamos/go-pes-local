@@ -28,7 +28,6 @@
         ${renderOrganizacionDetalleModal_()}
         ${renderOrganizacionEditModal_()}
         ${renderOrganizacionSocioCargoModal_()}
-        ${renderOrganizacionEditarFechasModal_()}
       </div>
     `;
 
@@ -53,9 +52,6 @@
             <div id="org-detalle-view-actions" style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
               <button type="button" class="secondary-btn" id="org-ver-socios-btn" disabled>
                 <span class="material-symbols-outlined">badge</span>Ver socios
-              </button>
-              <button type="button" class="secondary-btn" id="org-editar-fechas-hitos-btn" disabled title="Editar fechas de los 15 hitos administrativos">
-                <span class="material-symbols-outlined">edit_calendar</span>Editar fechas hitos
               </button>
               <button type="button" class="secondary-btn" id="org-edit-btn" disabled>
                 <span class="material-symbols-outlined">edit</span>Editar
@@ -186,134 +182,6 @@
     `;
   }
 
-  // -- MODAL EDITAR FECHAS DE HITOS --
-
-  function renderOrganizacionEditarFechasModal_() {
-    return `
-      <div id="org-editar-fechas-modal" class="organizaciones-modal is-hidden" aria-hidden="true">
-        <div class="organizaciones-modal__backdrop" data-org-editar-fechas-close="true"></div>
-        <div class="organizaciones-modal__dialog organizaciones-modal__dialog--wide">
-          <div class="organizaciones-modal__head">
-            <div>
-              <p class="eyebrow">Editar fechas de hitos</p>
-              <h3 id="org-editar-fechas-nombre">Organización</h3>
-            </div>
-            <button type="button" class="secondary-btn" data-org-editar-fechas-close="true">
-              <span class="material-symbols-outlined">close</span>Cerrar
-            </button>
-          </div>
-
-          <div class="org-editar-fechas-info">
-            <span class="material-symbols-outlined">info</span>
-            <p>Solo puedes editar fechas de hitos ya registrados. Para registrar nuevos hitos, usa el módulo Avance.</p>
-          </div>
-
-          <input type="hidden" id="org-editar-fechas-org-id">
-
-          <div class="org-editar-fechas-container">
-            <!-- Tramo 1: Preconstitución -->
-            <div class="org-editar-fechas-tramo">
-              <button type="button" class="org-editar-fechas-tramo-head" data-tramo="pre">
-                <span class="material-symbols-outlined">flag</span>
-                <div>
-                  <h4>Tramo 1 - Preconstitución</h4>
-                  <p class="muted">7 hitos administrativos</p>
-                </div>
-                <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
-              </button>
-
-              <div class="org-editar-fechas-grid org-editar-fechas-content"  data-tramo-content="pre">
-                <div class="field" data-hito="PRE_01">
-                  <label>1. Reunión informativa</label>
-                  <input type="date" id="org-fecha-PRE_01" data-codigo="PRE_01">
-                </div>
-                <div class="field" data-hito="PRE_02">
-                  <label>2. Carta por oficina de partes</label>
-                  <input type="date" id="org-fecha-PRE_02" data-codigo="PRE_02">
-                </div>
-                <div class="field" data-hito="PRE_03">
-                  <label>3. Fecha asignada</label>
-                  <input type="date" id="org-fecha-PRE_03" data-codigo="PRE_03">
-                </div>
-                <div class="field" data-hito="PRE_04">
-                  <label>4. Asamblea constitutiva</label>
-                  <input type="date" id="org-fecha-PRE_04" data-codigo="PRE_04">
-                </div>
-                <div class="field" data-hito="PRE_05">
-                  <label>5. Documentación ingresada</label>
-                  <input type="date" id="org-fecha-PRE_05" data-codigo="PRE_05">
-                </div>
-                <div class="field" data-hito="PRE_06">
-                  <label>6. Observaciones subsanadas <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="org-fecha-PRE_06" data-codigo="PRE_06">
-                </div>
-                <div class="field" data-hito="PRE_07">
-                  <label>7. Certificado provisorio</label>
-                  <input type="date" id="org-fecha-PRE_07" data-codigo="PRE_07">
-                </div>
-              </div>
-            </div>
-
-            <!-- Tramo 2: Formalización -->
-            <div class="org-editar-fechas-tramo">
-              <button type="button" class="org-editar-fechas-tramo-head" data-tramo="for">
-                <span class="material-symbols-outlined">approval</span>
-                <div>
-                  <h4>Tramo 2 - Formalización posterior</h4>
-                  <p class="muted">8 hitos administrativos</p>
-                </div>
-                <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
-              </button>
-
-              <div class="org-editar-fechas-grid org-editar-fechas-content" data-tramo-content="for">
-                <div class="field" data-hito="FOR_01">
-                  <label>8. Ingreso comisión electoral</label>
-                  <input type="date" id="org-fecha-FOR_01" data-codigo="FOR_01">
-                </div>
-                <div class="field" data-hito="FOR_02">
-                  <label>9. Asamblea de ratificación</label>
-                  <input type="date" id="org-fecha-FOR_02" data-codigo="FOR_02">
-                </div>
-                <div class="field" data-hito="FOR_03">
-                  <label>10. Documentación ingresada</label>
-                  <input type="date" id="org-fecha-FOR_03" data-codigo="FOR_03">
-                </div>
-                <div class="field" data-hito="FOR_04">
-                  <label>11. Certificado definitivo</label>
-                  <input type="date" id="org-fecha-FOR_04" data-codigo="FOR_04">
-                </div>
-                <div class="field" data-hito="FOR_07">
-                  <label>12. Obtención de RUT <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="org-fecha-FOR_07" data-codigo="FOR_07">
-                </div>
-                <div class="field" data-hito="FOR_06">
-                  <label>13. RCCE <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="org-fecha-FOR_06" data-codigo="FOR_06">
-                </div>
-                <div class="field" data-hito="FOR_08">
-                  <label>14. Cuenta bancaria <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="org-fecha-FOR_08" data-codigo="FOR_08">
-                </div>
-                <div class="field" data-hito="FOR_05">
-                  <label>15. RMRFP <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="org-fecha-FOR_05" data-codigo="FOR_05">
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="actions">
-            <button type="button" class="secondary-btn" id="org-editar-fechas-cancel-btn">
-              <span class="material-symbols-outlined">close</span>Cancelar
-            </button>
-            <button type="button" class="primary-btn" id="org-editar-fechas-save-btn">
-              <span class="material-symbols-outlined">save</span>Guardar cambios
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }
 
   // -- STATS HEADER --
 
@@ -633,13 +501,6 @@
     document.querySelectorAll('[data-org-socio-cargo-close]').forEach(btn => {
       btn.addEventListener('click', closeOrganizacionSocioCargoModal_);
     });
-    document.querySelectorAll('[data-org-editar-fechas-close]').forEach(btn => {
-      btn.addEventListener('click', closeOrganizacionEditarFechasModal_);
-    });
-
-    document.getElementById('org-editar-fechas-hitos-btn')?.addEventListener('click', openOrganizacionEditarFechasModal_);
-    document.getElementById('org-editar-fechas-cancel-btn')?.addEventListener('click', closeOrganizacionEditarFechasModal_);
-    document.getElementById('org-editar-fechas-save-btn')?.addEventListener('click', submitOrganizacionEditarFechasModal_);
 
     fillSelect(document.getElementById('org-socio-cargo-select'), getSocioCargoOptions_(), 'Seleccionar cargo');
 
@@ -701,7 +562,7 @@
   }
 
   function setOrganizacionesActionState_(enabled) {
-    ['org-ver-socios-btn', 'org-editar-fechas-hitos-btn', 'org-edit-btn', 'org-suspend-btn'].forEach(id => {
+    ['org-ver-socios-btn', 'org-edit-btn', 'org-suspend-btn'].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) btn.disabled = !enabled;
     });
@@ -851,6 +712,9 @@
 
     // Popular los selects y sincronizar UV/Sector
     populateEditFormSelects_();
+
+    // Inicializar acordeones de hitos
+    initInlineHitosAccordion_();
   }
 
   function switchToViewMode_() {
@@ -876,85 +740,188 @@
 
   function renderOrganizacionEditForm_(org) {
     org = org || {};
+    const data = APP.state.currentOrganizacionDetalle;
+    const timeline = (data && data.avance && data.avance.timeline) || [];
+
     return `
-      <form id="org-inline-edit-form" style="padding-top:1rem;">
-        <div class="form-grid organizaciones-form-grid">
-          <div class="field field--full">
-            <label>Nombre organización</label>
-            <input name="nombre_organizacion" type="text" required value="${escapeHtml(org.nombre_organizacion || '')}">
+      <form id="org-inline-edit-form" style="padding-top:1rem;max-height:calc(92vh - 180px);overflow-y:auto;">
+        <div class="org-editar-fechas-info" style="margin-bottom:1.5rem;">
+          <span class="material-symbols-outlined">info</span>
+          <p>Solo puedes editar fechas de hitos ya registrados. Para registrar nuevos hitos, usa el módulo Avance.</p>
+        </div>
+
+        <div class="org-editar-fechas-container">
+          <!-- Acordeón 1: Datos básicos -->
+          <div class="org-editar-fechas-tramo">
+            <button type="button" class="org-editar-fechas-tramo-head" data-tramo="datos">
+              <span class="material-symbols-outlined">apartment</span>
+              <div>
+                <h4>Datos básicos de la organización</h4>
+                <p class="muted">Información general y territorial</p>
+              </div>
+              <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
+            </button>
+
+            <div class="org-editar-fechas-grid org-editar-fechas-content" data-tramo-content="datos">
+              <div class="field field--full">
+                <label>Nombre organización</label>
+                <input name="nombre_organizacion" type="text" required value="${escapeHtml(org.nombre_organizacion || '')}">
+              </div>
+
+              <div class="field field--half">
+                <label>UV</label>
+                <select name="uv" id="inline-edit-uv"></select>
+              </div>
+
+              <div class="field field--half">
+                <label>Sector</label>
+                <select name="sector" id="inline-edit-sector"></select>
+              </div>
+
+              <div class="field field--full">
+                <label>Dirección referencia</label>
+                <input name="direccion_referencia" type="text" value="${escapeHtml(org.direccion_referencia || '')}">
+              </div>
+
+              <div class="field field--half">
+                <label>Personalidad jurídica</label>
+                <select name="personalidad_juridica_flag">
+                  <option value="">Seleccionar</option>
+                  <option ${org.personalidad_juridica_flag === 'Sí' ? 'selected' : ''}>Sí</option>
+                  <option ${org.personalidad_juridica_flag === 'No' ? 'selected' : ''}>No</option>
+                </select>
+              </div>
+
+              <div class="field field--half">
+                <label>Directiva vigente</label>
+                <select name="directiva_vigente_flag">
+                  <option value="">Seleccionar</option>
+                  <option ${org.directiva_vigente_flag === 'Sí' ? 'selected' : ''}>Sí</option>
+                  <option ${org.directiva_vigente_flag === 'No' ? 'selected' : ''}>No</option>
+                </select>
+              </div>
+
+              <div class="field field--half">
+                <label>Organización constituida</label>
+                <select name="organizacion_constituida_flag">
+                  <option value="">Seleccionar</option>
+                  <option ${org.organizacion_constituida_flag === 'Sí' ? 'selected' : ''}>Sí</option>
+                  <option ${org.organizacion_constituida_flag === 'No' ? 'selected' : ''}>No</option>
+                </select>
+              </div>
+
+              <div class="field field--full">
+                <label>Observaciones</label>
+                <textarea name="observacion_resumen" rows="3">${escapeHtml(org.observacion_resumen || '')}</textarea>
+              </div>
+            </div>
           </div>
 
-          <div class="field field--half">
-            <label>UV</label>
-            <select name="uv" id="inline-edit-uv"></select>
-          </div>
-
-          <div class="field field--half">
-            <label>Sector</label>
-            <select name="sector" id="inline-edit-sector"></select>
-          </div>
-
-          <div class="field field--full">
-            <label>Dirección referencia</label>
-            <input name="direccion_referencia" type="text" value="${escapeHtml(org.direccion_referencia || '')}">
-          </div>
-
-          <div class="field field--half">
-            <label>Fecha inicio acompañamiento</label>
-            <input name="fecha_inicio_acompanamiento" type="date" value="${org.fecha_inicio_acompanamiento || ''}">
-          </div>
-
-          <div class="field field--half">
-            <label>Fecha asamblea constitución</label>
-            <input name="fecha_asamblea_constitucion" type="date" value="${org.fecha_asamblea_constitucion || ''}">
-          </div>
-
-          <div class="field field--half">
-            <label>Fecha ratificación</label>
-            <input name="fecha_ratificacion" type="date" value="${org.fecha_ratificacion || ''}">
-          </div>
-
-          <div class="field field--half">
-            <label>Vigencia directiva hasta</label>
-            <input name="vigencia_directiva_hasta" type="date" value="${org.vigencia_directiva_hasta || ''}">
-          </div>
-
-          <div class="field field--half">
-            <label>Personalidad jurídica</label>
-            <select name="personalidad_juridica_flag">
-              <option value="">Seleccionar</option>
-              <option ${org.personalidad_juridica_flag === 'Sí' ? 'selected' : ''}>Sí</option>
-              <option ${org.personalidad_juridica_flag === 'No' ? 'selected' : ''}>No</option>
-            </select>
-          </div>
-
-          <div class="field field--half">
-            <label>Directiva vigente</label>
-            <select name="directiva_vigente_flag">
-              <option value="">Seleccionar</option>
-              <option ${org.directiva_vigente_flag === 'Sí' ? 'selected' : ''}>Sí</option>
-              <option ${org.directiva_vigente_flag === 'No' ? 'selected' : ''}>No</option>
-            </select>
-          </div>
-
-          <div class="field field--half">
-            <label>Organización constituida</label>
-            <select name="organizacion_constituida_flag">
-              <option value="">Seleccionar</option>
-              <option ${org.organizacion_constituida_flag === 'Sí' ? 'selected' : ''}>Sí</option>
-              <option ${org.organizacion_constituida_flag === 'No' ? 'selected' : ''}>No</option>
-            </select>
-          </div>
-
-          <div class="field field--full">
-            <label>Observaciones</label>
-            <textarea name="observacion_resumen" rows="4">${escapeHtml(org.observacion_resumen || '')}</textarea>
-          </div>
+          <!-- Acordeones 2 y 3: Hitos -->
+          ${renderHitosAccordion_(timeline)}
         </div>
 
         <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">
         <input type="hidden" name="solicitud_id" value="${escapeHtml(org.solicitud_id || '')}">
       </form>
+    `;
+  }
+
+  function renderHitosAccordion_(timeline) {
+    // Crear mapa de hitos con sus fechas
+    const hitosMap = {};
+    (timeline || []).forEach(h => {
+      const codigo = String(h.codigo_hito || '').trim();
+      if (codigo) {
+        hitosMap[codigo] = {
+          fecha: h.fecha_hito || '',
+          registrado: true
+        };
+      }
+    });
+
+    // Formatear fecha a YYYY-MM-DD para input[type="date"]
+    function formatFecha(fecha) {
+      if (!fecha) return '';
+      try {
+        const d = new Date(fecha);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      } catch (e) {
+        return '';
+      }
+    }
+
+    // Tramo 1: PRE_01 a PRE_07
+    const tramo1Html = ['PRE_01', 'PRE_02', 'PRE_03', 'PRE_04', 'PRE_05', 'PRE_06', 'PRE_07'].map((codigo, idx) => {
+      const hito = hitosMap[codigo];
+      const disabled = !hito || !hito.registrado;
+      const disabledClass = disabled ? ' is-disabled' : '';
+      const fecha = hito ? formatFecha(hito.fecha) : '';
+      const labels = ['1. Reunión informativa', '2. Carta por oficina de partes', '3. Fecha asignada',
+                      '4. Asamblea constitutiva', '5. Documentación ingresada', '6. Revisión técnica',
+                      '7. Certificado provisorio'];
+
+      return `
+        <div class="field${disabledClass}" data-hito="${codigo}">
+          <label>${labels[idx]}</label>
+          <input type="date" id="inline-fecha-${codigo}" data-codigo="${codigo}" value="${fecha}" ${disabled ? 'disabled' : ''}>
+        </div>
+      `;
+    }).join('');
+
+    // Tramo 2: FOR_01, FOR_02, FOR_03, FOR_04, FOR_07, FOR_06, FOR_08, FOR_05
+    const tramo2Codigos = ['FOR_01', 'FOR_02', 'FOR_03', 'FOR_04', 'FOR_07', 'FOR_06', 'FOR_08', 'FOR_05'];
+    const tramo2Labels = ['8. Asamblea ordinaria', '9. Cuenta pública', '10. Renovación directiva',
+                          '11. Certificado definitivo', '12. RUT organización', '13. Cuenta corriente',
+                          '14. Cuenta bancaria', '15. Personalidad jurídica'];
+
+    const tramo2Html = tramo2Codigos.map((codigo, idx) => {
+      const hito = hitosMap[codigo];
+      const disabled = !hito || !hito.registrado;
+      const disabledClass = disabled ? ' is-disabled' : '';
+      const fecha = hito ? formatFecha(hito.fecha) : '';
+
+      return `
+        <div class="field${disabledClass}" data-hito="${codigo}">
+          <label>${tramo2Labels[idx]}</label>
+          <input type="date" id="inline-fecha-${codigo}" data-codigo="${codigo}" value="${fecha}" ${disabled ? 'disabled' : ''}>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <!-- Tramo 1: Preconstitución -->
+      <div class="org-editar-fechas-tramo">
+        <button type="button" class="org-editar-fechas-tramo-head" data-tramo="pre">
+          <span class="material-symbols-outlined">flag</span>
+          <div>
+            <h4>Tramo 1 - Preconstitución</h4>
+            <p class="muted">7 hitos administrativos</p>
+          </div>
+          <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
+        </button>
+        <div class="org-editar-fechas-grid org-editar-fechas-content" data-tramo-content="pre">
+          ${tramo1Html}
+        </div>
+      </div>
+
+      <!-- Tramo 2: Formalización -->
+      <div class="org-editar-fechas-tramo">
+        <button type="button" class="org-editar-fechas-tramo-head" data-tramo="for">
+          <span class="material-symbols-outlined">flag</span>
+          <div>
+            <h4>Tramo 2 - Formalización posterior</h4>
+            <p class="muted">8 hitos administrativos</p>
+          </div>
+          <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
+        </button>
+        <div class="org-editar-fechas-grid org-editar-fechas-content" data-tramo-content="for">
+          ${tramo2Html}
+        </div>
+      </div>
     `;
   }
 
@@ -971,7 +938,7 @@
     const sectorSelect = document.getElementById('inline-edit-sector');
 
     if (uvSelect) {
-      const uvList = getCatalogOptions_('uvList');
+      const uvList = APP.state.catalogs && APP.state.catalogs.uvList || [];
       fillSelect(uvSelect, uvList, 'Seleccionar UV');
       uvSelect.value = org.uv || '';
     }
@@ -987,6 +954,35 @@
     }
   }
 
+  function initInlineHitosAccordion_() {
+    const form = document.getElementById('org-inline-edit-form');
+    if (!form) return;
+
+    const headers = form.querySelectorAll('.org-editar-fechas-tramo-head');
+    headers.forEach(header => {
+      header.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tramo = header.getAttribute('data-tramo');
+        const content = form.querySelector(`[data-tramo-content="${tramo}"]`);
+        const chevron = header.querySelector('.org-editar-fechas-chevron');
+
+        if (!content) return;
+
+        const isExpanded = content.classList.contains('is-expanded');
+
+        if (isExpanded) {
+          // Cerrar
+          content.classList.remove('is-expanded');
+          if (chevron) chevron.textContent = 'expand_more';
+        } else {
+          // Abrir
+          content.classList.add('is-expanded');
+          if (chevron) chevron.textContent = 'expand_less';
+        }
+      });
+    });
+  }
+
   function saveInlineOrganizacion_() {
     const form = document.getElementById('org-inline-edit-form');
     if (!form) return;
@@ -998,27 +994,55 @@
       return;
     }
 
+    // Extraer fechas de hitos de los inputs habilitados
+    const fechasMap = {};
+    const hitoInputs = form.querySelectorAll('input[type="date"][data-codigo]:not([disabled])');
+    hitoInputs.forEach(input => {
+      const codigo = String(input.dataset.codigo || '').trim();
+      const fecha = String(input.value || '').trim();
+      if (codigo && fecha) {
+        fechasMap[codigo] = fecha;
+      }
+    });
+
     showModalLoading('Guardando organización...');
 
-    api('guardarOrganizacion', payload).then(() => {
-      hideModalLoading();
-      showSuccess('Organización actualizada correctamente.');
+    // Primero guardar datos básicos de la organización
+    api('guardarOrganizacion', payload)
+      .then(() => {
+        // Si hay fechas de hitos para actualizar, hacerlo ahora
+        if (Object.keys(fechasMap).length > 0) {
+          return api('actualizarFechasHitos', {
+            organizacion_id: payload.organizacion_id,
+            fechas_map: fechasMap
+          });
+        }
+        return Promise.resolve();
+      })
+      .then(() => {
+        hideModalLoading();
+        const hitoCount = Object.keys(fechasMap).length;
+        const msg = hitoCount > 0
+          ? `Organización actualizada. ${hitoCount} fecha(s) de hito(s) actualizadas.`
+          : 'Organización actualizada correctamente.';
+        showSuccess(msg);
 
-      // Recargar el detalle en modo vista
-      const orgId = payload.organizacion_id;
-      return api('getOrganizacionModuloDetalle', { organizacion_id: orgId }).then(data => {
-        APP.state.currentOrganizacionDetalle = data || {};
-        switchToViewMode_();
+        // Recargar el detalle en modo vista
+        const orgId = payload.organizacion_id;
+        return api('getOrganizacionModuloDetalle', { organizacion_id: orgId }).then(data => {
+          APP.state.currentOrganizacionDetalle = data || {};
+          switchToViewMode_();
 
-        // Refrescar la lista de organizaciones en el fondo
-        ensureOrganizacionesModuloList_().then(() => {
-          renderOrganizacionesGridFromState_();
-        }).catch(() => {});
+          // Refrescar la lista de organizaciones en el fondo
+          ensureOrganizacionesModuloList_().then(() => {
+            renderOrganizacionesGridFromState_();
+          }).catch(() => {});
+        });
+      })
+      .catch(err => {
+        hideModalLoading();
+        showError(err);
       });
-    }).catch(err => {
-      hideModalLoading();
-      showError(err);
-    });
   }
 
   // -- MAPA --
@@ -1280,146 +1304,3 @@
     }).catch(showError);
   }
 
-  function openOrganizacionEditarFechasModal_() {
-    const org = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.organizacion;
-    const avanceInfo = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.avance;
-
-    if (!org || !org.organizacion_id) {
-      showError('Debes seleccionar una organización primero.');
-      return;
-    }
-
-    const modal = document.getElementById('org-editar-fechas-modal');
-    const orgNombre = document.getElementById('org-editar-fechas-nombre');
-    const orgIdInput = document.getElementById('org-editar-fechas-org-id');
-
-    if (orgNombre) orgNombre.textContent = String(org.nombre_organizacion || 'Organización');
-    if (orgIdInput) orgIdInput.value = String(org.organizacion_id || '');
-
-    // Resetear todos los campos
-    const inputs = modal.querySelectorAll('input[type="date"]');
-    inputs.forEach(input => {
-      input.value = '';
-      input.disabled = true;
-      const field = input.closest('.field');
-      if (field) field.classList.add('is-disabled');
-    });
-
-    // Cargar fechas existentes de los hitos (desde avance.timeline)
-    const timeline = (avanceInfo && avanceInfo.timeline) || [];
-    timeline.forEach(hito => {
-      const codigo = String(hito.codigo_hito || '').trim();
-      const input = document.getElementById('org-fecha-' + codigo);
-      if (input) {
-        input.disabled = false;
-        const field = input.closest('.field');
-        if (field) field.classList.remove('is-disabled');
-
-        // Formatear fecha a YYYY-MM-DD
-        if (hito.fecha_hito) {
-          try {
-            const fecha = new Date(hito.fecha_hito);
-            const yyyy = fecha.getFullYear();
-            const mm = String(fecha.getMonth() + 1).padStart(2, '0');
-            const dd = String(fecha.getDate()).padStart(2, '0');
-            input.value = yyyy + '-' + mm + '-' + dd;
-          } catch (e) {
-            input.value = '';
-          }
-        }
-      }
-    });
-
-    // Inicializar acordeones (ambos cerrados por defecto)
-    const tramoHeads = modal.querySelectorAll('.org-editar-fechas-tramo-head');
-    const tramoContents = modal.querySelectorAll('.org-editar-fechas-content');
-
-    tramoContents.forEach(content => {
-      content.style.display = 'none';
-      content.classList.remove('is-expanded');
-    });
-
-    tramoHeads.forEach(head => {
-      const chevron = head.querySelector('.org-editar-fechas-chevron');
-      if (chevron) chevron.style.transform = 'rotate(0deg)';
-
-      // Agregar event listener para toggle
-      head.onclick = function() {
-        const tramo = this.dataset.tramo;
-        const content = modal.querySelector('[data-tramo-content="' + tramo + '"]');
-        const chevronIcon = this.querySelector('.org-editar-fechas-chevron');
-
-        if (content.classList.contains('is-expanded')) {
-          // Cerrar
-          content.style.display = 'none';
-          content.classList.remove('is-expanded');
-          if (chevronIcon) chevronIcon.style.transform = 'rotate(0deg)';
-        } else {
-          // Abrir
-          content.style.display = 'grid';
-          content.classList.add('is-expanded');
-          if (chevronIcon) chevronIcon.style.transform = 'rotate(180deg)';
-        }
-      };
-    });
-
-    if (modal) {
-      modal.classList.remove('is-hidden');
-      modal.setAttribute('aria-hidden', 'false');
-      A11Y.trapFocus(modal);
-    }
-  }
-
-  function closeOrganizacionEditarFechasModal_() {
-    const modal = document.getElementById('org-editar-fechas-modal');
-    if (modal) {
-      modal.classList.add('is-hidden');
-      modal.setAttribute('aria-hidden', 'true');
-      A11Y.releaseFocus();
-    }
-  }
-
-  function submitOrganizacionEditarFechasModal_() {
-    const orgIdInput = document.getElementById('org-editar-fechas-org-id');
-    const organizacionId = String(orgIdInput?.value || '').trim();
-
-    if (!organizacionId) {
-      showError('No se encontró el ID de la organización.');
-      return;
-    }
-
-    const modal = document.getElementById('org-editar-fechas-modal');
-    const inputs = modal.querySelectorAll('input[type="date"]:not([disabled])');
-
-    // Construir mapa de fechas solo con campos habilitados y con valor
-    const fechasMap = {};
-    inputs.forEach(input => {
-      const codigo = String(input.dataset.codigo || '').trim();
-      const fecha = String(input.value || '').trim();
-      if (codigo && fecha) {
-        fechasMap[codigo] = fecha;
-      }
-    });
-
-    if (Object.keys(fechasMap).length === 0) {
-      showError('No hay cambios de fecha para guardar.');
-      return;
-    }
-
-    showModalLoading('Actualizando fechas de hitos...');
-
-    api('actualizarFechasHitos', {
-      organizacion_id: organizacionId,
-      fechas_map: fechasMap
-    }).then(res => {
-      closeOrganizacionEditarFechasModal_();
-      showSuccess(res && res.total_actualizados
-        ? 'Se actualizaron ' + res.total_actualizados + ' fecha(s) de hito(s) correctamente.'
-        : 'Fechas actualizadas correctamente.');
-
-      // Recargar detalle de la organización
-      return loadOrganizacionDetalle_(organizacionId);
-    }).catch(err => {
-      showError(err);
-    });
-  }

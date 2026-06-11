@@ -7476,7 +7476,6 @@ html[data-theme="dark"] .dash-status-pill{background:var(--surface-alt,#182635);
 
 /* Calendario de reuniones — Módulo Inicio */
 .inicio-cal-card{margin-top:0}
-.inicio-cal-loading{display:flex;align-items:center;justify-content:center;padding:20px;color:var(--text-muted,#6b7a8d)}
 .inicio-cal-empty{display:flex;flex-direction:column;align-items:center;gap:6px;padding:20px 12px;color:var(--text-muted,#6b7a8d);font-size:.82rem;text-align:center}
 .inicio-cal-empty .material-symbols-outlined{font-size:1.6rem;opacity:.45}
 .inicio-cal-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0;max-height:400px;overflow-y:auto}
@@ -8331,15 +8330,28 @@ th.sortable.sort-desc .sort-icon {
   font-size: 0.85rem;
 }
 
-.alertas-operativas-loading {
+.alertas-operativas-loading,
+.inicio-cal-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 32px 16px;
   color: var(--text-muted, #64748B);
 }
 
-.alertas-operativas-loading .material-symbols-outlined {
+.alertas-operativas-loading .material-symbols-outlined,
+.inicio-cal-loading .material-symbols-outlined {
   font-size: 2rem;
+  margin-bottom: 8px;
   animation: modal-loading-spin 1s linear infinite;
+}
+
+.alertas-operativas-loading p,
+.inicio-cal-loading p {
+  margin: 0;
+  font-size: 0.875rem;
 }
 
 /* ============================================================

@@ -224,126 +224,6 @@
         </div>
       </div>
 
-      <div id="avance-editar-fechas-modal" class="avance-modal is-hidden" aria-hidden="true">
-        <div class="avance-modal__backdrop" data-avance-editar-close="true"></div>
-        <div class="avance-modal__dialog avance-modal__dialog--wide">
-          <div class="avance-modal__head">
-            <div>
-              <p class="eyebrow">Editar fechas de hitos</p>
-              <h3 id="avance-editar-fechas-org-nombre">Organización</h3>
-            </div>
-            <button type="button" class="secondary-btn" id="avance-editar-fechas-close-btn">
-              <span class="material-symbols-outlined">close</span>Cerrar
-            </button>
-          </div>
-
-          <div class="avance-editar-info">
-            <span class="material-symbols-outlined">info</span>
-            <p>Solo puedes editar fechas de hitos ya registrados. Para registrar nuevos hitos, usa el botón correspondiente en cada tramo.</p>
-          </div>
-
-          <input type="hidden" id="avance-editar-fechas-org-id">
-
-          <div class="avance-editar-container">
-            <!-- Tramo 1: Preconstitución -->
-            <div class="avance-editar-tramo">
-              <div class="avance-editar-tramo-head">
-                <span class="material-symbols-outlined">flag</span>
-                <div>
-                  <h4>Tramo 1 - Preconstitución</h4>
-                  <p class="muted">7 hitos administrativos</p>
-                </div>
-              </div>
-
-              <div class="avance-editar-grid">
-                <div class="field" data-hito="PRE_01">
-                  <label>1. Reunión informativa</label>
-                  <input type="date" id="fecha-PRE_01" data-codigo="PRE_01">
-                </div>
-                <div class="field" data-hito="PRE_02">
-                  <label>2. Carta por oficina de partes</label>
-                  <input type="date" id="fecha-PRE_02" data-codigo="PRE_02">
-                </div>
-                <div class="field" data-hito="PRE_03">
-                  <label>3. Fecha asignada</label>
-                  <input type="date" id="fecha-PRE_03" data-codigo="PRE_03">
-                </div>
-                <div class="field" data-hito="PRE_04">
-                  <label>4. Asamblea constitutiva</label>
-                  <input type="date" id="fecha-PRE_04" data-codigo="PRE_04">
-                </div>
-                <div class="field" data-hito="PRE_05">
-                  <label>5. Documentación ingresada</label>
-                  <input type="date" id="fecha-PRE_05" data-codigo="PRE_05">
-                </div>
-                <div class="field" data-hito="PRE_06">
-                  <label>6. Observaciones subsanadas <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="fecha-PRE_06" data-codigo="PRE_06">
-                </div>
-                <div class="field" data-hito="PRE_07">
-                  <label>7. Certificado provisorio</label>
-                  <input type="date" id="fecha-PRE_07" data-codigo="PRE_07">
-                </div>
-              </div>
-            </div>
-
-            <!-- Tramo 2: Formalización -->
-            <div class="avance-editar-tramo">
-              <div class="avance-editar-tramo-head">
-                <span class="material-symbols-outlined">approval</span>
-                <div>
-                  <h4>Tramo 2 - Formalización posterior</h4>
-                  <p class="muted">8 hitos administrativos</p>
-                </div>
-              </div>
-
-              <div class="avance-editar-grid">
-                <div class="field" data-hito="FOR_01">
-                  <label>8. Ingreso comisión electoral</label>
-                  <input type="date" id="fecha-FOR_01" data-codigo="FOR_01">
-                </div>
-                <div class="field" data-hito="FOR_02">
-                  <label>9. Asamblea de ratificación</label>
-                  <input type="date" id="fecha-FOR_02" data-codigo="FOR_02">
-                </div>
-                <div class="field" data-hito="FOR_03">
-                  <label>10. Documentación ingresada</label>
-                  <input type="date" id="fecha-FOR_03" data-codigo="FOR_03">
-                </div>
-                <div class="field" data-hito="FOR_04">
-                  <label>11. Certificado definitivo</label>
-                  <input type="date" id="fecha-FOR_04" data-codigo="FOR_04">
-                </div>
-                <div class="field" data-hito="FOR_07">
-                  <label>12. Obtención de RUT <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="fecha-FOR_07" data-codigo="FOR_07">
-                </div>
-                <div class="field" data-hito="FOR_06">
-                  <label>13. RCCE <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="fecha-FOR_06" data-codigo="FOR_06">
-                </div>
-                <div class="field" data-hito="FOR_08">
-                  <label>14. Cuenta bancaria <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="fecha-FOR_08" data-codigo="FOR_08">
-                </div>
-                <div class="field" data-hito="FOR_05">
-                  <label>15. RMRFP <span class="badge-pill badge--info">opcional</span></label>
-                  <input type="date" id="fecha-FOR_05" data-codigo="FOR_05">
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="actions">
-            <button type="button" class="secondary-btn" id="avance-editar-fechas-cancel-btn">
-              <span class="material-symbols-outlined">close</span>Cancelar
-            </button>
-            <button type="button" class="primary-btn" id="avance-editar-fechas-save-btn">
-              <span class="material-symbols-outlined">save</span>Guardar cambios
-            </button>
-          </div>
-        </div>
-      </div>
     `;
 
     initAvanceView_();
@@ -433,35 +313,6 @@
       reminderModal.addEventListener('click', ev => {
         if (ev.target && ev.target.dataset && ev.target.dataset.avanceBeneficioClose === 'true') {
           closeAvanceBeneficioReminderModal_();
-        }
-      });
-    }
-
-    const editarFechasModal = document.getElementById('avance-editar-fechas-modal');
-    const editarFechasCloseBtn = document.getElementById('avance-editar-fechas-close-btn');
-    const editarFechasCancelBtn = document.getElementById('avance-editar-fechas-cancel-btn');
-    const editarFechasSaveBtn = document.getElementById('avance-editar-fechas-save-btn');
-
-    if (editarFechasCloseBtn && !editarFechasCloseBtn.dataset.bound) {
-      editarFechasCloseBtn.dataset.bound = 'true';
-      editarFechasCloseBtn.addEventListener('click', closeAvanceEditarFechasModal_);
-    }
-
-    if (editarFechasCancelBtn && !editarFechasCancelBtn.dataset.bound) {
-      editarFechasCancelBtn.dataset.bound = 'true';
-      editarFechasCancelBtn.addEventListener('click', closeAvanceEditarFechasModal_);
-    }
-
-    if (editarFechasSaveBtn && !editarFechasSaveBtn.dataset.bound) {
-      editarFechasSaveBtn.dataset.bound = 'true';
-      editarFechasSaveBtn.addEventListener('click', submitAvanceEditarFechasModal_);
-    }
-
-    if (editarFechasModal && !editarFechasModal.dataset.bound) {
-      editarFechasModal.dataset.bound = 'true';
-      editarFechasModal.addEventListener('click', ev => {
-        if (ev.target && ev.target.dataset && ev.target.dataset.avanceEditarClose === 'true') {
-          closeAvanceEditarFechasModal_();
         }
       });
     }
@@ -877,12 +728,7 @@
     el.innerHTML = `
       <div class="avance-resumen-layout">
         <aside class="avance-resumen-card" aria-label="Resumen de organizacion">
-          <div class="avance-resumen-card__head">
-            <div class="avance-resumen-card__title">Ficha de avance</div>
-            <button type="button" class="secondary-btn secondary-btn--sm" id="avance-editar-fechas-btn" title="Editar fechas de hitos registrados">
-              <span class="material-symbols-outlined">edit_calendar</span>Editar fechas
-            </button>
-          </div>
+          <div class="avance-resumen-card__title">Ficha de avance</div>
 
           <div class="avance-resumen-card__grid">
             <div class="avance-resumen-card__item"><strong>Estado</strong><span>${escapeHtml(estado)}</span></div>
@@ -904,13 +750,6 @@
         </section>
       </div>
     `;
-
-    // Bind botón de editar fechas
-    const editarFechasBtn = document.getElementById('avance-editar-fechas-btn');
-    if (editarFechasBtn && !editarFechasBtn.dataset.bound) {
-      editarFechasBtn.dataset.bound = 'true';
-      editarFechasBtn.addEventListener('click', openAvanceEditarFechasModal_);
-    }
   }
 
   function renderAvanceBotones_(data) {
@@ -1450,116 +1289,3 @@
     }, 250);
   }
 
-  function openAvanceEditarFechasModal_() {
-    const current = APP.state.currentAvance || {};
-    const org = current.organizacion || {};
-    const timeline = current.timeline || [];
-
-    if (!org.organizacion_id) {
-      showError('Debes seleccionar una organización primero.');
-      return;
-    }
-
-    const modal = document.getElementById('avance-editar-fechas-modal');
-    const orgNombre = document.getElementById('avance-editar-fechas-org-nombre');
-    const orgIdInput = document.getElementById('avance-editar-fechas-org-id');
-
-    if (orgNombre) orgNombre.textContent = String(org.nombre_organizacion || 'Organización');
-    if (orgIdInput) orgIdInput.value = String(org.organizacion_id || '');
-
-    // Resetear todos los campos
-    const inputs = modal.querySelectorAll('input[type="date"]');
-    inputs.forEach(input => {
-      input.value = '';
-      input.disabled = true;
-      const field = input.closest('.field');
-      if (field) field.classList.add('is-disabled');
-    });
-
-    // Cargar fechas existentes y habilitar solo hitos registrados
-    timeline.forEach(hito => {
-      const codigo = String(hito.codigo_hito || '').trim();
-      const input = document.getElementById('fecha-' + codigo);
-      if (input) {
-        input.disabled = false;
-        const field = input.closest('.field');
-        if (field) field.classList.remove('is-disabled');
-
-        // Formatear fecha a YYYY-MM-DD
-        if (hito.fecha_hito) {
-          try {
-            const fecha = new Date(hito.fecha_hito);
-            const yyyy = fecha.getFullYear();
-            const mm = String(fecha.getMonth() + 1).padStart(2, '0');
-            const dd = String(fecha.getDate()).padStart(2, '0');
-            input.value = yyyy + '-' + mm + '-' + dd;
-          } catch (e) {
-            input.value = '';
-          }
-        }
-      }
-    });
-
-    if (modal) {
-      modal.classList.remove('is-hidden');
-      modal.setAttribute('aria-hidden', 'false');
-      A11Y.trapFocus(modal);
-    }
-  }
-
-  function closeAvanceEditarFechasModal_() {
-    const modal = document.getElementById('avance-editar-fechas-modal');
-    if (modal) {
-      modal.classList.add('is-hidden');
-      modal.setAttribute('aria-hidden', 'true');
-      A11Y.releaseFocus();
-    }
-  }
-
-  function submitAvanceEditarFechasModal_() {
-    const orgIdInput = document.getElementById('avance-editar-fechas-org-id');
-    const organizacionId = String(orgIdInput?.value || '').trim();
-
-    if (!organizacionId) {
-      showError('No se encontró el ID de la organización.');
-      return;
-    }
-
-    const modal = document.getElementById('avance-editar-fechas-modal');
-    const inputs = modal.querySelectorAll('input[type="date"]:not([disabled])');
-
-    // Construir mapa de fechas solo con campos habilitados y con valor
-    const fechasMap = {};
-    inputs.forEach(input => {
-      const codigo = String(input.dataset.codigo || '').trim();
-      const fecha = String(input.value || '').trim();
-      if (codigo && fecha) {
-        fechasMap[codigo] = fecha;
-      }
-    });
-
-    if (Object.keys(fechasMap).length === 0) {
-      showError('No hay cambios de fecha para guardar.');
-      return;
-    }
-
-    showModalLoading('Actualizando fechas de hitos...');
-
-    api('actualizarFechasHitos', {
-      organizacion_id: organizacionId,
-      fechas_map: fechasMap
-    }).then(res => {
-      closeAvanceEditarFechasModal_();
-      showSuccess(res && res.total_actualizados
-        ? 'Se actualizaron ' + res.total_actualizados + ' fecha(s) de hito(s) correctamente.'
-        : 'Fechas actualizadas correctamente.');
-
-      // Recargar la organización para reflejar cambios
-      const selectOrg = document.getElementById('avance-organizacion-select');
-      if (selectOrg && selectOrg.value) {
-        return loadAvanceOrganizacion_(selectOrg.value);
-      }
-    }).catch(err => {
-      showError(err);
-    });
-  }

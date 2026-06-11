@@ -28,6 +28,7 @@
         ${renderOrganizacionDetalleModal_()}
         ${renderOrganizacionEditModal_()}
         ${renderOrganizacionSocioCargoModal_()}
+        ${renderOrganizacionEditarFechasModal_()}
       </div>
     `;
 
@@ -51,6 +52,9 @@
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
               <button type="button" class="secondary-btn" id="org-ver-socios-btn" disabled>
                 <span class="material-symbols-outlined">badge</span>Ver socios
+              </button>
+              <button type="button" class="secondary-btn" id="org-editar-fechas-hitos-btn" disabled title="Editar fechas de los 15 hitos administrativos">
+                <span class="material-symbols-outlined">edit_calendar</span>Editar fechas hitos
               </button>
               <button type="button" class="secondary-btn" id="org-edit-btn" disabled>
                 <span class="material-symbols-outlined">edit</span>Editar
@@ -168,6 +172,135 @@
             </button>
           </div>
         </form>
+      </div>
+    `;
+  }
+
+  // -- MODAL EDITAR FECHAS DE HITOS --
+
+  function renderOrganizacionEditarFechasModal_() {
+    return `
+      <div id="org-editar-fechas-modal" class="organizaciones-modal is-hidden" aria-hidden="true">
+        <div class="organizaciones-modal__backdrop" data-org-editar-fechas-close="true"></div>
+        <div class="organizaciones-modal__dialog organizaciones-modal__dialog--wide">
+          <div class="organizaciones-modal__head">
+            <div>
+              <p class="eyebrow">Editar fechas de hitos</p>
+              <h3 id="org-editar-fechas-nombre">Organización</h3>
+            </div>
+            <button type="button" class="secondary-btn" data-org-editar-fechas-close="true">
+              <span class="material-symbols-outlined">close</span>Cerrar
+            </button>
+          </div>
+
+          <div class="org-editar-fechas-info">
+            <span class="material-symbols-outlined">info</span>
+            <p>Solo puedes editar fechas de hitos ya registrados. Para registrar nuevos hitos, usa el módulo Avance.</p>
+          </div>
+
+          <input type="hidden" id="org-editar-fechas-org-id">
+
+          <div class="org-editar-fechas-container">
+            <!-- Tramo 1: Preconstitución -->
+            <div class="org-editar-fechas-tramo">
+              <button type="button" class="org-editar-fechas-tramo-head" data-tramo="pre">
+                <span class="material-symbols-outlined">flag</span>
+                <div>
+                  <h4>Tramo 1 - Preconstitución</h4>
+                  <p class="muted">7 hitos administrativos</p>
+                </div>
+                <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
+              </button>
+
+              <div class="org-editar-fechas-grid org-editar-fechas-content"  data-tramo-content="pre">
+                <div class="field" data-hito="PRE_01">
+                  <label>1. Reunión informativa</label>
+                  <input type="date" id="org-fecha-PRE_01" data-codigo="PRE_01">
+                </div>
+                <div class="field" data-hito="PRE_02">
+                  <label>2. Carta por oficina de partes</label>
+                  <input type="date" id="org-fecha-PRE_02" data-codigo="PRE_02">
+                </div>
+                <div class="field" data-hito="PRE_03">
+                  <label>3. Fecha asignada</label>
+                  <input type="date" id="org-fecha-PRE_03" data-codigo="PRE_03">
+                </div>
+                <div class="field" data-hito="PRE_04">
+                  <label>4. Asamblea constitutiva</label>
+                  <input type="date" id="org-fecha-PRE_04" data-codigo="PRE_04">
+                </div>
+                <div class="field" data-hito="PRE_05">
+                  <label>5. Documentación ingresada</label>
+                  <input type="date" id="org-fecha-PRE_05" data-codigo="PRE_05">
+                </div>
+                <div class="field" data-hito="PRE_06">
+                  <label>6. Observaciones subsanadas <span class="badge-pill badge--info">opcional</span></label>
+                  <input type="date" id="org-fecha-PRE_06" data-codigo="PRE_06">
+                </div>
+                <div class="field" data-hito="PRE_07">
+                  <label>7. Certificado provisorio</label>
+                  <input type="date" id="org-fecha-PRE_07" data-codigo="PRE_07">
+                </div>
+              </div>
+            </div>
+
+            <!-- Tramo 2: Formalización -->
+            <div class="org-editar-fechas-tramo">
+              <button type="button" class="org-editar-fechas-tramo-head" data-tramo="for">
+                <span class="material-symbols-outlined">approval</span>
+                <div>
+                  <h4>Tramo 2 - Formalización posterior</h4>
+                  <p class="muted">8 hitos administrativos</p>
+                </div>
+                <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
+              </button>
+
+              <div class="org-editar-fechas-grid org-editar-fechas-content" data-tramo-content="for">
+                <div class="field" data-hito="FOR_01">
+                  <label>8. Ingreso comisión electoral</label>
+                  <input type="date" id="org-fecha-FOR_01" data-codigo="FOR_01">
+                </div>
+                <div class="field" data-hito="FOR_02">
+                  <label>9. Asamblea de ratificación</label>
+                  <input type="date" id="org-fecha-FOR_02" data-codigo="FOR_02">
+                </div>
+                <div class="field" data-hito="FOR_03">
+                  <label>10. Documentación ingresada</label>
+                  <input type="date" id="org-fecha-FOR_03" data-codigo="FOR_03">
+                </div>
+                <div class="field" data-hito="FOR_04">
+                  <label>11. Certificado definitivo</label>
+                  <input type="date" id="org-fecha-FOR_04" data-codigo="FOR_04">
+                </div>
+                <div class="field" data-hito="FOR_07">
+                  <label>12. Obtención de RUT <span class="badge-pill badge--info">opcional</span></label>
+                  <input type="date" id="org-fecha-FOR_07" data-codigo="FOR_07">
+                </div>
+                <div class="field" data-hito="FOR_06">
+                  <label>13. RCCE <span class="badge-pill badge--info">opcional</span></label>
+                  <input type="date" id="org-fecha-FOR_06" data-codigo="FOR_06">
+                </div>
+                <div class="field" data-hito="FOR_08">
+                  <label>14. Cuenta bancaria <span class="badge-pill badge--info">opcional</span></label>
+                  <input type="date" id="org-fecha-FOR_08" data-codigo="FOR_08">
+                </div>
+                <div class="field" data-hito="FOR_05">
+                  <label>15. RMRFP <span class="badge-pill badge--info">opcional</span></label>
+                  <input type="date" id="org-fecha-FOR_05" data-codigo="FOR_05">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" class="secondary-btn" id="org-editar-fechas-cancel-btn">
+              <span class="material-symbols-outlined">close</span>Cancelar
+            </button>
+            <button type="button" class="primary-btn" id="org-editar-fechas-save-btn">
+              <span class="material-symbols-outlined">save</span>Guardar cambios
+            </button>
+          </div>
+        </div>
       </div>
     `;
   }
@@ -480,6 +613,13 @@
     document.querySelectorAll('[data-org-socio-cargo-close]').forEach(btn => {
       btn.addEventListener('click', closeOrganizacionSocioCargoModal_);
     });
+    document.querySelectorAll('[data-org-editar-fechas-close]').forEach(btn => {
+      btn.addEventListener('click', closeOrganizacionEditarFechasModal_);
+    });
+
+    document.getElementById('org-editar-fechas-hitos-btn')?.addEventListener('click', openOrganizacionEditarFechasModal_);
+    document.getElementById('org-editar-fechas-cancel-btn')?.addEventListener('click', closeOrganizacionEditarFechasModal_);
+    document.getElementById('org-editar-fechas-save-btn')?.addEventListener('click', submitOrganizacionEditarFechasModal_);
 
     fillSelect(document.getElementById('org-socio-cargo-select'), getSocioCargoOptions_(), 'Seleccionar cargo');
 
@@ -541,7 +681,7 @@
   }
 
   function setOrganizacionesActionState_(enabled) {
-    ['org-ver-socios-btn', 'org-edit-btn', 'org-suspend-btn'].forEach(id => {
+    ['org-ver-socios-btn', 'org-editar-fechas-hitos-btn', 'org-edit-btn', 'org-suspend-btn'].forEach(id => {
       const btn = document.getElementById(id);
       if (btn) btn.disabled = !enabled;
     });
@@ -918,4 +1058,148 @@
         return loadOrganizacionDetalle_(org.organizacion_id);
       });
     }).catch(showError);
+  }
+
+  function openOrganizacionEditarFechasModal_() {
+    const org = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.organizacion;
+    const avanceInfo = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.avance;
+
+    if (!org || !org.organizacion_id) {
+      showError('Debes seleccionar una organización primero.');
+      return;
+    }
+
+    const modal = document.getElementById('org-editar-fechas-modal');
+    const orgNombre = document.getElementById('org-editar-fechas-nombre');
+    const orgIdInput = document.getElementById('org-editar-fechas-org-id');
+
+    if (orgNombre) orgNombre.textContent = String(org.nombre_organizacion || 'Organización');
+    if (orgIdInput) orgIdInput.value = String(org.organizacion_id || '');
+
+    // Resetear todos los campos
+    const inputs = modal.querySelectorAll('input[type="date"]');
+    inputs.forEach(input => {
+      input.value = '';
+      input.disabled = true;
+      const field = input.closest('.field');
+      if (field) field.classList.add('is-disabled');
+    });
+
+    // Cargar fechas existentes de los hitos (desde avance.timeline)
+    const timeline = (avanceInfo && avanceInfo.timeline) || [];
+    timeline.forEach(hito => {
+      const codigo = String(hito.codigo_hito || '').trim();
+      const input = document.getElementById('org-fecha-' + codigo);
+      if (input) {
+        input.disabled = false;
+        const field = input.closest('.field');
+        if (field) field.classList.remove('is-disabled');
+
+        // Formatear fecha a YYYY-MM-DD
+        if (hito.fecha_hito) {
+          try {
+            const fecha = new Date(hito.fecha_hito);
+            const yyyy = fecha.getFullYear();
+            const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+            const dd = String(fecha.getDate()).padStart(2, '0');
+            input.value = yyyy + '-' + mm + '-' + dd;
+          } catch (e) {
+            input.value = '';
+          }
+        }
+      }
+    });
+
+    // Inicializar acordeones (ambos cerrados por defecto)
+    const tramoHeads = modal.querySelectorAll('.org-editar-fechas-tramo-head');
+    const tramoContents = modal.querySelectorAll('.org-editar-fechas-content');
+
+    tramoContents.forEach(content => {
+      content.style.display = 'none';
+      content.classList.remove('is-expanded');
+    });
+
+    tramoHeads.forEach(head => {
+      const chevron = head.querySelector('.org-editar-fechas-chevron');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+
+      // Agregar event listener para toggle
+      head.onclick = function() {
+        const tramo = this.dataset.tramo;
+        const content = modal.querySelector('[data-tramo-content="' + tramo + '"]');
+        const chevronIcon = this.querySelector('.org-editar-fechas-chevron');
+
+        if (content.classList.contains('is-expanded')) {
+          // Cerrar
+          content.style.display = 'none';
+          content.classList.remove('is-expanded');
+          if (chevronIcon) chevronIcon.style.transform = 'rotate(0deg)';
+        } else {
+          // Abrir
+          content.style.display = 'grid';
+          content.classList.add('is-expanded');
+          if (chevronIcon) chevronIcon.style.transform = 'rotate(180deg)';
+        }
+      };
+    });
+
+    if (modal) {
+      modal.classList.remove('is-hidden');
+      modal.setAttribute('aria-hidden', 'false');
+      A11Y.trapFocus(modal);
+    }
+  }
+
+  function closeOrganizacionEditarFechasModal_() {
+    const modal = document.getElementById('org-editar-fechas-modal');
+    if (modal) {
+      modal.classList.add('is-hidden');
+      modal.setAttribute('aria-hidden', 'true');
+      A11Y.releaseFocus();
+    }
+  }
+
+  function submitOrganizacionEditarFechasModal_() {
+    const orgIdInput = document.getElementById('org-editar-fechas-org-id');
+    const organizacionId = String(orgIdInput?.value || '').trim();
+
+    if (!organizacionId) {
+      showError('No se encontró el ID de la organización.');
+      return;
+    }
+
+    const modal = document.getElementById('org-editar-fechas-modal');
+    const inputs = modal.querySelectorAll('input[type="date"]:not([disabled])');
+
+    // Construir mapa de fechas solo con campos habilitados y con valor
+    const fechasMap = {};
+    inputs.forEach(input => {
+      const codigo = String(input.dataset.codigo || '').trim();
+      const fecha = String(input.value || '').trim();
+      if (codigo && fecha) {
+        fechasMap[codigo] = fecha;
+      }
+    });
+
+    if (Object.keys(fechasMap).length === 0) {
+      showError('No hay cambios de fecha para guardar.');
+      return;
+    }
+
+    showModalLoading('Actualizando fechas de hitos...');
+
+    api('actualizarFechasHitos', {
+      organizacion_id: organizacionId,
+      fechas_map: fechasMap
+    }).then(res => {
+      closeOrganizacionEditarFechasModal_();
+      showSuccess(res && res.total_actualizados
+        ? 'Se actualizaron ' + res.total_actualizados + ' fecha(s) de hito(s) correctamente.'
+        : 'Fechas actualizadas correctamente.');
+
+      // Recargar detalle de la organización
+      return loadOrganizacionDetalle_(organizacionId);
+    }).catch(err => {
+      showError(err);
+    });
   }

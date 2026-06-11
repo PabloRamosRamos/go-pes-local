@@ -8393,7 +8393,14 @@ th.sortable.sort-desc .sort-icon {
   width: calc(100% - 32px);
 }
 
-.avance-editar-info {
+/* ======== MÓDULO ORGANIZACIONES - Editar fechas de hitos ======== */
+
+.organizaciones-modal__dialog--wide {
+  max-width: 900px;
+  width: calc(100% - 32px);
+}
+
+.org-editar-fechas-info {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -8404,20 +8411,20 @@ th.sortable.sort-desc .sort-icon {
   margin-bottom: 24px;
 }
 
-.avance-editar-info .material-symbols-outlined {
+.org-editar-fechas-info .material-symbols-outlined {
   font-size: 1.25rem;
   color: var(--runtime-brand-accent, #03C2AE);
   flex-shrink: 0;
 }
 
-.avance-editar-info p {
+.org-editar-fechas-info p {
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;
   color: var(--text, #24364B);
 }
 
-.avance-editar-container {
+.org-editar-fechas-container {
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -8427,99 +8434,114 @@ th.sortable.sort-desc .sort-icon {
   margin-bottom: 24px;
 }
 
-.avance-editar-tramo {
+.org-editar-fechas-tramo {
   border: 1px solid var(--border, #D6E0EA);
   border-radius: var(--radius-md, 6px);
   overflow: hidden;
 }
 
-.avance-editar-tramo-head {
+.org-editar-fechas-tramo-head {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 16px;
   background: var(--surface-2, #F7FAFC);
+  border: none;
   border-bottom: 1px solid var(--border, #D6E0EA);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-align: left;
 }
 
-.avance-editar-tramo-head .material-symbols-outlined {
+.org-editar-fechas-tramo-head:hover {
+  background: var(--surface-alt, #EAF0F5);
+}
+
+.org-editar-fechas-tramo-head .material-symbols-outlined:first-child {
   font-size: 1.5rem;
   color: var(--runtime-brand-primary, #3D96B4);
 }
 
-.avance-editar-tramo-head h4 {
+.org-editar-fechas-chevron {
+  margin-left: auto;
+  font-size: 1.5rem;
+  color: var(--text-muted, #64748B);
+  transition: transform 0.3s ease;
+}
+
+.org-editar-fechas-tramo-head h4 {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
   color: var(--text, #24364B);
 }
 
-.avance-editar-tramo-head p {
+.org-editar-fechas-tramo-head p {
   margin: 0;
   font-size: 0.8125rem;
   color: var(--text-muted, #64748B);
 }
 
-.avance-editar-grid {
+.org-editar-fechas-content {
+  display: none;
+}
+
+.org-editar-fechas-content.is-expanded {
+  display: grid;
+}
+
+.org-editar-fechas-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 16px;
   padding: 20px;
 }
 
-.avance-editar-grid .field {
+.org-editar-fechas-grid .field {
   margin-bottom: 0;
 }
 
-.avance-editar-grid .field.is-disabled {
+.org-editar-fechas-grid .field.is-disabled {
   opacity: 0.5;
   pointer-events: none;
 }
 
-.avance-editar-grid .field.is-disabled label {
+.org-editar-fechas-grid .field.is-disabled label {
   color: var(--text-muted, #64748B);
 }
 
-.avance-editar-grid .field.is-disabled input {
+.org-editar-fechas-grid .field.is-disabled input {
   background-color: var(--surface-alt, #EAF0F5);
   cursor: not-allowed;
 }
 
-.avance-editar-grid label {
+.org-editar-fechas-grid label {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.avance-editar-grid .badge-pill {
+.org-editar-fechas-grid .badge-pill {
   font-size: 0.6875rem;
   padding: 2px 6px;
 }
 
 @media (max-width: 767px) {
-  .avance-modal__dialog--wide {
+  .organizaciones-modal__dialog--wide {
     max-width: 100%;
     width: 100%;
     height: 100%;
     border-radius: 0;
   }
 
-  .avance-editar-container {
+  .org-editar-fechas-container {
     max-height: none;
   }
 
-  .avance-editar-grid {
+  .org-editar-fechas-grid {
     grid-template-columns: 1fr;
-  }
-
-  .avance-resumen-card__head {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .avance-resumen-card__head button {
-    width: 100%;
   }
 }
 

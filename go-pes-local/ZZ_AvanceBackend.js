@@ -709,6 +709,18 @@ function goPesResolveAvanceContext_(payload) {
 }
 
 function goPesGetCatalogoHitosAvance_() {
+  // OPTIMIZACIÓN (2026-06-11): Cache con TTL 30 minutos
+  // El catálogo de hitos cambia raramente (solo cuando se configura el sistema)
+  const CACHE_KEY = 'catalogoHitosAvance';
+  const TTL_MS = 30 * 60 * 1000; // 30 minutos
+
+  if (GO_PES_RUNTIME[CACHE_KEY] && GO_PES_RUNTIME[CACHE_KEY].timestamp) {
+    const age = Date.now() - GO_PES_RUNTIME[CACHE_KEY].timestamp;
+    if (age < TTL_MS) {
+      return GO_PES_RUNTIME[CACHE_KEY].data;
+    }
+  }
+
   const rows = getSheetData_(GO_PES_V2.SHEETS.CAT_HITOS_AVANCE)
     .filter(function(r) { return goPesBool_(r.activo_flag); })
     .map(function(r) {
@@ -724,11 +736,18 @@ function goPesGetCatalogoHitosAvance_() {
       });
     });
 
-  return rows.sort(function(a, b) {
+  const sorted = rows.sort(function(a, b) {
     const tramoCompare = String(a.tramo || '').localeCompare(String(b.tramo || ''), 'es');
     if (tramoCompare !== 0) return tramoCompare;
     return Number(a.orden_hito || 0) - Number(b.orden_hito || 0);
   });
+
+  GO_PES_RUNTIME[CACHE_KEY] = {
+    data: sorted,
+    timestamp: Date.now()
+  };
+
+  return sorted;
 }
 
 function goPesGetAvanceHitoOverrides_() {
@@ -961,6 +980,13 @@ function goPesInvalidateAvanceSelectorCaches_() {
   } catch (err) {}
 }
 
+function goPesInvalidateCatalogoHitosCache_() {
+  // Invalida cache del catálogo de hitos (usar después de modificar CAT_Hitos_Avance)
+  try {
+    delete GO_PES_RUNTIME.catalogoHitosAvance;
+  } catch (err) {}
+}
+
 function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
   const nombreAsamblea = String(payload && payload.nombre_organizacion_asamblea || '').trim();
   if (!nombreAsamblea) {
@@ -1043,14 +1069,14 @@ function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
     });
   }
 
-  refreshPartialArtifacts_({
-    masterSolicitudIds: uniqueNonBlank_([solicitudId]),
-    vistaOrganizacionIds: [organizacionId],
-    sugerenciaSolicitudIds: uniqueNonBlank_([solicitudId]),
-    sugerenciaOrganizacionIds: [organizacionId],
-    territorioCatalogPairs: [{ uv: nextOrg.uv || '', sector: nextOrg.sector || '' }],
-    responsables: [nextOrg.responsable_actual || goPesGetUserEmail_(user)]
-  });
+  // OPTIMIZACIÓN (2026-06-11): Eliminada llamada a refreshPartialArtifacts_() que tomaba ~17s
+  // regenerando 8 artefactos derivados no críticos para el flujo inmediato:
+  //   - MASTER_DATOS, VW_LS_Organizaciones, VW_LS_Territorial
+  //   - DIM_*_Sugeridos (4 catálogos de autocomplete)
+  // La vista crítica VW_Avance_Organizacion se actualiza en el flujo principal (línea 303).
+  // Las vistas secundarias se recalcularán en el próximo refresh periódico del sistema.
+  // Ahorro: 15-17 segundos en el registro del hito PRE_05 (creación de organización).
+
   goPesInvalidateAvanceSelectorCaches_();
 
   logProcessing_('INFO', 'crearOrganizacionDesdeHito5', 'organizacion', organizacionId, goPesGetUserEmail_(user), 'OK', {

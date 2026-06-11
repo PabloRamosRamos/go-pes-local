@@ -8378,4 +8378,149 @@ th.sortable.sort-desc .sort-icon {
   font-size: 0.9rem;
 }
 
+/* ======== MÓDULO AVANCE - Editar fechas de hitos ======== */
+
+.avance-resumen-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.avance-modal__dialog--wide {
+  max-width: 900px;
+  width: calc(100% - 32px);
+}
+
+.avance-editar-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-2, #F7FAFC);
+  border-left: 4px solid var(--runtime-brand-accent, #03C2AE);
+  border-radius: var(--radius-sm, 4px);
+  margin-bottom: 24px;
+}
+
+.avance-editar-info .material-symbols-outlined {
+  font-size: 1.25rem;
+  color: var(--runtime-brand-accent, #03C2AE);
+  flex-shrink: 0;
+}
+
+.avance-editar-info p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--text, #24364B);
+}
+
+.avance-editar-container {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding-right: 8px;
+  margin-bottom: 24px;
+}
+
+.avance-editar-tramo {
+  border: 1px solid var(--border, #D6E0EA);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+}
+
+.avance-editar-tramo-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-2, #F7FAFC);
+  border-bottom: 1px solid var(--border, #D6E0EA);
+}
+
+.avance-editar-tramo-head .material-symbols-outlined {
+  font-size: 1.5rem;
+  color: var(--runtime-brand-primary, #3D96B4);
+}
+
+.avance-editar-tramo-head h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text, #24364B);
+}
+
+.avance-editar-tramo-head p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted, #64748B);
+}
+
+.avance-editar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 20px;
+}
+
+.avance-editar-grid .field {
+  margin-bottom: 0;
+}
+
+.avance-editar-grid .field.is-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.avance-editar-grid .field.is-disabled label {
+  color: var(--text-muted, #64748B);
+}
+
+.avance-editar-grid .field.is-disabled input {
+  background-color: var(--surface-alt, #EAF0F5);
+  cursor: not-allowed;
+}
+
+.avance-editar-grid label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.avance-editar-grid .badge-pill {
+  font-size: 0.6875rem;
+  padding: 2px 6px;
+}
+
+@media (max-width: 767px) {
+  .avance-modal__dialog--wide {
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .avance-editar-container {
+    max-height: none;
+  }
+
+  .avance-editar-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .avance-resumen-card__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .avance-resumen-card__head button {
+    width: 100%;
+  }
+}
+
 </style>

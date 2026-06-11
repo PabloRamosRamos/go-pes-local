@@ -1452,6 +1452,174 @@ function goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline) {
   };
 }
 
+/**
+ * Actualizar fechas de hitos existentes de una organización
+ * Solo permite editar la fecha, no otros campos ni crear nuevos hitos
+ */
+function actualizarFechasHitos(payload) {
+  const diag = goPesDiagStart_('ZZ_AvanceBackend.actualizarFechasHitos', payload || {});
+  const user = requireModuleAccess_('avance', ['coordinador', 'superuser']);
+  goPesEnsureAvanceBackendReady_();
+
+  payload = payload || {};
+  const organizacionId = String(payload.organizacion_id || '').trim();
+  const fechasMap = payload.fechas_map || {}; // { 'PRE_01': '2025-03-15', 'PRE_02': '2025-03-20', ... }
+
+  if (!organizacionId) throw new Error('Falta organizacion_id.');
+  if (!fechasMap || typeof fechasMap !== 'object') {
+    throw new Error('Falta fechas_map con formato { codigo_hito: fecha_iso }.');
+  }
+
+  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (!org) throw new Error('No se encontró la organización indicada.');
+
+  const solicitudId = String(org.solicitud_id || '').trim();
+  const timeline = goPesGetTimelineAvanceRows_(organizacionId);
+
+  // Validar que solo se editen hitos existentes
+  const hitosExistentes = timeline.filter(function(h) {
+    return String(h.organizacion_id || '').trim() === organizacionId;
+  });
+
+  const codigosExistentes = hitosExistentes.map(function(h) {
+    return String(h.codigo_hito || '').trim();
+  });
+
+  const actualizaciones = [];
+  const errores = [];
+
+  Object.keys(fechasMap).forEach(function(codigoHito) {
+    const fechaIso = String(fechasMap[codigoHito] || '').trim();
+
+    // Solo procesar si hay una fecha y el hito existe
+    if (!fechaIso) return;
+
+    if (codigosExistentes.indexOf(codigoHito) === -1) {
+      errores.push('El hito ' + codigoHito + ' no existe para esta organización. Use el modal de registrar hito para crearlo.');
+      return;
+    }
+
+    // Validar formato de fecha
+    const fechaObj = asDateOrBlank_(fechaIso);
+    if (!fechaObj) {
+      errores.push('Fecha inválida para hito ' + codigoHito + ': ' + fechaIso);
+      return;
+    }
+
+    // No permitir fechas futuras
+    const ahora = new Date();
+    ahora.setHours(23, 59, 59, 999); // Fin del día actual
+    if (fechaObj > ahora) {
+      errores.push('El hito ' + codigoHito + ' no puede tener fecha futura.');
+      return;
+    }
+
+    actualizaciones.push({
+      codigo_hito: codigoHito,
+      nueva_fecha: fechaObj,
+      fecha_iso: fechaIso
+    });
+  });
+
+  if (errores.length > 0) {
+    throw new Error('Errores de validación:\n' + errores.join('\n'));
+  }
+
+  if (actualizaciones.length === 0) {
+    throw new Error('No hay cambios de fecha para aplicar.');
+  }
+
+  // Aplicar actualizaciones a FACT_AVANCE_HITOS
+  const sheetName = GO_PES_V2.SHEETS.FACT_AVANCE_HITOS;
+  const sh = getSheet_(sheetName);
+  if (!sh) throw new Error('No existe la hoja FACT_Avance_Hitos.');
+
+  const headers = goPesGetAvanceHeaders_(sheetName);
+  const data = getSheetData_(sheetName);
+
+  const idxOrgId = headers.indexOf('organizacion_id');
+  const idxCodigoHito = headers.indexOf('codigo_hito');
+  const idxFechaHito = headers.indexOf('fecha_hito');
+
+  if (idxOrgId === -1 || idxCodigoHito === -1 || idxFechaHito === -1) {
+    throw new Error('Estructura de hoja FACT_Avance_Hitos inválida.');
+  }
+
+  let contador = 0;
+  const cambios = [];
+
+  for (var i = 0; i < data.length; i++) {
+    const row = data[i];
+    if (String(row.organizacion_id || '') !== organizacionId) continue;
+
+    const codigoHito = String(row.codigo_hito || '').trim();
+    const act = actualizaciones.find(function(a) {
+      return a.codigo_hito === codigoHito;
+    });
+
+    if (!act) continue;
+
+    const rowIndex = i + 2; // +2 porque empieza en 1 y hay header
+    const fechaActual = row.fecha_hito ? Utilities.formatDate(new Date(row.fecha_hito), 'GMT-3', 'yyyy-MM-dd') : '';
+
+    // Solo actualizar si la fecha cambió
+    if (fechaActual !== act.fecha_iso) {
+      sh.getRange(rowIndex, idxFechaHito + 1).setValue(act.nueva_fecha);
+      contador++;
+      cambios.push({
+        codigo_hito: codigoHito,
+        fecha_anterior: fechaActual,
+        fecha_nueva: act.fecha_iso
+      });
+    }
+  }
+
+  // Actualizar vista derivada
+  upsertVistaAvanceOrganizacionRowById_(organizacionId);
+
+  // Log de cambios
+  logProcessing_(
+    'INFO',
+    'actualizarFechasHitos',
+    'organizacion',
+    organizacionId,
+    goPesGetUserEmail_(user),
+    'OK',
+    {
+      organizacion_id: organizacionId,
+      solicitud_id: solicitudId,
+      total_actualizados: contador,
+      cambios: cambios
+    }
+  );
+
+  logUserAction_(
+    'ACTUALIZAR_FECHAS_HITOS',
+    'organizacion',
+    organizacionId,
+    'OK',
+    {
+      organizacion_id: organizacionId,
+      total_actualizados: contador
+    }
+  );
+
+  const result = goPesAvanceToClientSafe_({
+    ok: true,
+    organizacion_id: organizacionId,
+    total_actualizados: contador,
+    cambios: cambios
+  });
+
+  goPesDiagEnd_(diag, {
+    ok: true,
+    organizacion_id: organizacionId,
+    total_actualizados: contador
+  });
+
+  return result;
+}
+
 /** =========================
  *  HELPERS TÉCNICOS
  *  ========================= */

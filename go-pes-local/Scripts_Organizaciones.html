@@ -762,7 +762,8 @@
               <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
             </button>
 
-            <div class="org-editar-fechas-grid org-editar-fechas-content" data-tramo-content="datos">
+            <div class="org-editar-fechas-content" data-tramo-content="datos">
+              <div class="org-editar-fechas-grid">
               <div class="field field--full">
                 <label>Nombre organización</label>
                 <input name="nombre_organizacion" type="text" required value="${escapeHtml(org.nombre_organizacion || '')}">
@@ -813,6 +814,7 @@
               <div class="field field--full">
                 <label>Observaciones</label>
                 <textarea name="observacion_resumen" rows="3">${escapeHtml(org.observacion_resumen || '')}</textarea>
+              </div>
               </div>
             </div>
           </div>

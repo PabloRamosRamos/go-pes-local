@@ -741,7 +741,7 @@
   function renderOrganizacionEditForm_(org) {
     org = org || {};
     const data = APP.state.currentOrganizacionDetalle;
-    const timeline = (data && data.avance && data.avance.timeline) || [];
+    const timeline = (data && data.avance && data.avance.hitos) || [];
 
     return `
       <form id="org-inline-edit-form" style="padding-top:1rem;max-height:calc(92vh - 180px);overflow-y:auto;">
@@ -769,12 +769,12 @@
                 <input name="nombre_organizacion" type="text" required value="${escapeHtml(org.nombre_organizacion || '')}">
               </div>
 
-              <div class="field field--half">
+              <div class="field field--full">
                 <label>UV</label>
                 <select name="uv" id="inline-edit-uv"></select>
               </div>
 
-              <div class="field field--half">
+              <div class="field field--full">
                 <label>Sector</label>
                 <select name="sector" id="inline-edit-sector"></select>
               </div>
@@ -784,7 +784,7 @@
                 <input name="direccion_referencia" type="text" value="${escapeHtml(org.direccion_referencia || '')}">
               </div>
 
-              <div class="field field--half">
+              <div class="field field--full">
                 <label>Personalidad jurídica</label>
                 <select name="personalidad_juridica_flag">
                   <option value="">Seleccionar</option>
@@ -793,7 +793,7 @@
                 </select>
               </div>
 
-              <div class="field field--half">
+              <div class="field field--full">
                 <label>Directiva vigente</label>
                 <select name="directiva_vigente_flag">
                   <option value="">Seleccionar</option>
@@ -802,7 +802,7 @@
                 </select>
               </div>
 
-              <div class="field field--half">
+              <div class="field field--full">
                 <label>Organización constituida</label>
                 <select name="organizacion_constituida_flag">
                   <option value="">Seleccionar</option>
@@ -856,12 +856,34 @@
       }
     }
 
+    // Orden lineal de hitos del 1 al 12 (procesos secuenciales)
+    const ordenLineal = ['PRE_01', 'PRE_02', 'PRE_03', 'PRE_04', 'PRE_05', 'PRE_06', 'PRE_07',
+                         'FOR_01', 'FOR_02', 'FOR_03', 'FOR_04', 'FOR_07'];
+
+    // Función para obtener fecha máxima permitida (fecha del siguiente hito)
+    function getMaxDate(codigo) {
+      const idx = ordenLineal.indexOf(codigo);
+      if (idx === -1 || idx >= ordenLineal.length - 1) return ''; // No aplica después del hito 12
+
+      // Buscar el siguiente hito que tenga fecha
+      for (let i = idx + 1; i < ordenLineal.length; i++) {
+        const siguienteCodigo = ordenLineal[i];
+        const siguienteHito = hitosMap[siguienteCodigo];
+        if (siguienteHito && siguienteHito.fecha) {
+          return formatFecha(siguienteHito.fecha);
+        }
+      }
+      return '';
+    }
+
     // Tramo 1: PRE_01 a PRE_07
     const tramo1Html = ['PRE_01', 'PRE_02', 'PRE_03', 'PRE_04', 'PRE_05', 'PRE_06', 'PRE_07'].map((codigo, idx) => {
       const hito = hitosMap[codigo];
       const disabled = !hito || !hito.registrado;
       const disabledClass = disabled ? ' is-disabled' : '';
       const fecha = hito ? formatFecha(hito.fecha) : '';
+      const maxDate = getMaxDate(codigo);
+      const maxAttr = maxDate ? `max="${maxDate}"` : '';
       const labels = ['1. Reunión informativa', '2. Carta por oficina de partes', '3. Fecha asignada',
                       '4. Asamblea constitutiva', '5. Documentación ingresada', '6. Revisión técnica',
                       '7. Certificado provisorio'];
@@ -869,10 +891,14 @@
       return `
         <div class="field${disabledClass}" data-hito="${codigo}">
           <label>${labels[idx]}</label>
-          <input type="date" id="inline-fecha-${codigo}" data-codigo="${codigo}" value="${fecha}" ${disabled ? 'disabled' : ''}>
+          <input type="date" id="inline-fecha-${codigo}" data-codigo="${codigo}" value="${fecha}" ${maxAttr} ${disabled ? 'disabled' : ''}>
         </div>
       `;
     }).join('');
+
+    // Fecha mínima para hitos 13, 14, 15 (deben ser >= fecha del hito 12)
+    const hitoFor07 = hitosMap['FOR_07'];
+    const minDatePostHito12 = (hitoFor07 && hitoFor07.fecha) ? formatFecha(hitoFor07.fecha) : '';
 
     // Tramo 2: FOR_01, FOR_02, FOR_03, FOR_04, FOR_07, FOR_06, FOR_08, FOR_05
     const tramo2Codigos = ['FOR_01', 'FOR_02', 'FOR_03', 'FOR_04', 'FOR_07', 'FOR_06', 'FOR_08', 'FOR_05'];
@@ -886,10 +912,18 @@
       const disabledClass = disabled ? ' is-disabled' : '';
       const fecha = hito ? formatFecha(hito.fecha) : '';
 
+      // Hitos 1-12: validación max (no pueden ser posteriores al siguiente)
+      const maxDate = getMaxDate(codigo);
+      const maxAttr = maxDate ? `max="${maxDate}"` : '';
+
+      // Hitos 13, 14, 15: validación min (no pueden ser anteriores al hito 12)
+      const esHitoPostHito12 = ['FOR_06', 'FOR_08', 'FOR_05'].indexOf(codigo) !== -1;
+      const minAttr = (esHitoPostHito12 && minDatePostHito12) ? `min="${minDatePostHito12}"` : '';
+
       return `
         <div class="field${disabledClass}" data-hito="${codigo}">
           <label>${tramo2Labels[idx]}</label>
-          <input type="date" id="inline-fecha-${codigo}" data-codigo="${codigo}" value="${fecha}" ${disabled ? 'disabled' : ''}>
+          <input type="date" id="inline-fecha-${codigo}" data-codigo="${codigo}" value="${fecha}" ${minAttr} ${maxAttr} ${disabled ? 'disabled' : ''}>
         </div>
       `;
     }).join('');
@@ -905,8 +939,10 @@
           </div>
           <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
         </button>
-        <div class="org-editar-fechas-grid org-editar-fechas-content" data-tramo-content="pre">
-          ${tramo1Html}
+        <div class="org-editar-fechas-content" data-tramo-content="pre">
+          <div class="org-editar-fechas-grid">
+            ${tramo1Html}
+          </div>
         </div>
       </div>
 
@@ -920,8 +956,10 @@
           </div>
           <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
         </button>
-        <div class="org-editar-fechas-grid org-editar-fechas-content" data-tramo-content="for">
-          ${tramo2Html}
+        <div class="org-editar-fechas-content" data-tramo-content="for">
+          <div class="org-editar-fechas-grid">
+            ${tramo2Html}
+          </div>
         </div>
       </div>
     `;

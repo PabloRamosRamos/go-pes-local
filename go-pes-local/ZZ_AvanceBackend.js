@@ -1458,7 +1458,7 @@ function goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline) {
  */
 function actualizarFechasHitos(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.actualizarFechasHitos', payload || {});
-  const user = requireModuleAccess_('avance', ['coordinador', 'superuser']);
+  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
   payload = payload || {};

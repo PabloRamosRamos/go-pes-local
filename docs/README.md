@@ -1,5 +1,9 @@
 # GO-PES v2 — Gestor Operativo PES
 
+> **📘 Nota:** Este es el README principal del proyecto, ahora ubicado en `docs/README.md`.  
+> **Para Claude:** Inicia con [INICIO-RAPIDO-CLAUDE.md](INICIO-RAPIDO-CLAUDE.md)  
+> **Toda la documentación está en:** `docs/` (sin archivos .md en raíz)
+
 **Programa Estamos Seguros · Municipalidad de Providencia, Chile**
 
 Sistema de gestión integral para organizaciones comunitarias, beneficios, instrumentos de apoyo y seguimiento territorial del programa social municipal.
@@ -42,63 +46,77 @@ GO-PES (Gestor Operativo del Programa Estamos Seguros) es una aplicación web in
 
 ```
 GO Provi/
-├── README.md               ← Estás aquí
-├── CLAUDE.md               ← Guía técnica extensa para desarrollo
-├── CHANGELOG.md            ← Historial de versiones y cambios
 │
-├── docs/                   ← Documentación técnica (ver fase documental)
-│   ├── MANTENER-DOCS.md    ← Guía de mantenimiento de documentación
-│   ├── arquitectura.md     ← Capas, módulos, flujo request→response
-│   ├── modelo-datos.md     ← Esquema de hojas, relaciones, pipeline RAW→FACT
-│   ├── deploy.md           ← Proceso de despliegue DEV/PROD
-│   ├── api-interna.md      ← Inventario de funciones públicas backend
-│   ├── configuracion.md    ← Claves de CFG_Parametros y SystemConfig
-│   ├── seguridad.md        ← Roles, permisos, scopes, PINs
-│   ├── testing.md          ← Suite de tests, cobertura, estrategia
-│   ├── runbook-operacion.md   ← Incidentes, diagnóstico, soporte
-│   ├── migraciones-y-reset.md ← Utilidades admin, backups, validaciones
-│   └── dependencias-externas.md ← Calendar, Looker, APIs terceros
+├── docs/                        ← 📚 Toda la documentación (sin .md en raíz)
+│   ├── README.md                ← Estás aquí (Quick Start principal)
+│   ├── INICIO-RAPIDO-CLAUDE.md  ← Resumen ejecutivo para sesiones Claude
+│   ├── CLAUDE.md                ← Guía técnica extensa (fuente de verdad)
+│   ├── CHECKLIST-PRODUCCION.md  ← Verificación pre-deploy PROD
+│   ├── ORGANIZACION-DOCS-2026-06-19.md ← Proceso de reorganización
+│   │
+│   ├── — Documentación técnica —
+│   ├── MANTENER-DOCS.md         ← Guía de mantenimiento documentación
+│   ├── arquitectura.md          ← Capas, módulos, flujo request→response
+│   ├── modelo-datos.md          ← Esquema hojas, relaciones, pipeline
+│   ├── deploy.md                ← Proceso despliegue DEV/PROD
+│   ├── seguridad.md             ← Roles, permisos, scopes, PINs
+│   ├── design-system.md         ← Sistema diseño (componentes, CSS, UX)
+│   ├── dev-stats.md             ← Métricas del proyecto
+│   ├── frontend-*.md            ← Documentos frontend (estado, plan, resumen)
+│   ├── mensajes-normalizados.md ← Sistema traducción mensajes técnicos
+│   ├── diagnostico-transiciones.md ← Sistema transiciones UX
+│   │
+│   └── archive/                 ← Documentos históricos
+│       ├── ANALISIS-AVANCE-LEGACY.md
+│       ├── DEPLOYMENT-2026-06-05.md
+│       ├── GUIA-MIGRACION.md
+│       └── PLAN-LOADERS.md
 │
-├── go-pes-local/           ← Código fuente del proyecto Apps Script
-│   ├── appsscript.json     ← Manifiesto (runtime, timezone, scopes, webapp)
-│   ├── .clasp.json         ← Configuración DEV
-│   ├── .clasp.prod.json    ← Configuración PROD
+├── go-pes-local/                ← Código fuente Apps Script
+│   ├── appsscript.json          ← Manifiesto (runtime, timezone, scopes)
+│   ├── .clasp.json              ← Config DEV
+│   ├── .clasp.prod.json         ← Config PROD
 │   │
 │   ├── — BOOTSTRAP —
-│   ├── Main.js             ← doGet(), onOpen(), GO_PES_V2 constante
+│   ├── Main.js                  ← doGet(), onOpen(), GO_PES_V2
 │   │
 │   ├── — INFRAESTRUCTURA —
-│   ├── Auth.js             ← Autenticación, usuarios, permisos
-│   ├── SecurityPins.js     ← Gestión de PINs con rate limiting
-│   ├── Repository.js       ← Capa de acceso a hojas + cache
-│   ├── Validators.js       ← Validación de datos
-│   ├── SystemConfig.js     ← Configuración del sistema
-│   ├── DerivedBuilders.js  ← Reconstrucción de vistas materializadas
+│   ├── Auth.js                  ← Autenticación, usuarios, permisos
+│   ├── SecurityPins.js          ← PINs con rate limiting
+│   ├── Repository.js            ← Acceso hojas + cache
+│   ├── Validators.js            ← Validación datos
+│   ├── SystemConfig.js          ← Configuración sistema
+│   ├── DerivedBuilders.js       ← Vistas derivadas
+│   ├── Diagnostics.js           ← Trazas debug
 │   │
 │   ├── — LÓGICA DE NEGOCIO —
-│   ├── Services.js         ← Servicios de dominio principales
-│   ├── Catalogs.js         ← Gestión de catálogos (DIM_*)
-│   ├── NuevoIngreso.js     ← Módulo de ingreso de vecinos
-│   ├── ZZ_AvanceBackend.js ← Módulo de avance/hitos
-│   ├── ZZ_BeneficiosBackend.js  ← Módulo de beneficios
-│   ├── ZZ_OrganizacionesBackend.js ← Módulo de organizaciones
-│   ├── ZZ_SociosBackend.js      ← Módulo de socios
-│   ├── ZZ_AdminDataReset.js     ← Utilidades de reset (solo DEV)
-│   ├── ZZ_MigracionBackend.js   ← Migración de datos legacy
+│   ├── Services.js              ← Servicios dominio
+│   ├── Catalogs.js              ← Gestión catálogos
+│   ├── NuevoIngreso.js          ← Módulo ingreso vecinos
+│   ├── ZZ_AvanceBackend.js      ← Módulo avance/hitos
+│   ├── ZZ_AvancePhase1.js       ← Avance fase 1
+│   ├── ZZ_AvancePhase2.js       ← Avance fase 2
+│   ├── ZZ_BeneficiosBackend.js  ← Módulo beneficios
+│   ├── ZZ_OrganizacionesBackend.js ← Módulo organizaciones
+│   ├── ZZ_SociosBackend.js      ← Módulo socios
+│   ├── ZZ_AdminDataReset.js     ← Utilidades reset
 │   │
 │   ├── — FRONTEND —
-│   ├── Index.html          ← Template principal
-│   ├── Styles.html         ← CSS global (~154 KB)
-│   ├── ThemeDark.html      ← CSS modo oscuro
-│   ├── Scripts.html        ← Core JS (constantes, routing, utils)
-│   ├── Scripts_*.html      ← JS por módulo (8 parciales)
-│   ├── Manual.html         ← Manual de usuario embebido
-│   ├── Assets.js           ← Logos e imágenes (data URIs)
+│   ├── Index.html               ← Template principal
+│   ├── Styles.html              ← CSS global (~154 KB)
+│   ├── ThemeDark.html           ← CSS modo oscuro
+│   ├── Scripts.html             ← Core JS
+│   ├── Scripts_*.html           ← JS módulos (8 parciales)
+│   ├── Manual.html              ← Manual usuario
+│   ├── Calendario.html          ← Calendario reuniones
+│   ├── Splash.html              ← Splash inicial
+│   ├── Loading.html             ← Loading overlay
+│   ├── Assets.js                ← Imágenes (data URIs)
 │   │
-│   └── Audith.js           ← Suite de tests automatizados (195 tests)
+│   └── Audith.js                ← Tests (262 tests)
 │
-├── push-dev.ps1            ← Script de deploy a DEV
-└── push-prod.ps1           ← Script de deploy a PROD (con confirmación)
+├── push-dev.ps1                 ← Deploy DEV
+└── push-prod.ps1                ← Deploy PROD
 ```
 
 ---
@@ -223,22 +241,28 @@ Desarrollar en DEV → Ejecutar tests → Push a PROD
 
 ---
 
-## Documentación técnica
+## Documentación disponible
 
-Para profundizar en aspectos técnicos, consulta:
+### 📘 Para nuevos desarrolladores
+- **[README.md](README.md)** — Este archivo (Quick Start)
+- **[INICIO-RAPIDO-CLAUDE.md](INICIO-RAPIDO-CLAUDE.md)** — Resumen ejecutivo para sesiones Claude
+- **[CLAUDE.md](CLAUDE.md)** — Guía técnica extensa (fuente de verdad)
 
-- **[CLAUDE.md](CLAUDE.md)** — Guía extensa de desarrollo, arquitectura, convenciones
+### 🔧 Documentación técnica
 - **[docs/arquitectura.md](docs/arquitectura.md)** — Capas, módulos, flujo request→response
 - **[docs/modelo-datos.md](docs/modelo-datos.md)** — Esquema de hojas, relaciones, pipeline
 - **[docs/deploy.md](docs/deploy.md)** — Proceso completo de despliegue DEV/PROD
-- **[docs/api-interna.md](docs/api-interna.md)** — Inventario de funciones públicas backend
 - **[docs/seguridad.md](docs/seguridad.md)** — Roles, permisos, scopes, PINs
-- **[docs/testing.md](docs/testing.md)** — Suite de tests, cobertura, estrategia
-- **[CHANGELOG.md](CHANGELOG.md)** — Historial de versiones y cambios
+- **[docs/design-system.md](docs/design-system.md)** — Sistema de diseño completo
+- **[docs/dev-stats.md](docs/dev-stats.md)** — Métricas del proyecto
 
-Para operación y soporte:
-- **[docs/runbook-operacion.md](docs/runbook-operacion.md)** — Diagnóstico de incidentes
+### 📋 Operación y mantenimiento
+- **[docs/CHECKLIST-PRODUCCION.md](docs/CHECKLIST-PRODUCCION.md)** — Verificación pre-deploy PROD
+- **[docs/MANTENER-DOCS.md](docs/MANTENER-DOCS.md)** — Guía de mantenimiento de documentación
 - **[Manual.html](go-pes-local/Manual.html)** — Manual de usuario embebido en la app
+
+### 📦 Archivo histórico
+- **[docs/archive/](docs/archive/)** — Documentos de análisis y deployment históricos
 
 ---
 
@@ -257,6 +281,21 @@ Uso interno — Municipalidad de Providencia, Chile.
 
 ---
 
+## 📚 Guía rápida de documentos
+
+| Situación | Documento |
+|-----------|-----------|
+| 🆕 Soy nuevo en el proyecto | README.md → [INICIO-RAPIDO-CLAUDE.md](INICIO-RAPIDO-CLAUDE.md) |
+| 🤖 Inicio sesión con Claude | [INICIO-RAPIDO-CLAUDE.md](INICIO-RAPIDO-CLAUDE.md) |
+| 🔧 Voy a programar backend | [CLAUDE.md](CLAUDE.md) → [docs/arquitectura.md](docs/arquitectura.md) |
+| 🎨 Voy a programar frontend | [docs/design-system.md](docs/design-system.md) |
+| 🚀 Voy a hacer deploy | [docs/CHECKLIST-PRODUCCION.md](docs/CHECKLIST-PRODUCCION.md) → [docs/deploy.md](docs/deploy.md) |
+| 📝 Voy a actualizar docs | [docs/MANTENER-DOCS.md](docs/MANTENER-DOCS.md) |
+| 🔐 Necesito info de seguridad | [docs/seguridad.md](docs/seguridad.md) |
+| 📊 Necesito métricas del proyecto | [docs/dev-stats.md](docs/dev-stats.md) |
+
+---
+
 **Versión actual:** 2.1.512  
-**Última actualización README:** 2026-05-31  
+**Última actualización README:** 2026-06-19  
 **Próxima revisión:** Antes del próximo release mayor

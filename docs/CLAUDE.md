@@ -1,5 +1,10 @@
 # GO-PES v2 — Gestor Operativo PES
 
+> **📘 Para inicio rápido en nuevas sesiones Claude, consulta [INICIO-RAPIDO-CLAUDE.md](INICIO-RAPIDO-CLAUDE.md)**  
+> Este documento (CLAUDE.md) es la guía técnica extensa. El documento de inicio rápido contiene el resumen ejecutivo.
+
+---
+
 ## Descripción del proyecto
 
 GO-PES (Gestor Operativo del Programa Estamos Seguros) es una aplicación web interna de la **Municipalidad de Providencia, Chile**, construida sobre **Google Apps Script**. Su propósito es gestionar el programa social "Estamos Seguros": registro de vecinos, seguimiento de casos, organizaciones comunitarias, beneficios e instrumentos de apoyo.

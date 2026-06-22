@@ -296,14 +296,20 @@ goPesSeedSuperUsers()  // pablo.ramos@providencia.cl
 
 ## 🚀 Últimos cambios significativos
 
+**2026-06-22 (Permisos — Operadores pueden modificar fechas de hitos)**
+- `actualizarFechasHitos()` ahora permite rol operador
+- Afecta módulo Organizaciones (edición de org)
+- Validaciones de seguridad mantienen intactas
+
+**2026-06-19 (Documentación — Reorganización completa)**
+- Toda la documentación movida a `docs/`
+- Regla: SIN .md en raíz del proyecto
+- Creado `INICIO-RAPIDO-CLAUDE.md` + índices navegables
+
 **2026-06-01 (UX — Normalización mensajes técnicos)**
 - Sistema traducción errores técnicos → mensajes operativos
 - Capa central + limpieza en origen
 - ~169 líneas modificadas, ~15 mensajes auto-traducidos
-
-**2026-06-01 (Testing — Suite seguridad corregida)**
-- 262 tests, 0 fallos
-- `docs/dev-stats.md` creado
 
 **2026-06-01 (UX — Transiciones)**
 - Sistema completo: modales, vistas, stagger
@@ -314,7 +320,7 @@ goPesSeedSuperUsers()  // pablo.ramos@providencia.cl
 - Rate limiting 3 intentos/hora
 - 3 contextos separados
 
-**Ver:** `CLAUDE.md` historial completo de cambios
+**Ver:** [CLAUDE.md](CLAUDE.md) historial completo de cambios
 
 ---
 

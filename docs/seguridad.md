@@ -123,7 +123,7 @@ Cada módulo de la app requiere un **rol mínimo** y puede tener **permisos gran
 | **Buscar** | `buscar` | operador | ✓ | - | - |
 | **Ficha** | `ficha` | operador | ✓ | ✓ | Editar contacto, registrar gestión |
 | **Nuevo ingreso** | `nuevo-ingreso` | operador | - | ✓ | Crear vecino/solicitud |
-| **Avance** | `avance` | operador | ✓ | ✓ | Registrar hitos, cambiar estado |
+| **Avance** | `avance` | operador | ✓ | ✓ | Registrar hitos, modificar fechas, cambiar estado |
 | **Organizaciones** | `organizacion` | operador | ✓ | ✓ | Crear/editar org, suspender |
 | **Socios** | `socios` | operador | ✓ | ✓ | Añadir/editar socios |
 | **Beneficios** | `instrumento` | operador | ✓ | ✓ | Gestionar instrumentos, Fondese, eventos |

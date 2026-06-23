@@ -621,29 +621,30 @@ function obtenerFicha(payload) {
   const solicitudId = payload && payload.solicitud_id ? String(payload.solicitud_id) : '';
   const organizacionId = payload && payload.organizacion_id ? String(payload.organizacion_id) : '';
 
+  // OPTIMIZACIÓN: Usar helpers selectivos en lugar de scan completo
   let caseRow = solicitudId
-    ? findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false)
+    ? getCasoBySolicitudId_(solicitudId)
     : null;
 
   let orgRow = organizacionId
-    ? findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false)
+    ? getOrganizacionByOrgId_(organizacionId)
     : null;
 
   if (!caseRow && orgRow && orgRow.solicitud_id) {
-    caseRow = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', orgRow.solicitud_id, false);
+    caseRow = getCasoBySolicitudId_(orgRow.solicitud_id);
   }
   if ((!caseRow && !orgRow) && payload && payload.query) {
     const match = buscarVecino(payload.query)[0] || null;
     if (match && match.solicitud_id) {
-      caseRow = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', match.solicitud_id, false);
+      caseRow = getCasoBySolicitudId_(match.solicitud_id);
     }
     if (!orgRow && match && match.organizacion_id) {
-      orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', match.organizacion_id, false);
+      orgRow = getOrganizacionByOrgId_(match.organizacion_id);
     }
   }
 
   if (!orgRow && caseRow && caseRow.organizacion_id) {
-    orgRow = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', caseRow.organizacion_id, false);
+    orgRow = getOrganizacionByOrgId_(caseRow.organizacion_id);
   }
   if (!caseRow && !orgRow) {
     throw new Error('No se encontró la ficha solicitada.');
@@ -1661,5 +1662,23 @@ function maybeCallMaker_(fnName, payload) {
 
 function toClientSafe_(value) {
   return serializeForClient_(value);
+}
+
+/**
+ * Servicios de diagnóstico - solo superuser
+ */
+function enableDiagnostics() {
+  requireRole_(['superuser']);
+  return goPesEnableDiagnostics();
+}
+
+function disableDiagnostics() {
+  requireRole_(['superuser']);
+  return goPesDisableDiagnostics();
+}
+
+function getDiagnosticsStatus() {
+  requireRole_(['superuser']);
+  return goPesGetDiagnosticsStatus();
 }
 

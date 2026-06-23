@@ -82,9 +82,10 @@ function getOrganizacionesAvanceClient() {
     putCatalogCacheJson_(GO_PES_CATALOG_CACHE_KEYS.AVANCE_ORGS_CLIENT, result, 300);
   }
   goPesDiagEnd_(diag, {
-    result_count: result.organizacionesList.length
+    result_count: result.organizacionesList.length,
+    cache_hit: false
   });
-  return result;
+  return goPesDiagPayloadSize_(result, 'getOrganizacionesAvanceClient');
 }
 
 function getGruposVecinosAvanceClient() {
@@ -115,8 +116,11 @@ function getGruposVecinosAvanceClient() {
     })
   });
 
-  goPesDiagEnd_(diag, { result_count: result.gruposList.length });
-  return result;
+  goPesDiagEnd_(diag, {
+    result_count: result.gruposList.length,
+    total_casos_scanned: rows.length
+  });
+  return goPesDiagPayloadSize_(result, 'getGruposVecinosAvanceClient');
 }
 
 function getTimelineAvance(payload) {
@@ -163,9 +167,13 @@ function getAvanceOrganizacion(payload) {
     timeline: timeline
   });
   goPesDiagEnd_(diag, {
-    timeline_count: result.timeline.length
+    organizacion_id: orgId,
+    solicitud_id: solicitudId,
+    timeline_count: result.timeline.length,
+    botones_count: result.botones ? result.botones.length : 0,
+    has_estado: !!estadoActual
   });
-  return result;
+  return goPesDiagPayloadSize_(result, 'getAvanceOrganizacion');
 }
 
 function getAvanceGrupoVecinos(payload) {
@@ -195,8 +203,12 @@ function getAvanceGrupoVecinos(payload) {
     botones: botones,
     timeline: timeline
   });
-  goPesDiagEnd_(diag, { timeline_count: result.timeline.length });
-  return result;
+  goPesDiagEnd_(diag, {
+    solicitud_id: solicitudId,
+    timeline_count: result.timeline.length,
+    botones_count: result.botones ? result.botones.length : 0
+  });
+  return goPesDiagPayloadSize_(result, 'getAvanceGrupoVecinos');
 }
 
 function registrarHitoAvance(payload) {

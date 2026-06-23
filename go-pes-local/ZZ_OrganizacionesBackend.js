@@ -1,4 +1,5 @@
 function getOrganizacionesModuloClient() {
+  var diag = goPesDiagStart_('ZZ_OrganizacionesBackend.getOrganizacionesModuloClient', {});
   requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
 
   var rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
@@ -23,7 +24,7 @@ function getOrganizacionesModuloClient() {
     });
   } catch (e) {}
 
-  return serializeForClient_({
+  var result = serializeForClient_({
     organizaciones: rows.map(function(r) {
       var orgId = String(r.organizacion_id || '').trim();
       return {
@@ -45,9 +46,17 @@ function getOrganizacionesModuloClient() {
       };
     })
   });
+
+  goPesDiagEnd_(diag, {
+    organizaciones_count: result.organizaciones.length,
+    hitos_scanned: (avanceHitos || []).length
+  });
+
+  return goPesDiagPayloadSize_(result, 'getOrganizacionesModuloClient');
 }
 
 function getOrganizacionesConGruposClient() {
+  var diag = goPesDiagStart_('ZZ_OrganizacionesBackend.getOrganizacionesConGruposClient', {});
   requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
 
   var avanceHitos = [];
@@ -145,7 +154,17 @@ function getOrganizacionesConGruposClient() {
     .sort(function(a, b) { return a.label.localeCompare(b.label, 'es'); })
     .concat(grupos.sort(function(a, b) { return a.label.localeCompare(b.label, 'es'); }));
 
-  return serializeForClient_({ organizaciones: todosSorted });
+  var result = serializeForClient_({ organizaciones: todosSorted });
+
+  goPesDiagEnd_(diag, {
+    total_count: todosSorted.length,
+    organizaciones_count: orgs.length,
+    grupos_count: grupos.length,
+    socios_scanned: (socios || []).length,
+    hitos_scanned: (avanceHitos || []).length
+  });
+
+  return goPesDiagPayloadSize_(result, 'getOrganizacionesConGruposClient');
 }
 
 function getOrganizacionModuloDetalle(payload) {

@@ -4,7 +4,10 @@
  */
 const GO_PES_CATALOG_CACHE_KEYS = {
   APP_CLIENT: 'go_pes_catalogs_app_client',
-  INGRESO_CLIENT: 'go_pes_catalogs_ingreso_client'
+  INGRESO_CLIENT: 'go_pes_catalogs_ingreso_client',
+  AVANCE_ORGS_CLIENT: 'go_pes_avance_orgs_client',
+  AVANCE_GRUPOS_CLIENT: 'go_pes_avance_grupos_client',
+  ORGANIZACION_CLIENT: 'go_pes_organizacion_client'
 };
 
 function seedGoPesV2Catalogs_() {
@@ -494,7 +497,10 @@ function invalidateCatalogClientCaches_() {
   try {
     CacheService.getScriptCache().removeAll([
       GO_PES_CATALOG_CACHE_KEYS.APP_CLIENT,
-      GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT
+      GO_PES_CATALOG_CACHE_KEYS.INGRESO_CLIENT,
+      GO_PES_CATALOG_CACHE_KEYS.AVANCE_ORGS_CLIENT,
+      GO_PES_CATALOG_CACHE_KEYS.AVANCE_GRUPOS_CLIENT,
+      GO_PES_CATALOG_CACHE_KEYS.ORGANIZACION_CLIENT
     ]);
   } catch (err) {}
 }

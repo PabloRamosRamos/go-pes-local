@@ -93,27 +93,14 @@ function importarSocios(payload) {
 }
 
 function getSociosModuloClient() {
+  const diag = goPesDiagStart_('ZZ_SociosBackend.getSociosModuloClient', {});
   requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
 
   const socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
-  const organizaciones = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES) || [];
-  const casos = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS) || [];
 
-  const orgById = organizaciones.reduce(function(acc, row) {
-    const key = String(row.organizacion_id || '').trim();
-    if (key) acc[key] = row;
-    return acc;
-  }, {});
-
-  const caseByOrgId = casos.reduce(function(acc, row) {
-    const key = String(row.organizacion_id || '').trim();
-    if (!key) return acc;
-    const current = acc[key];
-    if (!current || new Date(row.updated_at || row.fecha_ingreso || 0) > new Date(current.updated_at || current.fecha_ingreso || 0)) {
-      acc[key] = row;
-    }
-    return acc;
-  }, {});
+  // OPTIMIZACIÓN: Usar índices en lugar de scan completo
+  const orgById = buildOrganizacionesByOrgIdIndex_();
+  const caseByOrgId = buildCasosByOrgIdIndex_();
 
   const rows = socios.map(function(row) {
     const organizacionId = String(row.organizacion_id || '').trim();
@@ -144,9 +131,17 @@ function getSociosModuloClient() {
     return String(a.nombre_socio || '').localeCompare(String(b.nombre_socio || ''), 'es', { sensitivity: 'base' });
   });
 
-  return serializeForClient_({
+  const result = serializeForClient_({
     rows: rows
   });
+
+  goPesDiagEnd_(diag, {
+    socios_count: rows.length,
+    organizaciones_indexed: Object.keys(orgById).length,
+    casos_indexed: Object.keys(caseByOrgId).length
+  });
+
+  return goPesDiagPayloadSize_(result, 'getSociosModuloClient');
 }
 
 function actualizarCargoSocioOrganizacion(payload) {

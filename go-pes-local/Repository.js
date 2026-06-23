@@ -387,6 +387,8 @@ function appendRowObject_(sheetName, obj) {
     const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
     sh.appendRow(headers.map(h => obj[h] !== undefined ? obj[h] : ''));
     invalidateSheetRuntimeCache_(sheetName);
+  invalidateRequestIndexes_();
+    invalidateRequestIndexes_(); // Invalidar índices después de write
   } finally {
     goPesDiagEnd_(diag, { rows_written: 1 });
   }
@@ -412,6 +414,8 @@ function appendRowObjects_(sheetName, objects) {
 
     sh.getRange(sh.getLastRow() + 1, 1, values.length, headers.length).setValues(values);
     invalidateSheetRuntimeCache_(sheetName);
+  invalidateRequestIndexes_();
+    invalidateRequestIndexes_(); // Invalidar índices después de write
   } finally {
     goPesDiagEnd_(diag);
   }
@@ -448,6 +452,7 @@ function upsertByKey_(sheetName, keyField, obj, caseInsensitive) {
       sh.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
     }
     invalidateSheetRuntimeCache_(sheetName);
+  invalidateRequestIndexes_();
   } finally {
     goPesDiagEnd_(diag, {
       mode: mode,
@@ -516,6 +521,7 @@ function upsertRowsByKey_(sheetName, keyField, objects, caseInsensitive) {
     }
 
     invalidateSheetRuntimeCache_(sheetName);
+  invalidateRequestIndexes_();
   } finally {
     goPesDiagEnd_(diag, {
       rows_updated: updatesCount,
@@ -541,6 +547,7 @@ function replaceSheetData_(sheetName, headers, rows) {
       sh.getRange(2, 1, rows.length, headers.length).setValues(rows);
     }
     invalidateSheetRuntimeCache_(sheetName);
+  invalidateRequestIndexes_();
   } finally {
     goPesDiagEnd_(diag);
   }
@@ -563,6 +570,7 @@ function clearSheetData_(sheetName) {
   if (!sh || sh.getLastRow() < 2) return;
   sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).clearContent();
   invalidateSheetRuntimeCache_(sheetName);
+  invalidateRequestIndexes_();
 }
 
 function nextId_(namespace, prefix) {
@@ -577,4 +585,154 @@ function nextIdIfMissing_(namespace, prefix, sheetName, idField, uniqueField, un
   const existing = findByField_(sheetName, uniqueField, uniqueValue, true);
   if (existing && existing[idField]) return existing[idField];
   return nextId_(namespace, prefix);
+}
+
+/**
+ * =============================================================================
+ * HELPERS SELECTIVOS - OPTIMIZACIÓN FASE 1
+ * Reducen lecturas completas de hojas grandes
+ * =============================================================================
+ */
+
+/**
+ * Índices por request en memoria para hojas frecuentes
+ */
+var GO_PES_REQUEST_INDEXES = this.GO_PES_REQUEST_INDEXES || {
+  casosByOrgId: null,
+  casosBySolicitudId: null,
+  organizacionesByOrgId: null,
+  hitosByOrgId: null,
+  hitosBySolicitudId: null,
+  sociosByOrgId: null
+};
+
+/**
+ * Invalida todos los índices (llamar después de writes)
+ */
+function invalidateRequestIndexes_() {
+  GO_PES_REQUEST_INDEXES.casosByOrgId = null;
+  GO_PES_REQUEST_INDEXES.casosBySolicitudId = null;
+  GO_PES_REQUEST_INDEXES.organizacionesByOrgId = null;
+  GO_PES_REQUEST_INDEXES.hitosByOrgId = null;
+  GO_PES_REQUEST_INDEXES.hitosBySolicitudId = null;
+  GO_PES_REQUEST_INDEXES.sociosByOrgId = null;
+}
+
+/**
+ * Construye índice de casos por organizacion_id (lazy)
+ */
+function buildCasosByOrgIdIndex_() {
+  if (GO_PES_REQUEST_INDEXES.casosByOrgId) {
+    return GO_PES_REQUEST_INDEXES.casosByOrgId;
+  }
+
+  const diag = goPesDiagStart_('Repository.buildCasosByOrgIdIndex_', {});
+  const casos = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS);
+  const index = {};
+
+  casos.forEach(function(caso) {
+    const orgId = String(caso.organizacion_id || '').trim();
+    if (!orgId) return;
+
+    // Si hay múltiples casos con mismo organizacion_id, tomar el más reciente
+    const current = index[orgId];
+    if (!current || new Date(caso.updated_at || caso.fecha_ingreso || 0) > new Date(current.updated_at || current.fecha_ingreso || 0)) {
+      index[orgId] = caso;
+    }
+  });
+
+  GO_PES_REQUEST_INDEXES.casosByOrgId = index;
+  goPesDiagEnd_(diag, { index_size: Object.keys(index).length, total_casos: casos.length });
+  return index;
+}
+
+/**
+ * Construye índice de casos por solicitud_id (lazy)
+ */
+function buildCasosBySolicitudIdIndex_() {
+  if (GO_PES_REQUEST_INDEXES.casosBySolicitudId) {
+    return GO_PES_REQUEST_INDEXES.casosBySolicitudId;
+  }
+
+  const diag = goPesDiagStart_('Repository.buildCasosBySolicitudIdIndex_', {});
+  const casos = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS);
+  const index = {};
+
+  casos.forEach(function(caso) {
+    const solId = String(caso.solicitud_id || '').trim();
+    if (solId) {
+      index[solId] = caso;
+    }
+  });
+
+  GO_PES_REQUEST_INDEXES.casosBySolicitudId = index;
+  goPesDiagEnd_(diag, { index_size: Object.keys(index).length, total_casos: casos.length });
+  return index;
+}
+
+/**
+ * Obtiene caso por organizacion_id (sin scan completo)
+ */
+function getCasoByOrganizacionId_(organizacionId) {
+  const orgId = String(organizacionId || '').trim();
+  if (!orgId) return null;
+
+  const index = buildCasosByOrgIdIndex_();
+  return index[orgId] || null;
+}
+
+/**
+ * Obtiene caso por solicitud_id (sin scan completo)
+ */
+function getCasoBySolicitudId_(solicitudId) {
+  const solId = String(solicitudId || '').trim();
+  if (!solId) return null;
+
+  const index = buildCasosBySolicitudIdIndex_();
+  return index[solId] || null;
+}
+
+/**
+ * Obtiene múltiples casos por lista de organizacion_id
+ */
+function getCasosByOrganizacionIds_(organizacionIds) {
+  const index = buildCasosByOrgIdIndex_();
+  return (organizacionIds || []).map(function(orgId) {
+    return index[String(orgId || '').trim()] || null;
+  }).filter(Boolean);
+}
+
+/**
+ * Construye índice de organizaciones por organizacion_id (lazy)
+ */
+function buildOrganizacionesByOrgIdIndex_() {
+  if (GO_PES_REQUEST_INDEXES.organizacionesByOrgId) {
+    return GO_PES_REQUEST_INDEXES.organizacionesByOrgId;
+  }
+
+  const diag = goPesDiagStart_('Repository.buildOrganizacionesByOrgIdIndex_', {});
+  const organizaciones = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES);
+  const index = {};
+
+  organizaciones.forEach(function(org) {
+    const orgId = String(org.organizacion_id || '').trim();
+    if (orgId) {
+      index[orgId] = org;
+    }
+  });
+
+  GO_PES_REQUEST_INDEXES.organizacionesByOrgId = index;
+  goPesDiagEnd_(diag, { index_size: Object.keys(index).length });
+  return index;
+}
+
+/**
+ * Obtiene organización por organizacion_id (sin scan completo)
+ */
+function getOrganizacionByOrgId_(organizacionId) {
+  const orgId = String(organizacionId || '').trim();
+  if (!orgId) return null;
+
+  const index = buildOrganizacionesByOrgIdIndex_();
+  return index[orgId] || null;
 }

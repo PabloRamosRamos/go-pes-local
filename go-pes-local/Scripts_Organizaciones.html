@@ -23,16 +23,23 @@
 
         <div id="org-chip-row" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;"></div>
 
-        <div id="organizaciones-grid-list"></div>
+        <div id="organizaciones-grid-list">
+          <div class="empty-state" style="padding:var(--space-8);">
+            <div class="spinner"></div>
+            <p style="margin-top:var(--space-3);color:var(--text-muted);">Cargando organizaciones...</p>
+          </div>
+        </div>
 
         ${renderOrganizacionDetalleModal_()}
         ${renderOrganizacionEditModal_()}
         ${renderOrganizacionSocioCargoModal_()}
+        ${renderLinkSociosModal_()}
       </div>
     `;
 
     APP.state.orgChipFiltro = APP.state.orgChipFiltro || 'todos';
     bindOrganizacionesView_();
+    initLinkSociosHandlers_();
     renderOrganizacionesGridFromState_();
   }
 
@@ -180,6 +187,64 @@
         </form>
       </div>
     `;
+  }
+
+  function renderLinkSociosModal_() {
+    return '<div id="org-link-socios-modal" class="organizaciones-modal is-hidden" aria-hidden="true">' +
+      '<div class="organizaciones-modal__backdrop" data-link-socios-close="true"></div>' +
+      '<div class="organizaciones-modal__dialog organizaciones-modal__dialog--md">' +
+        '<div class="organizaciones-modal__head">' +
+          '<div>' +
+            '<p class="eyebrow">Link de registro</p>' +
+            '<h3>Formulario de socios</h3>' +
+          '</div>' +
+          '<button type="button" class="secondary-btn" data-link-socios-close="true">' +
+            '<span class="material-symbols-outlined">close</span>Cerrar' +
+          '</button>' +
+        '</div>' +
+        '<div class="organizaciones-modal__body">' +
+          '<div id="link-socios-content-loading" class="empty-state" style="padding:var(--space-6);">' +
+            '<div class="spinner"></div>' +
+            '<p style="margin-top:var(--space-3);color:var(--text-muted);">Generando enlace...</p>' +
+          '</div>' +
+          '<div id="link-socios-content" style="display:none;"></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderLinkSociosContentHtml_(data) {
+    return '<div class="field field--full">' +
+      '<label><span class="material-symbols-outlined" style="font-size:1.25rem;vertical-align:middle;">link</span> Enlace del formulario</label>' +
+      '<div style="display:flex;gap:var(--space-2);align-items:center;">' +
+        '<input type="text" readonly value="' + escapeHtml(data.url) + '" id="link-socios-url-input" style="flex:1;font-size:0.75rem;font-family:monospace;">' +
+        '<button type="button" class="primary-btn" id="btn-copiar-link-socios" style="flex-shrink:0;">' +
+          '<span class="material-symbols-outlined">content_copy</span>Copiar' +
+        '</button>' +
+      '</div>' +
+      '<p style="margin-top:var(--space-2);font-size:0.875rem;color:var(--text-muted);">' +
+        '<strong>Grupo:</strong> ' + escapeHtml(data.label) +
+      '</p>' +
+    '</div>' +
+    '<div class="field field--full" style="margin-top:var(--space-4);">' +
+      '<label><span class="material-symbols-outlined" style="font-size:1.25rem;vertical-align:middle;">qr_code</span> Código QR</label>' +
+      '<div style="text-align:center;padding:var(--space-3);background:var(--surface);border-radius:var(--radius-md);">' +
+        '<img src="' + escapeHtml(data.qr_url) + '" alt="QR Code" style="max-width:240px;width:100%;height:auto;border-radius:var(--radius-sm);">' +
+        '<p style="margin-top:var(--space-3);font-size:0.875rem;color:var(--text-muted);">Comparte este código para que los vecinos se registren</p>' +
+        '<a href="' + escapeHtml(data.qr_url) + '" download="QR-Socios-' + escapeHtml(data.solicitud_id) + '.png" class="secondary-btn" style="margin-top:var(--space-2);display:inline-flex;">' +
+          '<span class="material-symbols-outlined">download</span>Descargar QR' +
+        '</a>' +
+      '</div>' +
+    '</div>' +
+    '<div class="field field--full" style="margin-top:var(--space-4);background:var(--surface-2);padding:var(--space-3);border-radius:var(--radius-md);">' +
+      '<p style="font-weight:600;margin-bottom:var(--space-2);"><span class="material-symbols-outlined" style="font-size:1.25rem;vertical-align:middle;color:var(--info);">info</span> Instrucciones</p>' +
+      '<ol style="margin:0;padding-left:var(--space-5);font-size:0.875rem;line-height:1.6;">' +
+        '<li>Comparte el enlace o QR con los vecinos del grupo</li>' +
+        '<li>Cada vecino completa sus datos (aprox. 3 minutos)</li>' +
+        '<li>Revisa las respuestas en el <strong>Módulo Socios</strong></li>' +
+        '<li>Importa los registros válidos desde allí</li>' +
+      '</ol>' +
+    '</div>';
   }
 
 
@@ -362,9 +427,14 @@
         '</div>' +
       '</div>' +
       '<div class="org-card__footer">' +
-        '<button type="button" class="secondary-btn" style="width:100%;justify-content:center;" data-grupo-ver-ficha="' + escapeHtml(org.solicitud_id || '') + '">' +
-          '<span class="material-symbols-outlined">person_search</span>Ver ficha' +
-        '</button>' +
+        '<div class="org-card__footer-grid">' +
+          '<button type="button" class="secondary-btn" data-grupo-ver-ficha="' + escapeHtml(org.solicitud_id || '') + '">' +
+            '<span class="material-symbols-outlined">person_search</span>Ver ficha' +
+          '</button>' +
+          '<button type="button" class="secondary-btn" data-grupo-link-socios="' + escapeHtml(org.solicitud_id || '') + '">' +
+            '<span class="material-symbols-outlined">link</span>Link socios' +
+          '</button>' +
+        '</div>' +
       '</div>' +
     '</div>';
   }
@@ -500,6 +570,11 @@
     });
     document.querySelectorAll('[data-org-socio-cargo-close]').forEach(btn => {
       btn.addEventListener('click', closeOrganizacionSocioCargoModal_);
+    });
+    document.querySelectorAll('[data-link-socios-close]').forEach(btn => {
+      btn.addEventListener('click', function() {
+        setModalVisibility_('org-link-socios-modal', false);
+      });
     });
 
     fillSelect(document.getElementById('org-socio-cargo-select'), getSocioCargoOptions_(), 'Seleccionar cargo');
@@ -1342,5 +1417,80 @@
         return loadOrganizacionDetalle_(org.organizacion_id);
       });
     }).catch(showError);
+  }
+
+  // -- LINK SOCIOS HANDLERS --
+
+  function initLinkSociosHandlers_() {
+    // Handler: abrir modal y generar link
+    document.addEventListener('click', function(e) {
+      const btn = e.target.closest('[data-grupo-link-socios]');
+      if (!btn) return;
+      e.preventDefault();
+
+      const solicitudId = btn.getAttribute('data-grupo-link-socios');
+      if (!solicitudId) return;
+
+      // Abrir modal
+      setModalVisibility_('org-link-socios-modal', true);
+
+      // Mostrar loading
+      const loadingEl = document.getElementById('link-socios-content-loading');
+      const contentEl = document.getElementById('link-socios-content');
+      if (loadingEl) loadingEl.style.display = 'block';
+      if (contentEl) contentEl.style.display = 'none';
+
+      // Llamar al backend
+      api('generarLinkFormSocios', { solicitud_id: solicitudId })
+        .then(function(result) {
+          if (!result.ok) throw new Error('No se pudo generar el enlace');
+
+          // Renderizar contenido
+          if (contentEl) {
+            contentEl.innerHTML = renderLinkSociosContentHtml_(result);
+            contentEl.style.display = 'block';
+          }
+          if (loadingEl) loadingEl.style.display = 'none';
+
+          // Inicializar handler de copiar
+          initCopiarLinkHandler_();
+        })
+        .catch(function(err) {
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (contentEl) {
+            contentEl.innerHTML = GO_PES_UI.emptyStateHtml('error', 'No se pudo generar el enlace', String(err));
+            contentEl.style.display = 'block';
+          }
+        });
+    });
+  }
+
+  function initCopiarLinkHandler_() {
+    const btnCopiar = document.getElementById('btn-copiar-link-socios');
+    const inputUrl = document.getElementById('link-socios-url-input');
+
+    if (!btnCopiar || !inputUrl) return;
+
+    btnCopiar.addEventListener('click', function() {
+      inputUrl.select();
+      inputUrl.setSelectionRange(0, 99999); // Para móviles
+
+      navigator.clipboard.writeText(inputUrl.value)
+        .then(function() {
+          GO_PES_UI.showSuccess('Enlace copiado al portapapeles');
+
+          // Feedback visual
+          const icon = btnCopiar.querySelector('.material-symbols-outlined');
+          if (icon) {
+            icon.textContent = 'check';
+            setTimeout(function() {
+              icon.textContent = 'content_copy';
+            }, 2000);
+          }
+        })
+        .catch(function(err) {
+          GO_PES_UI.showError('No se pudo copiar el enlace. Cópialo manualmente.');
+        });
+    });
   }
 

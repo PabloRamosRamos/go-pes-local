@@ -1067,6 +1067,9 @@ function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
       responsable_actual: nextOrg.responsable_actual || goPesGetUserEmail_(user),
       observacion_resumen: nextOrg.observacion_resumen || ''
     });
+
+    // Actualizar socios del grupo de vecinos al organizacion_id real
+    goPesActualizarSociosAlConstituirOrganizacion_(solicitudId, organizacionId, user);
   }
 
   // OPTIMIZACIÓN (2026-06-11): Eliminada llamada a refreshPartialArtifacts_() que tomaba ~17s
@@ -1683,4 +1686,70 @@ function goPesDiagnosticarAvanceBackend_() {
 
   Logger.log(JSON.stringify(report, null, 2));
   return report;
+}
+
+/**
+ * Actualiza los socios de un grupo de vecinos cuando se constituye en organización
+ * @param {string} solicitudId - ID de la solicitud (grupo de vecinos)
+ * @param {string} organizacionId - ID de la organización recién creada
+ * @param {object} user - Usuario que ejecuta la acción
+ */
+function goPesActualizarSociosAlConstituirOrganizacion_(solicitudId, organizacionId, user) {
+  if (!solicitudId || !organizacionId) return;
+
+  try {
+    const socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
+    const sociosAActualizar = socios.filter(function(socio) {
+      return String(socio.organizacion_id || '').trim() === solicitudId;
+    });
+
+    if (sociosAActualizar.length === 0) {
+      Logger.log('No hay socios para actualizar del grupo ' + solicitudId + ' a organización ' + organizacionId);
+      return;
+    }
+
+    // Actualizar cada socio
+    const now = new Date();
+    sociosAActualizar.forEach(function(socio) {
+      const socioActualizado = Object.assign({}, socio, {
+        organizacion_id: organizacionId,
+        updated_by: goPesGetUserEmail_(user),
+        updated_at: now
+      });
+      upsertByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioActualizado, false);
+    });
+
+    logProcessing_(
+      'INFO',
+      'actualizarSociosAlConstituir',
+      'socios',
+      '',
+      goPesGetUserEmail_(user),
+      'OK',
+      {
+        solicitud_id: solicitudId,
+        organizacion_id: organizacionId,
+        total_socios_actualizados: sociosAActualizar.length
+      }
+    );
+
+    Logger.log('Actualizados ' + sociosAActualizar.length + ' socios del grupo ' + solicitudId + ' a organización ' + organizacionId);
+
+  } catch (error) {
+    logProcessing_(
+      'ERROR',
+      'actualizarSociosAlConstituir',
+      'socios',
+      '',
+      goPesGetUserEmail_(user),
+      'ERROR',
+      {
+        solicitud_id: solicitudId,
+        organizacion_id: organizacionId,
+        error: String(error)
+      }
+    );
+    Logger.log('ERROR actualizando socios: ' + String(error));
+    // No lanzar error para no bloquear la constitución de la organización
+  }
 }

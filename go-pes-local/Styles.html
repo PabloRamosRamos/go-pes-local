@@ -8544,4 +8544,23 @@ th.sortable.sort-desc .sort-icon {
   }
 }
 
+/* ======== MÓDULO ORGANIZACIONES - Footer Grid (Link Socios) ======== */
+.org-card__footer-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.org-card__footer-grid .secondary-btn {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Responsive: stack vertical en mobile */
+@media (max-width: 480px) {
+  .org-card__footer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 </style>

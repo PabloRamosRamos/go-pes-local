@@ -350,6 +350,9 @@
             <button type="button" class="secondary-btn" id="socios-open-manual-btn">
               <span class="material-symbols-outlined">person_add</span>Agregar socio manualmente
             </button>
+            <button type="button" class="primary-btn" id="socios-import-form-btn">
+              <span class="material-symbols-outlined">cloud_download</span>Importar desde formulario
+            </button>
           </div>
         </div>
 
@@ -501,6 +504,7 @@
   function bindSociosView_() {
     document.getElementById('socios-open-bulk-btn')?.addEventListener('click', () => openSociosModal_('socios-bulk-modal'));
     document.getElementById('socios-open-manual-btn')?.addEventListener('click', () => openSociosModal_('socios-manual-modal'));
+    document.getElementById('socios-import-form-btn')?.addEventListener('click', importarSociosDesdeForm_);
     document.getElementById('socios-validate-btn')?.addEventListener('click', validateSociosInput);
     document.getElementById('socios-save-btn')?.addEventListener('click', saveSociosInput);
     document.getElementById('socios-manual-save-btn')?.addEventListener('click', () => saveSocioManual_({ keepOpen: false }));
@@ -828,5 +832,62 @@
         <p class="muted">${escapeHtml(row.nombre_socio)} asociado a ${escapeHtml(row.nombre_comite_origen || row.organizacion_id)}</p>
       </div>
     `;
+  }
+
+  // -- IMPORTAR DESDE FORMULARIO --
+
+  function importarSociosDesdeForm_() {
+    if (!confirm('¿Importar las respuestas del formulario de registro de socios?\n\nEsto leerá todas las respuestas del Google Form y las agregará al sistema.\n\nLos RUTs duplicados serán rechazados.')) {
+      return;
+    }
+
+    showContentLoading('Importando respuestas del formulario...');
+
+    api('importarRespuestasFormSocios', {})
+      .then(function(result) {
+        hideContentLoading();
+
+        console.log('Resultado importación:', result);
+
+        if (result.imported === 0 && result.total === 0) {
+          showSuccess(result.message || 'No hay respuestas para importar.');
+          return;
+        }
+
+        if (result.ok && result.errors.length === 0) {
+          showSuccess('✓ ' + result.imported + ' socios importados correctamente de ' + result.total + ' respuestas.');
+        } else {
+          if (result.errors.length > 0) {
+            var errorsText = 'ERRORES DE IMPORTACIÓN:\n\n';
+            errorsText += result.imported + ' de ' + result.total + ' importados correctamente.\n\n';
+
+            var errorsToShow = result.errors.slice(0, 5);
+            for (var i = 0; i < errorsToShow.length; i++) {
+              var err = errorsToShow[i];
+              errorsText += '• Fila ' + err.index + ': ' + err.error;
+              if (err.row && (err.row.nombre || err.row.rut)) {
+                errorsText += ' (' + (err.row.nombre || err.row.rut) + ')';
+              }
+              errorsText += '\n';
+            }
+
+            if (result.errors.length > 5) {
+              errorsText += '\n... y ' + (result.errors.length - 5) + ' errores más.';
+            }
+
+            errorsText += '\n\nRevisa la consola del navegador (F12) para ver todos los detalles.';
+
+            alert(errorsText);
+          }
+        }
+
+        // Recargar datos del módulo
+        APP.state.sociosModuleFetchedAt = 0;
+        loadSociosModuleData_({ force: true }).catch(function() {});
+      })
+      .catch(function(err) {
+        hideContentLoading();
+        showError('Error al importar: ' + String(err));
+      });
   }
 

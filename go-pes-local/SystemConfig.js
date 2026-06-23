@@ -189,6 +189,12 @@ function getDefaultSystemConfig_() {
       },
       dashboardHeight: 443
     },
+    form_socios_config: {
+      form_url_base: 'https://docs.google.com/forms/d/e/1FAIpQLSczBrk27i-7R00G66LpEWolrIm2eWrRFOYqkgrFjUhriQDYew/viewform',
+      entry_grupo: 'entry.1283210507',
+      sheet_respuestas_id: '1fRpj_XRDjyUCm7RS4yd6GIPP5a24e8qTDL6l17k0gkc',
+      activo: true
+    },
     beneficios: {
       capacitaciones: {
         annualDefaultCount: 4,

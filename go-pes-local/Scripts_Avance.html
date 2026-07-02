@@ -404,6 +404,16 @@
 
     if (!searchInput || !hiddenInput || !dropdown || !wrapper) return;
 
+    // Referencia a la función de normalización de texto
+    const normalizeText = window.GO_PES_UTILS?.normalizeText || function(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/['"´`]/g, '')
+        .toLowerCase()
+        .trim();
+    };
+
     // Guardar opciones en el elemento para uso posterior
     dropdown.dataset.options = JSON.stringify(options || []);
 

@@ -479,7 +479,12 @@
 
     const currentValue = String(hiddenInput.value || '').trim();
 
-    dropdown.innerHTML = options.map(opt => {
+    // Ordenar las opciones alfabéticamente descendente antes de renderizar
+    const sortedOptions = options.slice().sort(function(a, b) {
+      return String(b.label || '').localeCompare(String(a.label || ''), 'es');
+    });
+
+    dropdown.innerHTML = sortedOptions.map(opt => {
       const isSelected = String(opt.value) === currentValue;
       return `
         <div

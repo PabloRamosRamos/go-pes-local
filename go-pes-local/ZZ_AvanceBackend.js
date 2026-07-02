@@ -67,7 +67,8 @@ function getOrganizacionesAvanceClient() {
       return String(r.organizacion_id || '').trim() && String(r.nombre_organizacion || '').trim();
     })
     .sort(function(a, b) {
-      return String(a.nombre_organizacion || '').localeCompare(String(b.nombre_organizacion || ''), 'es');
+      // Orden alfabético descendente (Z → A)
+      return String(b.nombre_organizacion || '').localeCompare(String(a.nombre_organizacion || ''), 'es');
     });
 
   const result = goPesAvanceToClientSafe_({
@@ -98,7 +99,10 @@ function getGruposVecinosAvanceClient() {
       return String(r.solicitud_id || '').trim() && !String(r.organizacion_id || '').trim();
     })
     .sort(function(a, b) {
-      return String(a.fecha_ingreso || '').localeCompare(String(b.fecha_ingreso || ''));
+      // Orden alfabético descendente por nombre completo (Z → A)
+      const nombreA = String(a.nombre_completo || a.solicitud_id || '').trim();
+      const nombreB = String(b.nombre_completo || b.solicitud_id || '').trim();
+      return nombreB.localeCompare(nombreA, 'es');
     });
 
   const result = goPesAvanceToClientSafe_({

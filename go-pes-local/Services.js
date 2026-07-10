@@ -631,6 +631,9 @@ function obtenerFicha(payload) {
   const diag = goPesDiagStart_('Services.obtenerFicha', payload || {});
   requireModuleAccess_('ficha', ['operador', 'coordinador', 'superuser']);
 
+  // [OPTIMIZACIÓN 2026-07-10] Medir performance
+  const perfStart = Date.now();
+
   const solicitudId = payload && payload.solicitud_id ? String(payload.solicitud_id) : '';
   const organizacionId = payload && payload.organizacion_id ? String(payload.organizacion_id) : '';
 
@@ -703,26 +706,31 @@ function obtenerFicha(payload) {
       )
     : [];
 
-  const socios = finalOrgId
-    ? getRowsByFieldValuesSelective_(
-        GO_PES_V2.SHEETS.FACT_SOCIOS,
-        'organizacion_id',
-        [finalOrgId],
-        false
-      )
-    : [];
+  // [OPTIMIZACIÓN 2026-07-10] Usar índice de socios por org
+  const sociosByOrgIndex = buildSociosByOrgIdIndex_();
+  const socios = finalOrgId ? (sociosByOrgIndex[finalOrgId] || []) : [];
 
-  const avanceHitos = (finalOrgId || finalSolicitudId)
-    ? (getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS) || [])
-        .filter(function(row) {
-          return (finalOrgId && String(row.organizacion_id || '').trim() === finalOrgId)
-            || (finalSolicitudId && String(row.solicitud_id || '').trim() === finalSolicitudId);
-        })
-        .sort(function(a, b) {
-          return new Date(b.timestamp_registro || 0) - new Date(a.timestamp_registro || 0);
-        })
-        .slice(0, 25)
-    : [];
+  // [OPTIMIZACIÓN 2026-07-10] Usar índices de hitos de avance
+  const hitosByOrgIndex = buildHitosByOrgIdIndex_();
+  const hitosBySolicitudIndex = buildHitosBySolicitudIdIndex_();
+
+  const hitosOrg = finalOrgId ? (hitosByOrgIndex[finalOrgId] || []) : [];
+  const hitosSol = finalSolicitudId ? (hitosBySolicitudIndex[finalSolicitudId] || []) : [];
+
+  // Combinar y deduplicar
+  const combined = hitosOrg.concat(hitosSol);
+  const seen = {};
+  const avanceHitos = combined
+    .filter(function(row) {
+      const id = row.avance_hito_id;
+      if (seen[id]) return false;
+      seen[id] = true;
+      return true;
+    })
+    .sort(function(a, b) {
+      return new Date(b.timestamp_registro || 0) - new Date(a.timestamp_registro || 0);
+    })
+    .slice(0, 25);
   const hitoCreacionOrganizacion = getHitoCreacionOrganizacionFromAvance_(avanceHitos);
 
   const acciones = getRowsByFieldValuesSelective_(
@@ -775,8 +783,13 @@ function obtenerFicha(payload) {
     trazabilidad: acciones
   });
 
+  // [OPTIMIZACIÓN 2026-07-10] Log de performance
+  const perfElapsed = Date.now() - perfStart;
+  Logger.log('[PERF] obtenerFicha() ejecutado en ' + perfElapsed + 'ms (con índices)');
+
   goPesDiagEnd_(diag, {
-    found: !!(result && result.summary)
+    found: !!(result && result.summary),
+    performance_ms: perfElapsed
   });
   return result;
 }

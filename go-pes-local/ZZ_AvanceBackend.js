@@ -152,6 +152,9 @@ function getAvanceOrganizacion(payload) {
   const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
+  // [OPTIMIZACIÓN 2026-07-10] Medir performance
+  const perfStart = Date.now();
+
   const ctx = goPesResolveAvanceContext_(payload);
   const orgId = ctx.organizacion.organizacion_id;
   const solicitudId = ctx.organizacion.solicitud_id || '';
@@ -170,12 +173,18 @@ function getAvanceOrganizacion(payload) {
     botones: botones,
     timeline: timeline
   });
+
+  // [OPTIMIZACIÓN 2026-07-10] Log de performance
+  const perfElapsed = Date.now() - perfStart;
+  Logger.log('[PERF] getAvanceOrganizacion() ejecutado en ' + perfElapsed + 'ms (con índices)');
+
   goPesDiagEnd_(diag, {
     organizacion_id: orgId,
     solicitud_id: solicitudId,
     timeline_count: result.timeline.length,
     botones_count: result.botones ? result.botones.length : 0,
-    has_estado: !!estadoActual
+    has_estado: !!estadoActual,
+    performance_ms: perfElapsed
   });
   return goPesDiagPayloadSize_(result, 'getAvanceOrganizacion');
 }
@@ -1113,18 +1122,17 @@ function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
 }
 
 function goPesGetTimelineAvanceRows_(organizacionId) {
-  // OPTIMIZACIÓN: Usar filterByField_ en lugar de getSheetData_ + filter
-  // Reduce lectura de TODA la tabla a solo las filas relevantes
+  // [OPTIMIZACIÓN 2026-07-10] Usar índices globales en vez de filterByField_
   const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
   const solicitudId = org && org.solicitud_id ? String(org.solicitud_id || '').trim() : '';
 
-  // Filtrar directamente por organizacion_id (más rápido que leer todo)
-  const rowsByOrg = filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'organizacion_id', organizacionId, false) || [];
+  // Usar índice de hitos por org (lookup O(1))
+  const hitosByOrgIndex = buildHitosByOrgIdIndex_();
+  const rowsByOrg = hitosByOrgIndex[organizacionId] || [];
 
-  // Si hay solicitud_id, agregar también hitos por solicitud (grupos de vecinos)
-  const rowsBySolicitud = solicitudId
-    ? (filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'solicitud_id', solicitudId, false) || [])
-    : [];
+  // Si hay solicitud, usar índice de hitos por solicitud
+  const hitosBySolicitudIndex = buildHitosBySolicitudIdIndex_();
+  const rowsBySolicitud = solicitudId ? (hitosBySolicitudIndex[solicitudId] || []) : [];
 
   // Combinar y deduplicar por avance_hito_id
   const combined = rowsByOrg.concat(rowsBySolicitud);
@@ -1146,7 +1154,9 @@ function goPesGetTimelineAvanceRows_(organizacionId) {
 }
 
 function goPesGetTimelineAvanceRowsBySolicitud_(solicitudId) {
-  const rows = (filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, 'solicitud_id', solicitudId, false) || []).map(function(row) {
+  // [OPTIMIZACIÓN 2026-07-10] Usar índice en vez de filterByField_
+  const hitosBySolicitudIndex = buildHitosBySolicitudIdIndex_();
+  const rows = (hitosBySolicitudIndex[solicitudId] || []).map(function(row) {
     return goPesNormalizeTimelineHitoAvanceRow_(row);
   });
   return rows.sort(function(a, b) {
@@ -1155,12 +1165,16 @@ function goPesGetTimelineAvanceRowsBySolicitud_(solicitudId) {
 }
 
 function goPesGetEstadoAvanceActual_(organizacionId, solicitudId) {
-  const rows = filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_ESTADO, 'organizacion_id', organizacionId, false) || [];
+  // [OPTIMIZACIÓN 2026-07-10] Usar índice de estados por org
+  const estadosByOrgIndex = buildEstadosByOrgIdIndex_();
+  const rows = estadosByOrgIndex[organizacionId] || [];
   return goPesGetEstadoAvanceActualFromRows_(rows, solicitudId);
 }
 
 function goPesGetEstadoAvanceActualBySolicitud_(solicitudId) {
-  const rows = filterByField_(GO_PES_V2.SHEETS.FACT_AVANCE_ESTADO, 'solicitud_id', solicitudId, false) || [];
+  // [OPTIMIZACIÓN 2026-07-10] Usar índice de estados por solicitud
+  const estadosBySolicitudIndex = buildEstadosBySolicitudIdIndex_();
+  const rows = estadosBySolicitudIndex[solicitudId] || [];
   return goPesGetEstadoAvanceActualFromRows_(rows, solicitudId);
 }
 

@@ -59,40 +59,55 @@ function getOrganizacionesConGruposClient() {
   var diag = goPesDiagStart_('ZZ_OrganizacionesBackend.getOrganizacionesConGruposClient', {});
   requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
 
-  var avanceHitos = [];
-  try { avanceHitos = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS) || []; } catch (e) {}
+  // [OPTIMIZACIÓN 2026-07-10] Usar índices globales
+  var perfStart = Date.now();
 
-  // Obtener socios por organización para contar total
-  var socios = [];
-  try { socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || []; } catch (e) {}
+  // Índice de socios por organización (construido UNA VEZ, reusado)
+  var sociosByOrgIndex = buildSociosByOrgIdIndex_();
   var sociosByOrg = {};
-  var contactoByOrg = {}; // Primer socio con cargo "Presidente" o primer socio
-  socios.forEach(function(s) {
-    var orgId = String(s.organizacion_id || '').trim();
-    if (!orgId) return;
-    if (!sociosByOrg[orgId]) sociosByOrg[orgId] = 0;
-    sociosByOrg[orgId]++;
+  var contactoByOrg = {};
+
+  Object.keys(sociosByOrgIndex).forEach(function(orgId) {
+    var sociosOrg = sociosByOrgIndex[orgId] || [];
+    sociosByOrg[orgId] = sociosOrg.length;
 
     // Capturar contacto principal (preferir Presidente)
-    if (!contactoByOrg[orgId] || String(s.cargo_socio || '').toLowerCase().indexOf('president') !== -1) {
-      contactoByOrg[orgId] = String(s.nombre_socio || '').trim();
-    }
+    sociosOrg.forEach(function(s) {
+      if (!contactoByOrg[orgId] || String(s.cargo_socio || '').toLowerCase().indexOf('president') !== -1) {
+        contactoByOrg[orgId] = String(s.nombre_socio || '').trim();
+      }
+    });
   });
+
+  // Índices de hitos (construidos UNA VEZ, reusados)
+  var hitosByOrgIndex = buildHitosByOrgIdIndex_();
+  var hitosBySolicitudIndex = buildHitosBySolicitudIdIndex_();
 
   var hitosByOrg = {};
   var hitosBySolicitud = {};
-  avanceHitos.forEach(function(h) {
-    var orgId  = String(h.organizacion_id || '').trim();
-    var solId  = String(h.solicitud_id || '').trim();
-    var orden  = Number(h.orden_hito || 0);
-    if (orden <= 0) return;
-    if (orgId) {
-      if (!hitosByOrg[orgId]) hitosByOrg[orgId] = [];
-      if (hitosByOrg[orgId].indexOf(orden) === -1) hitosByOrg[orgId].push(orden);
-    } else if (solId) {
-      if (!hitosBySolicitud[solId]) hitosBySolicitud[solId] = [];
-      if (hitosBySolicitud[solId].indexOf(orden) === -1) hitosBySolicitud[solId].push(orden);
-    }
+
+  // Procesar hitos por organización
+  Object.keys(hitosByOrgIndex).forEach(function(orgId) {
+    var hitosOrg = hitosByOrgIndex[orgId] || [];
+    hitosByOrg[orgId] = [];
+    hitosOrg.forEach(function(h) {
+      var orden = Number(h.orden_hito || 0);
+      if (orden > 0 && hitosByOrg[orgId].indexOf(orden) === -1) {
+        hitosByOrg[orgId].push(orden);
+      }
+    });
+  });
+
+  // Procesar hitos por solicitud
+  Object.keys(hitosBySolicitudIndex).forEach(function(solId) {
+    var hitosSol = hitosBySolicitudIndex[solId] || [];
+    hitosBySolicitud[solId] = [];
+    hitosSol.forEach(function(h) {
+      var orden = Number(h.orden_hito || 0);
+      if (orden > 0 && hitosBySolicitud[solId].indexOf(orden) === -1) {
+        hitosBySolicitud[solId].push(orden);
+      }
+    });
   });
 
   var orgs = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
@@ -156,12 +171,15 @@ function getOrganizacionesConGruposClient() {
 
   var result = serializeForClient_({ organizaciones: todosSorted });
 
+  // [OPTIMIZACIÓN 2026-07-10] Log de performance
+  var perfElapsed = Date.now() - perfStart;
+  Logger.log('[PERF] getOrganizacionesConGruposClient() ejecutado en ' + perfElapsed + 'ms (con índices)');
+
   goPesDiagEnd_(diag, {
     total_count: todosSorted.length,
     organizaciones_count: orgs.length,
     grupos_count: grupos.length,
-    socios_scanned: (socios || []).length,
-    hitos_scanned: (avanceHitos || []).length
+    performance_ms: perfElapsed
   });
 
   return goPesDiagPayloadSize_(result, 'getOrganizacionesConGruposClient');

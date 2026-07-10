@@ -1,6 +1,6 @@
 # GO-PES v2 — Estadísticas de Desarrollo
 
-**Última actualización:** 2026-06-01
+**Última actualización:** 2026-07-10
 
 ---
 
@@ -8,8 +8,8 @@
 
 | Métrica | Valor |
 |---------|-------|
-| **Archivos de código** | 44 (22 JS + 22 HTML) |
-| **Líneas de código** | 33.326 |
+| **Archivos de código** | 53 archivos fuente en go-pes-local/ |
+| **Líneas de código** | 44.486 (según análisis completo 2026-07-10) |
 | **Tests automatizados** | 262 (90 validators + 41 auth + 51 services + 35 avance + 32 beneficios + 13 security) |
 | **Fallos en tests** | 0 |
 | **Cobertura estimada** | ~78% (core + servicios + auth + módulos críticos) |
@@ -278,7 +278,7 @@
 **Versión actual:** v2.1.0-modular  
 **Entorno de desarrollo:** DEV (p.e.ramos.ramos@gmail.com)  
 **Entorno de producción:** PROD (pablo.ramos@providencia.cl) — **ACTIVO**  
-**Última actualización:** 2026-06-01 (UX — Stagger en cards/listas, Fase 3)
+**Última actualización:** 2026-07-10 (UX — Stagger en cards/listas, Fase 3)
 
 ### Completitud
 

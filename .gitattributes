@@ -1,0 +1,22 @@
+# Normalización de line endings para GO-PES v2
+# Propósito: prevenir diff falsos por CRLF/LF en git
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Source code
+*.js text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# PowerShell scripts mantienen CRLF (convención Windows)
+*.ps1 text eol=crlf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary

@@ -13,15 +13,19 @@
  * 3) Revisar el log y las pestañas creadas
  */
 
-/** Wrapper visible */
-function goPesInstalarModuloAvanceFase1() {
-  return goPesInstalarModuloAvanceFase1_();
-}
+/**
+ * FUNCIONES PRIVATIZADAS - Solo ejecutables desde el editor de Apps Script
+ * No accesibles desde google.script.run (cliente)
+ */
 
-/** Wrapper visible */
-function goPesDiagnosticarModuloAvanceFase1() {
-  return goPesDiagnosticarModuloAvanceFase1_();
-}
+/**
+ * LEGACY: Wrappers públicos removidos por seguridad (2026-07-10)
+ * Las funciones de instalación ahora son privadas (sufijo _)
+ * y solo ejecutables desde el editor con cuenta de superuser.
+ *
+ * Para instalar: ejecutar goPesInstalarModuloAvanceFase1_() desde editor
+ * Para diagnosticar: ejecutar goPesDiagnosticarModuloAvanceFase1_() desde editor
+ */
 
 /** Devuelve el mapa de hojas nuevas del módulo Avance */
 function getGoPesAvanceSheetMap_() {
@@ -101,6 +105,7 @@ function getGoPesAvanceSheetDefinitions_() {
 
 /** Instala la fase 1: crea/normaliza hojas del módulo Avance */
 function goPesInstalarModuloAvanceFase1_() {
+  requireRole_(['superuser']);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('No se encontró el Spreadsheet activo.');
 
@@ -128,6 +133,7 @@ function goPesInstalarModuloAvanceFase1_() {
 
 /** Diagnóstico rápido de la Fase 1 */
 function goPesDiagnosticarModuloAvanceFase1_() {
+  requireRole_(['superuser']);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('No se encontró el Spreadsheet activo.');
 

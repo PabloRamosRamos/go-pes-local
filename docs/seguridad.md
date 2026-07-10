@@ -471,7 +471,7 @@ Se completó una auditoría de seguridad exhaustiva con los siguientes hallazgos
 | Bypass de autorización | Auth guards en todas las funciones mutantes |
 | PIN en código fuente | Externalizado a PropertiesService con rate limiting |
 | Operadores viendo logs completos | Módulo Historial restringido a superuser |
-| ID de migración expuesto | Movido a PropertiesService |
+| ID de migración expuesto | ✅ RESUELTO (2026-07-10): ZZ_MigracionHitos.js eliminado, Phase1/2 privatizadas |
 
 ---
 

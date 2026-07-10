@@ -10,15 +10,14 @@
  * - ZZ_AvancePhase1.gs ya instalado
  */
 
-/** Wrapper visible */
-function goPesSembrarCatalogoAvanceFase2() {
-  return goPesSembrarCatalogoAvanceFase2_();
-}
-
-/** Wrapper visible */
-function goPesDiagnosticarCatalogoAvanceFase2() {
-  return goPesDiagnosticarCatalogoAvanceFase2_();
-}
+/**
+ * LEGACY: Wrappers públicos removidos por seguridad (2026-07-10)
+ * Las funciones de siembra ahora son privadas (sufijo _)
+ * y solo ejecutables desde el editor con cuenta de superuser.
+ *
+ * Para sembrar catálogo: ejecutar goPesSembrarCatalogoAvanceFase2_() desde editor
+ * Para diagnosticar: ejecutar goPesDiagnosticarCatalogoAvanceFase2_() desde editor
+ */
 
 /** Catálogo inicial de hitos */
 function getSeedCatalogoHitosAvance_() {
@@ -178,6 +177,7 @@ function getSeedCatalogoHitosAvance_() {
 
 /** Siembra completa del catálogo */
 function goPesSembrarCatalogoAvanceFase2_() {
+  requireRole_(['superuser']);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('No se encontró el Spreadsheet activo.');
 
@@ -231,6 +231,7 @@ function goPesSembrarCatalogoAvanceFase2_() {
 
 /** Diagnóstico del catálogo */
 function goPesDiagnosticarCatalogoAvanceFase2_() {
+  requireRole_(['superuser']);
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('No se encontró el Spreadsheet activo.');
 

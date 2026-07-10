@@ -12,12 +12,13 @@
 // DETECCIÓN DE ENTORNO (DEV vs PROD)
 // ══════════════════════════════════════════════════════════════════════════
 
-var SCRIPT_ID_DEV_ = '12ZfNLyFSEpF5uAvwSwtqR8_zYZK9E6_TO0QhTaSYLO1AYsKHCN1eCdaB';
-var SCRIPT_ID_PROD_ = '10Lzrg2GyPlkB0Wk6yLCshhtwv53dCSKLxDc8dDaOOpJgM2euLoKjRPOG';
-
+/**
+ * Detecta si estamos en entorno DEV
+ * Usa GO_PES_V2.SCRIPT_IDS centralizado (2026-07-10)
+ */
 function isDevEnvironmentAlertas_() {
   var currentScriptId = ScriptApp.getScriptId();
-  return currentScriptId === SCRIPT_ID_DEV_;
+  return currentScriptId === GO_PES_V2.SCRIPT_IDS.DEV;
 }
 
 // ══════════════════════════════════════════════════════════════════════════

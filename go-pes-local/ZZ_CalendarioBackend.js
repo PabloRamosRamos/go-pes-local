@@ -2,17 +2,14 @@ var CAL_PATRONES_  = ['Reunion CS', 'Ministro de fe'];
 var CAL_MESES_ES_  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 var CAL_PROP_KEY_  = 'goPesCalEventos';
 
-// Script IDs de cada entorno (ver CLAUDE.md)
-var SCRIPT_ID_DEV_  = '12ZfNLyFSEpF5uAvwSwtqR8_zYZK9E6_TO0QhTaSYLO1AYsKHCN1eCdaB';
-var SCRIPT_ID_PROD_ = '10Lzrg2GyPlkB0Wk6yLCshhtwv53dCSKLxDc8dDaOOpJgM2euLoKjRPOG';
-
 /**
  * Detecta si el código está corriendo en DEV o PROD
+ * Usa GO_PES_V2.SCRIPT_IDS centralizado (2026-07-10)
  * @returns {boolean} true si es DEV, false si es PROD
  */
 function isDevEnvironment_() {
   var currentScriptId = ScriptApp.getScriptId();
-  return currentScriptId === SCRIPT_ID_DEV_;
+  return currentScriptId === GO_PES_V2.SCRIPT_IDS.DEV;
 }
 
 function normalizeCalText_(s) {

@@ -6,9 +6,16 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
   VERSION: '2.1.905',
-  BUILD: 'f8890c1',
+  BUILD: '47d37d5',
   BUILD_DATE: '20260702',
-  ENVIRONMENT: 'PROD',
+  ENVIRONMENT: 'DEV',
+
+  // Script IDs para detección de entorno (centralizados 2026-07-10)
+  SCRIPT_IDS: {
+    DEV: '12ZfNLyFSEpF5uAvwSwtqR8_zYZK9E6_TO0QhTaSYLO1AYsKHCN1eCdaB',
+    PROD: '10Lzrg2GyPlkB0Wk6yLCshhtwv53dCSKLxDc8dDaOOpJgM2euLoKjRPOG'
+  },
+
   SUPERUSERS: [
     'pablo.ramos@providencia.cl',
     'p.e.ramos.ramos@gmail.com'
@@ -123,13 +130,13 @@ const GO_PES_V2 = {
   TRUSTED_DOMAIN_AUTO_ACTIVE: false,
   DEFAULT_VIEW: 'inicio',
 
-  // Actualizar al subir versión significativa
+  // Actualizar al subir versión significativa (última actualización: 2026-07-10)
   DEV_STATS: {
-    linesOfCode:   34000,
+    linesOfCode:   44486,  // Actualizado según análisis Fable 5
     devHours:      540,
-    sourceFiles:   37,
-    apiEndpoints:  99,
-    testCases:     249,
+    sourceFiles:   53,     // 53 archivos fuente en go-pes-local/
+    apiEndpoints:  129,    // 129 funciones públicas (API cliente)
+    testCases:     262,    // 262 tests en 7 suites
     hourlyRateCLP: 32000,
     ufValueCLP:    39500,
     usdRateCLP:    940
@@ -325,7 +332,7 @@ function getAppVersionLabel_(buildInfo) {
     info.baseVersion ? `v${info.baseVersion}` : '',
     info.buildHash ? `build ${info.buildHash}` : '',
     info.buildDate || ''
-  ].filter(Boolean).join(' Â· ');
+  ].filter(Boolean).join(' · ');
 }
 
 function getAppBuildInfo_() {
@@ -340,12 +347,12 @@ function getAppBuildInfo_() {
 function getAppVersionLabelLegacy_() {
   const version = String(GO_PES_V2.VERSION || '').trim();
   const environment = String(GO_PES_V2.ENVIRONMENT || '').trim().toUpperCase();
-  return [version ? `v${version}` : '', environment].filter(Boolean).join(' Â· ');
+  return [version ? `v${version}` : '', environment].filter(Boolean).join(' · ');
 }
 
 function fijarSpreadsheetPES_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) throw new Error('Abre el spreadsheet contenedor antes de ejecutar esta funciÃ³n.');
+  if (!ss) throw new Error('Abre el spreadsheet contenedor antes de ejecutar esta función.');
 
   PropertiesService.getScriptProperties().setProperty('GO_PES_SPREADSHEET_ID', ss.getId());
   Logger.log('GO_PES_SPREADSHEET_ID = ' + ss.getId());

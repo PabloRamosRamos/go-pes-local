@@ -62,9 +62,19 @@ function getOrganizacionesAvanceClient() {
     return cached;
   }
 
-  const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
+  const allOrgs = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
     .filter(function(r) {
       return String(r.organizacion_id || '').trim() && String(r.nombre_organizacion || '').trim();
+    });
+
+  // [FIX 2026-07-10] Deduplicar por organizacion_id
+  const seenOrgs = {};
+  const rows = allOrgs
+    .filter(function(r) {
+      const orgId = String(r.organizacion_id || '').trim();
+      if (seenOrgs[orgId]) return false;
+      seenOrgs[orgId] = true;
+      return true;
     })
     .sort(function(a, b) {
       // Orden alfabético descendente (Z → A)
@@ -94,9 +104,19 @@ function getGruposVecinosAvanceClient() {
   requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();
 
-  const rows = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS)
+  const allRows = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS)
     .filter(function(r) {
       return String(r.solicitud_id || '').trim() && !String(r.organizacion_id || '').trim();
+    });
+
+  // [FIX 2026-07-10] Deduplicar por solicitud_id (puede haber duplicados)
+  const seen = {};
+  const rows = allRows
+    .filter(function(r) {
+      const solId = String(r.solicitud_id || '').trim();
+      if (seen[solId]) return false;
+      seen[solId] = true;
+      return true;
     })
     .sort(function(a, b) {
       // Orden alfabético descendente por nombre completo (Z → A)

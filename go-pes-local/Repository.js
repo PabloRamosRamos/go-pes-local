@@ -736,3 +736,101 @@ function getOrganizacionByOrgId_(organizacionId) {
   const index = buildOrganizacionesByOrgIdIndex_();
   return index[orgId] || null;
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// LAZY LOADING OPTIMIZATIONS (2026-07-10)
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Cache de lookups individuales (evita buscar el mismo ID múltiples veces)
+ */
+var GO_PES_LOOKUP_CACHE = this.GO_PES_LOOKUP_CACHE || {};
+
+/**
+ * Buscar UN solo registro por campo único
+ * Cachea el resultado para evitar re-buscar el mismo valor
+ *
+ * @param {string} sheetName - Nombre de la hoja
+ * @param {string} fieldName - Nombre del campo por el cual buscar
+ * @param {*} fieldValue - Valor a buscar
+ * @return {Object|null} Registro encontrado o null
+ */
+function findOneByField_(sheetName, fieldName, fieldValue) {
+  const cacheKey = sheetName + ':' + fieldName + ':' + String(fieldValue);
+
+  // Retornar desde cache si existe
+  if (GO_PES_LOOKUP_CACHE[cacheKey] !== undefined) {
+    return GO_PES_LOOKUP_CACHE[cacheKey];
+  }
+
+  // Buscar en la hoja
+  const rows = getSheetData_(sheetName);
+  const result = rows.find(function(r) {
+    return r[fieldName] === fieldValue;
+  }) || null;
+
+  // Cachear resultado (incluso si es null)
+  GO_PES_LOOKUP_CACHE[cacheKey] = result;
+  return result;
+}
+
+/**
+ * Leer solo las últimas N rows de una hoja
+ * Útil para logs/hitos ordenados por fecha desc
+ *
+ * @param {string} sheetName - Nombre de la hoja
+ * @param {number} limit - Número máximo de rows a retornar
+ * @param {number} offset - Offset desde el final (default 0)
+ * @return {Array} Array de objetos (últimas N rows)
+ */
+function getSheetDataLimited_(sheetName, limit, offset) {
+  offset = offset || 0;
+  limit = limit || 25;
+
+  const sheet = getSheet_(sheetName);
+  if (!sheet) return [];
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return []; // Solo header
+
+  const totalRows = lastRow - 1; // Excluir header
+  const startRow = Math.max(2, lastRow - offset - limit + 1);
+  const numRows = Math.min(limit, lastRow - startRow + 1);
+
+  if (numRows <= 0) return [];
+
+  const headers = getSheetHeaders_(sheetName);
+  const values = sheet.getRange(startRow, 1, numRows, headers.length).getValues();
+
+  return values.map(function(row) {
+    const obj = {};
+    headers.forEach(function(h, i) { obj[h] = row[i]; });
+    return obj;
+  });
+}
+
+/**
+ * Invalidar cache de lookups (llamar después de writes)
+ */
+function invalidateLookupCache_() {
+  GO_PES_LOOKUP_CACHE = {};
+}
+
+/**
+ * Invalidar índices de Repository_Indexes.js
+ * LLAMAR después de cualquier write a hojas
+ */
+function invalidateRequestIndexes_() {
+  // Invalidar índices locales de Repository.js
+  GO_PES_REQUEST_INDEXES.casosBySolicitudId = null;
+  GO_PES_REQUEST_INDEXES.casosByOrgId = null;
+  GO_PES_REQUEST_INDEXES.organizacionesByOrgId = null;
+
+  // Invalidar lookups
+  invalidateLookupCache_();
+
+  // Invalidar índices globales de Repository_Indexes.js
+  if (typeof invalidateAllIndexes_ === 'function') {
+    invalidateAllIndexes_();
+  }
+}

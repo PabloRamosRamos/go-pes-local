@@ -180,6 +180,9 @@ function getInicioPanelData() {
 function getDashboardKpis(payload) {
   requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'superuser']);
 
+  // [OPTIMIZACIÓN 2026-07-10] Medir performance
+  var perfStart = Date.now();
+
   var filters      = payload || {};
   var filterUv     = normalizeText_(String(filters.uv                || ''));
   var filterYear   = Number(filters.year                             || 0);
@@ -189,26 +192,22 @@ function getDashboardKpis(payload) {
   var MESES  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   var tz     = Session.getScriptTimeZone();
 
-  /* ── leer hojas ── */
-  var casos        = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS)         || [];
-  var orgs         = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES) || [];
+  /* ── [OPTIMIZADO] filtrar orgs usando índices ── */
+  var filteredOrgs = getOrgsFiltered_({
+    uv: filterUv,
+    estado_constitucion: filterEstado,
+    tipo_organizacion: filterTipo
+  });
+
+  /* ── [OPTIMIZADO] filtrar casos usando índices ── */
+  var filteredCasos = getCasosFiltered_({
+    uv: filterUv,
+    year: filterYear
+  });
+
+  /* ── [OPTIMIZADO] leer otras hojas (instrumentos, hitos solo si hay org filter) ── */
   var instrumentos = getSheetData_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS)  || [];
   var hitos        = getSheetData_(GO_PES_V2.SHEETS.FACT_HITOS)         || [];
-  var avanceHitos  = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS)  || [];
-
-  /* ── filtrar orgs ── */
-  var filteredOrgs = orgs.slice();
-  if (filterUv)     filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.uv||'')                  === filterUv;     });
-  if (filterEstado) filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.estado_constitucion||'') === filterEstado; });
-  if (filterTipo)   filteredOrgs = filteredOrgs.filter(function(r){ return normalizeText_(r.tipo_organizacion||'')   === filterTipo;   });
-
-  /* ── filtrar casos ── */
-  var filteredCasos = casos.slice();
-  if (filterUv)     filteredCasos = filteredCasos.filter(function(r){ return normalizeText_(r.uv||'')     === filterUv;     });
-  if (filterYear)   filteredCasos = filteredCasos.filter(function(r){
-    var d = r.fecha_ingreso ? new Date(r.fecha_ingreso) : null;
-    return d && !isNaN(d) && d.getFullYear() === filterYear;
-  });
 
   var orgIdSet     = {};
   var useOrgFilter = !!(filterUv || filterEstado || filterTipo);
@@ -266,15 +265,23 @@ function getDashboardKpis(payload) {
   var tendenciaMensual = ingresosMes.map(function(ing, m){ return { label: MESES[m], ingresos: ing, gestiones: gestionesMes[m] }; });
   var ingresosPorMes   = ingresosMes.map(function(c, m){ return { label: MESES[m], count: c }; });
 
-  /* ── avance por hito (FACT_AVANCE_HITOS) ── */
+  /* ── [OPTIMIZADO] avance por hito usando índice hitosByOrgId ── */
   var hitoOrgs = {};
-  var avHitosFilt = useOrgFilter ? avanceHitos.filter(function(h){ return orgIdSet[h.organizacion_id]; }) : avanceHitos;
-  avHitosFilt.forEach(function(h){
-    var n = String(h.nombre_hito || h.codigo_hito || '').trim();
-    if (!n || n === '0') return;
-    if (!hitoOrgs[n]) hitoOrgs[n] = {};
-    if (h.organizacion_id) hitoOrgs[n][h.organizacion_id] = true;
+  var hitosByOrgIndex = buildHitosByOrgIdIndex_(); // Construir índice UNA VEZ
+
+  filteredOrgs.forEach(function(org) {
+    var orgId = org.organizacion_id;
+    if (!orgId) return;
+
+    var hitosOrg = hitosByOrgIndex[orgId] || []; // Lookup O(1)
+    hitosOrg.forEach(function(h) {
+      var n = String(h.nombre_hito || h.codigo_hito || '').trim();
+      if (!n || n === '0') return;
+      if (!hitoOrgs[n]) hitoOrgs[n] = {};
+      hitoOrgs[n][orgId] = true;
+    });
   });
+
   var avancePorHito = Object.keys(hitoOrgs).map(function(n){
     var done = Object.keys(hitoOrgs[n]).length;
     return { hito: n, completados: done, total: totalOrgs, pct: totalOrgs > 0 ? Math.round(done / totalOrgs * 100) : 0 };
@@ -361,7 +368,7 @@ function getDashboardKpis(payload) {
   casos.forEach(function(r){ var d = r.fecha_ingreso ? new Date(r.fecha_ingreso) : null; if (d && !isNaN(d)) yearsSeen[d.getFullYear()] = true; });
   var years = Object.keys(yearsSeen).map(Number).sort(function(a,b){ return b - a; });
 
-  return serializeForClient_({
+  var result = serializeForClient_({
     kpis: {
       totalSolicitudes: totalSolicitudes, totalOrgs: totalOrgs,
       orgsConstituidas: orgsConstituidas, pctConstituidas: pctConstituidas,
@@ -393,6 +400,12 @@ function getDashboardKpis(payload) {
     },
     lastUpdated: Utilities.formatDate(new Date(), tz, 'dd/MM/yyyy HH:mm')
   });
+
+  // [OPTIMIZACIÓN 2026-07-10] Log de performance
+  var perfElapsed = Date.now() - perfStart;
+  Logger.log('[PERF] getDashboardKpis() ejecutado en ' + perfElapsed + 'ms (con índices)');
+
+  return result;
 }
 
 function buildInicioBeneficioAlerts_(rows, organizacionesById, options) {

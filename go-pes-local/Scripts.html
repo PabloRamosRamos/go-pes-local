@@ -366,9 +366,9 @@
         loadFicha(BOOTSTRAP.query);
       }
     }).finally(() => {
+      // El loader del módulo lo gestiona route(); aquí solo se retira el splash.
       setTimeout(() => {
         hideAppLoading();
-        hideModuleLoading();
       }, 120);
     });
   }
@@ -1447,7 +1447,16 @@
     );
 
     toggleTopQuickActions_(view);
+
+    // Loader estándar del módulo: visible desde que se selecciona en el menú
+    // y mientras se cargan los catálogos/datos de la vista.
+    showModuleLoading(`Cargando ${friendlyViewName_(view)}...`);
+
     const finalizeRoute = () => {
+      // Si el usuario navegó a otro módulo mientras cargaban los datos,
+      // no tocar el loader ni el estado de la vista activa.
+      if (APP.state.activeView !== view) return;
+
       hideModuleLoading();
       ensureViewRendered_(view);
 
@@ -1494,7 +1503,10 @@
 
     const catalogPromise = ensureCatalogsForView_(view);
     if (catalogPromise) {
-      catalogPromise.then(finalizeRoute).catch(showError);
+      catalogPromise.then(finalizeRoute).catch(err => {
+        if (APP.state.activeView === view) hideModuleLoading();
+        showError(err);
+      });
       return;
     }
 

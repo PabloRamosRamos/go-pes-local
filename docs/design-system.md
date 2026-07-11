@@ -884,6 +884,7 @@ Estándar unificado (2026-07-10). **Ningún loader cubre la pantalla completa**;
 
 - Definido en `Loading.html`. Overlay `#content-loading` montado **siempre** dentro de `#app .content` (área de acción del módulo). El sidebar y el header permanecen visibles y usables.
 - Uso: carga de datos del módulo o acciones disparadas desde el área del módulo.
+- **`route()` (Scripts.html) lo muestra automáticamente al seleccionar un módulo del menú** con el mensaje `Cargando <Módulo>...`, y lo oculta cuando los catálogos/datos de la vista están listos. Si el usuario navega a otro módulo antes de que termine la carga, el `finalizeRoute` obsoleto no toca el loader (guard por `APP.state.activeView`).
 - `showContentLoading` / `hideContentLoading` son alias de compatibilidad (mismo comportamiento).
 
 ```javascript

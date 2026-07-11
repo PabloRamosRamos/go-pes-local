@@ -876,7 +876,64 @@ document.querySelector('.stagger-item').classList;
 
 ---
 
+## Sistema de Loading
+
+Estándar unificado (2026-07-10). **Ningún loader cubre la pantalla completa**; el único elemento fullscreen permitido es el splash inicial (`Splash.html`).
+
+### 1. Loader de módulo — `showModuleLoading(message)` / `hideModuleLoading()`
+
+- Definido en `Loading.html`. Overlay `#content-loading` montado **siempre** dentro de `#app .content` (área de acción del módulo). El sidebar y el header permanecen visibles y usables.
+- Uso: carga de datos del módulo o acciones disparadas desde el área del módulo.
+- `showContentLoading` / `hideContentLoading` son alias de compatibilidad (mismo comportamiento).
+
+```javascript
+showModuleLoading('Cargando usuarios...');
+api('listUsers').then(render).finally(hideModuleLoading);
+```
+
+### 2. Loader de modal — `showModalLoading(modalId, message)` / `hideModalLoading(modalId)`
+
+- Definido en `Loading.html`. Overlay `.modal-loading` (spinner circular + texto) montado **dentro del diálogo** del modal indicado; cubre solo el modal, no la app.
+- Se crea bajo demanda si el modal no declara un `.modal-loading` en su markup; si lo declara, se reutiliza.
+- Uso: acciones ejecutadas mientras el modal permanece abierto (guardar, actualizar).
+
+```javascript
+showModalLoading('org-edit-modal', 'Guardando organización...');
+api('guardarOrganizacion', payload).finally(() => hideModalLoading('org-edit-modal'));
+```
+
+- Si el flujo **cierra el modal antes** de disparar la acción, usar `showModuleLoading` (el área de acción vuelve a ser el módulo).
+
+### 3. Loader local — `.module-loading` (flecha circular + texto)
+
+Bloque estático para listas, tablas y paneles. Markup estándar:
+
+```html
+<div id="mi-loader" class="module-loading is-hidden">
+  <span class="material-symbols-outlined dash-spin">refresh</span>
+  <span>Cargando datos...</span>
+</div>
+```
+
+- Se muestra/oculta con `classList.toggle('is-hidden')`.
+- Variante `.module-loading--overlay`: cubre el contenedor local (tabla) con fondo `var(--surface)`; requiere `position: relative` en el padre.
+- Usado en: Beneficios (`#beneficios-loading`), Socios (`#socios-table-loading`), Historial (`#hist-table-loading`), Organizaciones (grid y link de socios), Inicio (`.dash-loading-zone`) y Calendario (`#cal-step-loading`).
+
+### Reglas
+
+1. Prohibido `position: fixed` o montar loaders en `#app`/`body` (fullscreen).
+2. Todo loader nuevo usa una de las tres formas anteriores; no crear sistemas propios por módulo.
+3. Modo claro y oscuro ya cubiertos (`Styles.html` + `ThemeDark.html`); los textos usan `var(--text-muted)`.
+
+---
+
 ## Changelog
+
+### v1.2 (2026-07-10)
+
+- ✅ Sistema de loading estandarizado: loader de módulo (nunca fullscreen), loader de modal por `modalId`, loader local `.module-loading`
+- ✅ Eliminado el contexto fullscreen (`content-loading--modal`) y el loader `position:fixed` propio de Avance
+- ✅ Clase `.spinner` sin CSS reemplazada por `.module-loading` en Organizaciones
 
 ### v1.1 (2026-06-01)
 

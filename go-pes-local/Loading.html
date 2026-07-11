@@ -1,5 +1,5 @@
 <template id="content-loading-template">
-  <div id="content-loading" class="content-loading is-hidden content-loading--content" aria-live="polite" aria-busy="false">
+  <div id="content-loading" class="content-loading is-hidden" aria-live="polite" aria-busy="false">
     <div class="content-loading__box loading-shell" role="status">
       <div class="content-loading__spinner loading-shell__visual" aria-hidden="true">
         <span class="loading-shell__halo"></span>
@@ -18,13 +18,24 @@
 </template>
 
 <script>
-  const CONTENT_LOADING_MODAL_SELECTOR = [
-    '.admin-reset-modal:not(.is-hidden)',
-    '.user-modal:not(.is-hidden)',
-    '.avance-modal:not(.is-hidden)',
-    '.socios-modal:not(.is-hidden)',
-    '.organizaciones-modal:not(.is-hidden)'
-  ].join(', ');
+  /**
+   * SISTEMA DE LOADING UNIFICADO
+   *
+   * Dos contextos, dos APIs:
+   *
+   * 1. showModuleLoading(message) / hideModuleLoading()
+   *    Overlay que cubre SOLO el área de acción del módulo (#app .content).
+   *    Nunca cubre la pantalla completa. Uso: cargas de datos y acciones
+   *    disparadas desde el área del módulo.
+   *
+   * 2. showModalLoading(modalId, message) / hideModalLoading(modalId)
+   *    Loader local (flecha circular + texto) montado DENTRO del diálogo
+   *    del modal indicado. Uso: acciones disparadas con un modal abierto
+   *    (guardar, actualizar) mientras el modal permanece visible.
+   *
+   * Los loaders locales estáticos de listas/tablas usan la clase
+   * .module-loading (ícono refresh + texto) definida en Styles.html.
+   */
 
   function getLoadingSystemConfig_() {
     const app = document.getElementById('app');
@@ -41,69 +52,39 @@
     return (((getLoadingSystemConfig_() || {}).general || {}).loadingText) || 'Iniciando Gestor Operativo';
   }
 
-  function getContentLoadingContentHost_() {
-    return document.querySelector('#app .content');
+  function getModuleLoadingHost_() {
+    return document.querySelector('#app .content') || document.getElementById('app') || document.body;
   }
 
-  function getContentLoadingGlobalHost_() {
-    return document.getElementById('app') || document.body;
-  }
+  function ensureModuleLoadingMounted_() {
+    const host = getModuleLoadingHost_();
+    if (!host) return null;
 
-  function hasOpenContentLoadingModal_() {
-    return !!document.querySelector(CONTENT_LOADING_MODAL_SELECTOR);
-  }
-
-  function mountContentLoadingForContext_(overlay, forceModal) {
-    if (!overlay) return null;
-
-    const isModal = typeof forceModal === 'boolean' ? forceModal : hasOpenContentLoadingModal_();
-    const host = isModal ? getContentLoadingGlobalHost_() : getContentLoadingContentHost_();
-    if (!host) return overlay;
-
-    if (overlay.parentElement !== host) {
-      host.insertBefore(overlay, host.firstChild || null);
+    const existing = document.getElementById('content-loading');
+    if (existing) {
+      if (existing.parentElement !== host) {
+        host.insertBefore(existing, host.firstChild || null);
+      }
+      return existing;
     }
 
-    overlay.classList.toggle('content-loading--modal', isModal);
-    overlay.classList.toggle('content-loading--content', !isModal);
-    overlay.dataset.loadingContext = isModal ? 'modal' : 'content';
-    return overlay;
-  }
-
-  function syncContentLoadingLayerState_(overlay) {
-    const hasModalLoading = !!(
-      overlay &&
-      !overlay.classList.contains('is-hidden') &&
-      overlay.classList.contains('content-loading--modal')
-    );
-    const shouldLock = hasModalLoading || hasOpenContentLoadingModal_();
-    document.body.classList.toggle('app-has-modal', shouldLock);
-    document.documentElement.classList.toggle('app-has-modal', shouldLock);
-  }
-
-  function ensureContentLoadingMounted_(forceModal) {
-    const existing = document.getElementById('content-loading');
-    if (existing) return mountContentLoadingForContext_(existing, forceModal);
-
     const template = document.getElementById('content-loading-template');
-    const initialHost = getContentLoadingContentHost_() || getContentLoadingGlobalHost_();
-    if (!template || !initialHost) return null;
+    if (!template) return null;
 
-    const fragment = template.content.cloneNode(true);
-    initialHost.insertBefore(fragment, initialHost.firstChild || null);
-    const overlay = mountContentLoadingForContext_(document.getElementById('content-loading'), forceModal);
+    host.insertBefore(template.content.cloneNode(true), host.firstChild || null);
+    const overlay = document.getElementById('content-loading');
     const text = overlay ? overlay.querySelector('.content-loading__text') : null;
     if (text) text.textContent = getLoadingText_();
     return overlay;
   }
 
-  document.addEventListener('DOMContentLoaded', ensureContentLoadingMounted_);
+  document.addEventListener('DOMContentLoaded', ensureModuleLoadingMounted_);
 
-  function showContentLoading(message) {
-    const overlay = ensureContentLoadingMounted_(hasOpenContentLoadingModal_());
-    const text = overlay ? overlay.querySelector('.content-loading__text') : null;
+  function showModuleLoading(message) {
+    const overlay = ensureModuleLoadingMounted_();
     if (!overlay) return;
 
+    const text = overlay.querySelector('.content-loading__text');
     if (text) text.textContent = message || getLoadingText_();
     overlay.setAttribute('aria-busy', 'true');
     overlay.style.display = 'flex';
@@ -111,10 +92,9 @@
     // Forzar reflow antes de quitar is-hidden para que funcione la transición
     overlay.offsetHeight;
     overlay.classList.remove('is-hidden');
-    syncContentLoadingLayerState_(overlay);
   }
 
-  function hideContentLoading() {
+  function hideModuleLoading() {
     const overlay = document.getElementById('content-loading');
     if (!overlay) return;
     overlay.setAttribute('aria-busy', 'false');
@@ -122,47 +102,90 @@
     // Agregar is-hidden (activa transición de opacity)
     overlay.classList.add('is-hidden');
 
-    // Después de la transición, solo resetear display
-    // NO mover el loader - quedará en su posición actual (app o content)
-    // y la próxima llamada a show decidirá dónde montarlo
+    // Después de la transición, resetear display
     setTimeout(() => {
       if (overlay.classList.contains('is-hidden')) {
         overlay.style.display = 'none';
-        syncContentLoadingLayerState_(overlay);
       }
     }, 250); // Sincronizado con --transition-base (220ms) + margen
   }
 
   /**
-   * Muestra el loading global con contexto de MODAL forzado.
-   * Uso: cuando el flujo dispara una acción desde un modal abierto
-   * y necesita que el loader cubra toda la pantalla.
-   *
-   * @param {string} message - Mensaje a mostrar en el loader
+   * Obtiene (o crea bajo demanda) el overlay .modal-loading dentro del
+   * diálogo del modal indicado. Reutiliza el overlay si el modal ya trae
+   * uno declarado en su markup.
    */
-  function showModalLoading(message) {
-    const overlay = ensureContentLoadingMounted_(true);
-    const text = overlay ? overlay.querySelector('.content-loading__text') : null;
-    if (!overlay) return;
+  function getModalLoadingOverlay_(modalId, createIfMissing) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return null;
 
-    if (text) text.textContent = message || getLoadingText_();
-    overlay.setAttribute('aria-busy', 'true');
-    overlay.style.display = 'flex';
+    const dialog = modal.querySelector('[class*="__dialog"]') || modal;
+    let overlay = dialog.querySelector('.modal-loading');
+    if (!overlay && createIfMissing) {
+      overlay = document.createElement('div');
+      overlay.className = 'modal-loading is-hidden';
+      overlay.setAttribute('role', 'status');
+      overlay.setAttribute('aria-live', 'polite');
 
-    overlay.offsetHeight;
-    overlay.classList.remove('is-hidden');
-    syncContentLoadingLayerState_(overlay);
+      const spinner = document.createElement('div');
+      spinner.className = 'modal-loading__spinner';
+      spinner.setAttribute('aria-hidden', 'true');
+
+      const text = document.createElement('p');
+      text.className = 'modal-loading__text';
+
+      overlay.appendChild(spinner);
+      overlay.appendChild(text);
+      dialog.appendChild(overlay);
+    }
+    return overlay;
   }
 
   /**
-   * Oculta el loading modal.
-   * Alias de hideContentLoading() para simetría con showModalLoading().
+   * Muestra el loader local DENTRO del modal indicado (cubre solo el modal).
+   *
+   * @param {string} modalId - id del modal contenedor (ej: 'org-edit-modal')
+   * @param {string} message - Mensaje a mostrar junto al spinner
    */
-  function hideModalLoading() {
-    hideContentLoading();
+  function showModalLoading(modalId, message) {
+    // Compatibilidad: si el primer argumento no corresponde a un elemento
+    // existente, se interpreta como mensaje y se usa el loader del módulo.
+    if (typeof modalId === 'string' && !document.getElementById(modalId)) {
+      showModuleLoading(modalId);
+      return;
+    }
+
+    const overlay = getModalLoadingOverlay_(modalId, true);
+    if (!overlay) return;
+
+    const text = overlay.querySelector('.modal-loading__text');
+    if (text) text.textContent = message || getLoadingText_();
+    overlay.setAttribute('aria-busy', 'true');
+    overlay.classList.remove('is-hidden');
   }
 
+  /**
+   * Oculta el loader del modal indicado. Sin argumentos, oculta el loader
+   * del módulo (compatibilidad con la API anterior).
+   */
+  function hideModalLoading(modalId) {
+    if (!modalId) {
+      hideModuleLoading();
+      return;
+    }
+    const overlay = getModalLoadingOverlay_(modalId, false);
+    if (!overlay) return;
+    overlay.setAttribute('aria-busy', 'false');
+    overlay.classList.add('is-hidden');
+  }
+
+  // Alias de compatibilidad con la API anterior (contexto = módulo)
+  const showContentLoading = showModuleLoading;
+  const hideContentLoading = hideModuleLoading;
+
   // Exponer funciones globalmente para módulos cargados con includeModule_()
+  window.showModuleLoading = showModuleLoading;
+  window.hideModuleLoading = hideModuleLoading;
   window.showContentLoading = showContentLoading;
   window.hideContentLoading = hideContentLoading;
   window.showModalLoading = showModalLoading;

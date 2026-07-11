@@ -131,7 +131,6 @@
     --layer-dropdown: 120;
     --layer-content-loading: 40;
     --layer-modal: 1300;
-    --layer-modal-loading: 1400;
     --layer-splash: 99999;
     --panel-padding: var(--space-7);
     --panel-gap: var(--space-5);
@@ -799,16 +798,6 @@
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-  }
-
-  .content-loading--content {
-    position: absolute;
-  }
-
-  .content-loading--modal {
-    position: fixed;
-    z-index: var(--layer-modal-loading);
-    padding: 24px;
   }
 
   .content-loading__box,
@@ -8561,6 +8550,15 @@ th.sortable.sort-desc .sort-icon {
   .org-card__footer-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ======== MODULE LOADING - variante overlay (tablas/paneles) ======== */
+/* Cubre el contenedor local (requiere position:relative en el padre) */
+.module-loading--overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--surface, #fff);
+  z-index: 10;
 }
 
 </style>

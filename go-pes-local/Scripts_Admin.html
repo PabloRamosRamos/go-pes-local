@@ -1,7 +1,7 @@
   function loadUsers() {
     if (!APP.state.permissions.canManageUsers) return Promise.resolve([]);
 
-    showContentLoading('Cargando usuarios...');
+    showModuleLoading('Cargando usuarios...');
     return api('listUsers').then(rows => {
       const tbody = document.getElementById('users-results');
       if (!tbody) return [];
@@ -47,7 +47,7 @@
       tbody.querySelectorAll('.js-reactivate-user').forEach(btn => {
         btn.addEventListener('click', () => {
           if (!confirm('¿Reactivar acceso para ' + (btn.dataset.name || btn.dataset.email) + '?')) return;
-          showContentLoading('Reactivando usuario...');
+          showModuleLoading('Reactivando usuario...');
           api('updateUser', {
             email: btn.dataset.email,
             nombre_visible: btn.dataset.name || btn.dataset.email,
@@ -58,11 +58,11 @@
           }).then(() => {
             showSuccess('Usuario reactivado.');
             loadUsers();
-          }).catch(showError).finally(hideContentLoading);
+          }).catch(showError).finally(hideModuleLoading);
         });
       });
       return rows;
-    }).catch(showError).finally(hideContentLoading);
+    }).catch(showError).finally(hideModuleLoading);
   }
 
   function normalizeUiBool_(value, defaultValue) {
@@ -132,7 +132,7 @@
     }
 
     if (btn) btn.disabled = true;
-    showContentLoading('Guardando usuario...');
+    showModuleLoading('Guardando usuario...');
     api('updateUser', payload).then(() => {
       showSuccess('Usuario actualizado.');
       const emailInput = document.getElementById('user-email-local');
@@ -146,7 +146,7 @@
       loadUsers();
     }).catch(showError).finally(() => {
       if (btn) btn.disabled = false;
-      hideContentLoading();
+      hideModuleLoading();
     });
   }
 
@@ -197,13 +197,13 @@
 
     if (btn) btn.disabled = true;
     closeUserEditModal_();
-    showModalLoading('Guardando usuario...');
+    showModuleLoading('Guardando usuario...');
     api('updateUser', payload).then(() => {
       showSuccess('Usuario actualizado.');
       loadUsers();
     }).catch(showError).finally(() => {
       if (btn) btn.disabled = false;
-      hideModalLoading();
+      hideModuleLoading();
     });
   }
 
@@ -236,14 +236,14 @@
 
     if (btn) btn.disabled = true;
     closeUserDeleteModal_();
-    showModalLoading('Desactivando usuario...');
+    showModuleLoading('Desactivando usuario...');
     api('deactivateUser', payload).then(() => {
       markUserInactiveInTable_(payload.email);
       showSuccess('Usuario desactivado.');
       return loadUsers();
     }).catch(showError).finally(() => {
       if (btn) btn.disabled = false;
-      hideModalLoading();
+      hideModuleLoading();
     });
   }
 
@@ -274,7 +274,7 @@
     const root = document.getElementById('configuracion-root');
     if (!root || !APP.state.permissions.canManageConfig) return;
 
-    showContentLoading('Cargando configuración...');
+    showModuleLoading('Cargando configuración...');
     api('getSystemConfigClient').then(data => {
       APP.state.systemConfig = (data && data.config) || APP.state.systemConfig || {};
       APP.state.moduleDefinitions = (data && data.moduleDefinitions) || APP.state.moduleDefinitions || [];
@@ -289,7 +289,7 @@
       if (content) content.innerHTML = '<div class="empty-state">No fue posible cargar la configuración.</div>';
       showError(err);
     }).finally(() => {
-      hideContentLoading();
+      hideModuleLoading();
     });
   }
 
@@ -354,7 +354,7 @@
       submitBtn.disabled = true;
     }
 
-    showContentLoading('Guardando configuración...');
+    showModuleLoading('Guardando configuración...');
     api('saveSystemConfigSection', { section, data: payload }).then(res => {
       APP.state.systemConfig = (res && res.config) || APP.state.systemConfig || {};
       APP.state.moduleDefinitions = (res && res.moduleDefinitions) || APP.state.moduleDefinitions || [];
@@ -366,7 +366,7 @@
       showSuccess('Configuración guardada.');
     }).catch(showError).finally(() => {
       if (submitBtn) submitBtn.disabled = false;
-      hideContentLoading();
+      hideModuleLoading();
     });
   }
 
@@ -1838,18 +1838,18 @@
       btnRebuild.addEventListener('click', function() {
         if (!confirm('¿Reconstruir todas las vistas derivadas y el MASTER_DATOS?\n\nEsta operación puede tardar varios minutos dependiendo del volumen de datos.')) return;
         const resultEl = document.getElementById('mig-result-rebuild');
-        showContentLoading('Reconstruyendo vistas...');
+        showModuleLoading('Reconstruyendo vistas...');
         btnRebuild.disabled = true;
         google.script.run
           .withSuccessHandler(function() {
-            hideContentLoading();
+            hideModuleLoading();
             btnRebuild.disabled = false;
             resultEl.innerHTML = `<p style="color:var(--runtime-brand-secondary,#007C4A);font-size:0.83rem;display:flex;align-items:center;gap:4px;margin:0">
               <span class="material-symbols-outlined" style="font-size:1rem">check_circle</span>Vistas reconstruidas correctamente.
             </p>`;
           })
           .withFailureHandler(function(err) {
-            hideContentLoading();
+            hideModuleLoading();
             btnRebuild.disabled = false;
             resultEl.innerHTML = renderMigError_(String(err && err.message || err));
           })
@@ -1858,12 +1858,12 @@
     }
 
     btnVerify.addEventListener('click', function() {
-      showContentLoading('Verificando fuente...');
+      showModuleLoading('Verificando fuente...');
       btnVerify.disabled = true;
 
       google.script.run
         .withSuccessHandler(function(result) {
-          hideContentLoading();
+          hideModuleLoading();
           btnVerify.disabled = false;
 
           if (!result || !result.ok) {
@@ -1885,7 +1885,7 @@
           bindMigracionStepButtons_();
         })
         .withFailureHandler(function(err) {
-          hideContentLoading();
+          hideModuleLoading();
           btnVerify.disabled = false;
           document.getElementById('mig-source-info').innerHTML = renderMigError_(String(err && err.message || err || 'Error desconocido'));
         })
@@ -1898,15 +1898,15 @@
     if (btnPreviewIng && !btnPreviewIng.dataset.migBound) {
       btnPreviewIng.dataset.migBound = '1';
       btnPreviewIng.addEventListener('click', function() {
-        showContentLoading('Cargando vista previa...');
+        showModuleLoading('Cargando vista previa...');
         google.script.run
           .withSuccessHandler(function(result) {
-            hideContentLoading();
+            hideModuleLoading();
             document.getElementById('mig-preview-ingresos').innerHTML =
               result && result.ok ? renderMigPreviewTable_(result.rows) : renderMigError_(result && result.error || 'Error');
           })
           .withFailureHandler(function(err) {
-            hideContentLoading();
+            hideModuleLoading();
             document.getElementById('mig-preview-ingresos').innerHTML = renderMigError_(String(err && err.message || err));
           })
           .previewMigracion({ tipo: 'ingresos', columnMap: getMigColumnMap_('ingresos') });
@@ -1918,16 +1918,16 @@
       btnExecIng.dataset.migBound = '1';
       btnExecIng.addEventListener('click', function() {
         if (!confirm('¿Confirmas la migración de ingresos?\n\nEsta acción insertará registros en el sistema. Los duplicados (mismo RUT) se omitirán automáticamente.')) return;
-        showContentLoading('Ejecutando migración de ingresos...');
+        showModuleLoading('Ejecutando migración de ingresos...');
         btnExecIng.disabled = true;
         google.script.run
           .withSuccessHandler(function(result) {
-            hideContentLoading();
+            hideModuleLoading();
             btnExecIng.disabled = false;
             document.getElementById('mig-result-ingresos').innerHTML = renderMigResult_(result);
           })
           .withFailureHandler(function(err) {
-            hideContentLoading();
+            hideModuleLoading();
             btnExecIng.disabled = false;
             document.getElementById('mig-result-ingresos').innerHTML = renderMigError_(String(err && err.message || err));
           })
@@ -1939,15 +1939,15 @@
     if (btnPreviewSoc && !btnPreviewSoc.dataset.migBound) {
       btnPreviewSoc.dataset.migBound = '1';
       btnPreviewSoc.addEventListener('click', function() {
-        showContentLoading('Cargando vista previa...');
+        showModuleLoading('Cargando vista previa...');
         google.script.run
           .withSuccessHandler(function(result) {
-            hideContentLoading();
+            hideModuleLoading();
             document.getElementById('mig-preview-socios').innerHTML =
               result && result.ok ? renderMigPreviewTable_(result.rows) : renderMigError_(result && result.error || 'Error');
           })
           .withFailureHandler(function(err) {
-            hideContentLoading();
+            hideModuleLoading();
             document.getElementById('mig-preview-socios').innerHTML = renderMigError_(String(err && err.message || err));
           })
           .previewMigracion({ tipo: 'socios', columnMap: getMigColumnMap_('socios') });
@@ -1959,16 +1959,16 @@
       btnExecSoc.dataset.migBound = '1';
       btnExecSoc.addEventListener('click', function() {
         if (!confirm('¿Confirmas la migración de socios?\n\nLas organizaciones deben existir en el sistema. Los socios duplicados (mismo RUT + organización) se omitirán automáticamente.')) return;
-        showContentLoading('Ejecutando migración de socios...');
+        showModuleLoading('Ejecutando migración de socios...');
         btnExecSoc.disabled = true;
         google.script.run
           .withSuccessHandler(function(result) {
-            hideContentLoading();
+            hideModuleLoading();
             btnExecSoc.disabled = false;
             document.getElementById('mig-result-socios').innerHTML = renderMigResult_(result);
           })
           .withFailureHandler(function(err) {
-            hideContentLoading();
+            hideModuleLoading();
             btnExecSoc.disabled = false;
             document.getElementById('mig-result-socios').innerHTML = renderMigError_(String(err && err.message || err));
           })
@@ -2171,10 +2171,10 @@
         }
       });
 
-      showContentLoading('Guardando configuración...');
+      showModuleLoading('Guardando configuración...');
       api('saveAlertasConfigAdmin', payload)
         .then(result => {
-          hideContentLoading();
+          hideModuleLoading();
           if (result && result.ok) {
             showSuccess('Configuración de alertas guardada correctamente');
             // Invalidar cache de alertas
@@ -2191,7 +2191,7 @@
           }
         })
         .catch(err => {
-          hideContentLoading();
+          hideModuleLoading();
           showError(err);
         });
     });

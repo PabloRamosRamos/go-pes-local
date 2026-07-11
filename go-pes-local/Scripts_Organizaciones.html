@@ -24,9 +24,9 @@
         <div id="org-chip-row" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;"></div>
 
         <div id="organizaciones-grid-list">
-          <div class="empty-state" style="padding:var(--space-8);">
-            <div class="spinner"></div>
-            <p style="margin-top:var(--space-3);color:var(--text-muted);">Cargando organizaciones...</p>
+          <div class="module-loading">
+            <span class="material-symbols-outlined dash-spin">refresh</span>
+            <span>Cargando organizaciones...</span>
           </div>
         </div>
 
@@ -203,9 +203,9 @@
           '</button>' +
         '</div>' +
         '<div class="organizaciones-modal__body">' +
-          '<div id="link-socios-content-loading" class="empty-state" style="padding:var(--space-6);">' +
-            '<div class="spinner"></div>' +
-            '<p style="margin-top:var(--space-3);color:var(--text-muted);">Generando enlace...</p>' +
+          '<div id="link-socios-content-loading" class="module-loading">' +
+            '<span class="material-symbols-outlined dash-spin">refresh</span>' +
+            '<span>Generando enlace...</span>' +
           '</div>' +
           '<div id="link-socios-content" style="display:none;"></div>' +
         '</div>' +
@@ -606,8 +606,7 @@
   function loadOrganizacionDetalle_(organizacionId) {
     // Primero abrir el modal con el loader visible
     openOrganizacionDetalleModal_();
-    const modalLoader = document.getElementById('org-detalle-modal-loading');
-    if (modalLoader) modalLoader.classList.remove('is-hidden');
+    showModalLoading('org-detalle-modal', 'Cargando organización...');
 
     return api('getOrganizacionModuloDetalle', { organizacion_id: organizacionId }).then(data => {
       APP.state.currentOrganizacionDetalle = data || {};
@@ -618,7 +617,7 @@
       renderOrganizacionDetalle_(APP.state.currentOrganizacionDetalle);
       setOrganizacionesActionState_(true);
     }).catch(showError).finally(() => {
-      if (modalLoader) modalLoader.classList.add('is-hidden');
+      hideModalLoading('org-detalle-modal');
     });
   }
 
@@ -1120,7 +1119,7 @@
       }
     });
 
-    showModalLoading('Guardando organización...');
+    showModalLoading('org-detalle-modal', 'Guardando organización...');
 
     // Primero guardar datos básicos de la organización
     api('guardarOrganizacion', payload)
@@ -1135,7 +1134,7 @@
         return Promise.resolve();
       })
       .then(() => {
-        hideModalLoading();
+        hideModalLoading('org-detalle-modal');
         const hitoCount = Object.keys(fechasMap).length;
         const msg = hitoCount > 0
           ? `Organización actualizada. ${hitoCount} fecha(s) de hito(s) actualizadas.`
@@ -1155,7 +1154,7 @@
         });
       })
       .catch(err => {
-        hideModalLoading();
+        hideModalLoading('org-detalle-modal');
         showError(err);
       });
   }
@@ -1362,7 +1361,7 @@
       return;
     }
 
-    showModalLoading('Actualizando cargo...');
+    showModalLoading('org-socio-cargo-modal', 'Actualizando cargo...');
     api('actualizarCargoSocioOrganizacion', {
       organizacion_id: org.organizacion_id,
       socio_id: socioId,
@@ -1372,7 +1371,7 @@
       showSuccess('Cargo de socio actualizado.');
       return loadOrganizacionDetalle_(org.organizacion_id);
     }).catch(showError).finally(() => {
-      hideModalLoading();
+      hideModalLoading('org-socio-cargo-modal');
     });
   }
 
@@ -1385,8 +1384,7 @@
     }
 
     // Mostrar loader dentro del modal
-    const modalLoader = document.getElementById('org-edit-modal-loading');
-    if (modalLoader) modalLoader.classList.remove('is-hidden');
+    showModalLoading('org-edit-modal', 'Guardando organización...');
 
     api('guardarOrganizacion', payload).then(res => {
       showSuccess('Organización guardada correctamente.');
@@ -1397,8 +1395,7 @@
         return loadOrganizacionDetalle_(res.organizacion_id);
       });
     }).catch(showError).finally(() => {
-      // Ocultar loader del modal
-      if (modalLoader) modalLoader.classList.add('is-hidden');
+      hideModalLoading('org-edit-modal');
     });
   }
 

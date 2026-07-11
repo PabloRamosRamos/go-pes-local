@@ -84,15 +84,9 @@
 
   function syncGlobalUiLayerState_() {
     const splash = document.getElementById('app-loading');
-    const contentLoading = document.getElementById('content-loading');
     const hasModal = hasOpenGlobalModal_();
-    const hasModalLoading = !!(
-      contentLoading &&
-      !contentLoading.classList.contains('is-hidden') &&
-      contentLoading.classList.contains('content-loading--modal')
-    );
     const hasSplash = !!(splash && !splash.classList.contains('is-hidden') && splash.style.display !== 'none');
-    const shouldLock = hasModal || hasModalLoading || hasSplash;
+    const shouldLock = hasModal || hasSplash;
 
     document.body.classList.toggle('app-has-modal', shouldLock);
     document.documentElement.classList.toggle('app-has-modal', shouldLock);
@@ -316,7 +310,7 @@
     if (!APP.state.user || !APP.state.user.canAccess) {
       showAccessDenied_();
       hideAppLoading();
-      hideContentLoading();
+      hideModuleLoading();
       return;
     }
 
@@ -374,7 +368,7 @@
     }).finally(() => {
       setTimeout(() => {
         hideAppLoading();
-        hideContentLoading();
+        hideModuleLoading();
       }, 120);
     });
   }
@@ -1356,7 +1350,7 @@
       return;
     }
 
-    showContentLoading('Limpiando datos de prueba...');
+    showModalLoading('admin-reset-modal', 'Limpiando datos de prueba...');
     api('limpiarDatosPruebaAdmin', { pin, confirmacion }).then(res => {
       closeAdminResetModal_();
       const totalRows = (res.cleared || []).reduce((sum, item) => sum + Number(item.rows_cleared || 0), 0);
@@ -1385,7 +1379,7 @@
       APP.state.renderedViews = {};
       route('inicio');
     }).catch(showError).finally(() => {
-      hideContentLoading();
+      hideModalLoading('admin-reset-modal');
     });
   }
 
@@ -1454,7 +1448,7 @@
 
     toggleTopQuickActions_(view);
     const finalizeRoute = () => {
-      hideContentLoading();
+      hideModuleLoading();
       ensureViewRendered_(view);
 
       if (view === 'ficha' && APP.state.currentFicha && APP.state.currentFicha.summary) {
@@ -1699,7 +1693,7 @@
     }
 
     route('ficha');
-    showContentLoading('Cargando ficha...');
+    showModuleLoading('Cargando ficha...');
 
     api('obtenerFicha', params).then(data => {
       if (!data || !data.summary) {
@@ -1717,7 +1711,7 @@
       }
       showError(err);
     }).finally(() => {
-      hideContentLoading();
+      hideModuleLoading();
     });
   }
 

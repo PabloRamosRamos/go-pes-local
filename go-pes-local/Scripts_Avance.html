@@ -5,23 +5,6 @@
     container.className = 'avance-shell';
     container.style.position = 'relative';
     container.innerHTML = `
-      <div id="avance-loading" class="content-loading is-hidden" style="position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:var(--surface,#fff);" aria-live="polite" aria-busy="false">
-        <div class="content-loading__box loading-shell" role="status">
-          <div class="content-loading__spinner loading-shell__visual" aria-hidden="true">
-            <span class="loading-shell__halo"></span>
-            <span class="loading-shell__ring"></span>
-            <span class="loading-shell__ring loading-shell__ring--reverse"></span>
-            <span class="loading-shell__pulse"></span>
-            <span class="loading-shell__beam"></span>
-            <span class="loading-shell__dot loading-shell__dot--one"></span>
-            <span class="loading-shell__dot loading-shell__dot--two"></span>
-            <span class="loading-shell__dot loading-shell__dot--three"></span>
-          </div>
-          <div class="content-loading__text">Cargando opciones...</div>
-          <div class="loading-shell__subtext">Actualizando la información del módulo.</div>
-        </div>
-      </div>
-
       <div class="avance-header">
         <div class="field field--grow">
           <label for="avance-grupo-search">Tramo 1 - Grupo de vecinos</label>
@@ -571,9 +554,7 @@
     const currentValue = String(select.value || '').trim();
     const currentGrupoValue = String(grupoSelect?.value || '').trim();
 
-    if (typeof window.showModalLoading === 'function') {
-      showAvanceLoading_('Cargando opciones...');
-    }
+    showAvanceLoading_('Cargando opciones...');
 
     Promise.all([
       api('getGruposVecinosAvanceClient'),
@@ -612,13 +593,9 @@
         if (grupo) document.getElementById('avance-grupo-search').value = grupo.label;
       }
 
-      if (typeof window.hideModalLoading === 'function') {
-        hideAvanceLoading_();
-      }
+      hideAvanceLoading_();
     }).catch(err => {
-      if (typeof window.hideModalLoading === 'function') {
-        hideAvanceLoading_();
-      }
+      hideAvanceLoading_();
     });
   }
 
@@ -1132,8 +1109,8 @@
       ? `COMITE DE SEGURIDAD ${nombreOrganizacionVariable}`.replace(/\s+/g, ' ').trim()
       : '';
 
-    // Mostrar loader (se detecta automáticamente que hay modal abierto)
-    showModalLoading(requiereNombreOrganizacion ? 'Creando organización...' : 'Registrando hito...');
+    // Loader local dentro del modal de hito
+    showModalLoading('avance-hito-modal', requiereNombreOrganizacion ? 'Creando organización...' : 'Registrando hito...');
 
     api('registrarHitoAvance', {
       organizacion_id: isGrupo ? '' : organizacionId,
@@ -1196,7 +1173,7 @@
     }).catch(err => {
       showError(err);
     }).finally(() => {
-      hideContentLoading();
+      hideModalLoading('avance-hito-modal');
     });
   }
 
@@ -1282,25 +1259,10 @@
   }
 
   function showAvanceLoading_(message) {
-    const loader = document.getElementById('avance-loading');
-    if (!loader) return;
-    const text = loader.querySelector('.content-loading__text');
-    if (text && message) text.textContent = message;
-    loader.setAttribute('aria-busy', 'true');
-    loader.style.display = 'flex';
-    loader.offsetHeight;
-    loader.classList.remove('is-hidden');
+    showModuleLoading(message);
   }
 
   function hideAvanceLoading_() {
-    const loader = document.getElementById('avance-loading');
-    if (!loader) return;
-    loader.setAttribute('aria-busy', 'false');
-    loader.classList.add('is-hidden');
-    setTimeout(() => {
-      if (loader.classList.contains('is-hidden')) {
-        loader.style.display = 'none';
-      }
-    }, 250);
+    hideModuleLoading();
   }
 

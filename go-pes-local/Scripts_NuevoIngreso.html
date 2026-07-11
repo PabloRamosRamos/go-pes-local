@@ -284,7 +284,7 @@
   }
 
   function renderNuevoIngresoView_() {
-    showContentLoading('Iniciando Gestor Operativo');
+    showModuleLoading('Iniciando Gestor Operativo');
 
     requestAnimationFrame(() => {
       syncIngresoSectorOptions();
@@ -302,7 +302,7 @@
 
       setTimeout(() => {
         document.getElementById('ing-nombre_vecino')?.focus();
-        hideContentLoading();
+        hideModuleLoading();
       }, 80);
     });
   }
@@ -390,7 +390,7 @@
       return Promise.resolve(data);
     }
 
-    showContentLoading('Cargando organización...');
+    showModuleLoading('Cargando organización...');
 
     return api('getOrganizacionClientById', { organizacion_id: organizacionId }).then(payload => {
       const snapshot = payload || {};
@@ -401,7 +401,7 @@
       applyOrganizacionFormData_(form, snapshot);
       return snapshot;
     }).finally(() => {
-      hideContentLoading();
+      hideModuleLoading();
     });
   }
 

@@ -786,14 +786,14 @@
       configForm.addEventListener('submit', ev => {
         ev.preventDefault();
         const payload = serializeForm(configForm);
-        showContentLoading('Guardando plazos...');
+        showModuleLoading('Guardando plazos...');
         api('guardarConfiguracionCamaras1414', payload).then(res => {
           APP.state.systemConfig = APP.state.systemConfig || {};
           APP.state.systemConfig.beneficios = APP.state.systemConfig.beneficios || {};
           APP.state.systemConfig.beneficios.camaras1414 = res && res.config ? res.config : {};
           showSuccess('Plazos de CAMARAS 1414 guardados.');
           return refreshBeneficiosModuloMinimo_();
-        }).catch(showError).finally(hideContentLoading);
+        }).catch(showError).finally(hideModuleLoading);
       });
     }
 
@@ -824,11 +824,11 @@
         }
         const payload = collectCamaras1414DetailPayload_(detailForm);
         APP.state.currentBeneficioOrganizacionId = payload.organizacion_id || APP.state.currentBeneficioOrganizacionId || '';
-        showContentLoading('Guardando gestión CAMARAS 1414...');
+        showModuleLoading('Guardando gestión CAMARAS 1414...');
         api('guardarCamaras1414Organizacion', payload).then(() => {
           showSuccess('Gestión CAMARAS 1414 guardada.');
           return refreshBeneficiosModuloMinimo_();
-        }).catch(showError).finally(hideContentLoading);
+        }).catch(showError).finally(hideModuleLoading);
       });
     }
 
@@ -1276,7 +1276,7 @@
     document.querySelectorAll('.js-beneficio-org-add, .js-beneficio-org-manage').forEach(btn => {
       btn.addEventListener('click', () => {
         APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
-        showContentLoading('Cargando organizacion...');
+        showModuleLoading('Cargando organizacion...');
         api('getBeneficioOrganizacionDetalle', {
           beneficio_codigo: APP.state.currentBeneficioCodigo || '',
           organizacion_id: APP.state.currentBeneficioOrganizacionId || ''
@@ -1287,7 +1287,7 @@
             selected_org_detail: detail
           };
           renderBeneficiosPanel_(APP.state.currentBeneficiosDetalle);
-        }).catch(showError).finally(hideContentLoading);
+        }).catch(showError).finally(hideModuleLoading);
       });
     });
 

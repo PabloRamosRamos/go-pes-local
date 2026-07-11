@@ -1,1 +1,8 @@
-﻿{"model": "claude-fable-5"}
+{
+  "model": "claude-fable-5",
+  "permissions": {
+    "allow": [
+      "Bash(clasp run *)"
+    ]
+  }
+}

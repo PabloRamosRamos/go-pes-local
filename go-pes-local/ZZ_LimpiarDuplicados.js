@@ -278,12 +278,14 @@ function goPesLimpiarCasosDuplicados_(dryRun) {
   }
 
   const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) {
+  const lastCol = sheet.getLastColumn();
+
+  if (lastRow <= 1 || !lastCol) {
     Logger.log('✅ Hoja vacía, nada que eliminar.\n');
     return { eliminados: 0, dry_run: false };
   }
 
-  const headers = getSheetHeaders_(GO_PES_V2.SHEETS.MAE_CASOS);
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0].map(String);
   const solIdColIndex = headers.indexOf('solicitud_id');
 
   if (solIdColIndex === -1) {

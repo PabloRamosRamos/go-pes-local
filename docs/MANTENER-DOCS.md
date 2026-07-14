@@ -230,6 +230,14 @@ grep -c "^####" docs/api-interna.md
 ✅ **Ejemplos concretos** — Un payload de ejemplo > 3 párrafos abstractos.  
 ✅ **Versión en cada doc crítico** — "Actualizado: 2026-05-31 | v2.1.512"
 
+### Anti-patrones detectados en la auditoría 2026-07-13 (obligatorio evitarlos)
+
+❌ **Planes/diagnósticos completados viviendo en `docs/`** — Un documento cuyo trabajo terminó se mueve a `docs/archive/` **en el mismo cambio que lo completa**, con su entrada en `archive/README.md`. Si quedó obsoleto sin ejecutarse, se le agrega encabezado `> ⚠️ SUPERSEDED (fecha): reemplazado por <doc vigente>`.  
+❌ **Documentos paralelos sobre el mismo tema** — Antes de crear un doc nuevo, grep en `docs/` por el tema: si ya existe uno, se **extiende** ese. Se encontraron 3 planes de rendimiento del mismo día solapados; ahora llevan notas cruzadas y está pendiente consolidarlos — no repetir el patrón.  
+❌ **Árbol de archivos desactualizado en `CLAUDE.md`** — Al **crear, renombrar o eliminar** cualquier archivo de `go-pes-local/`, actualizar el árbol de "Estructura de carpetas" en el mismo commit (llegó a faltar 17 archivos).  
+❌ **Docs que describen APIs eliminadas** — Al eliminar o renombrar una API (`showContentLoading` → `showModuleLoading`, etc.), grep del nombre viejo en `docs/` y actualizar toda mención; una referencia a código inexistente induce a re-crearlo.  
+❌ **"Tareas pendientes" ya resueltas sin marcar** — Al cerrar un pendiente de `CLAUDE.md`, marcarlo `[x]` con fecha en el mismo cambio; un pendiente falso hace re-auditar trabajo ya hecho.
+
 ---
 
 ## Revisión editorial periódica

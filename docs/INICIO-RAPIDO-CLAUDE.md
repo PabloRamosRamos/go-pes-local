@@ -220,6 +220,16 @@ goPesSeedSuperUsers()  // pablo.ramos@providencia.cl
 - Agregar al final del archivo con comentario de sección
 - No modificar splash/logo/layout sin instrucción explícita
 
+### Higiene de código y performance (auditoría 2026-07)
+- **Grep del nombre antes de crear una función** — backend GAS = 1 namespace global; parciales = 1 IIFE; el duplicado pisa en silencio
+- **Código muerto se elimina**, no se desactiva con `return;` ni sufijos Legacy
+- **`GO_PES_RUNTIME` muere en cada ejecución** — cache persistente = `CacheService`, nunca TTL en globals
+- **Sin tiempos fijos** para enmascarar latencia (splash/loaders reaccionan al estado real)
+- **Acciones > 2 s llevan guard anti doble envío**
+- **Loaders: solo las 3 formas estándar** de `design-system.md` → "Sistema de Loading"
+- **Docs completados → `docs/archive/`** en el mismo cambio; árbol de CLAUDE.md al día
+- Detalle completo: `CLAUDE.md` → "Higiene de código" y "Performance y datos"
+
 ---
 
 ## 📊 Estadísticas del proyecto

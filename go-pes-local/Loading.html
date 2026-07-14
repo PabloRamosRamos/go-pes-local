@@ -179,15 +179,9 @@
     overlay.classList.add('is-hidden');
   }
 
-  // Alias de compatibilidad con la API anterior (contexto = módulo)
-  const showContentLoading = showModuleLoading;
-  const hideContentLoading = hideModuleLoading;
-
   // Exponer funciones globalmente para módulos cargados con includeModule_()
   window.showModuleLoading = showModuleLoading;
   window.hideModuleLoading = hideModuleLoading;
-  window.showContentLoading = showContentLoading;
-  window.hideContentLoading = hideContentLoading;
   window.showModalLoading = showModalLoading;
   window.hideModalLoading = hideModalLoading;
 </script>

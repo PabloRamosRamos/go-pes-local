@@ -1,8 +1,12 @@
 {
-  "model": "claude-fable-5",
   "permissions": {
     "allow": [
-      "Bash(clasp run *)"
+      "Bash(clasp run *)",
+      "Bash(awk 'NR>=1540 && NR<=1585 || NR>=3170 && NR<=3220' Scripts_Beneficios.html)",
+      "Bash(sed -i '990,1417d' Scripts_Beneficios.html)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(grep -oE '^\\(\\\\s*\\)\\\\.[a-zA-Z0-9_-]+\\(\\\\s*,\\)?\\\\s*\\\\{' Styles.html)"
     ]
-  }
+  },
+  "model": "claude-fable-5"
 }

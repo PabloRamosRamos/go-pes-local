@@ -782,14 +782,14 @@ requestAnimationFrame(() => {
 **Mecánica:**
 ```javascript
 // Mostrar
-showContentLoading('Cargando...');
+showModuleLoading('Cargando...');
 // Internamente:
 // 1. display: flex
 // 2. offsetHeight (fuerza reflow)
 // 3. classList.remove('is-hidden') → opacity 0 → 1 (220ms)
 
 // Ocultar
-hideContentLoading();
+hideModuleLoading();
 // Internamente:
 // 1. classList.add('is-hidden') → opacity 1 → 0 (220ms)
 // 2. setTimeout(250ms) → display: none
@@ -885,7 +885,7 @@ Estándar unificado (2026-07-10). **Ningún loader cubre la pantalla completa**;
 - Definido en `Loading.html`. Overlay `#content-loading` montado **siempre** dentro de `#app .content` (área de acción del módulo). El sidebar y el header permanecen visibles y usables.
 - Uso: carga de datos del módulo o acciones disparadas desde el área del módulo.
 - **`route()` (Scripts.html) lo muestra automáticamente al seleccionar un módulo del menú** con el mensaje `Cargando <Módulo>...`, y lo oculta cuando los catálogos/datos de la vista están listos. Si el usuario navega a otro módulo antes de que termine la carga, el `finalizeRoute` obsoleto no toca el loader (guard por `APP.state.activeView`).
-- `showContentLoading` / `hideContentLoading` son alias de compatibilidad (mismo comportamiento).
+- Las APIs anteriores `showContentLoading` / `hideContentLoading` fueron eliminadas (2026-07-13); usar siempre `showModuleLoading` / `hideModuleLoading`.
 
 ```javascript
 showModuleLoading('Cargando usuarios...');
@@ -895,7 +895,7 @@ api('listUsers').then(render).finally(hideModuleLoading);
 ### 2. Loader de modal — `showModalLoading(modalId, message)` / `hideModalLoading(modalId)`
 
 - Definido en `Loading.html`. Overlay `.modal-loading` (spinner circular + texto) montado **dentro del diálogo** del modal indicado; cubre solo el modal, no la app.
-- Se crea bajo demanda si el modal no declara un `.modal-loading` en su markup; si lo declara, se reutiliza.
+- Se crea bajo demanda la primera vez y se reutiliza en llamadas siguientes; los modales no declaran loaders en su markup.
 - Uso: acciones ejecutadas mientras el modal permanece abierto (guardar, actualizar).
 
 ```javascript

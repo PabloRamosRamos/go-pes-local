@@ -26,7 +26,32 @@ Este directorio contiene documentos de análisis, planes y deployments históric
 ### PLAN-LOADERS.md
 **Fecha:** 2026-06-08  
 **Propósito:** Plan de mejora de loaders y estados de carga UX  
-**Estado:** ✅ Implementado (loading local, contexto explícito), documentado en design-system.md
+**Estado:** ✅ Superseded — el sistema de loading se estandarizó el 2026-07-10 (loader por módulo, nunca fullscreen). Ver `design-system.md` → "Sistema de Loading"
+
+### diagnostico-transiciones.md
+**Fecha:** 2026-06-01 · **Archivado:** 2026-07-13  
+**Propósito:** Diagnóstico puntual del sistema de transiciones UX (v2.1.512)  
+**Estado:** ✅ Sistema de transiciones implementado y documentado en `design-system.md`
+
+### frontend-estado-actual.md
+**Fecha:** 2026-05-31 · **Archivado:** 2026-07-13  
+**Propósito:** Auditoría UX/accesibilidad del frontend previa al plan de mejora  
+**Estado:** ✅ Instantánea pre-mejoras; el plan derivado se completó (5/5 fases)
+
+### frontend-plan-mejora.md
+**Fecha:** 2026-05-31 · **Archivado:** 2026-07-13  
+**Propósito:** Roadmap priorizado de mejoras frontend  
+**Estado:** ✅ Completado (5/5 fases); resultado documentado en `design-system.md`
+
+### frontend-plan-resumen.md
+**Fecha:** 2026-05-31 · **Archivado:** 2026-07-13  
+**Propósito:** Resumen ejecutivo del plan de mejora frontend  
+**Estado:** ✅ Completado (5/5 fases)
+
+### ORGANIZACION-DOCS-2026-06-19.md
+**Fecha:** 2026-06-19 · **Archivado:** 2026-07-13  
+**Propósito:** Registro del proceso de reorganización de documentación a `docs/`  
+**Estado:** ✅ Proceso ejecutado; la estructura vigente está en `README.md`
 
 ---
 
@@ -49,10 +74,11 @@ Una vez completadas las tareas, la información relevante se integró en:
 **Estos documentos NO deben usarse como referencia para desarrollo activo.**
 
 Si necesitas información sobre estos temas, consulta:
-- **Módulo Avance:** [`CLAUDE.md`](../../CLAUDE.md) → sección "Módulo Avance"
-- **Deploy a PROD:** [`CHECKLIST-PRODUCCION.md`](../../CHECKLIST-PRODUCCION.md)
+- **Módulo Avance:** [`CLAUDE.md`](../CLAUDE.md) → sección "Módulo Avance"
+- **Deploy a PROD:** [`CHECKLIST-PRODUCCION.md`](../CHECKLIST-PRODUCCION.md)
 - **Migración de datos:** Código en `go-pes-local/ZZ_MigracionBackend.js`
-- **Loaders UX:** [`design-system.md`](../design-system.md) → sección "Loading States"
+- **Loaders UX:** [`design-system.md`](../design-system.md) → sección "Sistema de Loading"
+- **Frontend (componentes, transiciones):** [`design-system.md`](../design-system.md)
 
 ---
 

@@ -79,30 +79,6 @@
     });
   }
 
-  function ensureInicioPanelData_(force) {
-    const now = Date.now();
-    const TTL = 30000;
-    const panelFresh = !force && APP.state.inicioPanelData  && APP.state.inicioPanelFetchedAt  && (now - APP.state.inicioPanelFetchedAt)  < TTL;
-    const dashFresh  = !force && APP.state.dashboardData    && APP.state.dashboardDataFetchedAt && (now - APP.state.dashboardDataFetchedAt) < TTL;
-
-    if (panelFresh && dashFresh) return null;
-
-    const tasks = [];
-    if (!panelFresh) {
-      tasks.push(api('getInicioPanelData').then(data => {
-        APP.state.inicioPanelData      = data || {};
-        APP.state.inicioPanelFetchedAt = Date.now();
-      }));
-    }
-    if (!dashFresh) {
-      tasks.push(api('getDashboardData', {}).then(data => {
-        APP.state.dashboardData          = data || {};
-        APP.state.dashboardDataFetchedAt = Date.now();
-      }));
-    }
-    return Promise.all(tasks);
-  }
-
   /**
    * Renderiza el panel de alertas operativas (Fase 4 — Sistema de Alertas)
    */

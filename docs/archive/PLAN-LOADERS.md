@@ -1,3 +1,5 @@
+> **⚠️ SUPERSEDED (2026-07-10):** Este plan fue reemplazado por la estandarización completa del sistema de loading (loader por módulo, nunca fullscreen; loader de modal por `modalId`). La referencia vigente es `docs/design-system.md` → sección "Sistema de Loading". Las APIs `showContentLoading`/`hideContentLoading` descritas aquí ya no existen.
+
 # PLAN DE ANÁLISIS Y CORRECCIÓN DE LOADERS
 
 ## 📊 DIAGNÓSTICO ACTUAL

@@ -52,7 +52,6 @@ GO Provi/
 │   ├── INICIO-RAPIDO-CLAUDE.md  ← Resumen ejecutivo para sesiones Claude
 │   ├── CLAUDE.md                ← Guía técnica extensa (fuente de verdad)
 │   ├── CHECKLIST-PRODUCCION.md  ← Verificación pre-deploy PROD
-│   ├── ORGANIZACION-DOCS-2026-06-19.md ← Proceso de reorganización
 │   │
 │   ├── — Documentación técnica —
 │   ├── MANTENER-DOCS.md         ← Guía de mantenimiento documentación
@@ -60,17 +59,15 @@ GO Provi/
 │   ├── modelo-datos.md          ← Esquema hojas, relaciones, pipeline
 │   ├── deploy.md                ← Proceso despliegue DEV/PROD
 │   ├── seguridad.md             ← Roles, permisos, scopes, PINs
-│   ├── design-system.md         ← Sistema diseño (componentes, CSS, UX)
+│   ├── design-system.md         ← Sistema diseño (componentes, CSS, UX, loading)
 │   ├── dev-stats.md             ← Métricas del proyecto
-│   ├── frontend-*.md            ← Documentos frontend (estado, plan, resumen)
 │   ├── mensajes-normalizados.md ← Sistema traducción mensajes técnicos
-│   ├── diagnostico-transiciones.md ← Sistema transiciones UX
+│   ├── performance-*.md / plan-rendimiento-agresivo.md ← Análisis y planes de rendimiento
+│   ├── analisis-completo-2026-07-10.md ← Análisis integral del proyecto
 │   │
-│   └── archive/                 ← Documentos históricos
-│       ├── ANALISIS-AVANCE-LEGACY.md
-│       ├── DEPLOYMENT-2026-06-05.md
-│       ├── GUIA-MIGRACION.md
-│       └── PLAN-LOADERS.md
+│   └── archive/                 ← Documentos históricos completados
+│       (planes ejecutados, diagnósticos puntuales y registros de proceso;
+│        ver archive/README.md para el índice)
 │
 ├── go-pes-local/                ← Código fuente Apps Script
 │   ├── appsscript.json          ← Manifiesto (runtime, timezone, scopes)

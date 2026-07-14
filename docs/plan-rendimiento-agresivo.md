@@ -1,3 +1,6 @@
+> **Relación con otros documentos:** complementa a [`performance-plan-agresivo.md`](performance-plan-agresivo.md) (plan por módulos) y [`performance-implementacion-pendiente.md`](performance-implementacion-pendiente.md) (estado de fases). Este documento aporta el diagnóstico transversal D1–D6. Pendiente: consolidar los tres en un solo plan.
+> **Nota 2026-07-13:** el hallazgo de D2 sobre `invalidateRequestIndexes_()` duplicada en `Repository.js` ya fue corregido (definición única fusionada).
+
 # Plan de mejora agresivo de rendimiento — GO-PES v2
 
 **Fecha:** 2026-07-10

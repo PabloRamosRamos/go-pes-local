@@ -1315,7 +1315,7 @@
             ${configInput_('appName', 'Nombre de la app', section.appName || '', 'text')}
             ${configInput_('programName', 'Nombre del programa', section.programName || '', 'text')}
             ${configInput_('environmentLabel', 'Etiqueta de entorno', section.environmentLabel || '', 'text')}
-            ${configInput_('splashMinDurationMs', 'Splash mínimo (ms)', section.splashMinDurationMs || 5000, 'number')}
+            ${configInput_('splashMinDurationMs', 'Splash: ritmo de animación (ms)', section.splashMinDurationMs || 5000, 'number')}
             ${configInput_('appSubtitle', 'Subtítulo de la app', section.appSubtitle || '', 'text', 'field--full')}
             ${configInput_('loadingText', 'Texto por defecto del loading', section.loadingText || '', 'text', 'field--full')}
             ${configCheckbox_('showVisibleVersion', 'Mostrar versión visible', section.showVisibleVersion !== false)}
@@ -1466,53 +1466,9 @@
               <div class="config-grid">
                 ${configInput_('camarasDisplayName', 'Nombre visible', camaras.displayName || '', 'text')}
                 ${configInput_('camarasTechnicalVisitAlertDays', 'Días alerta visita técnica', camaras.technicalVisitAlertDays || 0, 'number')}
+                ${configInput_('camarasMaxDaysWithoutProgress', 'Días sin avance', camaras.maxDaysWithoutProgress || 30, 'number')}
                 ${configTextarea_('camarasBaseStates', 'Estados base', joinLines_(camaras.baseStates), 'field--full', 5)}
                 ${configTextarea_('camarasBaseEligibilityCondition', 'Condición base de elegibilidad', camaras.baseEligibilityCondition || '', 'field--full', 4)}
-              </div>
-            </article>
-          </div>
-          <div class="actions"><button type="submit" class="primary-btn"><span class="material-symbols-outlined">save</span>Guardar Beneficios</button></div>
-        </form>
-      </section>
-    `;
-  }
-
-  function renderConfigBeneficiosSection_(section) {
-    const capacitaciones = section.capacitaciones || {};
-    const fondese = section.fondese || {};
-    const camaras = section.camaras1414 || {};
-    return `
-      <section class="config-section" id="config-section-beneficios">
-        <div class="config-section__head"><p class="eyebrow">Beneficios</p><h3>Parametros base por tipo</h3></div>
-        <form class="config-form" data-config-section="beneficios">
-          <div class="config-subgrid">
-            <article class="config-subcard">
-              <h4>CAPACITACIONES</h4>
-              <div class="config-grid">
-                ${configInput_('capacitacionesDisplayName', 'Nombre visible', capacitaciones.displayName || '', 'text')}
-                ${configInput_('capacitacionesAnnualDefaultCount', 'Cantidad anual por defecto', capacitaciones.annualDefaultCount || 0, 'number')}
-                ${configTextarea_('capacitacionesAllowedStates', 'Estados permitidos', joinLines_(capacitaciones.allowedStates), 'field--full', 5)}
-                ${configTextarea_('capacitacionesBaseEligibilityCondition', 'Condicion base de elegibilidad', capacitaciones.baseEligibilityCondition || '', 'field--full', 4)}
-              </div>
-            </article>
-            <article class="config-subcard">
-              <h4>FONDESE</h4>
-              <div class="config-grid">
-                ${configInput_('fondeseBaseYear', 'Ano base', fondese.baseYear || new Date().getFullYear(), 'number')}
-                ${configInput_('fondeseCallsPerYear', 'Convocatorias por ano', fondese.callsPerYear || 1, 'number')}
-                ${configInput_('fondeseAlertDaysBefore', 'Dias de alerta', fondese.alertDaysBefore || 0, 'number')}
-                ${configTextarea_('fondeseBaseStates', 'Estados base', joinLines_(fondese.baseStates), 'field--full', 5)}
-                ${configTextarea_('fondeseKeyDates', 'Fechas clave (clave|etiqueta|fecha)', joinKeyDateLines_(fondese.keyDates), 'field--full', 6)}
-              </div>
-            </article>
-            <article class="config-subcard">
-              <h4>CAMARAS 1414</h4>
-              <div class="config-grid">
-                ${configInput_('camarasDisplayName', 'Nombre visible', camaras.displayName || '', 'text')}
-                ${configInput_('camarasTechnicalVisitAlertDays', 'Dias alerta visita tecnica', camaras.technicalVisitAlertDays || 0, 'number')}
-                ${configInput_('camarasMaxDaysWithoutProgress', 'Dias sin avance', camaras.maxDaysWithoutProgress || 30, 'number')}
-                ${configTextarea_('camarasBaseStates', 'Estados base', joinLines_(camaras.baseStates), 'field--full', 5)}
-                ${configTextarea_('camarasBaseEligibilityCondition', 'Condicion base de elegibilidad', camaras.baseEligibilityCondition || '', 'field--full', 4)}
               </div>
             </article>
           </div>

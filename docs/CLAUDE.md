@@ -69,7 +69,7 @@ Desde el editor online de Apps Script:
 
 ```
 GO Provi/
-├── CLAUDE.md               ← Este archivo
+├── docs/                   ← Toda la documentación (este archivo incluido; sin .md en raíz)
 └── go-pes-local/           ← Código fuente del proyecto Apps Script
     ├── appsscript.json     ← Manifiesto del proyecto (runtime, timezone, webapp config)
     │
@@ -80,6 +80,7 @@ GO Provi/
     ├── Auth.js             ← Autenticación, gestión de usuarios, permisos por módulo
     ├── SecurityPins.js     ← Gestión de PINs de seguridad con rate limiting (PropertiesService)
     ├── Repository.js       ← Capa de acceso a hojas + cache en memoria (GO_PES_RUNTIME)
+    ├── Repository_Indexes.js ← Índices lazy globales para lecturas frecuentes
     ├── Validators.js       ← Helpers de validación de datos
     ├── Diagnostics.js      ← Trazas de diagnóstico activables/desactivables
     ├── SystemConfig.js     ← Configuración del sistema (persiste en CFG_Parametros)
@@ -88,6 +89,8 @@ GO Provi/
     ├── — LÓGICA DE NEGOCIO —
     ├── Services.js         ← Servicios de dominio principales
     ├── Catalogs.js         ← Gestión de catálogos (DIM_*)
+    ├── Dashboard.js        ← Datos del dashboard nativo de Inicio
+    ├── Alertas.js          ← Sistema de alertas operativas
     ├── NuevoIngreso.js     ← Módulo de ingreso de nuevos vecinos/solicitudes
     ├── ZZ_AvanceBackend.js ← Módulo de avance/seguimiento de hitos
     ├── ZZ_AvancePhase1.js  ← Fase 1 del avance
@@ -95,24 +98,38 @@ GO Provi/
     ├── ZZ_BeneficiosBackend.js     ← Módulo de beneficios e instrumentos
     ├── ZZ_OrganizacionesBackend.js ← Módulo de organizaciones comunitarias
     ├── ZZ_SociosBackend.js         ← Módulo de socios/miembros
-    ├── ZZ_AdminDataReset.js ← Utilidades de administración y reset
+    ├── ZZ_CalendarioBackend.js     ← Calendario de reuniones
+    ├── ZZ_FormSociosIntegration.js ← Integración Google Form de socios
+    ├── ZZ_MigracionBackend.js      ← Migración de datos desde fuentes externas
+    ├── ZZ_AdminDataReset.js        ← Utilidades de administración y reset
+    ├── ZZ_LimpiarDuplicados.js     ← Limpieza de registros duplicados
+    ├── ZZ_VerificarDuplicados.js   ← Verificación de registros duplicados
     │
     ├── — FRONTEND (HTML/CSS/JS) —
     ├── Index.html              ← Template principal (incluye todos los parciales)
-    ├── Styles.html             ← CSS global (~154 KB)
+    ├── Styles.html             ← CSS global (modo claro)
     ├── ThemeDark.html          ← CSS del tema oscuro
-    ├── Scripts.html            ← Core JS: constantes, init, routing, catalogs, utils (~1.757 líneas)
-    ├── Scripts_Inicio.html     ← Módulo Inicio (renderQuickActions, renderHomeTiles)
-    ├── Scripts_Ficha.html      ← Módulo Ficha (renderFicha, fichaBlock)
+    ├── Scripts.html            ← Core JS: constantes, init, routing
+    ├── Scripts_Utils.html      ← Utilidades (nombres, fechas, config, labels)
+    ├── Scripts_UI.html         ← Helpers de UI (toasts, empty states, paginador)
+    ├── Scripts_A11y.html       ← Accesibilidad (focus trap, modales)
+    ├── Scripts_CatalogCache.html ← Cache de catálogos con TTL + ensureCatalogsForView
+    ├── Scripts_Inicio.html     ← Módulo Inicio (dashboard, alertas)
+    ├── Scripts_Ficha.html      ← Módulo Ficha
     ├── Scripts_NuevoIngreso.html ← Módulo Nuevo Ingreso + formulario organización
     ├── Scripts_Organizaciones.html ← Módulo Organizaciones
-    ├── Scripts_Beneficios.html ← Módulo Beneficios/Instrumentos (~1.700 líneas)
-    ├── Scripts_Socios.html     ← Módulo Socios (~714 líneas)
-    ├── Scripts_Avance.html     ← Módulo Avance (~853 líneas)
-    ├── Scripts_Admin.html      ← Módulos Usuarios + Configuración (~1.697 líneas)
-    ├── Splash.html             ← Pantalla de splash inicial
-    ├── Loading.html            ← Pantalla de carga
+    ├── Scripts_Beneficios.html ← Módulo Beneficios/Instrumentos
+    ├── Scripts_Socios.html     ← Módulo Socios
+    ├── Scripts_Avance.html     ← Módulo Avance
+    ├── Scripts_Admin.html      ← Módulos Usuarios + Configuración
+    ├── Scripts_Calendario.html ← Lógica del calendario de reuniones
+    ├── Calendario.html         ← UI del calendario de reuniones
+    ├── Splash.html             ← Pantalla de splash inicial (única fullscreen)
+    ├── Loading.html            ← Sistema de loading (módulo + modal)
     ├── Inicio.html             ← HTML estático del módulo Inicio/Home
+    ├── Manual.html             ← Manual de usuario
+    ├── ManualProcedimientos.html ← Manual de procedimientos
+    ├── FlowchartConfig.html    ← Configuración de diagramas de flujo
     ├── Assets.js               ← Data URIs de logos e imágenes (base64)
     │
     └── — DEBUG/QA —
@@ -346,13 +363,17 @@ Suite de tests automatizados en `Audith.js` cubre:
 - [x] `Scripts.html` dividido en 8 parciales por módulo (Fase 5 completada)
 - [x] Tests automatizados implementados en `Audith.js` (262 tests, 0 fallos, verificados en DEV y PROD)
 - [x] Auditoría de seguridad completada (5 de 7 hallazgos cerrados, 2 excluidos por diseño DEV)
-- [x] Plan de mejora frontend completado (5/5 fases: A11y, Consolidación CSS, Modularización JS, Responsive, Design System). Ver [`docs/design-system.md`](../docs/design-system.md) y [`docs/frontend-plan-resumen.md`](../docs/frontend-plan-resumen.md).
+- [x] Plan de mejora frontend completado (5/5 fases: A11y, Consolidación CSS, Modularización JS, Responsive, Design System). Ver [`docs/design-system.md`](../docs/design-system.md) y [`docs/archive/frontend-plan-resumen.md`](../docs/archive/frontend-plan-resumen.md).
 - [x] Sistema de transiciones UX implementado (3 fases: modales, vistas, stagger). Ver [`docs/design-system.md`](../docs/design-system.md) sección "Transiciones y Animaciones".
 - [x] Eliminar 3 funciones duplicadas en `Scripts_Beneficios.html` — Ya completado en commits anteriores (verificado 2026-06-01: solo existe 1 definición de cada función)
 - [ ] Superusuario y dominios confiables hardcodeados en Main.js — evaluar moverlos a CFG_Parametros (bajo, solo convenios de configuración)
 - [ ] Añadir `data-label` attributes a tablas dinámicas de `Scripts_*.html` para card layout responsive (incremental, baja prioridad)
 
 ## Historial de cambios significativos
+
+- **2026-07-13 (Limpieza — Eliminación de duplicados y código/documentación obsoletos)** — Auditoría completa del proyecto. **Colisiones de funciones corregidas (el duplicado sombreado se eliminó):** `invalidateRequestIndexes_()` definida 2 veces en `Repository.js` — la versión activa NO invalidaba los índices de hitos/socios (bug latente de datos obsoletos tras escrituras); fusionadas en una sola completa. `initUserEmailField_()` ×2 en `Scripts.html` (eliminada la vieja con dominio hardcodeado `providencia.cl`). `renderConfigBeneficiosSection_()` ×2 en `Scripts_Admin.html` (conservada la vigente con campo `camarasMaxDaysWithoutProgress`, acentos restaurados). **Código muerto eliminado:** 428 líneas en `Scripts_Beneficios.html` (6 funciones `*LegacyInactive_` + panel legacy completo sin llamadores: `renderBenefitConfigurationPanel_`, `renderBenefitOrganizationsPanel_`, `renderBenefitOrgDetailPanel_` y 8 auxiliares exclusivos); `ensureInicioPanelData_(force)` sin llamadores en `Scripts_Inicio.html`; wrappers `showAvanceLoading_`/`hideAvanceLoading_`; alias `showContentLoading`/`hideContentLoading` (API eliminada, cero llamadores); divs `.modal-loading` estáticos de Organizaciones (la API los crea bajo demanda); línea redundante de texto del overlay en `applySystemConfigUi_`. **CSS muerto/duplicado:** bloque `.view-loader` completo + keyframe + overrides dark (cero usos desde que se eliminaron los view loaders); `.app-loading__box`/`.app-loading__spinner` (el splash no usa esas clases); keyframe `loadingPanelGlow`; regla inerte `.loading-shell::before`; bloque tardío duplicado de `.content-loading` consolidado en la definición base (de paso se restaura el fade-out, que el duplicado rompía al pisar la transición de `visibility`). **Documentación:** movidos a `docs/archive/` cinco documentos completados (`diagnostico-transiciones`, `frontend-estado-actual`, `frontend-plan-mejora`, `frontend-plan-resumen`, `ORGANIZACION-DOCS-2026-06-19`) con índice actualizado en `archive/README.md`; nota SUPERSEDED en `PLAN-LOADERS.md`; notas cruzadas entre los tres documentos de performance (pendiente consolidarlos en uno); árbol de archivos de `CLAUDE.md` actualizado a la estructura real (52 archivos); `design-system.md` sin referencias a APIs eliminadas. **Deuda registrada:** wizards informativos de CAMARAS y FONDESE en `Scripts_Beneficios.html` comparten ~150 líneas de maquinaria local duplicada (sin colisión; candidata a extraerse en sesión dedicada). Archivos: `Repository.js`, `Scripts.html`, `Scripts_Admin.html`, `Scripts_Beneficios.html`, `Scripts_Inicio.html`, `Scripts_Avance.html`, `Scripts_Organizaciones.html`, `Loading.html`, `Styles.html`, `ThemeDark.html`, 9 docs.
+
+- **2026-07-13 (Performance — Splash sin tiempo mínimo fijo)** — El splash inicial ya no retiene la app 5 segundos: `hideAppLoading()` cierra el splash apenas la app está lista (la barra corre a 100% en ~200 ms y hace fade de 260 ms). Cambios en `Splash.html`: eliminado el gating `elapsed >= minDurationMs` en `tickSplashProgress_`, el force-hide de respaldo pasa de "resto hasta el mínimo + 260 ms" a 600 ms fijos post-solicitud (solo cubre rAF pausado en pestañas en segundo plano), y eliminadas 3 funciones duplicadas muertas (`getSplashStatusCopy_`, `renderSplashProgress_`, `tickSplashProgress_` tenían versiones viejas sombreadas). `splashMinDurationMs` (CFG general, default 5000) pasa a controlar solo el ritmo visual de la barra mientras carga de verdad, no la permanencia del splash; etiqueta en Configuración actualizada a "Splash: ritmo de animación (ms)" (`Scripts_Admin.html`). En `Scripts.html` se eliminó el `setTimeout` fijo de 120 ms previo a `hideAppLoading()` en `init()`. Archivos: `Splash.html`, `Scripts.html`, `Scripts_Admin.html`.
 
 - **2026-07-10 (UX — Sistema de loading estandarizado, nunca fullscreen)** — Todos los loaders de la aplicación quedan acotados a su área de acción; ningún loader cubre la pantalla completa (el único fullscreen permitido es el splash inicial). **API nueva en `Loading.html`:** `showModuleLoading(message)`/`hideModuleLoading()` monta el overlay `#content-loading` siempre dentro de `#app .content` (sidebar y header quedan visibles); `showModalLoading(modalId, message)`/`hideModalLoading(modalId)` monta un loader local `.modal-loading` (spinner + texto) dentro del diálogo del modal indicado, creándolo bajo demanda si el modal no lo declara. `showContentLoading`/`hideContentLoading` se mantienen como alias de compatibilidad (contexto módulo). **Eliminado:** detección heurística de modal abierto (`CONTENT_LOADING_MODAL_SELECTOR`, `mountContentLoadingForContext_`, `syncContentLoadingLayerState_`), contexto fullscreen `content-loading--modal` (CSS + variable `--layer-modal-loading`), y el loader propio de Avance con `position:fixed` inline y z-index 9999 (`#avance-loading`; `showAvanceLoading_`/`hideAvanceLoading_` ahora delegan en la API de módulo). **Migraciones por módulo:** Scripts.html (init, route, ficha; reset de datos usa loader dentro de `admin-reset-modal`), Avance (hito usa loader dentro de `avance-hito-modal`), Organizaciones (guardados y cargo usan loader del modal correspondiente: `org-detalle-modal`, `org-edit-modal`, `org-socio-cargo-modal`; el spinner invisible clase `.spinner` sin CSS del grid y del link de socios reemplazado por `.module-loading`), Admin/Socios/Beneficios/NuevoIngreso (todas las llamadas a loader de módulo). **Loaders locales estandarizados:** clase `.module-loading` (flecha circular `dash-spin refresh` + texto) con nueva variante `.module-loading--overlay` en `Styles.html`; eliminados estilos inline de `#socios-table-loading` y `#hist-table-loading`. Documentación: nueva sección "Sistema de Loading" en `docs/design-system.md` (v1.2). Archivos: `Loading.html` (reescrito), `Styles.html`, `Scripts.html`, `Scripts_Avance.html`, `Scripts_Organizaciones.html`, `Scripts_Admin.html`, `Scripts_Socios.html`, `Scripts_Beneficios.html`, `Scripts_NuevoIngreso.html`, `Index.html`, `docs/design-system.md`.
 

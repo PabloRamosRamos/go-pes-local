@@ -1,3 +1,5 @@
+> **Relación con otros documentos:** ver también [`plan-rendimiento-agresivo.md`](plan-rendimiento-agresivo.md) (diagnóstico transversal D1–D6) y [`performance-implementacion-pendiente.md`](performance-implementacion-pendiente.md) (estado de fases). Pendiente: consolidar los tres en un solo plan.
+
 # Plan de Performance Agresivo — GO-PES v2
 
 **Fecha:** 2026-07-10  

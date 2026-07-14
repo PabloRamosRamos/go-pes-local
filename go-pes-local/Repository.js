@@ -607,7 +607,8 @@ var GO_PES_REQUEST_INDEXES = this.GO_PES_REQUEST_INDEXES || {
 };
 
 /**
- * Invalida todos los índices (llamar después de writes)
+ * Invalida todos los índices y caches derivados (llamar después de writes).
+ * Única definición: cubre índices locales, cache de lookups e índices globales.
  */
 function invalidateRequestIndexes_() {
   GO_PES_REQUEST_INDEXES.casosByOrgId = null;
@@ -616,6 +617,14 @@ function invalidateRequestIndexes_() {
   GO_PES_REQUEST_INDEXES.hitosByOrgId = null;
   GO_PES_REQUEST_INDEXES.hitosBySolicitudId = null;
   GO_PES_REQUEST_INDEXES.sociosByOrgId = null;
+
+  // Invalidar cache de lookups
+  invalidateLookupCache_();
+
+  // Invalidar índices globales de Repository_Indexes.js
+  if (typeof invalidateAllIndexes_ === 'function') {
+    invalidateAllIndexes_();
+  }
 }
 
 /**
@@ -816,21 +825,3 @@ function invalidateLookupCache_() {
   GO_PES_LOOKUP_CACHE = {};
 }
 
-/**
- * Invalidar índices de Repository_Indexes.js
- * LLAMAR después de cualquier write a hojas
- */
-function invalidateRequestIndexes_() {
-  // Invalidar índices locales de Repository.js
-  GO_PES_REQUEST_INDEXES.casosBySolicitudId = null;
-  GO_PES_REQUEST_INDEXES.casosByOrgId = null;
-  GO_PES_REQUEST_INDEXES.organizacionesByOrgId = null;
-
-  // Invalidar lookups
-  invalidateLookupCache_();
-
-  // Invalidar índices globales de Repository_Indexes.js
-  if (typeof invalidateAllIndexes_ === 'function') {
-    invalidateAllIndexes_();
-  }
-}

@@ -554,7 +554,7 @@
     const currentValue = String(select.value || '').trim();
     const currentGrupoValue = String(grupoSelect?.value || '').trim();
 
-    showAvanceLoading_('Cargando opciones...');
+    showModuleLoading('Cargando opciones...');
 
     Promise.all([
       api('getGruposVecinosAvanceClient'),
@@ -593,9 +593,9 @@
         if (grupo) document.getElementById('avance-grupo-search').value = grupo.label;
       }
 
-      hideAvanceLoading_();
+      hideModuleLoading();
     }).catch(err => {
-      hideAvanceLoading_();
+      hideModuleLoading();
     });
   }
 
@@ -613,7 +613,7 @@
       return Promise.resolve();
     }
 
-    showAvanceLoading_('Cargando módulo de avance...');
+    showModuleLoading('Cargando módulo de avance...');
 
     return Promise.all([
       api('getCatalogosAvanceClient'),
@@ -626,12 +626,12 @@
       APP.state.avanceOrganizaciones = (organizaciones && organizaciones.organizacionesList) || [];
       APP.state.avanceOrganizacionesFetchedAt = Date.now();
     }).finally(() => {
-      hideAvanceLoading_();
+      hideModuleLoading();
     });
   }
 
   function loadAvanceOrganizacion_(organizacionId) {
-    showAvanceLoading_('Cargando avance...');
+    showModuleLoading('Cargando avance...');
 
     return api('getAvanceOrganizacion', { organizacion_id: organizacionId }).then(data => {
       APP.state.currentAvance = data;
@@ -645,12 +645,12 @@
       clearAvanceView_();
       showError(err);
     }).finally(() => {
-      hideAvanceLoading_();
+      hideModuleLoading();
     });
   }
 
   function loadAvanceGrupoVecinos_(solicitudId) {
-    showAvanceLoading_('Cargando avance de Grupo de vecinos...');
+    showModuleLoading('Cargando avance de Grupo de vecinos...');
 
     return api('getAvanceGrupoVecinos', { solicitud_id: solicitudId }).then(data => {
       APP.state.currentAvance = data;
@@ -664,7 +664,7 @@
       clearAvanceView_();
       showError(err);
     }).finally(() => {
-      hideAvanceLoading_();
+      hideModuleLoading();
     });
   }
 
@@ -1201,7 +1201,7 @@
       }
     }
 
-    showAvanceLoading_('Actualizando estado de avance...');
+    showModuleLoading('Actualizando estado de avance...');
 
     api('cambiarEstadoAvance', {
       organizacion_id: organizacionId,
@@ -1212,7 +1212,7 @@
       showSuccess(`Estado actualizado a: ${nuevoEstado}`);
       loadAvanceOrganizacion_(organizacionId);
     }).catch(showError).finally(() => {
-      hideAvanceLoading_();
+      hideModuleLoading();
     });
   }
 
@@ -1258,11 +1258,4 @@
     lockAvanceActions_(true);
   }
 
-  function showAvanceLoading_(message) {
-    showModuleLoading(message);
-  }
-
-  function hideAvanceLoading_() {
-    hideModuleLoading();
-  }
 

@@ -367,9 +367,9 @@
       }
     }).finally(() => {
       // El loader del módulo lo gestiona route(); aquí solo se retira el splash.
-      setTimeout(() => {
-        hideAppLoading();
-      }, 120);
+      // Sin delays fijos: el splash cierra apenas la app está lista (la rampa
+      // final de la barra + fade ya cubren el primer render de la vista).
+      hideAppLoading();
     });
   }
 
@@ -1257,34 +1257,6 @@
     if (normalizedView === 'configuracion') return !!APP.state.permissions.canManageConfig;
     if (normalizedView === 'ficha') return !!((APP.state.permissions.modules || {}).ficha);
     return !!((APP.state.permissions.modules || {})[normalizedView]);
-  }
-
-  function initUserEmailField_() {
-    const input = document.getElementById('user-email-local');
-    if (!input || input.dataset.bound === '1') return;
-    input.dataset.bound = '1';
-
-    const normalizeLocal = () => {
-      const raw = String(input.value || '').trim().toLowerCase().replace(/\s+/g, '');
-      if (!raw) {
-        input.value = '';
-        return;
-      }
-
-      const parts = raw.split('@').filter(Boolean);
-      if (parts.length === 1) {
-        input.value = parts[0];
-        return;
-      }
-
-      if (parts.length === 2 && parts[1] === 'providencia.cl') {
-        input.value = parts[0];
-        return;
-      }
-    };
-
-    input.addEventListener('blur', normalizeLocal);
-    input.addEventListener('paste', () => setTimeout(normalizeLocal, 0));
   }
 
   function renderUserModuleOptions_(selectedModules, targetId) {
@@ -2294,7 +2266,6 @@
     const heroTitle = document.querySelector('.hero__title');
     const heroSubtitle = document.querySelector('.hero__subtitle');
     const splashText = document.querySelector('#app-loading .app-loading__text');
-    const contentText = document.querySelector('#content-loading .content-loading__text');
     const emailSuffix = document.querySelector('.email-input-group__suffix');
 
     if (heroTitle) heroTitle.textContent = general.appName || 'Gestor Operativo PES';
@@ -2303,7 +2274,6 @@
       general.appSubtitle || ''
     ].filter(Boolean).join(' · ');
     if (splashText) splashText.textContent = getLoadingText_();
-    if (contentText) contentText.textContent = getLoadingText_();
     if (emailSuffix) emailSuffix.textContent = '@' + getAllowedUserDomain_();
     applyBrandingRuntimeTheme_();
   }

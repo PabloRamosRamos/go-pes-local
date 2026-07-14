@@ -789,7 +789,8 @@
     animation: contentLoadingSurfaceDrift 14s ease-in-out infinite alternate;
     opacity: 1;
     visibility: visible;
-    transition: opacity 0.22s ease, visibility 0.22s ease;
+    transition: opacity var(--transition-base) var(--ease-out),
+                visibility var(--transition-base) var(--ease-out);
     pointer-events: auto;
     backdrop-filter: blur(4px);
   }
@@ -800,8 +801,7 @@
     pointer-events: none;
   }
 
-  .content-loading__box,
-  .app-loading__box {
+  .content-loading__box {
     position: relative;
     z-index: 1;
     display: grid;
@@ -820,10 +820,6 @@
 
   .loading-shell {
     position: relative;
-  }
-
-  .loading-shell::before {
-    display: none;
   }
 
   .content-loading__text {
@@ -855,11 +851,6 @@
     box-shadow:
       0 18px 36px rgba(36, 54, 75, 0.12),
       inset 0 1px 0 rgba(255, 255, 255, 0.72);
-  }
-
-  .app-loading__spinner.loading-shell__visual {
-    width: 124px;
-    height: 124px;
   }
 
   .loading-shell__visual::before {
@@ -956,12 +947,6 @@
     animation-duration: 1.2s;
   }
 
-  @keyframes loadingPanelGlow {
-    0%, 100% { transform: translateX(-120%); opacity: 0; }
-    25%, 70% { opacity: 1; }
-    55% { transform: translateX(120%); opacity: 0.72; }
-  }
-
   @keyframes contentLoadingSurfaceDrift {
     0% { background-position: 0% 0%, 100% 100%, 0 0; }
     100% { background-position: 14% 10%, 86% 92%, 0 0; }
@@ -990,7 +975,6 @@
     .splash-screen__logo-ring,
     .splash-screen__logo-core::after,
     .splash-screen__progress-bar::after,
-    .loading-shell::before,
     .loading-shell__halo,
     .loading-shell__ring,
     .loading-shell__ring--reverse,
@@ -1033,48 +1017,6 @@
 
   .muted {
     color: var(--text-muted);
-  }
-
-  /* ======== VIEW LOADER (local por módulo) ======== */
-
-  .view-loader {
-    position: absolute;
-    inset: 0;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    background: var(--surface);
-    opacity: 1;
-    transition: opacity 0.22s ease;
-  }
-
-  .view-loader.is-hidden {
-    opacity: 0;
-    pointer-events: none;
-    display: none;
-  }
-
-  .view-loader__spinner {
-    width: 48px;
-    height: 48px;
-    border: 3px solid var(--border);
-    border-top-color: var(--runtime-brand-primary, var(--brand-blue));
-    border-radius: 50%;
-    animation: view-loader-spin 0.8s linear infinite;
-  }
-
-  .view-loader__text {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin: 0;
-  }
-
-  @keyframes view-loader-spin {
-    to { transform: rotate(360deg); }
   }
 
   .tile-grid {
@@ -7746,24 +7688,6 @@ html[data-theme="dark"] .ficha-gestion-form input,html[data-theme="dark"] .ficha
   transform: translateY(8px) scale(0.98);
   transition: opacity var(--transition-fast) var(--ease-in-out),
               transform var(--transition-fast) var(--ease-in-out);
-}
-
-/* ========================================
-   LOADING OVERLAY: transiciones suaves
-   ======================================== */
-
-.content-loading {
-  transition: opacity var(--transition-base) var(--ease-out);
-}
-
-.content-loading.is-hidden {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* Evitar flash al mostrar loading */
-.content-loading:not(.is-hidden) {
-  opacity: 1;
 }
 
 /* ========================================

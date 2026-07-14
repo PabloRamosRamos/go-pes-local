@@ -126,44 +126,14 @@
     Object.keys(tokens).forEach(key => rootStyle.setProperty(key, tokens[key]));
   }
 
-  function getSplashStatusCopy_(progress, hideRequested) {
-    if (hideRequested && progress >= 96) return 'Finalizando la carga inicial.';
-    if (progress >= 84) return 'Validando módulos y permisos.';
-    if (progress >= 60) return 'Sincronizando estructura operativa.';
-    if (progress >= 34) return 'Cargando configuración institucional.';
-    return 'Preparando entorno operativo.';
-  }
-
-  function renderSplashProgress_() {
-    const els = getSplashElements_();
-    if (!els) return;
-    const progressValue = Math.max(0, Math.min(100, APP_SPLASH_STATE.progress));
-    const rounded = Math.round(progressValue);
-
-    if (els.bar) {
-      els.bar.style.width = `${progressValue}%`;
-      els.bar.setAttribute('aria-valuenow', String(rounded));
-    }
-    if (els.percent) els.percent.textContent = `${rounded}%`;
-    if (els.status) els.status.textContent = getSplashStatusCopy_(progressValue, APP_SPLASH_STATE.hideRequested);
-    if (els.text) els.text.textContent = APP_SPLASH_STATE.message || getSplashLoadingText_();
-  }
-
   function easeOutCubic_(value) {
     const t = Math.max(0, Math.min(1, Number(value) || 0));
     return 1 - Math.pow(1 - t, 3);
   }
 
-  function getSplashVisualTarget_(elapsed, minDurationMs, hideRequested) {
+  function getSplashVisualTarget_(elapsed, minDurationMs) {
     const safeDuration = Math.max(500, Number(minDurationMs) || 5000);
     const normalized = Math.max(0, Math.min(1, elapsed / safeDuration));
-
-    if (hideRequested) {
-      if (normalized < 0.82) {
-        return 4 + easeOutCubic_(normalized / 0.82) * 84;
-      }
-      return 88 + easeOutCubic_((normalized - 0.82) / 0.18) * 12;
-    }
 
     if (elapsed <= safeDuration) {
       return 4 + easeOutCubic_(normalized) * 88;
@@ -176,7 +146,7 @@
   }
 
   function getSplashStatusCopy_(elapsed, minDurationMs, hideRequested) {
-    if (hideRequested && elapsed >= minDurationMs) return 'Finalizando la carga inicial.';
+    if (hideRequested) return 'Finalizando la carga inicial.';
 
     const statuses = [
       'Preparando entorno operativo.',
@@ -257,16 +227,15 @@
   }
 
   function scheduleSplashForceHide_() {
-    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
-    const remainingMs = Math.max(0, minDurationMs - getSplashElapsed_());
-
+    // Respaldo por si el rAF está pausado (pestaña en segundo plano):
+    // cierre garantizado poco después de solicitar el hide, sin esperas fijas.
     window.clearTimeout(APP_SPLASH_STATE.forceHideTimerId);
     APP_SPLASH_STATE.forceHideTimerId = window.setTimeout(() => {
       if (!APP_SPLASH_STATE.visible || !APP_SPLASH_STATE.hideRequested) return;
       APP_SPLASH_STATE.progress = 100;
       renderSplashProgress_();
       finalizeSplashHide_();
-    }, remainingMs + 260);
+    }, 600);
   }
 
   function tickSplashProgress_(now) {
@@ -278,55 +247,23 @@
 
     const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
     const elapsed = now - APP_SPLASH_STATE.startedAt;
-    let target = Math.min(91, 9 + (elapsed / minDurationMs) * 82);
 
-    if (APP_SPLASH_STATE.hideRequested) {
-      target = elapsed >= minDurationMs ? 100 : Math.max(target, 94);
-    }
+    // El splash se cierra apenas la app está lista (hideRequested):
+    // la barra corre a 100% en unos pocos frames y se desvanece.
+    const target = APP_SPLASH_STATE.hideRequested
+      ? 100
+      : getSplashVisualTarget_(elapsed, minDurationMs);
 
-    const easing = APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs ? 0.18 : 0.075;
+    const easing = APP_SPLASH_STATE.hideRequested ? 0.22 : 0.065;
     APP_SPLASH_STATE.progress += (target - APP_SPLASH_STATE.progress) * easing;
 
-    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && (100 - APP_SPLASH_STATE.progress) < 0.4) {
+    if (APP_SPLASH_STATE.hideRequested && (100 - APP_SPLASH_STATE.progress) < 0.4) {
       APP_SPLASH_STATE.progress = 100;
     }
 
     renderSplashProgress_();
 
-    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && APP_SPLASH_STATE.progress >= 100) {
-      finalizeSplashHide_();
-      APP_SPLASH_STATE.rafId = 0;
-      return;
-    }
-
-    APP_SPLASH_STATE.rafId = window.requestAnimationFrame(tickSplashProgress_);
-  }
-
-  function tickSplashProgress_(now) {
-    const els = getSplashElements_();
-    if (!els || !APP_SPLASH_STATE.visible) {
-      APP_SPLASH_STATE.rafId = 0;
-      return;
-    }
-
-    const minDurationMs = APP_SPLASH_STATE.minDurationMs || getSplashMinDurationMs_();
-    const elapsed = now - APP_SPLASH_STATE.startedAt;
-    let target = getSplashVisualTarget_(elapsed, minDurationMs, APP_SPLASH_STATE.hideRequested);
-
-    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs) {
-      target = 100;
-    }
-
-    const easing = APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs ? 0.22 : 0.065;
-    APP_SPLASH_STATE.progress += (target - APP_SPLASH_STATE.progress) * easing;
-
-    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && (100 - APP_SPLASH_STATE.progress) < 0.4) {
-      APP_SPLASH_STATE.progress = 100;
-    }
-
-    renderSplashProgress_();
-
-    if (APP_SPLASH_STATE.hideRequested && elapsed >= minDurationMs && APP_SPLASH_STATE.progress >= 100) {
+    if (APP_SPLASH_STATE.hideRequested && APP_SPLASH_STATE.progress >= 100) {
       finalizeSplashHide_();
       APP_SPLASH_STATE.rafId = 0;
       return;

@@ -69,11 +69,21 @@ function getDashboardData(filtros) {
 
   // Generar clave de cache
   var cacheKey = 'dashboard_data_' + JSON.stringify({ uv: filterUv, estado: filterEstado, year: filterYear });
+  var isDefaultQuery = !filterUv && !filterEstado && !filterYear;
 
-  // Verificar cache (TTL 3 minutos)
+  // Cache runtime (solo vive dentro de la misma ejecución GAS)
   var cached = GO_PES_RUNTIME[cacheKey];
   if (cached && cached.timestamp && (Date.now() - cached.timestamp) < GO_PES_V2.DASHBOARD.CACHE_TTL_MS) {
     return serializeForClient_(cached.data);
+  }
+
+  // Cache persistente entre ejecuciones (CacheService) para la consulta sin
+  // filtros — la del arranque y la entrada a Inicio. Las variables globales
+  // de GAS se reinician en cada google.script.run, por lo que sin esto cada
+  // apertura de Inicio recalcula todas las hojas.
+  if (isDefaultQuery) {
+    var scriptCached = getCatalogCacheJson_(GO_PES_DASHBOARD_CACHE_KEY);
+    if (scriptCached) return scriptCached;
   }
 
   // Calcular datos
@@ -145,8 +155,14 @@ function getDashboardData(filtros) {
     timestamp: Date.now()
   };
 
-  return serializeForClient_(data);
+  var payload = serializeForClient_(data);
+  if (isDefaultQuery) {
+    putCatalogCacheJson_(GO_PES_DASHBOARD_CACHE_KEY, payload, Math.floor(GO_PES_V2.DASHBOARD.CACHE_TTL_MS / 1000));
+  }
+  return payload;
 }
+
+var GO_PES_DASHBOARD_CACHE_KEY = 'go_pes_dashboard_client_default';
 
 /**
  * Invalida el cache del dashboard (llamar después de modificar datos)
@@ -158,6 +174,24 @@ function invalidateDashboardCache_() {
       delete GO_PES_RUNTIME[k];
     }
   });
+  try {
+    CacheService.getScriptCache().remove(GO_PES_DASHBOARD_CACHE_KEY);
+  } catch (err) {}
+}
+
+/**
+ * Bootstrap del módulo Inicio en una sola ejecución GAS:
+ * dashboard + panel de inicio + alertas del usuario.
+ * Reemplaza 3 llamadas google.script.run (con su auth y lecturas
+ * repetidas) por 1 sola en el arranque de la app.
+ */
+function getInicioBootstrapData() {
+  requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'superuser']);
+  return {
+    dashboard: getDashboardData({}),
+    panel: getInicioPanelData(),
+    alertas: getAlertasUsuario()
+  };
 }
 
 // ══════════════════════════════════════════════════════════════════════════

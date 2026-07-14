@@ -311,6 +311,10 @@
       showAccessDenied_();
       hideAppLoading();
       hideModuleLoading();
+      // Conservar la traza de auditoría también para accesos denegados
+      try {
+        api('goPesLogAppOpened', BOOTSTRAP.query || {}).catch(function() {});
+      } catch (err) {}
       return;
     }
 
@@ -329,23 +333,35 @@
 
     showAppLoading(getLoadingText_());
 
-    // Pre-fetch both dashboard KPIs and inicio panel data in parallel while splash shows.
-    // Route only happens after both resolve so the inicio view renders immediately with full data.
-    var dashPrefetch = api('getDashboardData', {}).then(function(data) {
-      APP.state.dashboardData = data || {};
-      APP.state.dashboardDataFetchedAt = Date.now();
-    }).catch(function() {
-      APP.state.dashboardData = {};
-      APP.state.dashboardDataFetchedAt = Date.now();
-    });
+    // Prefetch de Inicio en UNA sola llamada GAS (dashboard + panel + alertas).
+    // Solo bloquea el route inicial si la vista de arranque ES Inicio; para
+    // cualquier otro módulo se rutea de inmediato y el prefetch corre en
+    // background (únicamente si el usuario tiene permiso para ver Inicio).
+    var canSeeInicio = !!((((BOOTSTRAP.permissions || {}).modules) || {}).inicio);
+    var startsAtInicio = APP.state.activeView === 'inicio' && canSeeInicio;
 
-    var panelPrefetch = api('getInicioPanelData').then(function(data) {
-      APP.state.inicioPanelData = data || {};
-      APP.state.inicioPanelFetchedAt = Date.now();
-    }).catch(function() {
-      APP.state.inicioPanelData = {};
-      APP.state.inicioPanelFetchedAt = Date.now();
-    });
+    var inicioPrefetch = null;
+    if (canSeeInicio) {
+      inicioPrefetch = api('getInicioBootstrapData').then(function(data) {
+        var payload = data || {};
+        APP.state.dashboardData = payload.dashboard || {};
+        APP.state.dashboardDataFetchedAt = Date.now();
+        APP.state.inicioPanelData = payload.panel || {};
+        APP.state.inicioPanelFetchedAt = Date.now();
+        if (payload.alertas) {
+          APP.state.alertasData = payload.alertas;
+          APP.state.alertasDataFetchedAt = Date.now();
+        }
+      }).catch(function() {
+        APP.state.dashboardData = APP.state.dashboardData || {};
+        APP.state.dashboardDataFetchedAt = Date.now();
+        APP.state.inicioPanelData = APP.state.inicioPanelData || {};
+        APP.state.inicioPanelFetchedAt = Date.now();
+      }).finally(function() {
+        APP.state.inicioPrefetchPromise = null;
+      });
+      APP.state.inicioPrefetchPromise = inicioPrefetch;
+    }
 
     var bootstrapWork = Promise.resolve().then(() => {
       APP.state.user = BOOTSTRAP.user || APP.state.user;
@@ -360,7 +376,11 @@
       setStatus('Ocurrió un error al iniciar la aplicación.', false);
     });
 
-    Promise.all([bootstrapWork, dashPrefetch, panelPrefetch]).then(() => {
+    var routeGate = startsAtInicio && inicioPrefetch
+      ? Promise.all([bootstrapWork, inicioPrefetch])
+      : bootstrapWork;
+
+    routeGate.then(() => {
       route(APP.state.activeView, BOOTSTRAP.query || {});
       if ((BOOTSTRAP.query || {}).solicitud_id || (BOOTSTRAP.query || {}).organizacion_id) {
         loadFicha(BOOTSTRAP.query);
@@ -370,6 +390,11 @@
       // Sin delays fijos: el splash cierra apenas la app está lista (la rampa
       // final de la barra + fade ya cubren el primer render de la vista).
       hideAppLoading();
+      // Registrar la apertura después del primer render (antes se hacía en
+      // doGet y retrasaba el primer byte de la app).
+      try {
+        api('goPesLogAppOpened', BOOTSTRAP.query || {}).catch(function() {});
+      } catch (err) {}
     });
   }
 

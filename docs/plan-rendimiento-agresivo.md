@@ -1,5 +1,6 @@
 > **Relación con otros documentos:** complementa a [`performance-plan-agresivo.md`](performance-plan-agresivo.md) (plan por módulos) y [`performance-implementacion-pendiente.md`](performance-implementacion-pendiente.md) (estado de fases). Este documento aporta el diagnóstico transversal D1–D6. Pendiente: consolidar los tres en un solo plan.
-> **Nota 2026-07-13:** el hallazgo de D2 sobre `invalidateRequestIndexes_()` duplicada en `Repository.js` ya fue corregido (definición única fusionada).
+> **Nota 2026-07-13:** el hallazgo de D2 sobre `invalidateRequestIndexes_()` duplicada en `Repository.js` ya fue corregido (definición única fusionada; llamadas dobles en `appendRowObject_`/`appendRowObjects_` deduplicadas el 2026-07-14).
+> **Nota 2026-07-14:** D1 (caches Dashboard/Alertas que nunca acertaban entre ejecuciones) y D3 (logAccess síncrono en doGet) quedaron **resueltos** con el bloque P1: `CacheService` script/user cache, endpoint unificado `getInicioBootstrapData()`, prefetch condicional y `goPesLogAppOpened` post-render. Pendientes de este plan: D2 (sobrecosto por append), D4 (lock global), D5 (payload de boot 1,2 MB), D6 (doble clonación en lecturas).
 
 # Plan de mejora agresivo de rendimiento — GO-PES v2
 

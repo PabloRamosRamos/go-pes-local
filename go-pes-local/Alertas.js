@@ -80,10 +80,41 @@ function saveAlertasConfig_(config) {
 function invalidateAlertasCache_() {
   delete GO_PES_RUNTIME.alertasUsuario;
   delete GO_PES_RUNTIME.alertasConfig;
+  Object.keys(GO_PES_RUNTIME).forEach(function(k) {
+    if (k.indexOf('alertasUsuario_') === 0) delete GO_PES_RUNTIME[k];
+  });
+  // Cache persistente por usuario (solo alcanza al usuario en sesión;
+  // el resto expira por TTL)
+  try {
+    CacheService.getUserCache().remove(GO_PES_ALERTAS_USER_CACHE_KEY);
+  } catch (err) {}
   // Invalidar también cache del dashboard (depende de alertas)
   if (typeof invalidateDashboardCache_ === 'function') {
     invalidateDashboardCache_();
   }
+}
+
+var GO_PES_ALERTAS_USER_CACHE_KEY = 'go_pes_alertas_usuario';
+
+function getAlertasUserCacheJson_() {
+  try {
+    var raw = CacheService.getUserCache().get(GO_PES_ALERTAS_USER_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function putAlertasUserCacheJson_(payload) {
+  try {
+    var raw = JSON.stringify(payload);
+    if (raw.length > 90000) return;
+    CacheService.getUserCache().put(
+      GO_PES_ALERTAS_USER_CACHE_KEY,
+      raw,
+      Math.floor(GO_PES_V2.ALERTAS.CACHE_TTL_MS / 1000)
+    );
+  } catch (err) {}
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -508,14 +539,22 @@ function getAlertasUsuario() {
       return serializeForClient_(getAlertasMock_());
     }
 
-    // Cache
+    // Cache runtime (solo vive dentro de la misma ejecución GAS)
     var cacheKey = 'alertasUsuario_' + getCurrentUserEmail_();
     if (GO_PES_RUNTIME[cacheKey]) {
       var cached = GO_PES_RUNTIME[cacheKey];
       if (cached.timestamp && (Date.now() - cached.timestamp < GO_PES_V2.ALERTAS.CACHE_TTL_MS)) {
-        Logger.log('[ALERTAS] Retornando datos del cache');
+        Logger.log('[ALERTAS] Retornando datos del cache runtime');
         return serializeForClient_(cached.data);
       }
+    }
+
+    // Cache persistente entre ejecuciones (CacheService por usuario) —
+    // las variables globales de GAS se reinician en cada google.script.run.
+    var userCached = getAlertasUserCacheJson_();
+    if (userCached) {
+      Logger.log('[ALERTAS] Retornando datos del cache persistente');
+      return userCached;
     }
 
     var email = getCurrentUserEmail_();
@@ -560,14 +599,17 @@ function getAlertasUsuario() {
       alertas: alertas
     };
 
-    // Guardar en cache
+    // Guardar en cache (runtime + persistente)
     GO_PES_RUNTIME[cacheKey] = {
       timestamp: Date.now(),
       data: result
     };
 
+    var payload = serializeForClient_(result);
+    putAlertasUserCacheJson_(payload);
+
     Logger.log('[ALERTAS] Datos guardados en cache y listos para enviar');
-    return serializeForClient_(result);
+    return payload;
 
   } catch (error) {
     Logger.log('[ALERTAS] ERROR en getAlertasUsuario: ' + error.toString());

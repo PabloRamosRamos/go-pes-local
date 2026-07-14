@@ -699,6 +699,18 @@ function logAccess_(event, payload) {
   });
 }
 
+/**
+ * Registro de apertura de la app, invocado por el cliente después del
+ * primer render. Antes se hacía en doGet, retrasando el primer byte
+ * con un append síncrono a LOG_Accesos.
+ */
+function goPesLogAppOpened(params) {
+  try {
+    logAccess_('OPEN_APP', params || {});
+  } catch (err) {}
+  return true;
+}
+
 function logUserAction_(action, entityType, entityId, result, detail) {
   const email = GO_PES_RUNTIME.currentUserEmail || getCurrentUserEmail_();
 

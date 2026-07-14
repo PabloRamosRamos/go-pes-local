@@ -387,7 +387,6 @@ function appendRowObject_(sheetName, obj) {
     const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
     sh.appendRow(headers.map(h => obj[h] !== undefined ? obj[h] : ''));
     invalidateSheetRuntimeCache_(sheetName);
-  invalidateRequestIndexes_();
     invalidateRequestIndexes_(); // Invalidar índices después de write
   } finally {
     goPesDiagEnd_(diag, { rows_written: 1 });
@@ -414,7 +413,6 @@ function appendRowObjects_(sheetName, objects) {
 
     sh.getRange(sh.getLastRow() + 1, 1, values.length, headers.length).setValues(values);
     invalidateSheetRuntimeCache_(sheetName);
-  invalidateRequestIndexes_();
     invalidateRequestIndexes_(); // Invalidar índices después de write
   } finally {
     goPesDiagEnd_(diag);

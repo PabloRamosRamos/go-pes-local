@@ -257,7 +257,8 @@ function buildBootstrapForTemplate_(e) {
     ? requestedView
     : getFirstAllowedView_(permissions);
 
-  logAccess_('OPEN_APP', params);
+  // El registro OPEN_APP lo envía el cliente después del primer render
+  // (goPesLogAppOpened) para no retrasar el primer byte con un append a hoja.
 
   return {
     appName: config.general.appName || GO_PES_V2.APP_NAME,

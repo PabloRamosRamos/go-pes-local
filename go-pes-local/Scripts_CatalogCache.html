@@ -149,6 +149,12 @@
       return Promise.resolve();
     }
 
+    // Si el prefetch unificado del arranque sigue en vuelo, esperar ese
+    // en vez de duplicar la llamada (puebla panel + dashboard + alertas).
+    if (window.APP.state.inicioPrefetchPromise) {
+      return window.APP.state.inicioPrefetchPromise;
+    }
+
     return window.api('getInicioPanelData').then(data => {
       window.APP.state.inicioPanelData = data || {};
       window.APP.state.inicioPanelFetchedAt = Date.now();

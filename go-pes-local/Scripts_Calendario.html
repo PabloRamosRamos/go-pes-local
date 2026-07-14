@@ -125,8 +125,9 @@
           var solId = btn.dataset.solId;
           if (!solId) return;
           _calHideDialog();
+          // loadFicha ya rutea a la vista ficha; un route() adicional
+          // ocultaría el loader mientras obtenerFicha sigue en vuelo.
           loadFicha({ solicitud_id: solId });
-          route('ficha');
         });
       });
     }).catch(function() {

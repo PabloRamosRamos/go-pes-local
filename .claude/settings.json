@@ -6,8 +6,12 @@
       "Bash(sed -i '990,1417d' Scripts_Beneficios.html)",
       "Bash(echo \"exit=$?\")",
       "Bash(grep -oE '^\\(\\\\s*\\)\\\\.[a-zA-Z0-9_-]+\\(\\\\s*,\\)?\\\\s*\\\\{' Styles.html)",
-      "Bash(node --check Repository.js)"
+      "Bash(node --check Repository.js)",
+      "Skill(claude-api)",
+      "Skill(claude-api:*)",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
     ]
   },
-  "model": "claude-fable-5"
+  "model": "claude-opus-4-8"
 }

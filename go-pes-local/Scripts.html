@@ -1419,6 +1419,13 @@
     APP.state.activeView = view;
     const wasRendered = !!APP.state.renderedViews[view];
 
+    // Un evento de calendario pendiente solo es válido mientras el usuario
+    // permanece en Nuevo Ingreso; al navegar a otro módulo se descarta para
+    // que no contamine un ingreso manual posterior.
+    if (view !== 'nuevo-ingreso' && APP.state.calendarioPendingEvent) {
+      APP.state.calendarioPendingEvent = null;
+    }
+
     // Cerrar todos los modales abiertos al cambiar de módulo
     closeAllModals_();
 

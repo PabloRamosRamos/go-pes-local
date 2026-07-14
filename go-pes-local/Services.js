@@ -642,6 +642,16 @@ function obtenerFicha(payload) {
     ? getCasoBySolicitudId_(solicitudId)
     : null;
 
+  // Reintento corto: si la ficha se pide inmediatamente después de crear la
+  // solicitud (flujo Nuevo Ingreso → ficha), la fila puede no ser visible
+  // aún para esta ejecución. Un solo reintento con cache limpio lo cubre.
+  if (!caseRow && solicitudId) {
+    Utilities.sleep(500);
+    invalidateSheetRuntimeCache_(GO_PES_V2.SHEETS.MAE_CASOS);
+    invalidateRequestIndexes_();
+    caseRow = getCasoBySolicitudId_(solicitudId);
+  }
+
   let orgRow = organizacionId
     ? getOrganizacionByOrgId_(organizacionId)
     : null;
@@ -950,6 +960,11 @@ function guardarIngreso(payload) {
       vistaTerritorialPairs: [{ uv: clean.uv, sector: clean.sector }],
       sugerenciaSolicitudIds: [solicitudId]
     });
+
+    // Materializar las escrituras antes de liberar el lock: el cliente llama
+    // obtenerFicha inmediatamente después y la fila debe ser visible para
+    // esa ejecución (mitiga la carrera de visibilidad post-append).
+    SpreadsheetApp.flush();
 
     const result = {
       ok: true,

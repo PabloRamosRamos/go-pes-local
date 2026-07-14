@@ -188,8 +188,8 @@ function evaluarFormHito4a5_(hitosPorCaso, casosMap, orgsMap, umbralDias) {
 
   Object.keys(hitosPorCaso).forEach(function(key) {
     var hitosDelCaso = hitosPorCaso[key];
-    var h4 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_04; });
-    var h5 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_05; });
+    var h4 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_04; });
+    var h5 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_05; });
 
     if (!h4 || !h5) return;
 
@@ -228,8 +228,8 @@ function evaluarFormHito5a9_(hitosPorCaso, casosMap, orgsMap, umbralDias) {
 
   Object.keys(hitosPorCaso).forEach(function(key) {
     var hitosDelCaso = hitosPorCaso[key];
-    var h5 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_05; });
-    var h9 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_09; });
+    var h5 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_05; });
+    var h9 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_09; });
 
     if (!h5 || !h9) return;
 
@@ -268,8 +268,8 @@ function evaluarFormHito8Antes9_(hitosPorCaso, casosMap, orgsMap, minimoAntesDia
 
   Object.keys(hitosPorCaso).forEach(function(key) {
     var hitosDelCaso = hitosPorCaso[key];
-    var h8 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_08; });
-    var h9 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_09; });
+    var h8 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_08; });
+    var h9 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_09; });
 
     if (!h8 || !h9) return;
 
@@ -309,8 +309,8 @@ function evaluarFormHito7Post5_(hitosPorCaso, casosMap, orgsMap, esperadoDias) {
 
   Object.keys(hitosPorCaso).forEach(function(key) {
     var hitosDelCaso = hitosPorCaso[key];
-    var h5 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_05; });
-    var h7 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_07; });
+    var h5 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_05; });
+    var h7 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_07; });
 
     if (!h5 || h7) return; // Si h7 existe, no hay alerta
 
@@ -349,8 +349,8 @@ function evaluarFormHito11Post10_(hitosPorCaso, casosMap, orgsMap, esperadoDias)
 
   Object.keys(hitosPorCaso).forEach(function(key) {
     var hitosDelCaso = hitosPorCaso[key];
-    var h10 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_10; });
-    var h11 = hitosDelCaso.find(function(h) { return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_11; });
+    var h10 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_10; });
+    var h11 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_11; });
 
     if (!h10 || h11) return; // Si h11 existe, no hay alerta
 
@@ -403,7 +403,7 @@ function evaluarBenCamarasPostCert_(hitos, casos, orgs, instrumentos, umbralDias
 
   // Buscar todos los hitos 11 (certificado definitivo)
   var hitosH11 = hitos.filter(function(h) {
-    return h.hito_key === GO_PES_V2.ALERTAS.HITOS.PRE_11;
+    return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_11;
   });
 
   var casosMap = {};

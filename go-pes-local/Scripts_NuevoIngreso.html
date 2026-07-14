@@ -131,10 +131,16 @@
       api('guardarIngreso', payload).then(res => {
         showSuccess('Solicitud guardada correctamente.');
 
-        // Si viene desde calendario, registrar el evento como procesado
+        // Si viene desde calendario: registrar el evento como procesado y
+        // retirarlo de la lista local para que no reaparezca en Inicio.
         if (APP.state.calendarioPendingEvent) {
           const calEv = APP.state.calendarioPendingEvent;
           APP.state.calendarioPendingEvent = null;
+          if (APP.state.calendarioData && Array.isArray(APP.state.calendarioData.eventos)) {
+            APP.state.calendarioData.eventos = APP.state.calendarioData.eventos.filter(function(e) {
+              return e.id !== calEv.id;
+            });
+          }
           api('registrarEventoCalendario', {
             eventId:    calEv.id,
             realizado:  true,
@@ -142,6 +148,10 @@
             titulo:     calEv.titulo,
             fecha:      calEv.fecha
           }).catch(function(err) {
+            // El ingreso ya quedó guardado; avisar para que el operador
+            // marque el evento manualmente en vez de fallar en silencio.
+            showError('La solicitud se guardó, pero no se pudo marcar el evento del calendario como realizado: ' + err);
+            APP.state.calendarioData = null; // forzar re-fetch al volver a Inicio
           });
         }
 
@@ -172,6 +182,12 @@
   function clearIngresoForm(showMessage = true) {
     const form = document.getElementById('form-ingreso');
     if (!form) return;
+
+    // Limpiar el form descarta también el evento de calendario pendiente:
+    // sin esto, un ingreso manual posterior arrastraría el hito y el
+    // registro del evento de un vecino que no corresponde.
+    APP.state.calendarioPendingEvent = null;
+    syncIngresoCalBanner_();
 
     form.reset();
     form.querySelectorAll('input, textarea, select').forEach(el => goPesFieldClearError_(el));
@@ -253,6 +269,37 @@
   }
 
 
+  /**
+   * Sincroniza el banner que indica que el ingreso en curso quedará
+   * vinculado a un evento del calendario (hito PRE_01 + marca del evento).
+   */
+  function syncIngresoCalBanner_() {
+    const banner = document.getElementById('ingreso-cal-banner');
+    if (!banner) return;
+
+    const calEv = APP.state.calendarioPendingEvent;
+    const text = document.getElementById('ingreso-cal-banner-text');
+    if (calEv) {
+      if (text) {
+        text.textContent = 'Este ingreso quedará vinculado al evento "' + (calEv.titulo || 'Evento') +
+          '" (' + (calEv.fecha || 'sin fecha') + '): al guardar se creará el hito 1 y el evento se marcará como realizado.';
+      }
+      banner.classList.remove('is-hidden');
+    } else {
+      banner.classList.add('is-hidden');
+    }
+
+    const unlinkBtn = document.getElementById('ingreso-cal-banner-unlink');
+    if (unlinkBtn && !unlinkBtn.dataset.bound) {
+      unlinkBtn.dataset.bound = '1';
+      unlinkBtn.addEventListener('click', function() {
+        APP.state.calendarioPendingEvent = null;
+        syncIngresoCalBanner_();
+        showSuccess('Ingreso desvinculado del evento del calendario.');
+      });
+    }
+  }
+
   function applyIngresoPrefill_() {
     var prefill = APP.state.nuevoIngresoPrefill;
     if (!prefill) return;
@@ -289,6 +336,7 @@
     requestAnimationFrame(() => {
       syncIngresoSectorOptions();
       applyIngresoPrefill_();
+      syncIngresoCalBanner_();
       renderIngresoPreview();
 
       const form = document.getElementById('form-ingreso');

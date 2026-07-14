@@ -8485,4 +8485,36 @@ th.sortable.sort-desc .sort-icon {
   z-index: 10;
 }
 
+/* ======== NUEVO INGRESO - banner de evento de calendario vinculado ======== */
+.ingreso-cal-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--runtime-brand-primary, #3D96B4);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--runtime-brand-primary, #3D96B4) 8%, var(--surface, #fff));
+  font-size: 0.85rem;
+  color: var(--text, #24364B);
+}
+
+.ingreso-cal-banner > .material-symbols-outlined {
+  color: var(--runtime-brand-primary, #3D96B4);
+  flex-shrink: 0;
+}
+
+.ingreso-cal-banner #ingreso-cal-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.ingreso-cal-banner .secondary-btn {
+  flex-shrink: 0;
+}
+
+.ingreso-cal-banner.is-hidden {
+  display: none;
+}
+
 </style>

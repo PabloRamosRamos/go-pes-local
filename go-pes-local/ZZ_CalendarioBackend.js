@@ -12,6 +12,29 @@ function isDevEnvironment_() {
   return currentScriptId === GO_PES_V2.SCRIPT_IDS.DEV;
 }
 
+/**
+ * Eventos de calendario ya procesados — store COMPARTIDO (ScriptProperties).
+ * [FIX 2026-07-14] Antes se guardaba en UserProperties: cada operador tenía
+ * su propia lista y un evento registrado por A seguía apareciendo como
+ * pendiente para B (riesgo de ingreso duplicado). Se fusiona con el store
+ * per-user antiguo durante la transición para no re-mostrar eventos ya
+ * marcados antes de la migración.
+ */
+function goPesGetCalEventosProcesados_() {
+  var compartidos = {};
+  var propios = {};
+  try {
+    compartidos = JSON.parse(PropertiesService.getScriptProperties().getProperty(CAL_PROP_KEY_) || '{}');
+  } catch (e) {}
+  try {
+    propios = JSON.parse(PropertiesService.getUserProperties().getProperty(CAL_PROP_KEY_) || '{}');
+  } catch (e) {}
+  var merged = {};
+  Object.keys(propios).forEach(function(k) { merged[k] = propios[k]; });
+  Object.keys(compartidos).forEach(function(k) { merged[k] = compartidos[k]; });
+  return merged;
+}
+
 function normalizeCalText_(s) {
   return normalizeText_(String(s || ''))
     .replace(/[\/\-]+/g, ' ')
@@ -153,6 +176,11 @@ function getCalendarioEventosMock_() {
     }
   ];
 
+  // Aplicar el mismo filtro de procesados que en PROD para que el flujo
+  // completo (registrar → desaparecer de la lista) sea verificable en DEV.
+  var procesados = goPesGetCalEventosProcesados_();
+  mockEvents = mockEvents.filter(function(ev) { return !procesados[ev.id]; });
+
   return serializeForClient_({
     ok: true,
     eventos: mockEvents,
@@ -185,11 +213,10 @@ function getCalendarioEventos(payload) {
   //   });
   // }
 
-  // Leer eventos ya procesados por este usuario
-  var procesados = {};
-  try {
-    procesados = JSON.parse(PropertiesService.getUserProperties().getProperty(CAL_PROP_KEY_) || '{}');
-  } catch (e) {}
+  // Leer eventos ya procesados (compartido entre todos los operadores).
+  // Se lee también el store per-user antiguo para no re-mostrar eventos
+  // marcados antes de la migración a ScriptProperties (2026-07-14).
+  var procesados = goPesGetCalEventosProcesados_();
 
   var patronesNorm = CAL_PATRONES_.map(normalizeCalText_);
   var ahora        = new Date();
@@ -198,10 +225,13 @@ function getCalendarioEventos(payload) {
   var calendar     = CalendarApp.getDefaultCalendar();
   var raw          = calendar.getEvents(desde, hasta);
 
-  // Cargar hitos PRE_04 (Reunión CS) del período para cruce
-  var hitosRows  = getSheetData_(GO_PES_V2.AVANCE.FACT_HITOS);
+  // Cargar hitos PRE_04 (Reunión CS) del período para cruce.
+  // [FIX 2026-07-14] La clave GO_PES_V2.AVANCE.FACT_HITOS no existía y el
+  // campo era hito_key (inexistente) — el cruce devolvía siempre vacío y
+  // yaIngresado nunca se poblaba.
+  var hitosRows  = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS);
   var hitosPRE04 = hitosRows.filter(function(h) {
-    if (h.hito_key !== 'PRE_04') return false;
+    if (String(h.codigo_hito || '').trim() !== 'PRE_04') return false;
     var fh = h.fecha_hito;
     if (!fh) return false;
     var d = fh instanceof Date ? fh : new Date(fh);
@@ -275,7 +305,7 @@ function getCalendarioEventos(payload) {
             hitoMatch.fecha_hito instanceof Date ? hitoMatch.fecha_hito : new Date(hitoMatch.fecha_hito),
             tz, 'dd/MM/yyyy'
           ),
-          responsable:        hitoMatch.responsable_gestion || '',
+          responsable:        hitoMatch.usuario_registro || '',
           observacion:        hitoMatch.observacion || '',
           vecino_nombre:      caso.nombre_completo || '',
           vecino_uv:          caso.uv || '',
@@ -306,7 +336,8 @@ function registrarEventoCalendario(payload) {
 
   if (!eventId) throw new Error('ID de evento requerido.');
 
-  var props = PropertiesService.getUserProperties();
+  // Store compartido entre operadores (ver goPesGetCalEventosProcesados_)
+  var props = PropertiesService.getScriptProperties();
   var stored = {};
   try { stored = JSON.parse(props.getProperty(CAL_PROP_KEY_) || '{}'); } catch (e) {}
 
@@ -317,6 +348,16 @@ function registrarEventoCalendario(payload) {
     fecha:      fecha,
     ts:         Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss")
   };
+
+  // Poda: el fetch del calendario solo mira 14 días hacia atrás; conservar
+  // 60 días evita crecer sin límite (ScriptProperties tope ~9KB por clave).
+  var cutoff = Date.now() - 60 * 24 * 60 * 60 * 1000;
+  Object.keys(stored).forEach(function(k) {
+    var entry = stored[k] || {};
+    var ref = entry.ts || entry.fecha;
+    var d = ref ? new Date(ref) : null;
+    if (d && !isNaN(d.getTime()) && d.getTime() < cutoff) delete stored[k];
+  });
 
   props.setProperty(CAL_PROP_KEY_, JSON.stringify(stored));
 

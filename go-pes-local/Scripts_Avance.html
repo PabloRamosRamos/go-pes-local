@@ -996,6 +996,13 @@
   }
 
   function submitAvanceHitoModal_() {
+    // Guard anti doble envío: con 8-12 s de backend, el usuario puede cerrar
+    // el modal (ESC) y reintentar mientras el primer registro sigue en vuelo.
+    if (APP.state.avanceHitoSubmitting) {
+      showError('El hito ya se está registrando, espera un momento.');
+      return;
+    }
+
     const current = APP.state.currentAvance || {};
     const isGrupo = String(current.context_type || '') === 'grupo_vecinos';
     const orgSelect = document.getElementById('avance-organizacion-select');
@@ -1109,6 +1116,8 @@
       ? `COMITE DE SEGURIDAD ${nombreOrganizacionVariable}`.replace(/\s+/g, ' ').trim()
       : '';
 
+    APP.state.avanceHitoSubmitting = true;
+
     // Loader local dentro del modal de hito
     showModalLoading('avance-hito-modal', requiereNombreOrganizacion ? 'Creando organización...' : 'Registrando hito...');
 
@@ -1173,6 +1182,7 @@
     }).catch(err => {
       showError(err);
     }).finally(() => {
+      APP.state.avanceHitoSubmitting = false;
       hideModalLoading('avance-hito-modal');
     });
   }

@@ -18,6 +18,30 @@ function invalidateSheetRuntimeCache_(sheetName) {
   delete GO_PES_RUNTIME.sheetByName[sheetName];
   delete GO_PES_RUNTIME.headersBySheet[sheetName];
   delete GO_PES_RUNTIME.rowsBySheet[sheetName];
+  if (GO_PES_RUNTIME.ensuredSheets) delete GO_PES_RUNTIME.ensuredSheets[sheetName];
+}
+
+/**
+ * Invalida solo los DATOS cacheados de una hoja. Un write de filas no
+ * altera los headers ni el handle de la hoja, así que los appends/upserts
+ * usan esta variante para no pagar relecturas de headers en la misma
+ * ejecución (una request puede encadenar 5+ writes entre datos y logs).
+ */
+function invalidateSheetDataCache_(sheetName) {
+  delete GO_PES_RUNTIME.rowsBySheet[sheetName];
+}
+
+/**
+ * Headers de una hoja con cache por ejecución. Evita el
+ * getRange(1,1,1,lastCol).getValues() por cada append.
+ */
+function getSheetHeadersCached_(sh, sheetName) {
+  const cached = GO_PES_RUNTIME.headersBySheet[sheetName];
+  if (cached && cached.length) return cached.slice();
+  const lastCol = sh.getLastColumn();
+  const headers = lastCol ? sh.getRange(1, 1, 1, lastCol).getValues()[0].map(String) : [];
+  GO_PES_RUNTIME.headersBySheet[sheetName] = headers.slice();
+  return headers;
 }
 
 function cloneRowObjects_(rows) {
@@ -154,6 +178,12 @@ function invalidateBuildSheetDefinitionsCache_() {
 }
 
 function ensureSheetWithHeaders_(name, headers) {
+  // Memoizado por ejecución: la verificación de hoja + headers se paga una
+  // sola vez por request (los writes encadenados reutilizan el handle).
+  if (GO_PES_RUNTIME.ensuredSheets && GO_PES_RUNTIME.ensuredSheets[name] && GO_PES_RUNTIME.sheetByName[name]) {
+    return GO_PES_RUNTIME.sheetByName[name];
+  }
+
   const ss = getSpreadsheet_();
   let sh = ss.getSheetByName(name);
   if (!sh) sh = ss.insertSheet(name);
@@ -166,6 +196,8 @@ function ensureSheetWithHeaders_(name, headers) {
     invalidateSheetRuntimeCache_(name);
   }
   GO_PES_RUNTIME.sheetByName[name] = sh;
+  GO_PES_RUNTIME.ensuredSheets = GO_PES_RUNTIME.ensuredSheets || {};
+  GO_PES_RUNTIME.ensuredSheets[name] = true;
   return sh;
 }
 
@@ -384,9 +416,9 @@ function appendRowObject_(sheetName, obj) {
 
   try {
     const sh = ensureSheetWithHeaders_(sheetName, buildSheetDefinitions_()[sheetName] || Object.keys(obj));
-    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const headers = getSheetHeadersCached_(sh, sheetName);
     sh.appendRow(headers.map(h => obj[h] !== undefined ? obj[h] : ''));
-    invalidateSheetRuntimeCache_(sheetName);
+    invalidateSheetDataCache_(sheetName);
     invalidateRequestIndexes_(); // Invalidar índices después de write
   } finally {
     goPesDiagEnd_(diag, { rows_written: 1 });
@@ -412,7 +444,7 @@ function appendRowObjects_(sheetName, objects) {
     });
 
     sh.getRange(sh.getLastRow() + 1, 1, values.length, headers.length).setValues(values);
-    invalidateSheetRuntimeCache_(sheetName);
+    invalidateSheetDataCache_(sheetName);
     invalidateRequestIndexes_(); // Invalidar índices después de write
   } finally {
     goPesDiagEnd_(diag);
@@ -449,8 +481,8 @@ function upsertByKey_(sheetName, keyField, obj, caseInsensitive) {
       mode = 'update';
       sh.getRange(rowIndex, 1, 1, headers.length).setValues([row]);
     }
-    invalidateSheetRuntimeCache_(sheetName);
-  invalidateRequestIndexes_();
+    invalidateSheetDataCache_(sheetName);
+    invalidateRequestIndexes_();
   } finally {
     goPesDiagEnd_(diag, {
       mode: mode,
@@ -518,8 +550,8 @@ function upsertRowsByKey_(sheetName, keyField, objects, caseInsensitive) {
       sh.getRange(sh.getLastRow() + 1, 1, appends.length, headers.length).setValues(appends);
     }
 
-    invalidateSheetRuntimeCache_(sheetName);
-  invalidateRequestIndexes_();
+    invalidateSheetDataCache_(sheetName);
+    invalidateRequestIndexes_();
   } finally {
     goPesDiagEnd_(diag, {
       rows_updated: updatesCount,

@@ -5,7 +5,8 @@
       "Bash(awk 'NR>=1540 && NR<=1585 || NR>=3170 && NR<=3220' Scripts_Beneficios.html)",
       "Bash(sed -i '990,1417d' Scripts_Beneficios.html)",
       "Bash(echo \"exit=$?\")",
-      "Bash(grep -oE '^\\(\\\\s*\\)\\\\.[a-zA-Z0-9_-]+\\(\\\\s*,\\)?\\\\s*\\\\{' Styles.html)"
+      "Bash(grep -oE '^\\(\\\\s*\\)\\\\.[a-zA-Z0-9_-]+\\(\\\\s*,\\)?\\\\s*\\\\{' Styles.html)",
+      "Bash(node --check Repository.js)"
     ]
   },
   "model": "claude-fable-5"

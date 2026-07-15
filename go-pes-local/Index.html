@@ -309,19 +309,23 @@
       }
       .av2-hero--done .av2-hero__bigicon { color: #8CC63F; }
 
-      /* Hitos disponibles adicionales (filas compactas) */
-      .av2-extra {
+      /* Paso siguiente: hito inmediato posterior al actual. Flujo lineal:
+         NO es accionable hasta que se complete el hito actual, por eso no
+         lleva botón y titila para señalar hacia dónde avanza el proceso. */
+      .av2-next {
         display: flex;
         align-items: center;
         gap: 10px;
         margin: 0 16px 12px;
-        padding: 10px 18px;
-        border: 1px dashed var(--border);
+        padding: 12px 18px;
         border-radius: 10px;
+        border: 1px solid color-mix(in srgb, var(--runtime-brand-primary, #3D96B4) 30%, var(--surface));
+        background: color-mix(in srgb, var(--runtime-brand-primary, #3D96B4) 5%, var(--surface));
         font-size: 13px;
         color: var(--text);
+        animation: av2-next-pulse 1.8s ease-in-out infinite;
       }
-      .av2-extra__num {
+      .av2-next__num {
         width: 26px;
         height: 26px;
         border-radius: 50%;
@@ -333,7 +337,34 @@
         font-size: 12px;
         font-weight: 600;
       }
-      .av2-extra .secondary-btn { margin-left: auto; flex-shrink: 0; }
+      .av2-next__body { flex: 1; min-width: 0; }
+      .av2-next__title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .av2-next__title { font-weight: 500; }
+      .av2-next__badge {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        padding: 2px 8px;
+        border-radius: 10px;
+        color: var(--runtime-brand-primary, #3D96B4);
+        background: color-mix(in srgb, var(--runtime-brand-primary, #3D96B4) 15%, var(--surface));
+        white-space: nowrap;
+      }
+      .av2-next__lock {
+        color: var(--text-muted);
+        flex-shrink: 0;
+        font-size: 16px;
+      }
+      @keyframes av2-next-pulse {
+        0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--runtime-brand-primary, #3D96B4) 40%, transparent); }
+        70%  { box-shadow: 0 0 0 7px color-mix(in srgb, var(--runtime-brand-primary, #3D96B4) 0%, transparent); }
+        100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--runtime-brand-primary, #3D96B4) 0%, transparent); }
+      }
 
       /* Footer */
       .av2-foot {
@@ -366,6 +397,7 @@
       @media (prefers-reduced-motion: reduce) {
         .av2-done-list,
         .av2-done-row__chev { transition: none !important; }
+        .av2-next { animation: none !important; }
       }
 
       @media (max-width: 760px) {

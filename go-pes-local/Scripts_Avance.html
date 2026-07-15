@@ -673,7 +673,14 @@
     const disponibles = allItems.filter(x => x.enabled_flag && !x.completed_flag).sort(byOrden);
     const bloqueados = allItems.filter(x => !x.enabled_flag && !x.completed_flag).sort(byOrden);
     const actual = disponibles[0] || null;
-    const extras = disponibles.slice(1);
+
+    // Flujo lineal (hitos 1-12): solo el hito actual es registrable. El hito
+    // inmediato posterior se muestra como "Paso siguiente" (sin botón) aunque
+    // el backend lo reporte enabled — no se puede saltar el predecesor.
+    const pendientesOrden = allItems.filter(x => !x.completed_flag).sort(byOrden);
+    const pasoSiguiente = actual
+      ? (pendientesOrden[pendientesOrden.indexOf(actual) + 1] || null)
+      : null;
 
     // Usuario por hito cumplido: cruce con el timeline por codigo_hito
     const tlByCodigo = {};
@@ -798,13 +805,18 @@
             <span class="material-symbols-outlined" aria-hidden="true">add_task</span>Registrar hito
           </button>
         </div>
-        ${extras.map(it => `
-          <div class="av2-extra">
-            <span class="av2-extra__num" aria-hidden="true">${Number(it.orden_hito || 0) || ''}</span>
-            <span>${escapeHtml(it.nombre_hito || '')}</span>
-            <button type="button" class="secondary-btn" data-av2-registrar="${escapeHtml(it.codigo_hito || '')}"${isActive ? '' : ' disabled'}>Registrar</button>
+        ${pasoSiguiente ? `
+          <div class="av2-next" role="status" aria-label="Paso siguiente: ${escapeHtml(pasoSiguiente.nombre_hito || '')}">
+            <span class="av2-next__num" aria-hidden="true">${Number(pasoSiguiente.orden_hito || 0) || ''}</span>
+            <div class="av2-next__body">
+              <div class="av2-next__title-row">
+                <span class="av2-next__title">${escapeHtml(pasoSiguiente.nombre_hito || '')}</span>
+                <span class="av2-next__badge">PASO SIGUIENTE</span>
+              </div>
+            </div>
+            <span class="material-symbols-outlined av2-next__lock" aria-hidden="true">lock</span>
           </div>
-        `).join('')}
+        ` : ''}
       `;
     } else if (total > 0 && done >= total) {
       heroHtml = `
@@ -827,16 +839,18 @@
       `;
     }
 
-    // --- Footer ---
-    const primerBloqueado = bloqueados[0] || null;
-    const restantes = bloqueados.slice(1);
+    // --- Footer: hitos bloqueados más allá del "Paso siguiente" ya mostrado ---
+    const mostradosEnCard = [actual, pasoSiguiente].filter(Boolean);
+    const restantesFoot = pendientesOrden.filter(it => mostradosEnCard.indexOf(it) === -1);
     let footNext = '';
-    if (primerBloqueado) {
-      const todosFor = restantes.length > 0 && restantes.every(it => forItems.indexOf(it) !== -1);
-      const masTxt = restantes.length > 0
-        ? ` y ${restantes.length} hito${restantes.length !== 1 ? 's' : ''} más${todosFor ? ' del tramo Formalización' : ''}`
-        : '';
-      footNext = `Siguiente: ${primerBloqueado.nombre_hito || ''}${masTxt}`;
+    if (restantesFoot.length) {
+      const primero = restantesFoot[0];
+      const mas = restantesFoot.length - 1;
+      const todosFor = restantesFoot.every(it => forItems.indexOf(it) !== -1);
+      const masTxt = mas > 0
+        ? ` y ${mas} hito${mas !== 1 ? 's' : ''} más${todosFor ? ' del tramo Formalización' : ''}`
+        : (todosFor ? ' (tramo Formalización)' : '');
+      footNext = `Bloqueado: ${primero.nombre_hito || ''}${masTxt}`;
     }
     const footUser = String(r.usuario_ultimo_hito || '');
     const footHtml = (footNext || footUser) ? `

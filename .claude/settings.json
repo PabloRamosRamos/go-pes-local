@@ -15,7 +15,10 @@
       "Bash(echo \"\\(hardcoded restantes: exit $?\\)\")",
       "Bash(node --check ZZ_OrganizacionesBackend.js)",
       "Bash(echo \"\\(exit $?\\)\")",
-      "Bash(clasp -u dev run goPesRunAllTests)"
+      "Bash(clasp -u dev run goPesRunAllTests)",
+      "Bash(cp Scripts_Avance.html /c/Users/peram/AppData/Local/Temp/claude_av_check.js)",
+      "Bash(node --check /c/Users/peram/AppData/Local/Temp/claude_av_check.js)",
+      "Bash(rm /c/Users/peram/AppData/Local/Temp/claude_av_check.js)"
     ]
   },
   "model": "claude-opus-4-8"

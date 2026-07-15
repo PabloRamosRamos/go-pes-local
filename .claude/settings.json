@@ -18,7 +18,14 @@
       "Bash(clasp -u dev run goPesRunAllTests)",
       "Bash(cp Scripts_Avance.html /c/Users/peram/AppData/Local/Temp/claude_av_check.js)",
       "Bash(node --check /c/Users/peram/AppData/Local/Temp/claude_av_check.js)",
-      "Bash(rm /c/Users/peram/AppData/Local/Temp/claude_av_check.js)"
+      "Bash(rm /c/Users/peram/AppData/Local/Temp/claude_av_check.js)",
+      "Bash(grep -n \"initAvanceView_\\\\|</div>\\\\`\\\\|container.innerHTML\\\\|^  }\")",
+      "Bash(npm ls *)",
+      "Bash(sed -i \"s#require\\('fs'\\).writeFileSync.*#// skip write#\" /c/Users/peram/AppData/Local/Temp/av_html.js)",
+      "Bash(node /c/Users/peram/AppData/Local/Temp/av_html.js)",
+      "Bash(cp Scripts_Avance.html /c/Users/peram/AppData/Local/Temp/av_chk.js)",
+      "Bash(node --check /c/Users/peram/AppData/Local/Temp/av_chk.js)",
+      "Bash(rm /c/Users/peram/AppData/Local/Temp/av_chk.js)"
     ]
   },
   "model": "claude-opus-4-8"

@@ -319,6 +319,7 @@
         select.dataset.bound = 'true';
         select.addEventListener('change', () => {
           const orgId = String(select.value || '').trim();
+          console.log('[Avance] change organización, orgId=', JSON.stringify(orgId));
 
           // Limpiar el otro selector (grupos)
           if (grupoSelect) grupoSelect.value = '';
@@ -326,6 +327,7 @@
           if (grupoSearchInput) grupoSearchInput.value = '';
 
           if (!orgId) {
+            setStatus('No se recibió el identificador de la organización seleccionada.', false);
             clearAvanceView_();
             return;
           }
@@ -588,11 +590,7 @@
 
     return api('getAvanceOrganizacion', { organizacion_id: organizacionId }).then(data => {
       APP.state.currentAvance = data;
-      renderAvanceResumen_(data);
-      renderAvanceBotones_(data);
-      renderAvanceTimeline_(data.timeline || []);
-      lockAvanceActions_(false, data);
-      setStatus('Avance cargado correctamente.', true);
+      renderAvanceDataOrError_(data, false);
     }).catch(err => {
       APP.state.currentAvance = null;
       clearAvanceView_();
@@ -602,16 +600,33 @@
     });
   }
 
+  // Dibuja la card y aísla un error de render de un error de API: si el render
+  // falla, muestra el mensaje real en el área en vez de dejarla vacía en
+  // silencio (evita el síntoma "no pasa nada" imposible de diagnosticar).
+  function renderAvanceDataOrError_(data, locked) {
+    try {
+      renderAvanceResumen_(data);
+      renderAvanceBotones_(data);
+      renderAvanceTimeline_((data && data.timeline) || []);
+      lockAvanceActions_(locked, data);
+      setStatus('Avance cargado correctamente.', true);
+    } catch (renderErr) {
+      console.error('[Avance] Error al renderizar la card. data=', data, renderErr);
+      const el = document.getElementById('avance-resumen');
+      if (el) {
+        el.className = 'avance-resumen empty-state';
+        el.textContent = 'No se pudo dibujar la card de avance: ' + ((renderErr && renderErr.message) || renderErr);
+      }
+      showError(renderErr);
+    }
+  }
+
   function loadAvanceGrupoVecinos_(solicitudId) {
     showModuleLoading('Cargando avance de Grupo de vecinos...');
 
     return api('getAvanceGrupoVecinos', { solicitud_id: solicitudId }).then(data => {
       APP.state.currentAvance = data;
-      renderAvanceResumen_(data);
-      renderAvanceBotones_(data);
-      renderAvanceTimeline_(data.timeline || []);
-      lockAvanceActions_(true, data);
-      setStatus('Avance de Grupo de vecinos cargado correctamente.', true);
+      renderAvanceDataOrError_(data, true);
     }).catch(err => {
       APP.state.currentAvance = null;
       clearAvanceView_();

@@ -251,7 +251,11 @@
 
     if (APP.state.calendarioData !== null) return;
 
-    api('getCalendarioEventos', {})
+    var diasAdelante = (window.GO_PES_CALENDARIO && GO_PES_CALENDARIO.getDiasAdelante)
+      ? GO_PES_CALENDARIO.getDiasAdelante()
+      : 60;
+
+    api('getCalendarioEventos', { diasAdelante: diasAdelante })
       .then(function(data) {
         APP.state.calendarioData      = data || {};
         APP.state.calendarioFetchedAt = Date.now();

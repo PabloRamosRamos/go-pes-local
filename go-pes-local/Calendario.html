@@ -2,6 +2,13 @@
 window.GO_PES_CALENDARIO = (function() {
 
   var _currentFilter = 'todos';
+  var _currentDias = 60; // rango de tiempo: 7 (1 semana) | 30 (1 mes) | 60 (2 meses)
+
+  var CAL_RANGO_LABELS = { 7: '1 semana', 30: '1 mes', 60: '2 meses' };
+
+  function rangoLabel_() {
+    return CAL_RANGO_LABELS[_currentDias] || (_currentDias + ' días');
+  }
 
   function render(root, data, esc, onAction, onRefresh) {
     if (!root) return;
@@ -49,6 +56,11 @@ window.GO_PES_CALENDARIO = (function() {
           _currentFilter = e.target.value;
           render(root, data, esc, onAction, onRefresh);
         }
+        if (e.target.id === 'inicio-cal-rango') {
+          _currentDias = Number(e.target.value) || 60;
+          // Cambiar el rango requiere re-consultar el backend
+          if (typeof onRefresh === 'function') onRefresh();
+        }
       });
       // Handler para botón de lupa (detalles)
       root.addEventListener('click', function(e) {
@@ -67,9 +79,11 @@ window.GO_PES_CALENDARIO = (function() {
       });
     }
 
-    // Restaurar valor del filtro
+    // Restaurar valores de los filtros
     var filterSelect = root.querySelector('#inicio-cal-filter');
     if (filterSelect) filterSelect.value = _currentFilter;
+    var rangoSelect = root.querySelector('#inicio-cal-rango');
+    if (rangoSelect) rangoSelect.value = String(_currentDias);
   }
 
   function buildCard_(eventos, fetchedAt, esc) {
@@ -84,7 +98,7 @@ window.GO_PES_CALENDARIO = (function() {
             '<div class="inicio-cal-total-count">0</div>' +
             '<div class="inicio-cal-summary-text">' +
               '<div class="inicio-cal-summary-title">Sin reuniones próximas</div>' +
-              '<div class="inicio-cal-summary-subtitle">60 días</div>' +
+              '<div class="inicio-cal-summary-subtitle">' + rangoLabel_() + '</div>' +
             '</div>' +
           '</div>' +
         '</div>'
@@ -93,7 +107,7 @@ window.GO_PES_CALENDARIO = (function() {
             '<div class="inicio-cal-total-count">' + totalEventos + '</div>' +
             '<div class="inicio-cal-summary-text">' +
               '<div class="inicio-cal-summary-title">' + tipoLabel + ' próxim' + (totalEventos !== 1 ? 'os' : 'o') + '</div>' +
-              '<div class="inicio-cal-summary-subtitle">60 días · ' + totalEventos + ' evento' + (totalEventos !== 1 ? 's' : '') + '</div>' +
+              '<div class="inicio-cal-summary-subtitle">' + rangoLabel_() + ' · ' + totalEventos + ' evento' + (totalEventos !== 1 ? 's' : '') + '</div>' +
             '</div>' +
           '</div>' +
           '<span class="material-symbols-outlined inicio-cal-toggle-icon">expand_more</span>' +
@@ -102,13 +116,18 @@ window.GO_PES_CALENDARIO = (function() {
     var body = eventos.length === 0
       ? '<div class="inicio-cal-empty">' +
           '<span class="material-symbols-outlined">event_busy</span>' +
-          '<p>Sin reuniones próximas en los próximos 60 días</p>' +
+          '<p>Sin reuniones próximas en los próximos ' + _currentDias + ' días</p>' +
         '</div>'
       : '<ul class="inicio-cal-list">' +
           eventos.map(function(ev) { return buildItem_(ev, esc); }).join('') +
         '</ul>';
 
     var controls = '<div class="inicio-cal-controls">' +
+      '<select id="inicio-cal-rango" class="inicio-cal-filter" title="Rango de tiempo">' +
+        '<option value="7">1 semana</option>' +
+        '<option value="30">1 mes</option>' +
+        '<option value="60">2 meses</option>' +
+      '</select>' +
       '<select id="inicio-cal-filter" class="inicio-cal-filter">' +
         '<option value="todos">Todos</option>' +
         '<option value="visitas">Visitas</option>' +
@@ -397,6 +416,9 @@ window.GO_PES_CALENDARIO = (function() {
     return '<div class="cal-details-grid">' + calSide + appSide + '</div>';
   }
 
-  return { render: render };
+  return {
+    render: render,
+    getDiasAdelante: function() { return _currentDias; }
+  };
 })();
 </script>

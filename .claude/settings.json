@@ -10,7 +10,9 @@
       "Skill(claude-api)",
       "Skill(claude-api:*)",
       "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Bash(node --check ZZ_CalendarioBackend.js)",
+      "Bash(echo \"\\(hardcoded restantes: exit $?\\)\")"
     ]
   },
   "model": "claude-opus-4-8"

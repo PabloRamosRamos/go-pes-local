@@ -62,9 +62,10 @@ function stripCalHtml_(html) {
  * Retorna eventos simulados para testing sin acceder a Calendar API
  * Para activar: cambiar CAL_USE_MOCK_ = true
  */
-function getCalendarioEventosMock_() {
+function getCalendarioEventosMock_(diasAdelante) {
   var ahora = new Date();
   var tz = Session.getScriptTimeZone();
+  var dias = Math.min(Math.max(Number(diasAdelante || 60), 1), 365);
 
   // Crear 8 eventos simulados
   var mockEvents = [
@@ -176,10 +177,15 @@ function getCalendarioEventosMock_() {
     }
   ];
 
-  // Aplicar el mismo filtro de procesados que en PROD para que el flujo
-  // completo (registrar → desaparecer de la lista) sea verificable en DEV.
+  // Aplicar los mismos filtros que en PROD (procesados + rango de tiempo)
+  // para que el flujo completo sea verificable en DEV.
   var procesados = goPesGetCalEventosProcesados_();
-  mockEvents = mockEvents.filter(function(ev) { return !procesados[ev.id]; });
+  var limite = new Date(ahora.getTime() + dias * 24 * 60 * 60 * 1000);
+  mockEvents = mockEvents.filter(function(ev) {
+    if (procesados[ev.id]) return false;
+    var fechaEv = new Date(ev.fecha + 'T00:00:00');
+    return !isNaN(fechaEv.getTime()) && fechaEv <= limite;
+  });
 
   return serializeForClient_({
     ok: true,
@@ -193,13 +199,14 @@ function getCalendarioEventosMock_() {
 function getCalendarioEventos(payload) {
   requireModuleAccess_('inicio', ['visor', 'operador', 'coordinador', 'superuser']);
 
+  var filters      = payload || {};
+  var diasAdelante = Math.min(Math.max(Number(filters.diasAdelante || 60), 1), 365);
+
   // En DEV: usar datos simulados automáticamente (no requiere Calendar API)
   if (isDevEnvironment_()) {
-    return getCalendarioEventosMock_();
+    return getCalendarioEventosMock_(diasAdelante);
   }
 
-  var filters      = payload || {};
-  var diasAdelante = Math.min(Number(filters.diasAdelante || 60), 365);
   var tz           = Session.getScriptTimeZone();
 
   // NOTA: Validación de email @providencia.cl comentada temporalmente

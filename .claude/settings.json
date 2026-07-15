@@ -12,7 +12,8 @@
       "Skill(update-config)",
       "Skill(update-config:*)",
       "Bash(node --check ZZ_CalendarioBackend.js)",
-      "Bash(echo \"\\(hardcoded restantes: exit $?\\)\")"
+      "Bash(echo \"\\(hardcoded restantes: exit $?\\)\")",
+      "Bash(node --check ZZ_OrganizacionesBackend.js)"
     ]
   },
   "model": "claude-opus-4-8"

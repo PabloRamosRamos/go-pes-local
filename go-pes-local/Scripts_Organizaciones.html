@@ -12,16 +12,18 @@
           </div>
         </div>
 
-        <div id="org-stats-row"></div>
-
-        <div class="panel organizaciones-selector-panel" style="margin-bottom:0.75rem;">
-          <div class="field field--grow">
-            <label for="org-search-input">Buscar organización</label>
-            <input type="text" id="org-search-input" placeholder="Filtrar por nombre, tipo, UV o responsable…" autocomplete="off">
+        <div class="org-toolbar">
+          <div class="org-toolbar__filters">
+            <div class="panel organizaciones-selector-panel">
+              <div class="field field--grow">
+                <label for="org-search-input">Buscar organización</label>
+                <input type="text" id="org-search-input" placeholder="Filtrar por nombre, tipo, UV o responsable…" autocomplete="off">
+              </div>
+            </div>
+            <div id="org-chip-row" class="org-chip-row"></div>
           </div>
+          <div id="org-stats-row" class="org-toolbar__stats"></div>
         </div>
-
-        <div id="org-chip-row" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;"></div>
 
         <div id="organizaciones-grid-list">
           <div class="module-loading">
@@ -239,11 +241,14 @@
   // -- STATS HEADER --
 
   function renderOrganizacionesStatsHtml_(orgs) {
+    // Numeración según el orden visual del módulo (ver labels del form inline):
+    // 2 = Carta oficina de partes (PRE_02), 7 = Certificado provisorio (PRE_07),
+    // 11 = Certificado definitivo (FOR_04), 14 = Cuenta bancaria (FOR_08).
     const cards = [
-      { n: 2,  label: 'Carta ingresada',  icon: 'mail',            color: '#3D96B4' },
-      { n: 9,  label: 'Cert. provisorio', icon: 'pending_actions', color: '#f59e0b' },
-      { n: 11, label: 'Cert. definitivo', icon: 'verified',        color: '#22c55e' },
-      { n: 14, label: 'Cta. bancaria',    icon: 'account_balance', color: '#8CC63F' }
+      { n: 2,  label: 'Carta ingresada',  icon: 'mail',            mod: 'carta' },
+      { n: 7,  label: 'Cert. provisorio', icon: 'pending_actions', mod: 'provisorio' },
+      { n: 11, label: 'Cert. definitivo', icon: 'verified',        mod: 'definitivo' },
+      { n: 14, label: 'Cta. bancaria',    icon: 'account_balance', mod: 'banco' }
     ];
 
     const counts = {};
@@ -257,18 +262,33 @@
       });
     });
 
-    return `
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1rem;">
-        ${cards.map(c => `
-          <div class="panel" style="padding:1.25rem 1rem;text-align:center;border-top:3px solid ${c.color};display:flex;flex-direction:column;align-items:center;gap:0.3rem;">
-            <span class="material-symbols-outlined" style="font-size:1.75rem;color:${c.color};">${escapeHtml(c.icon)}</span>
-            <div style="font-size:2.2rem;font-weight:700;line-height:1;">${counts[c.n]}</div>
-            <div style="font-size:0.85rem;font-weight:600;">${escapeHtml(c.label)}</div>
-            <span style="font-size:0.72rem;background:var(--bg,#f5f5f5);padding:2px 8px;border-radius:10px;color:var(--text-muted,#666);">Hito ${c.n}</span>
-          </div>
-        `).join('')}
-      </div>
-    `;
+    return '<div class="org-stats-grid">' +
+      cards.map(c =>
+        '<div class="panel org-stat-card org-stat-card--' + c.mod + '">' +
+          '<span class="material-symbols-outlined org-stat-card__icon">' + escapeHtml(c.icon) + '</span>' +
+          '<div class="org-stat-card__num">' + counts[c.n] + '</div>' +
+          '<div class="org-stat-card__label">' + escapeHtml(c.label) + '</div>' +
+          '<span class="org-stat-card__hito">Hito ' + c.n + '</span>' +
+        '</div>'
+      ).join('') +
+    '</div>';
+  }
+
+  /**
+   * Determina si un elemento abandonó el proceso:
+   * - estado de avance vigente "Detenido" (org o grupo), o
+   * - organización suspendida/inactiva, o
+   * - caso del grupo en "No continúa" / "Desistido".
+   */
+  function esAbandonoProceso_(o) {
+    var estadoAvance = String(o.estado_avance || '').toLowerCase();
+    if (estadoAvance === 'detenido') return true;
+
+    var estadoGeneral = String(o.estado_general_organizacion || '').toLowerCase();
+    if (estadoGeneral.indexOf('suspend') !== -1 || estadoGeneral.indexOf('inactiv') !== -1) return true;
+
+    var estadoCaso = String(o.estado_actual || '').toLowerCase();
+    return estadoCaso === 'no continúa' || estadoCaso === 'no continua' || estadoCaso === 'desistido';
   }
 
   // -- TARJETA ORGANIZACION --
@@ -441,7 +461,8 @@
       var chips = [
         { key: 'todos',          label: 'Todos (' + allItems.length + ')' },
         { key: 'organizacion',   label: 'Constituidas (' + allItems.filter(function(o){ return o.tipo === 'organizacion' || !o.tipo; }).length + ')' },
-        { key: 'grupo_vecinos',  label: 'En proceso (' + allItems.filter(function(o){ return o.tipo === 'grupo_vecinos'; }).length + ')' }
+        { key: 'grupo_vecinos',  label: 'En proceso (' + allItems.filter(function(o){ return o.tipo === 'grupo_vecinos'; }).length + ')' },
+        { key: 'abandono',       label: 'Abandonaron (' + allItems.filter(esAbandonoProceso_).length + ')' }
       ];
       chipRow.innerHTML = chips.map(function(c) {
         var active = c.key === chipFiltro;
@@ -456,6 +477,7 @@
     var items = chipFiltro === 'todos' ? allItems
       : allItems.filter(function(o) {
           if (chipFiltro === 'organizacion') return o.tipo === 'organizacion' || !o.tipo;
+          if (chipFiltro === 'abandono') return esAbandonoProceso_(o);
           return o.tipo === chipFiltro;
         });
 

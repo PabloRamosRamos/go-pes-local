@@ -83,6 +83,16 @@ function getOrganizacionesConGruposClient() {
   var hitosByOrgIndex = buildHitosByOrgIdIndex_();
   var hitosBySolicitudIndex = buildHitosBySolicitudIdIndex_();
 
+  // Estados de avance (para el filtro "Abandonaron el proceso"):
+  // el último registro de FACT_Avance_Estado es el estado vigente.
+  var estadosByOrgIndex = buildEstadosByOrgIdIndex_();
+  var estadosBySolicitudIndex = buildEstadosBySolicitudIdIndex_();
+
+  function ultimoEstadoAvance_(registros) {
+    if (!registros || !registros.length) return '';
+    return String(registros[registros.length - 1].estado_avance || '').trim();
+  }
+
   var hitosByOrg = {};
   var hitosBySolicitud = {};
 
@@ -135,7 +145,8 @@ function getOrganizacionesConGruposClient() {
         directiva_vigente_flag: String(r.directiva_vigente_flag || ''),
         organizacion_constituida_flag: String(r.organizacion_constituida_flag || ''),
         fecha_asamblea_constitucion: String(r.fecha_asamblea_constitucion || ''),
-        hitos_cumplidos: hitosByOrg[orgId] || []
+        hitos_cumplidos: hitosByOrg[orgId] || [],
+        estado_avance: ultimoEstadoAvance_(estadosByOrgIndex[orgId])
       };
     });
 
@@ -161,7 +172,9 @@ function getOrganizacionesConGruposClient() {
         total_socios: 0, // Los grupos de vecinos no tienen socios formales aún
         nombre_contacto: String(r.nombre_completo || '').trim(), // El vecino que hace la solicitud
         fecha_ingreso: r.fecha_ingreso ? Utilities.formatDate(r.fecha_ingreso instanceof Date ? r.fecha_ingreso : new Date(r.fecha_ingreso), Session.getScriptTimeZone(), 'dd/MM/yyyy') : '',
-        hitos_cumplidos: hitosBySolicitud[solId] || []
+        hitos_cumplidos: hitosBySolicitud[solId] || [],
+        estado_avance: ultimoEstadoAvance_(estadosBySolicitudIndex[solId]),
+        estado_actual: String(r.estado_actual || '')
       };
     });
 

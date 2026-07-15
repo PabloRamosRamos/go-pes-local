@@ -8485,6 +8485,94 @@ th.sortable.sort-desc .sort-icon {
   z-index: 10;
 }
 
+/* ======== MÓDULO ORGANIZACIONES - toolbar (filtros izq. + stats der.) ======== */
+.org-toolbar {
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) auto;
+  gap: 1rem;
+  align-items: stretch;
+  margin-bottom: 1rem;
+}
+
+.org-toolbar__filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.org-chip-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.org-toolbar__stats {
+  justify-self: end;
+}
+
+.org-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 150px));
+  gap: 0.75rem;
+  height: 100%;
+}
+
+.org-stat-card {
+  padding: 0.9rem 0.75rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-top: 3px solid var(--border, #D6E0EA);
+}
+
+.org-stat-card__icon {
+  font-size: 1.5rem;
+}
+
+.org-stat-card__num {
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.org-stat-card__label {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.org-stat-card__hito {
+  font-size: 0.7rem;
+  background: var(--bg, #f5f5f5);
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: var(--text-muted, #666);
+}
+
+.org-stat-card--carta      { border-top-color: var(--runtime-brand-primary, #3D96B4); }
+.org-stat-card--carta      .org-stat-card__icon { color: var(--runtime-brand-primary, #3D96B4); }
+.org-stat-card--provisorio { border-top-color: #f59e0b; }
+.org-stat-card--provisorio .org-stat-card__icon { color: #f59e0b; }
+.org-stat-card--definitivo { border-top-color: #22c55e; }
+.org-stat-card--definitivo .org-stat-card__icon { color: #22c55e; }
+.org-stat-card--banco      { border-top-color: var(--runtime-brand-secondary, #8CC63F); }
+.org-stat-card--banco      .org-stat-card__icon { color: var(--runtime-brand-secondary, #8CC63F); }
+
+@media (max-width: 1100px) {
+  .org-toolbar {
+    grid-template-columns: 1fr;
+  }
+  .org-toolbar__stats {
+    justify-self: stretch;
+  }
+  .org-stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
+
 /* ======== NUEVO INGRESO - banner de evento de calendario vinculado ======== */
 .ingreso-cal-banner {
   display: flex;

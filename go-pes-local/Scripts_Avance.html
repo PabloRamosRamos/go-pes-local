@@ -48,6 +48,26 @@
       <section class="avance-section">
         <div class="section-head">
           <div>
+            <p class="eyebrow">Tramo 1</p>
+            <h3>Preconstitución</h3>
+          </div>
+        </div>
+        <div id="avance-pre-grid" class="avance-hitos-grid" data-layout="grid"></div>
+      </section>
+
+      <section class="avance-section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Tramo 2</p>
+            <h3>Formalización</h3>
+          </div>
+        </div>
+        <div id="avance-for-grid" class="avance-hitos-grid" data-layout="grid"></div>
+      </section>
+
+      <section class="avance-section">
+        <div class="section-head">
+          <div>
             <p class="eyebrow">Historial</p>
             <h3>Timeline de avance</h3>
           </div>
@@ -319,7 +339,6 @@
         select.dataset.bound = 'true';
         select.addEventListener('change', () => {
           const orgId = String(select.value || '').trim();
-          console.log('[Avance] change organización, orgId=', JSON.stringify(orgId));
 
           // Limpiar el otro selector (grupos)
           if (grupoSelect) grupoSelect.value = '';
@@ -327,7 +346,6 @@
           if (grupoSearchInput) grupoSearchInput.value = '';
 
           if (!orgId) {
-            setStatus('No se recibió el identificador de la organización seleccionada.', false);
             clearAvanceView_();
             return;
           }
@@ -348,6 +366,11 @@
     return val;
   }
 
+  function clampPct_(value) {
+    const n = Number(value || 0);
+    if (!isFinite(n)) return 0;
+    return Math.max(0, Math.min(100, Math.round(n)));
+  }
 
   /**
    * Inicializa un select con búsqueda integrada
@@ -491,6 +514,28 @@
     });
   }
 
+  function buildProgressBarHtml_(label, done, total) {
+    const safeDone = Number(done || 0);
+    const safeTotal = Number(total || 0);
+    const pct = safeTotal > 0 ? clampPct_((safeDone / safeTotal) * 100) : 0;
+
+    return `
+      <div class="avance-resumen-bar">
+        <div class="avance-resumen-bar__head">
+          <div class="avance-resumen-bar__label">${escapeHtml(label)}</div>
+          <div class="avance-resumen-bar__meta">${safeDone} de ${safeTotal}</div>
+        </div>
+
+        <div class="avance-resumen-bar__row">
+          <div class="avance-resumen-bar__track">
+            <div class="avance-resumen-bar__fill" style="width:${pct}%"></div>
+          </div>
+          <div class="avance-resumen-bar__pct">${pct}%</div>
+        </div>
+      </div>
+    `;
+  }
+
   function refreshAvanceViewOnRoute_() {
     const select = document.getElementById('avance-organizacion-select');
     const grupoSelect = document.getElementById('avance-grupo-select');
@@ -590,7 +635,11 @@
 
     return api('getAvanceOrganizacion', { organizacion_id: organizacionId }).then(data => {
       APP.state.currentAvance = data;
-      renderAvanceDataOrError_(data, false);
+      renderAvanceResumen_(data);
+      renderAvanceBotones_(data);
+      renderAvanceTimeline_(data.timeline || []);
+      lockAvanceActions_(false, data);
+      setStatus('Avance cargado correctamente.', true);
     }).catch(err => {
       APP.state.currentAvance = null;
       clearAvanceView_();
@@ -600,33 +649,16 @@
     });
   }
 
-  // Dibuja la card y aísla un error de render de un error de API: si el render
-  // falla, muestra el mensaje real en el área en vez de dejarla vacía en
-  // silencio (evita el síntoma "no pasa nada" imposible de diagnosticar).
-  function renderAvanceDataOrError_(data, locked) {
-    try {
-      renderAvanceResumen_(data);
-      renderAvanceBotones_(data);
-      renderAvanceTimeline_((data && data.timeline) || []);
-      lockAvanceActions_(locked, data);
-      setStatus('Avance cargado correctamente.', true);
-    } catch (renderErr) {
-      console.error('[Avance] Error al renderizar la card. data=', data, renderErr);
-      const el = document.getElementById('avance-resumen');
-      if (el) {
-        el.className = 'avance-resumen empty-state';
-        el.textContent = 'No se pudo dibujar la card de avance: ' + ((renderErr && renderErr.message) || renderErr);
-      }
-      showError(renderErr);
-    }
-  }
-
   function loadAvanceGrupoVecinos_(solicitudId) {
     showModuleLoading('Cargando avance de Grupo de vecinos...');
 
     return api('getAvanceGrupoVecinos', { solicitud_id: solicitudId }).then(data => {
       APP.state.currentAvance = data;
-      renderAvanceDataOrError_(data, true);
+      renderAvanceResumen_(data);
+      renderAvanceBotones_(data);
+      renderAvanceTimeline_(data.timeline || []);
+      lockAvanceActions_(true, data);
+      setStatus('Avance de Grupo de vecinos cargado correctamente.', true);
     }).catch(err => {
       APP.state.currentAvance = null;
       clearAvanceView_();
@@ -665,262 +697,123 @@
     if (!el) return;
 
     const r = (data && data.resumen) || {};
-    const estadoObj = (data && data.estado) || {};
-    const estado = String(estadoObj.estado_avance || 'Activo');
-    const motivoEstado = String(estadoObj.motivo_estado || '');
-    const isActive = estado === 'Activo';
+    const estado = (data && data.estado && data.estado.estado_avance) || 'Activo';
     const tramos = (data && data.botones && data.botones.tramos) || [];
     const isGrupo = String(data && data.context_type || '') === 'grupo_vecinos';
 
-    const byOrden = (a, b) => Number(a.orden_hito || 0) - Number(b.orden_hito || 0);
-    const preItems = getAvanceTramoItems_(tramos, ['Preconstitucion']).slice().sort(byOrden);
-    const forItems = getAvanceTramoItems_(tramos, ['Formalizacion', 'Formalizacion posterior']).slice().sort(byOrden);
-    const allItems = preItems.concat(forItems);
+    const tramoPreItems = getAvanceTramoItems_(tramos, ['Preconstitucion']);
+    const tramoForItems = getAvanceTramoItems_(tramos, ['Formalizacion', 'Formalizacion posterior']);
+    const catalogosAvance = APP.state.avanceCatalogos || {};
+    const catalogoPreItems = ((catalogosAvance.hitosPorTramo || {}).preconstitucion || []);
+    const catalogoForItems = ((catalogosAvance.hitosPorTramo || {}).formalizacion || []);
 
-    const totalPre = Math.max(preItems.length, Number(r.total_hitos_tramo_pre || 0));
-    const totalFor = Math.max(forItems.length, Number(r.total_hitos_tramo_for || 0));
-    const donePre = preItems.filter(x => x.completed_flag).length;
-    const doneFor = forItems.filter(x => x.completed_flag).length;
-    const total = totalPre + totalFor;
-    const done = donePre + doneFor;
+    const totalPre = Math.max(tramoPreItems.length, catalogoPreItems.length, Number(r.total_hitos_tramo_pre || 0));
+    const donePre = tramoPreItems.filter(x => x.completed_flag).length;
 
-    const cumplidos = allItems.filter(x => x.completed_flag).sort(byOrden);
-    const disponibles = allItems.filter(x => x.enabled_flag && !x.completed_flag).sort(byOrden);
-    const bloqueados = allItems.filter(x => !x.enabled_flag && !x.completed_flag).sort(byOrden);
-    const actual = disponibles[0] || null;
+    const totalFor = Math.max(tramoForItems.length, catalogoForItems.length, Number(r.total_hitos_tramo_for || 0));
+    const doneFor = tramoForItems.filter(x => x.completed_flag).length;
 
-    // Flujo lineal (hitos 1-12): solo el hito actual es registrable. El hito
-    // inmediato posterior se muestra como "Paso siguiente" (sin botón) aunque
-    // el backend lo reporte enabled — no se puede saltar el predecesor.
-    const pendientesOrden = allItems.filter(x => !x.completed_flag).sort(byOrden);
-    const pasoSiguiente = actual
-      ? (pendientesOrden[pendientesOrden.indexOf(actual) + 1] || null)
-      : null;
-
-    // Usuario por hito cumplido: cruce con el timeline por codigo_hito
-    const tlByCodigo = {};
-    ((data && data.timeline) || []).forEach(t => {
-      const codigo = String(t && t.codigo_hito || '');
-      if (codigo && !tlByCodigo[codigo]) tlByCodigo[codigo] = t;
-    });
-
-    // --- Header ---
-    const nombre = String(r.nombre_organizacion || '').trim();
-    const iniciales = nombre.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w.charAt(0)).join('').toUpperCase() || 'GO';
-    const estadoKey = normalizeAvanceTramoKey_(estado).replace(/\s+/g, '');
-    const chipEstadoCls = { activo: 'av2-chip--activo', standby: 'av2-chip--standby', detenido: 'av2-chip--detenido', finalizado: 'av2-chip--finalizado' }[estadoKey] || '';
-    const chipEstadoTitle = motivoEstado ? ` title="${escapeHtml(motivoEstado)}"` : '';
-    const chipsHtml = `
-      <span class="av2-chip ${chipEstadoCls}"${chipEstadoTitle}><span class="av2-chip__dot"></span>${escapeHtml(estado)}</span>
-      ${isGrupo ? '<span class="av2-chip">Grupo de vecinos</span>' : ''}
-      ${r.solicitud_id ? `<span class="av2-chip">${escapeHtml(r.solicitud_id)}</span>` : ''}
-      ${r.uv ? `<span class="av2-chip">UV ${escapeHtml(r.uv)}</span>` : ''}
-    `;
-
-    const RING_C = 2 * Math.PI * 27;
-    const ringDash = (total > 0 ? (done / total) * RING_C : 0).toFixed(2);
-    const ringHtml = `
-      <div class="av2-ring" role="img" aria-label="${done} de ${total} hitos cumplidos">
-        <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
-          <circle class="av2-ring__track" cx="32" cy="32" r="27" fill="none" stroke-width="6"></circle>
-          <circle class="av2-ring__arc" cx="32" cy="32" r="27" fill="none" stroke-width="6" stroke-linecap="round" stroke-dasharray="${ringDash} ${RING_C.toFixed(2)}"></circle>
-        </svg>
-        <div class="av2-ring__center">
-          <span class="av2-ring__count">${done}/${total}</span>
-          <span class="av2-ring__label">hitos</span>
-        </div>
-      </div>
-    `;
-
-    // --- Barras segmentadas ---
-    const segsHtml = (items, syntheticTotal) => {
-      if (items.length) {
-        return items.map(it => {
-          const cls = it.completed_flag
-            ? ' av2-seg--done'
-            : (actual && String(it.codigo_hito) === String(actual.codigo_hito) ? ' av2-seg--current' : '');
-          return `<span class="av2-seg${cls}" title="${escapeHtml(it.nombre_hito || '')}"></span>`;
-        }).join('');
-      }
-      let out = '';
-      for (let i = 0; i < syntheticTotal; i++) out += '<span class="av2-seg" aria-hidden="true"></span>';
-      return out;
-    };
-    const forBloqueado = totalFor > 0 && !forItems.some(x => x.completed_flag || x.enabled_flag);
-    const tracksHtml = `
-      <div class="av2-tracks">
-        <div class="av2-track av2-track--pre">
-          <div class="av2-track__head"><span>Preconstitución</span><span>${donePre}/${totalPre}</span></div>
-          <div class="av2-segs">${segsHtml(preItems, totalPre)}</div>
-        </div>
-        <div class="av2-track av2-track--for">
-          <div class="av2-track__head">
-            <span>Formalización${forBloqueado ? ' <span class="material-symbols-outlined" aria-label="Tramo bloqueado">lock</span>' : ''}</span>
-            <span>${doneFor}/${totalFor}</span>
-          </div>
-          <div class="av2-segs">${segsHtml(forItems, totalFor)}</div>
-        </div>
-      </div>
-    `;
-
-    // --- Cumplidos (colapsable) ---
-    let doneHtml = '';
-    if (cumplidos.length) {
-      const plural = cumplidos.length !== 1 ? 's' : '';
-      const ultimoTxt = r.ultimo_hito_nombre
-        ? ` · último: ${r.ultimo_hito_nombre}${r.ultimo_hito_fecha ? ', ' + formatFechaHoraUi_(r.ultimo_hito_fecha) : ''}`
-        : '';
-      const itemsHtml = cumplidos.map(it => {
-        const tl = tlByCodigo[String(it.codigo_hito || '')] || {};
-        const fecha = formatFechaHoraUi_(it.fecha_hito || tl.fecha_hito || '');
-        const usuario = String(tl.usuario_registro || '');
-        const meta = [fecha, usuario].filter(Boolean).join(' · ');
-        return `
-          <div class="av2-done-item">
-            <span class="av2-done-item__circle" aria-hidden="true"><span class="material-symbols-outlined">check</span></span>
-            <span>${Number(it.orden_hito || 0) || ''} · ${escapeHtml(it.nombre_hito || '')}</span>
-            <span class="av2-done-item__meta">${escapeHtml(meta)}</span>
-          </div>
-        `;
-      }).join('');
-      doneHtml = `
-        <div class="av2-done-row" role="button" tabindex="0" aria-expanded="false" aria-controls="av2-done-list" id="av2-done-toggle">
-          <span class="av2-done-row__check" aria-hidden="true"><span class="material-symbols-outlined">check</span></span>
-          <span><strong>${cumplidos.length} hito${plural} cumplido${plural}</strong><span class="av2-done-row__meta">${escapeHtml(ultimoTxt)}</span></span>
-          <span class="material-symbols-outlined av2-done-row__chev" aria-hidden="true">expand_more</span>
-        </div>
-        <div class="av2-done-list" id="av2-done-list">${itemsHtml}</div>
-      `;
-    }
-
-    // --- Hero del hito actual ---
-    let heroHtml = '';
-    if (actual) {
-      const previo = allItems.find(x => String(x.codigo_hito) === String(actual.codigo_hito_previo || ''));
-      const metaParts = [];
-      if (previo && previo.fecha_hito) {
-        metaParts.push(`<span><span class="material-symbols-outlined" aria-hidden="true">event</span> Disponible desde ${escapeHtml(formatFechaHoraUi_(previo.fecha_hito))}</span>`);
-      }
-      if (previo && previo.completed_flag) {
-        metaParts.push(`<span><span class="material-symbols-outlined" aria-hidden="true">link</span> Requiere: ${escapeHtml(previo.nombre_hito || '')} ✓</span>`);
-      }
-      const ctaDisabled = isActive ? '' : ` disabled title="${escapeHtml(motivoEstado || 'Proceso en estado ' + estado)}"`;
-      heroHtml = `
-        <div class="av2-hero">
-          <div class="av2-hero__num" aria-hidden="true">${Number(actual.orden_hito || 0) || ''}</div>
-          <div class="av2-hero__body">
-            <div class="av2-hero__title-row">
-              <span class="av2-hero__title">${escapeHtml(actual.nombre_hito || '')}</span>
-              <span class="av2-hero__badge">HITO ACTUAL</span>
-            </div>
-            ${actual.descripcion ? `<div class="av2-hero__desc">${escapeHtml(actual.descripcion)}</div>` : ''}
-            ${metaParts.length ? `<div class="av2-hero__meta">${metaParts.join('')}</div>` : ''}
-          </div>
-          <button type="button" class="primary-btn av2-hero__cta" data-av2-registrar="${escapeHtml(actual.codigo_hito || '')}"${ctaDisabled}>
-            <span class="material-symbols-outlined" aria-hidden="true">add_task</span>Registrar hito
-          </button>
-        </div>
-        ${pasoSiguiente ? `
-          <div class="av2-next" role="status" aria-label="Paso siguiente: ${escapeHtml(pasoSiguiente.nombre_hito || '')}">
-            <span class="av2-next__num" aria-hidden="true">${Number(pasoSiguiente.orden_hito || 0) || ''}</span>
-            <div class="av2-next__body">
-              <div class="av2-next__title-row">
-                <span class="av2-next__title">${escapeHtml(pasoSiguiente.nombre_hito || '')}</span>
-                <span class="av2-next__badge">PASO SIGUIENTE</span>
-              </div>
-            </div>
-            <span class="material-symbols-outlined av2-next__lock" aria-hidden="true">lock</span>
-          </div>
-        ` : ''}
-      `;
-    } else if (total > 0 && done >= total) {
-      heroHtml = `
-        <div class="av2-hero av2-hero--info av2-hero--done">
-          <span class="material-symbols-outlined av2-hero__bigicon" aria-hidden="true">check_circle</span>
-          <div class="av2-hero__title">Proceso completado</div>
-          <div class="av2-hero__desc">${done} de ${total} hitos cumplidos.</div>
-        </div>
-      `;
-    } else {
-      const motivoTxt = !isActive
-        ? `Proceso en estado ${estado}${motivoEstado ? ': ' + motivoEstado : ''}.`
-        : ((bloqueados[0] && bloqueados[0].blocked_reason) || 'No hay hitos disponibles para registrar.');
-      heroHtml = `
-        <div class="av2-hero av2-hero--info">
-          <span class="material-symbols-outlined av2-hero__bigicon" aria-hidden="true">${isActive ? 'lock' : 'pause_circle'}</span>
-          <div class="av2-hero__title">${isActive ? 'Sin hitos disponibles' : 'Proceso ' + escapeHtml(estado)}</div>
-          <div class="av2-hero__desc">${escapeHtml(motivoTxt)}</div>
-        </div>
-      `;
-    }
-
-    // --- Footer: hitos bloqueados más allá del "Paso siguiente" ya mostrado ---
-    const mostradosEnCard = [actual, pasoSiguiente].filter(Boolean);
-    const restantesFoot = pendientesOrden.filter(it => mostradosEnCard.indexOf(it) === -1);
-    let footNext = '';
-    if (restantesFoot.length) {
-      const primero = restantesFoot[0];
-      const mas = restantesFoot.length - 1;
-      const todosFor = restantesFoot.every(it => forItems.indexOf(it) !== -1);
-      const masTxt = mas > 0
-        ? ` y ${mas} hito${mas !== 1 ? 's' : ''} más${todosFor ? ' del tramo Formalización' : ''}`
-        : (todosFor ? ' (tramo Formalización)' : '');
-      footNext = `Bloqueado: ${primero.nombre_hito || ''}${masTxt}`;
-    }
-    const footUser = String(r.usuario_ultimo_hito || '');
-    const footHtml = (footNext || footUser) ? `
-      <div class="av2-foot">
-        ${footNext ? `<span class="material-symbols-outlined" aria-hidden="true">lock</span><span class="av2-foot__next">${escapeHtml(footNext)}</span>` : ''}
-        ${footUser ? `<span class="av2-foot__user"><span class="material-symbols-outlined" aria-hidden="true">person</span>${escapeHtml(footUser)}</span>` : ''}
-      </div>
-    ` : '';
+    const totalGeneral = totalPre + totalFor;
+    const doneGeneral = donePre + doneFor;
 
     el.className = 'avance-resumen';
     el.innerHTML = `
-      <div class="av2-card" aria-label="Avance de ${escapeHtml(nombre || (isGrupo ? 'grupo de vecinos' : 'organización'))}">
-        <div class="av2-head">
-          <div class="av2-avatar" aria-hidden="true">${escapeHtml(iniciales)}</div>
-          <div class="av2-head__main">
-            <div class="av2-name" title="${escapeHtml(nombre)}">${escapeHtml(nombre)}</div>
-            <div class="av2-chips">${chipsHtml}</div>
+      <div class="avance-resumen-layout">
+        <aside class="avance-resumen-card" aria-label="Resumen de organizacion">
+          <div class="avance-resumen-card__title">Ficha de avance</div>
+
+          <div class="avance-resumen-card__grid">
+            <div class="avance-resumen-card__item"><strong>Estado</strong><span>${escapeHtml(estado)}</span></div>
+            <div class="avance-resumen-card__item"><strong>${isGrupo ? 'Grupo de vecinos' : 'Organización'}</strong><span>${escapeHtml(r.nombre_organizacion || '')}</span></div>
+            <div class="avance-resumen-card__item"><strong>Solicitud</strong><span>${escapeHtml(r.solicitud_id || '')}</span></div>
+            <div class="avance-resumen-card__item"><strong>Último hito</strong><span>${escapeHtml(r.ultimo_hito_nombre || 'Sin registros')}</span></div>
+            <div class="avance-resumen-card__item"><strong>Fecha último hito</strong><span>${escapeHtml(formatFechaHoraUi_(r.ultimo_hito_fecha || ''))}</span></div>
+            <div class="avance-resumen-card__item"><strong>Usuario último hito</strong><span>${escapeHtml(r.usuario_ultimo_hito || '')}</span></div>
           </div>
-          ${ringHtml}
-        </div>
-        ${tracksHtml}
-        ${doneHtml}
-        ${heroHtml}
-        ${footHtml}
+        </aside>
+
+        <section class="avance-resumen-progress" aria-label="Resumen de avance">
+          <div class="avance-resumen-progress__title">Resumen de avance</div>
+          <div class="avance-resumen-bars">
+            ${buildProgressBarHtml_('Total hitos cumplidos', doneGeneral, totalGeneral)}
+            ${buildProgressBarHtml_('Preconstitución', donePre, totalPre)}
+            ${buildProgressBarHtml_('Formalización', doneFor, totalFor)}
+          </div>
+        </section>
       </div>
     `;
   }
 
-  // Wiring de la card unificada (av2): renderAvanceResumen_ genera el HTML y
-  // esta función engancha los listeners tras cada render (el innerHTML se
-  // regenera en cada carga, por lo que el rebind por render es necesario).
   function renderAvanceBotones_(data) {
-    const host = document.getElementById('avance-resumen');
-    if (!host) return;
+    const pre = document.getElementById('avance-pre-grid');
+    const post = document.getElementById('avance-for-grid');
+    if (!pre || !post) return;
 
-    host.querySelectorAll('[data-av2-registrar]').forEach(btn => {
-      btn.addEventListener('click', () => registrarHitoAvanceUi_(btn.dataset.av2Registrar));
+    pre.className = 'avance-hitos-grid';
+    post.className = 'avance-hitos-grid';
+    pre.dataset.layout = 'grid';
+    post.dataset.layout = 'grid';
+
+    const tramos = (data && data.botones && data.botones.tramos) || [];
+    const tramoPreItems = getAvanceTramoItems_(tramos, ['Preconstitucion']);
+    const tramoForItems = getAvanceTramoItems_(tramos, ['Formalizacion', 'Formalizacion posterior']);
+
+    pre.innerHTML = tramoPreItems.map(renderAvanceProgressRow_).join('');
+    post.innerHTML = tramoForItems.map(renderAvanceProgressRow_).join('');
+
+    document.querySelectorAll('.js-avance-hito').forEach(btn => {
+      btn.addEventListener('click', () => registrarHitoAvanceUi_(btn.dataset.codigo));
     });
+  }
 
-    const toggle = host.querySelector('#av2-done-toggle');
-    const list = host.querySelector('#av2-done-list');
-    if (toggle && list) {
-      const flip = () => {
-        const open = list.classList.toggle('is-open');
-        toggle.classList.toggle('is-open', open);
-        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      };
-      toggle.addEventListener('click', flip);
-      toggle.addEventListener('keydown', ev => {
-        if (ev.key === 'Enter' || ev.key === ' ') {
-          ev.preventDefault();
-          flip();
-        }
-      });
-    }
+  function renderAvanceProgressRow_(item) {
+    const disabled = !item.enabled_flag ? 'disabled' : '';
+    const completed = item.completed_flag ? 'is-completed' : '';
+    const blocked = !item.enabled_flag && !item.completed_flag ? 'is-blocked' : '';
+    const enabled = item.enabled_flag && !item.completed_flag ? 'is-enabled' : '';
+    const icon = item.completed_flag
+      ? 'check'
+      : (!item.enabled_flag && !item.completed_flag ? 'remove' : 'radio_button_unchecked');
+    const iconLabel = item.completed_flag
+      ? 'Hito cumplido'
+      : (!item.enabled_flag && !item.completed_flag ? 'Hito bloqueado' : 'Hito disponible');
+
+    const statusText = item.completed_flag
+      ? 'Cumplido'
+      : (!item.enabled_flag && !item.completed_flag ? 'Bloqueado' : 'Disponible');
+    const statusDetail = item.completed_flag
+      ? escapeHtml(formatFechaHoraUi_(item.fecha_hito || 'Registrado'))
+      : item.blocked_reason
+        ? escapeHtml(item.blocked_reason)
+        : 'Clic para registrar';
+    const titleAttr = item.blocked_reason
+      ? ` title="${escapeHtml(item.blocked_reason)}"`
+      : '';
+    const hitoLabel = `Hito ${Number(item.orden_hito || 0) || ''}`.trim();
+
+    return `
+      <button
+        type="button"
+        class="avance-hito-card js-avance-hito ${completed} ${blocked} ${enabled}"
+        data-codigo="${escapeHtml(item.codigo_hito || '')}"
+        aria-label="${iconLabel}: ${escapeHtml(item.nombre_hito || '')}"
+        aria-disabled="${disabled ? 'true' : 'false'}"
+        data-estado="${escapeHtml(statusText)}"
+        ${titleAttr}
+        ${disabled}>
+        <div class="avance-hito-card__head">
+          <div class="avance-hito-card__eyebrow">${escapeHtml(hitoLabel)}</div>
+          <div class="avance-hito-card__icon" aria-hidden="true">
+            <span class="material-symbols-outlined">${icon}</span>
+          </div>
+        </div>
+        <div class="avance-hito-card__body">
+          <div class="avance-hito-card__title">${escapeHtml(item.nombre_hito || '')}</div>
+          <div class="avance-hito-card__status">${escapeHtml(statusText)}</div>
+          <div class="avance-hito-card__detail">${statusDetail}</div>
+        </div>
+      </button>
+    `;
   }
 
   function renderAvanceTimeline_(rows) {
@@ -1355,6 +1248,8 @@
 
     const badge = document.getElementById('avance-estado-badge');
     const resumen = document.getElementById('avance-resumen');
+    const pre = document.getElementById('avance-pre-grid');
+    const post = document.getElementById('avance-for-grid');
     const timeline = document.getElementById('avance-timeline');
 
     if (badge) badge.textContent = 'Sin selección';
@@ -1362,6 +1257,8 @@
       resumen.className = 'avance-resumen empty-state';
       resumen.innerHTML = 'Selecciona una organización para visualizar su avance.';
     }
+    if (pre) pre.innerHTML = '';
+    if (post) post.innerHTML = '';
     if (timeline) {
       timeline.className = 'avance-timeline empty-state';
       timeline.innerHTML = 'No hay hitos registrados.';

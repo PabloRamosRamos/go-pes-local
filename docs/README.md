@@ -68,6 +68,8 @@ GO Provi/
 │   ├── mensajes-normalizados.md ← Sistema traducción mensajes técnicos
 │   ├── performance.md           ← Rendimiento (plan consolidado + estado por fases)
 │   ├── performance-implementacion-pendiente.md ← Roadmap de optimización pendiente
+│   ├── runbook-operacion.md     ← Diagnóstico de incidentes recurrentes / soporte
+│   ├── dependencias-externas.md ← Servicios externos (Google Fonts, Forms)
 │   │
 │   └── archive/                 ← Documentos históricos completados
 │       (planes ejecutados, diagnósticos puntuales y registros de proceso;
@@ -260,6 +262,8 @@ Desarrollar en DEV → Ejecutar tests → Push a PROD
 ### 📋 Operación y mantenimiento
 - **[deploy.md](deploy.md)** — Proceso de deploy DEV/PROD + checklist pre-PROD
 - **[mantener-docs.md](mantener-docs.md)** — Guía de mantenimiento de documentación
+- **[runbook-operacion.md](runbook-operacion.md)** — Diagnóstico de incidentes recurrentes / soporte
+- **[dependencias-externas.md](dependencias-externas.md)** — Servicios externos (Google Fonts, Forms)
 - **[Manual.html](../go-pes-local/Manual.html)** — Manual de usuario embebido en la app
 
 ### 📦 Archivo histórico

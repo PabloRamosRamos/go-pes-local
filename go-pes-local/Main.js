@@ -132,11 +132,11 @@ const GO_PES_V2 = {
 
   // Actualizar al subir versión significativa (última actualización: 2026-07-10)
   DEV_STATS: {
-    linesOfCode:   44486,  // Actualizado según análisis Fable 5
+    linesOfCode:   44025,  // wc -l de go-pes-local/ (2026-08)
     devHours:      540,
-    sourceFiles:   53,     // 53 archivos fuente en go-pes-local/
-    apiEndpoints:  129,    // 129 funciones públicas (API cliente)
-    testCases:     262,    // 262 tests en 7 suites
+    sourceFiles:   51,     // 27 JS + 24 HTML en go-pes-local/
+    apiEndpoints:  120,    // funciones públicas backend (API cliente)
+    testCases:     272,    // 272 tests en 7 suites
     hourlyRateCLP: 32000,
     ufValueCLP:    39500,
     usdRateCLP:    940

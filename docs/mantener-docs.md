@@ -38,8 +38,8 @@ No hay "después lo documento". El conocimiento se pierde en 48 horas.
 | **docs/testing.md** | Dev (quien escribe el test) | Por nueva suite | ✅ Activo | Nueva suite en `Audith.js`, cambio en estrategia de testing |
 
 > Nota: el proceso de deploy a PROD y su checklist pre-PROD viven en `docs/deploy.md` (el antiguo `checklist-produccion.md` se consolidó ahí). Docs de rendimiento: `performance.md` (plan) + `performance-implementacion-pendiente.md` (roadmap).
-| **docs/runbook-operacion.md** | Operaciones + Dev lead | Mensual | ⚠️ Pendiente | Nuevo incidente recurrente, procedimiento de soporte |
-| **docs/dependencias-externas.md** | Dev lead | Por nueva integración | ⚠️ Pendiente | Nuevo servicio externo (Calendar, Looker, API terceros) |
+| **docs/runbook-operacion.md** | Operaciones + Dev lead | Mensual | ✅ Activo | Nuevo incidente recurrente, procedimiento de soporte |
+| **docs/dependencias-externas.md** | Dev lead | Por nueva integración | ✅ Activo | Nuevo servicio externo (Google Fonts, Forms, API terceros) |
 
 ---
 
@@ -138,10 +138,9 @@ Antes de hacer `push-prod.ps1`:
 - `docs/dev-stats.md` — se actualiza por release/milestone
 
 ### Pendientes de crear (según necesidad) ⚠️
-- `docs/runbook-operacion.md` — diagnóstico de incidentes recurrentes
-- `docs/dependencias-externas.md` — Calendar, Looker, APIs terceros
+- _(ninguno — todos los docs planificados están creados)_
 
-> Ya creados: `api-interna.md`, `testing.md`, y `branding-configuracion.md` (cubre lo que antes se listaba como `configuracion.md`).
+> Creados en 2026-08: `api-interna.md`, `testing.md`, `branding-configuracion.md` (ex `configuracion.md`), `avance-hitos.md`, `alertas.md`, `performance.md`, `runbook-operacion.md`, `dependencias-externas.md`.
 
 ---
 

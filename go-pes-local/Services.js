@@ -1710,16 +1710,16 @@ function toClientSafe_(value) {
  */
 function enableDiagnostics() {
   requireRole_(['superuser']);
-  return goPesEnableDiagnostics();
+  return goPesEnableDiagnostics_();
 }
 
 function disableDiagnostics() {
   requireRole_(['superuser']);
-  return goPesDisableDiagnostics();
+  return goPesDisableDiagnostics_();
 }
 
 function getDiagnosticsStatus() {
   requireRole_(['superuser']);
-  return goPesGetDiagnosticsStatus();
+  return goPesGetDiagnosticsStatus_();
 }
 

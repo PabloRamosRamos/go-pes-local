@@ -110,7 +110,7 @@ Ver también `avance-hitos.md`.
 | `goPesRefrescarVistasYMaster()` | Reconstruye vistas derivadas y master |
 
 ## Diagnóstico (`Diagnostics.js`, `Audith.js`)
-`goPesEnableDiagnostics()` / `goPesDisableDiagnostics()` / `goPesGetDiagnosticsStatus()`; `goPesRunAllTests()` (ver `testing.md`). Las funciones `debug*` de `Audith.js`/`Main.js` son utilidades manuales de desarrollo, no API de producción.
+`enableDiagnostics()` / `disableDiagnostics()` / `getDiagnosticsStatus()` (Services.js, **superuser**; delegan en helpers privados `goPes*Diagnostics_` de Diagnostics.js); `goPesRunAllTests()` (ver `testing.md`). Las funciones `debug*` de `Audith.js`/`Main.js` son utilidades manuales de desarrollo (guardadas con `requireRole_(['superuser'])` las que escriben), no API de producción.
 
 ---
 

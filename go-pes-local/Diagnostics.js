@@ -95,19 +95,19 @@ function goPesDiagWriteToSheet_(result) {
   }
 }
 
-function goPesEnableDiagnostics() {
+function goPesEnableDiagnostics_() {
   PropertiesService.getScriptProperties().setProperty('GO_PES_DIAG', '1');
   GO_PES_DIAG_RUNTIME.enabled = true;
   return { ok: true, enabled: true };
 }
 
-function goPesDisableDiagnostics() {
+function goPesDisableDiagnostics_() {
   PropertiesService.getScriptProperties().deleteProperty('GO_PES_DIAG');
   GO_PES_DIAG_RUNTIME.enabled = false;
   return { ok: true, enabled: false };
 }
 
-function goPesGetDiagnosticsStatus() {
+function goPesGetDiagnosticsStatus_() {
   return {
     ok: true,
     enabled: goPesDiagEnabled_()

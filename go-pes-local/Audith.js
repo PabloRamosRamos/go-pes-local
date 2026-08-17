@@ -24,6 +24,7 @@ function testCatalogosClient() {
 }
 
 function debugInsertMaeCasos() {
+  requireRole_(['superuser']);
   ensureGoPesV2Sheets_();
 
   const id = 'TEST-' + new Date().getTime();

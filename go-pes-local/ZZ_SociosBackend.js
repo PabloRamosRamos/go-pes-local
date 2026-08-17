@@ -221,18 +221,6 @@ function editarDatosSocio(payload) {
   }
 }
 
-function goPesSocioCargoPermitidoLegacy_(cargo) {
-  return [
-    'Presidente',
-    'Tesorero',
-    'Secretario',
-    'Director',
-    'Comisión electoral',
-    'Comision de finanzas',
-    'Socio'
-  ].indexOf(String(cargo || '').trim()) !== -1;
-}
-
 function goPesSocioCargoPermitido_(cargo) {
   return getConfiguredSocioCargos_().indexOf(String(cargo || '').trim()) !== -1;
 }

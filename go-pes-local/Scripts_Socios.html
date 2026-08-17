@@ -875,9 +875,7 @@
               errorsText += '\n... y ' + (result.errors.length - 5) + ' errores más.';
             }
 
-            errorsText += '\n\nRevisa la consola del navegador (F12) para ver todos los detalles.';
-
-            alert(errorsText);
+            showError(errorsText);
           }
         }
 

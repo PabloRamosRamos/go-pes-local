@@ -8605,4 +8605,9 @@ th.sortable.sort-desc .sort-icon {
   display: none;
 }
 
+  /* a11y (2026-08): enlace de navegación como <button> real en detalles del calendario */
+  .cal-details-field .cal-link-btn{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--runtime-brand-primary,#3D96B4);cursor:pointer;text-decoration:none}
+  .cal-details-field .cal-link-btn:hover{text-decoration:underline}
+  html[data-theme="dark"] .cal-details-field .cal-link-btn{color:#74c8e6}
+
 </style>

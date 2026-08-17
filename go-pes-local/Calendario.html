@@ -354,9 +354,9 @@ window.GO_PES_CALENDARIO = (function() {
         '<div class="cal-details-side__content">' +
           '<div class="cal-details-field">' +
             '<label>Solicitud ID</label>' +
-            '<p><a href="#" onclick="window.GO_PES_ROUTER && window.GO_PES_ROUTER.push(\'ficha\', {id:\'' + esc(hi.solicitud_id) + '\'}); return false;">' +
+            '<p><button type="button" class="cal-link-btn" onclick="window.GO_PES_ROUTER && window.GO_PES_ROUTER.push(\'ficha\', {id:\'' + esc(hi.solicitud_id) + '\'});">' +
               esc(hi.solicitud_id) +
-            '</a></p>' +
+            '</button></p>' +
           '</div>' +
           (hi.organizacion_nombre
             ? '<div class="cal-details-field">' +

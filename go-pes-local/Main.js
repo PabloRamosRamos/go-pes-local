@@ -345,12 +345,6 @@ function getAppBuildInfo_() {
   };
 }
 
-function getAppVersionLabelLegacy_() {
-  const version = String(GO_PES_V2.VERSION || '').trim();
-  const environment = String(GO_PES_V2.ENVIRONMENT || '').trim().toUpperCase();
-  return [version ? `v${version}` : '', environment].filter(Boolean).join(' · ');
-}
-
 function fijarSpreadsheetPES_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   if (!ss) throw new Error('Abre el spreadsheet contenedor antes de ejecutar esta función.');

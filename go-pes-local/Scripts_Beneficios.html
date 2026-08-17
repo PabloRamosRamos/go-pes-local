@@ -741,7 +741,7 @@
       const selectRow = () => {
         const issue = String(row.dataset.camaras1414RowIssue || '').trim();
         if (issue) {
-          window.alert(issue);
+          showError(issue);
           return;
         }
         APP.state.currentBeneficioOrganizacionId = row.dataset.camaras1414Row || '';
@@ -760,7 +760,7 @@
         ev.stopPropagation();
         const issue = String(btn.dataset.eligibilityIssue || '').trim();
         if (issue) {
-          window.alert(issue);
+          showError(issue);
           return;
         }
         APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
@@ -1223,7 +1223,7 @@
             .c14-alert{display:flex;align-items:flex-start;gap:8px;background:var(--info-soft,#e8f4fb);border-radius:8px;padding:10px 12px;font-size:0.83rem;color:var(--text,#24364B);margin-top:12px}
             .c14-alert .material-symbols-outlined{font-size:1rem;color:var(--runtime-brand-primary,#214E8A);flex-shrink:0;margin-top:1px}
             .c14-alert--warn{background:var(--warning-soft,#fff3cd)}
-            .c14-alert--warn .material-symbols-outlined{color:#856404}
+            .c14-alert--warn .material-symbols-outlined{color:var(--warning)}
             .c14-decision{margin-top:14px}
             .c14-decision__q{display:flex;align-items:center;gap:7px;font-weight:600;font-size:0.9rem;color:var(--text,#24364B);margin-bottom:10px}
             .c14-decision__q .material-symbols-outlined{font-size:1.1rem;color:var(--runtime-brand-primary,#214E8A)}
@@ -1362,9 +1362,9 @@
           .c14d-badge--sp{background:color-mix(in srgb,var(--runtime-brand-secondary,#007C4A) 12%,transparent);color:var(--runtime-brand-secondary,#007C4A)}
           .c14d-badge--org{background:color-mix(in srgb,var(--runtime-brand-accent,#03C2AE) 12%,transparent);color:var(--runtime-brand-accent,#03C2AE)}
           .c14d-badge--mix{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
-          .c14d-badge--deadline{background:var(--warning-soft,#fff3cd);color:#856404}
+          .c14d-badge--deadline{background:var(--warning-soft,#fff3cd);color:var(--warning)}
           .c14d-badge--state{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
-          .c14d-badge--alert{background:var(--danger-soft,#fdecea);color:#b3261e}
+          .c14d-badge--alert{background:var(--danger-soft,#fdecea);color:var(--danger)}
           .c14d-badge--decision{background:#eef1ff;color:#4757b1}
           .c14d-mini-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
           .c14d-mini-item{background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:8px 12px;font-size:0.8rem;line-height:1.45;color:var(--text-muted,#6b7a8d)}
@@ -1378,7 +1378,7 @@
           .c14d-branch-title{margin:0 0 6px;font-size:0.88rem;font-weight:700;color:var(--text,#24364B)}
           .c14d-branch-text{margin:0;font-size:0.8rem;line-height:1.5;color:var(--text-muted,#6b7a8d)}
           .c14d-warn-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--warning-soft,#fff3cd);color:#7a5e08;font-size:0.8rem;line-height:1.5;border:1px solid rgba(244,180,0,0.25)}
-          .c14d-danger-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--danger-soft,#fdecea);color:#9d261d;font-size:0.8rem;line-height:1.5;border:1px solid rgba(217,48,37,0.2)}
+          .c14d-danger-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--danger-soft,#fdecea);color:var(--danger);font-size:0.8rem;line-height:1.5;border:1px solid rgba(217,48,37,0.2)}
           .c14d-connector{width:2px;height:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 35%,transparent),transparent);margin:0 auto}
           .c14d-footer-note{margin-top:16px;font-size:0.75rem;color:var(--text-muted,#6b7a8d);text-align:center;line-height:1.5}
           html[data-theme="dark"] .c14d-modal{background:var(--surface,#14202d)}
@@ -1666,7 +1666,7 @@
       .fnd-header{display:grid;gap:6px;margin-bottom:20px}
       .fnd-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
       .fnd-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;background:color-mix(in srgb,var(--runtime-brand-primary,#3D96B4) 10%,transparent);color:var(--runtime-brand-primary,#3D96B4);border:1px solid color-mix(in srgb,var(--runtime-brand-primary,#3D96B4) 20%,transparent)}
-      .fnd-chip--cierre{background:color-mix(in srgb,#d93025 8%,transparent);color:#b3261e;border-color:color-mix(in srgb,#d93025 18%,transparent)}
+      .fnd-chip--cierre{background:color-mix(in srgb,#d93025 8%,transparent);color:var(--danger);border-color:color-mix(in srgb,#d93025 18%,transparent)}
       .fnd-monto{font-size:0.82rem;color:var(--text-muted,#6b7a8d)}
       .fnd-monto strong{color:var(--text,#24364B)}
       .fnd-table-wrap{overflow-x:auto;margin-top:4px}
@@ -1678,21 +1678,21 @@
       .fnd-doc-bar{display:flex;align-items:center;gap:6px;white-space:nowrap}
       .fnd-doc-bar__track{flex:1;min-width:60px;height:6px;border-radius:3px;background:var(--border,#D6E0EA);overflow:hidden}
       .fnd-doc-bar__fill{height:100%;border-radius:3px;transition:width .3s}
-      .fnd-doc-bar__fill--low{background:#d93025}
+      .fnd-doc-bar__fill--low{background:var(--danger)}
       .fnd-doc-bar__fill--mid{background:#f29900}
-      .fnd-doc-bar__fill--ok{background:#1e8e3e}
+      .fnd-doc-bar__fill--ok{background:var(--success-dark)}
       .fnd-doc-bar__label{font-size:0.75rem;color:var(--text-muted,#6b7a8d)}
       .fnd-estado{display:inline-flex;align-items:center;padding:3px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;white-space:nowrap}
       .fnd-estado--postulando{background:#e8f0fe;color:#1a73e8}
-      .fnd-estado--en_evaluacion{background:#fff8e1;color:#e37400}
-      .fnd-estado--adjudicado{background:#e6f4ea;color:#1e8e3e}
+      .fnd-estado--en_evaluacion{background:var(--warning-soft);color:var(--warning)}
+      .fnd-estado--adjudicado{background:var(--success-soft);color:var(--success-dark)}
       .fnd-estado--firma_convenio{background:#e8f0fe;color:#1a73e8}
-      .fnd-estado--en_ejecucion{background:#e6f4ea;color:#1e8e3e}
-      .fnd-estado--en_rendicion{background:#fff8e1;color:#e37400}
+      .fnd-estado--en_ejecucion{background:var(--success-soft);color:var(--success-dark)}
+      .fnd-estado--en_rendicion{background:var(--warning-soft);color:var(--warning)}
       .fnd-estado--cerrado{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
-      .fnd-resultado--adjudicado{background:#e6f4ea;color:#1e8e3e}
-      .fnd-resultado--rechazado{background:#fce8e6;color:#b3261e}
-      .fnd-resultado--inadmisible{background:#fff8e1;color:#e37400}
+      .fnd-resultado--adjudicado{background:var(--success-soft);color:var(--success-dark)}
+      .fnd-resultado--rechazado{background:var(--danger-soft);color:var(--danger)}
+      .fnd-resultado--inadmisible{background:var(--warning-soft);color:var(--warning)}
       .fnd-empty{padding:40px 20px;text-align:center;color:var(--text-muted,#6b7a8d)}
       .fnd-detail{display:grid;gap:20px}
       .fnd-detail__head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
@@ -1709,9 +1709,9 @@
       .fnd-doc-item{display:flex;align-items:center;gap:8px;padding:6px 4px;font-size:0.81rem;color:var(--text,#24364B)}
       .fnd-doc-item input[type=checkbox]{width:15px;height:15px;flex-shrink:0;accent-color:var(--runtime-brand-primary,#3D96B4)}
       .fnd-result-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 18px;border-radius:20px;font-size:0.9rem;font-weight:700}
-      .fnd-result-badge--adjudicado{background:#e6f4ea;color:#1e8e3e}
-      .fnd-result-badge--rechazado{background:#fce8e6;color:#b3261e}
-      .fnd-result-badge--inadmisible{background:#fff8e1;color:#e37400}
+      .fnd-result-badge--adjudicado{background:var(--success-soft);color:var(--success-dark)}
+      .fnd-result-badge--rechazado{background:var(--danger-soft);color:var(--danger)}
+      .fnd-result-badge--inadmisible{background:var(--warning-soft);color:var(--warning)}
       .fnd-section{background:var(--surface,#fff);border:1px solid var(--border,#D6E0EA);border-radius:10px;padding:16px 18px}
       .fnd-section h4{margin:0 0 12px;font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#6b7a8d)}
       .fnd-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9800;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -1730,8 +1730,8 @@
       .fnd-editions-table th{text-align:left;padding:7px 10px;font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-muted,#6b7a8d);border-bottom:2px solid var(--border,#D6E0EA)}
       .fnd-editions-table td{padding:8px 10px;border-bottom:1px solid var(--border,#D6E0EA);vertical-align:middle}
       .fnd-editions-table tr:last-child td{border-bottom:none}
-      .fnd-status--activa{background:#e6f4ea;color:#1e8e3e}
-      .fnd-status--borrador{background:#fff8e1;color:#e37400}
+      .fnd-status--activa{background:var(--success-soft);color:var(--success-dark)}
+      .fnd-status--borrador{background:var(--warning-soft);color:var(--warning)}
       .fnd-status--cerrada{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
       html[data-theme="dark"] .fnd-table tr:hover td{background:var(--surface-alt,#182635)}
       html[data-theme="dark"] .fnd-section{background:var(--surface,#14202d);border-color:var(--border,#294356)}
@@ -1931,10 +1931,10 @@
         const today = new Date(); today.setHours(0,0,0,0);
         const daysLeft = Math.ceil((fechaCierre - today) / 86400000);
         const badge = daysLeft < 0
-          ? '<span style="background:#fce8e6;color:#b3261e;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700">Vencida hace ' + Math.abs(daysLeft) + ' días</span>'
+          ? '<span style="background:var(--danger-soft);color:var(--danger);padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700">Vencida hace ' + Math.abs(daysLeft) + ' días</span>'
           : daysLeft <= 14
-            ? '<span style="background:#fff8e1;color:#e37400;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700">Vence en ' + daysLeft + ' días</span>'
-            : '<span style="background:#e6f4ea;color:#1e8e3e;padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700">' + daysLeft + ' días restantes</span>';
+            ? '<span style="background:var(--warning-soft);color:var(--warning);padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700">Vence en ' + daysLeft + ' días</span>'
+            : '<span style="background:var(--success-soft);color:var(--success-dark);padding:2px 8px;border-radius:12px;font-size:.72rem;font-weight:700">' + daysLeft + ' días restantes</span>';
         rendicionDeadlineHtml = '<p class="fnd-monto" style="margin-bottom:10px">Fecha límite: <strong>' + escapeHtml(String(currentConv.fecha_cierre_rendicion)) + '</strong> &nbsp;' + badge + '</p>';
       }
 
@@ -2182,7 +2182,7 @@
       body.innerHTML = `
         <form id="fnd-new-form" novalidate>
           <div class="field" style="margin-bottom:14px">
-            <label>Organización <span style="color:#d93025">*</span></label>
+            <label>Organización <span style="color:var(--danger)">*</span></label>
             <select name="organizacion_id" id="fnd-org-select" required>
               <option value="">— Seleccionar organización —</option>
               ${orgs.map(function(o) {
@@ -2192,7 +2192,7 @@
             <input type="hidden" name="nombre_organizacion" id="fnd-org-nombre">
           </div>
           <div class="field" style="margin-bottom:14px">
-            <label>Convocatoria <span style="color:#d93025">*</span></label>
+            <label>Convocatoria <span style="color:var(--danger)">*</span></label>
             <select name="convocatoria_id" id="fnd-conv-select" required>
               <option value="">— Seleccionar convocatoria —</option>
               ${CONVS.map(function(c) {
@@ -2201,12 +2201,12 @@
             </select>
             <p class="muted" style="font-size:0.75rem;margin-top:6px">Si la organización postula a ambos llamados, crea un registro independiente por cada uno.</p>
           </div>
-          <div id="fnd-dup-warning" style="display:none;margin-bottom:14px;padding:10px 12px;border-radius:8px;background:var(--warning-soft,#fff3cd);color:#856404;font-size:0.82rem;border:1px solid rgba(244,180,0,.3)">
+          <div id="fnd-dup-warning" style="display:none;margin-bottom:14px;padding:10px 12px;border-radius:8px;background:var(--warning-soft,#fff3cd);color:var(--warning);font-size:0.82rem;border:1px solid rgba(244,180,0,.3)">
             <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;margin-right:4px">warning</span>
             Ya existe un registro para esta organización y convocatoria. Puedes continuar si deseas crear un duplicado.
           </div>
           <div class="field" style="margin-bottom:14px">
-            <label>Línea de producto <span style="color:#d93025">*</span></label>
+            <label>Línea de producto <span style="color:var(--danger)">*</span></label>
             <select name="linea_producto_id" required>
               <option value="">— Seleccionar —</option>
               ${LINEAS.map(function(l) {
@@ -2263,7 +2263,7 @@
 
     }).catch(function(err) {
       const body = document.getElementById('fnd-modal-body');
-      if (body) body.innerHTML = '<div class="empty-state" style="padding:24px;color:#d93025">' + escapeHtml(String(err && err.message || err || 'Error al cargar')) + '</div>';
+      if (body) body.innerHTML = '<div class="empty-state" style="padding:24px;color:var(--danger)">' + escapeHtml(String(err && err.message || err || 'Error al cargar')) + '</div>';
       showError(err);
     });
   }
@@ -2866,7 +2866,7 @@
             .fnd-alert{display:flex;align-items:flex-start;gap:8px;background:var(--info-soft,#e8f4fb);border-radius:8px;padding:10px 12px;font-size:0.83rem;color:var(--text,#24364B);margin-top:12px}
             .fnd-alert .material-symbols-outlined{font-size:1rem;color:var(--runtime-brand-primary,#214E8A);flex-shrink:0;margin-top:1px}
             .fnd-alert--warn{background:var(--warning-soft,#fff3cd)}
-            .fnd-alert--warn .material-symbols-outlined{color:#856404}
+            .fnd-alert--warn .material-symbols-outlined{color:var(--warning)}
             .fnd-decision{margin-top:14px}
             .fnd-decision__q{display:flex;align-items:center;gap:7px;font-weight:600;font-size:0.9rem;color:var(--text,#24364B);margin-bottom:10px}
             .fnd-decision__q .material-symbols-outlined{font-size:1.1rem;color:var(--runtime-brand-primary,#214E8A)}
@@ -2876,7 +2876,7 @@
             .fnd-branch--yes{background:var(--success-soft,#e8f5e9);color:var(--text,#24364B)}
             .fnd-branch--yes .material-symbols-outlined{color:var(--runtime-brand-secondary,#007C4A)}
             .fnd-branch--no{background:var(--danger-soft,#fdecea);color:var(--text,#24364B)}
-            .fnd-branch--no .material-symbols-outlined{color:#b3261e}
+            .fnd-branch--no .material-symbols-outlined{color:var(--danger)}
             .fnd-branch--neutral{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
             .fnd-branch--neutral .material-symbols-outlined{color:var(--text-muted,#6b7a8d)}
             .fnd-footer{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--border,#D6E0EA);flex-shrink:0}
@@ -3004,8 +3004,8 @@
           .fndd-badge--mix{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
           .fndd-badge--state{background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)}
           .fndd-badge--decision{background:#eef1ff;color:#4757b1}
-          .fndd-badge--alert{background:var(--danger-soft,#fdecea);color:#b3261e}
-          .fndd-badge--ok{background:var(--success-soft,#e8f5e9);color:#1b6b2f}
+          .fndd-badge--alert{background:var(--danger-soft,#fdecea);color:var(--danger)}
+          .fndd-badge--ok{background:var(--success-soft,#e8f5e9);color:var(--success-dark)}
           .fndd-mini-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
           .fndd-mini-item{background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:8px 12px;font-size:0.8rem;line-height:1.45;color:var(--text-muted,#6b7a8d)}
           .fndd-mini-item strong{color:var(--text,#24364B)}
@@ -3019,7 +3019,7 @@
           .fndd-branch-title{margin:0 0 6px;font-size:0.88rem;font-weight:700;color:var(--text,#24364B)}
           .fndd-branch-text{margin:0;font-size:0.8rem;line-height:1.5;color:var(--text-muted,#6b7a8d)}
           .fndd-warn-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--warning-soft,#fff3cd);color:#7a5e08;font-size:0.8rem;line-height:1.5;border:1px solid rgba(244,180,0,0.25)}
-          .fndd-danger-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--danger-soft,#fdecea);color:#9d261d;font-size:0.8rem;line-height:1.5;border:1px solid rgba(217,48,37,0.2)}
+          .fndd-danger-block{margin-top:10px;padding:10px 12px;border-radius:8px;background:var(--danger-soft,#fdecea);color:var(--danger);font-size:0.8rem;line-height:1.5;border:1px solid rgba(217,48,37,0.2)}
           .fndd-connector{width:2px;height:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--runtime-brand-primary,#214E8A) 35%,transparent),transparent);margin:0 auto}
           .fndd-footer-note{margin-top:16px;font-size:0.75rem;color:var(--text-muted,#6b7a8d);text-align:center;line-height:1.5}
           html[data-theme="dark"] .fndd-modal{background:var(--surface,#14202d)}
@@ -3364,18 +3364,18 @@
 
   function capEstadoBadge_(estado) {
     switch (String(estado || '').toLowerCase()) {
-      case 'activo':   return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--success-soft,#e8f5e9);color:#1b6b2f">Activo</span>`;
+      case 'activo':   return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--success-soft,#e8f5e9);color:var(--success-dark)">Activo</span>`;
       case 'cerrado':  return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)">Cerrado</span>`;
-      case 'cancelado':return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--danger-soft,#fdecea);color:#b3261e">Cancelado</span>`;
+      case 'cancelado':return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--danger-soft,#fdecea);color:var(--danger)">Cancelado</span>`;
       default:         return `<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:700;background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)">${escapeHtml(estado)}</span>`;
     }
   }
 
   function capInscripcionBadge_(tipo) {
     if (String(tipo || '') === 'abierta') {
-      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,#f59e0b 12%,transparent);color:#92400e"><span class="material-symbols-outlined" style="font-size:0.8rem">lock_open</span>Abierta</span>`;
+      return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,#f59e0b 12%,transparent);color:var(--warning)"><span class="material-symbols-outlined" style="font-size:0.8rem">lock_open</span>Abierta</span>`;
     }
-    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,#3D96B4 12%,transparent);color:#1e5f7a"><span class="material-symbols-outlined" style="font-size:0.8rem">lock</span>Exclusiva</span>`;
+    return `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,var(--info) 12%,transparent);color:var(--info)"><span class="material-symbols-outlined" style="font-size:0.8rem">lock</span>Exclusiva</span>`;
   }
 
   function renderCapacitacionesListHtml_(eventos) {
@@ -3476,7 +3476,7 @@
 
     const pinField = `
       <div class="field field--full js-cap-pin-field" style="display:none">
-        <label>Clave de SUPERUSER <span style="color:#b3261e">*</span></label>
+        <label>Clave de SUPERUSER <span style="color:var(--danger)">*</span></label>
         <input type="password" name="pin" placeholder="Ingresa la clave de SUPERUSER para habilitar inscripción abierta" autocomplete="off">
         <p style="margin:4px 0 0;font-size:0.78rem;color:var(--text-muted,#6b7a8d)">La clave es requerida para confirmar que un administrador autoriza este tipo de inscripción.</p>
       </div>`;
@@ -3495,7 +3495,7 @@
             <form id="cap-event-form" class="form-grid organizaciones-form-grid">
               <input type="hidden" name="evento_id" value="${isEdit ? escapeHtml(existing.evento_id) : ''}">
               <div class="field field--half">
-                <label>Tipo de evento <span style="color:#b3261e">*</span></label>
+                <label>Tipo de evento <span style="color:var(--danger)">*</span></label>
                 <select name="tipo" required>
                   <option value="">Seleccionar tipo...</option>
                   <option value="capacitacion" ${(existing && existing.tipo) === 'capacitacion' ? 'selected' : ''}>Capacitación</option>
@@ -3504,7 +3504,7 @@
                 </select>
               </div>
               <div class="field field--half">
-                <label>Título <span style="color:#b3261e">*</span></label>
+                <label>Título <span style="color:var(--danger)">*</span></label>
                 <input type="text" name="titulo" value="${isEdit ? escapeHtml(existing.titulo || '') : ''}" required placeholder="Ej: Taller de primeros auxilios">
               </div>
               <div class="field field--half">
@@ -3512,7 +3512,7 @@
                 <textarea name="descripcion" rows="3" placeholder="Describe el contenido y objetivo del evento...">${isEdit ? escapeHtml(existing.descripcion || '') : ''}</textarea>
               </div>
               <div class="field field--half">
-                <label>Fecha <span style="color:#b3261e">*</span></label>
+                <label>Fecha <span style="color:var(--danger)">*</span></label>
                 <input type="date" name="fecha_evento" value="${isEdit ? escapeHtml(String(existing.fecha_evento || '').substring(0, 10)) : ''}" required>
               </div>
               <div class="field field--half">
@@ -3533,7 +3533,7 @@
               </div>
               ${estadoField}
               <div class="field field--full">
-                <label>Tipo de inscripción <span style="color:#b3261e">*</span></label>
+                <label>Tipo de inscripción <span style="color:var(--danger)">*</span></label>
                 <div style="display:flex;gap:16px;padding-top:4px">
                   <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400">
                     <input type="radio" name="tipo_inscripcion" value="exclusiva" ${(!isEdit || existing.tipo_inscripcion === 'exclusiva') ? 'checked' : ''}>
@@ -3668,7 +3668,7 @@
         const isOpen = String(ev.estado || '') === 'activo';
         const listHtml = ins.length ? ins.map(i => {
           const tipoBadge = i.tipo_inscrito === 'socio'
-            ? `<span style="display:inline-flex;padding:2px 7px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,#8CC63F 14%,transparent);color:#3a6b10">Socio</span>`
+            ? `<span style="display:inline-flex;padding:2px 7px;border-radius:20px;font-size:0.7rem;font-weight:700;background:color-mix(in srgb,var(--success) 14%,transparent);color:var(--success-dark)">Socio</span>`
             : `<span style="display:inline-flex;padding:2px 7px;border-radius:20px;font-size:0.7rem;font-weight:700;background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d)">Externo</span>`;
           return `
             <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--border,#D6E0EA);border-radius:8px;background:var(--surface,#fff)">
@@ -3684,7 +3684,7 @@
                   ${i.correo ? `<span>${escapeHtml(i.correo)}</span>` : ''}
                 </div>
               </div>
-              ${isOpen ? `<button type="button" class="secondary-btn js-cap-cancel-ins" data-id="${escapeHtml(i.inscripcion_id)}" style="font-size:0.75rem;padding:4px 8px;color:#b3261e;border-color:#f4b4b0">
+              ${isOpen ? `<button type="button" class="secondary-btn js-cap-cancel-ins" data-id="${escapeHtml(i.inscripcion_id)}" style="font-size:0.75rem;padding:4px 8px;color:var(--danger);border-color:var(--alert-danger-border)">
                 <span class="material-symbols-outlined" style="font-size:0.9rem">person_remove</span>
               </button>` : ''}
             </div>`;
@@ -3748,12 +3748,12 @@
         </p>
         <div class="organizaciones-form-grid" id="cap-ins-form-fields" style="display:grid;gap:10px 12px">
           <div class="field field--half">
-            <label>RUT <span style="color:#b3261e">*</span></label>
+            <label>RUT <span style="color:var(--danger)">*</span></label>
             <input type="text" id="cap-ins-rut" placeholder="12.345.678-9" ${isExclusiva ? 'data-mode="exclusiva"' : ''}>
             ${isExclusiva ? '<p style="margin:3px 0 0;font-size:0.75rem;color:var(--text-muted,#6b7a8d)">Al ingresar el RUT se busca el socio automáticamente.</p>' : ''}
           </div>
           <div class="field field--half">
-            <label>Nombre <span style="color:#b3261e">*</span></label>
+            <label>Nombre <span style="color:var(--danger)">*</span></label>
             <input type="text" id="cap-ins-nombre" placeholder="Nombre completo" ${isExclusiva ? 'readonly' : ''}>
           </div>
           <div class="field field--half">
@@ -3826,15 +3826,15 @@
                 }
                 orgSelEl.value = orgName;
               }
-              msgEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9rem;color:#1b6b2f">check_circle</span> <span style="color:#1b6b2f">Socio encontrado</span>`;
+              msgEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--success-dark)">check_circle</span> <span style="color:var(--success-dark)">Socio encontrado</span>`;
             } else {
               document.getElementById('cap-ins-nombre').value = '';
               const orgSelEl2 = document.getElementById('cap-ins-org');
               if (orgSelEl2) orgSelEl2.value = '';
-              msgEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9rem;color:#b3261e">error</span> <span style="color:#b3261e">RUT no encontrado en socios registrados</span>`;
+              msgEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--danger)">error</span> <span style="color:var(--danger)">RUT no encontrado en socios registrados</span>`;
             }
           }).catch(() => {
-            msgEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9rem;color:#b3261e">error</span> <span style="color:#b3261e">Error al buscar el socio</span>`;
+            msgEl.innerHTML = `<span class="material-symbols-outlined" style="font-size:0.9rem;color:var(--danger)">error</span> <span style="color:var(--danger)">Error al buscar el socio</span>`;
           });
         }, 600);
       });

@@ -549,6 +549,8 @@ html[data-theme="dark"] {
 - Nunca hardcodear hex en componentes
 - Siempre definir override en `ThemeDark.html` si el componente usa colores
 
+> **Deuda conocida (2026-08):** el módulo Beneficios (`Scripts_Beneficios.html`) define chips de categoría (morado/azul) con **hex hardcodeado dentro de bloques `<style>` embebidos**. Son **theme-complete** (traen su override `html[data-theme="dark"]`), por lo que funcionan en ambos temas; la deuda es de consistencia (deberían usar tokens), no un bug. Los colores de estado inline (danger/warning/success) ya se migraron a tokens (`--danger`/`--warning`/`--success*`). Ver auditoría con skill `go-pes-colores`.
+
 ---
 
 ## Responsive

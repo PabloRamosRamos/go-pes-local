@@ -8,22 +8,17 @@ Este directorio contiene documentos de análisis, planes y deployments históric
 
 ## 📦 Documentos archivados
 
-### ANALISIS-AVANCE-LEGACY.md
+### analisis-avance-legacy.md
 **Fecha:** 2026-05-26  
 **Propósito:** Análisis de migración del módulo Avance desde sistema legacy  
 **Estado:** ✅ Migración completada, documento conservado por referencia
 
-### DEPLOYMENT-2026-06-05.md
+### deployment-2026-06-05.md
 **Fecha:** 2026-06-05  
 **Propósito:** Notas de deployment específico con checklist de verificación  
-**Estado:** ✅ Deploy completado, checklist integrada en CHECKLIST-PRODUCCION.md
+**Estado:** ✅ Deploy completado, checklist integrada en deploy.md
 
-### GUIA-MIGRACION.md
-**Fecha:** 2026-06-02  
-**Propósito:** Guía paso a paso para migración de datos desde sistema legacy  
-**Estado:** ✅ Migración completada, funcionalidad integrada en ZZ_MigracionBackend.js
-
-### PLAN-LOADERS.md
+### plan-loaders.md
 **Fecha:** 2026-06-08  
 **Propósito:** Plan de mejora de loaders y estados de carga UX  
 **Estado:** ✅ Superseded — el sistema de loading se estandarizó el 2026-07-10 (loader por módulo, nunca fullscreen). Ver `design-system.md` → "Sistema de Loading"
@@ -48,10 +43,25 @@ Este directorio contiene documentos de análisis, planes y deployments históric
 **Propósito:** Resumen ejecutivo del plan de mejora frontend  
 **Estado:** ✅ Completado (5/5 fases)
 
-### ORGANIZACION-DOCS-2026-06-19.md
+### organizacion-docs-2026-06-19.md
 **Fecha:** 2026-06-19 · **Archivado:** 2026-07-13  
 **Propósito:** Registro del proceso de reorganización de documentación a `docs/`  
 **Estado:** ✅ Proceso ejecutado; la estructura vigente está en `README.md`
+
+### analisis-completo-2026-07-10.md
+**Fecha:** 2026-07-10 · **Archivado:** 2026-08  
+**Propósito:** Análisis integral puntual del proyecto  
+**Estado:** ✅ Instantánea fechada; hallazgos incorporados al código y docs vigentes
+
+### performance-plan-agresivo.md · performance-analisis-modulos.md · plan-rendimiento-agresivo.md
+**Fecha:** 2026-07-10 · **Archivado:** 2026-08  
+**Propósito:** Planes y análisis de rendimiento (optimizaciones con código, análisis por módulo, diagnóstico transversal D1–D6)  
+**Estado:** ✅ Consolidados en `performance.md` (activo). Se conservan por el código de ejemplo y el detalle por módulo; el plan y estado vigentes están en `performance.md` + `performance-implementacion-pendiente.md`
+
+### checklist-produccion.md
+**Fecha:** 2026-06-02 · **Archivado:** 2026-08  
+**Propósito:** Checklist pre-producción (configuración crítica, PINs, limpieza de datos, backfill, verificaciones finales)  
+**Estado:** ✅ Consolidado en `deploy.md` (secciones "Puesta en marcha de PROD" y checklists de preflight/release)
 
 ---
 
@@ -65,7 +75,7 @@ Estos documentos fueron útiles durante fases específicas del desarrollo:
 Una vez completadas las tareas, la información relevante se integró en:
 - Código fuente (`go-pes-local/`)
 - Documentación técnica activa (`docs/*.md`)
-- Guía de producción (`CHECKLIST-PRODUCCION.md`)
+- Proceso de deploy y checklist pre-PROD (`deploy.md`)
 
 ---
 
@@ -75,8 +85,7 @@ Una vez completadas las tareas, la información relevante se integró en:
 
 Si necesitas información sobre estos temas, consulta:
 - **Módulo Avance:** [`CLAUDE.md`](../CLAUDE.md) → sección "Módulo Avance"
-- **Deploy a PROD:** [`CHECKLIST-PRODUCCION.md`](../CHECKLIST-PRODUCCION.md)
-- **Migración de datos:** Código en `go-pes-local/ZZ_MigracionBackend.js`
+- **Deploy a PROD:** [`deploy.md`](../deploy.md)
 - **Loaders UX:** [`design-system.md`](../design-system.md) → sección "Sistema de Loading"
 - **Frontend (componentes, transiciones):** [`design-system.md`](../design-system.md)
 

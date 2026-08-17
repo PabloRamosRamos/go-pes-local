@@ -1,6 +1,6 @@
 # Guía de Deploy — GO-PES v2
 
-**Propósito:** Procedimiento completo para desplegar cambios a DEV y PROD de forma segura, incluyendo preflight, validación post-deploy y rollback.
+**Propósito:** Procedimiento completo para desplegar cambios a DEV y PROD de forma segura, incluyendo preflight, checklist pre-PROD, limpieza de datos de prueba, validación post-deploy y rollback. (Consolida el antiguo `checklist-produccion.md`, hoy en `archive/`.)
 
 **Audiencia:** Desarrolladores con acceso a clasp y cuentas Google del proyecto.
 
@@ -121,7 +121,7 @@ clasp login --status
 ```javascript
 // Desde el editor de Apps Script → Ejecutar → goPesRunAllTests
 goPesRunAllTests()
-// → Verificar: 195 tests, 0 fallos
+// → Verificar: 272 tests (7 suites), 0 fallos
 ```
 
 ---
@@ -216,17 +216,7 @@ goPesIsPinConfigured('admin_reset')  // → {configured: true}
 - **NO usar la misma clave para los 3 contextos**
 - Guardar en gestor de passwords del equipo (1Password, LastPass, etc.)
 
-#### 3. Configurar Spreadsheet de migración (si aplica)
-
-```javascript
-// Solo si vas a usar el módulo de migración
-goPesConfigurarMigracionSourceId('1Eb_mj3Ef6Ss0JiBuQvlshj3nbKTOqLgtNbDRDsBzJq8')
-
-// Verificar
-goPesVerMigracionSourceId()  // → {spreadsheet_id: "..."}
-```
-
-#### 4. Desplegar la Web App
+#### 3. Desplegar la Web App
 
 Desde el **Editor de Apps Script**:
 
@@ -248,6 +238,31 @@ Si el deploy incluye breaking changes documentados en CHANGELOG:
 2. Ejecutar scripts de migración si los hay
 3. Actualizar configuración de `CFG_Parametros` si aplica
 4. Notificar a usuarios clave del cambio
+
+---
+
+## Puesta en marcha de PROD: limpieza de prueba y backfill
+
+### Limpiar datos de prueba (antes de abrir PROD al equipo)
+
+Si el entorno tiene datos de prueba, límpialos **antes** de operar:
+- **Dónde:** módulo Configuración → Limpieza de datos.
+- **Requiere:** PIN `admin_reset` + escribir la confirmación `LIMPIAR`.
+- La función resetea contadores de secuencia (IDs vuelven a `VEC-000001`, `SOL-000001`…), reconstruye vistas derivadas y registra la acción en logs.
+
+**Hojas que SE LIMPIAN (datos operativos):** `RAW_*` (ingresos, seguimiento, organizaciones, instrumentos, socios), `MAE_*` (casos, organizaciones), `FACT_*` (hitos, instrumentos, socios, beneficios, avance), `VW_*`, `DIM_*_Sugeridos`, `MASTER_DATOS`.
+
+**Hojas PROTEGIDAS (NO se tocan):** `CAT_Hitos_Avance`, `CFG_FONDESE_Ediciones`, `DIM_Usuarios`, `DIM_Territorio`, `DIM_Estados`, `DIM_Etapas_Constitucion`, `DIM_Origen_Canal`, `DIM_Beneficios`, `DIM_Instrumentos`, `DIM_Requisitos_Instrumento`, `DIM_Responsables`, `DIM_Cargos_Socios`, `LOG_*`.
+
+### Backfill del hito PRE_01
+
+Si hay casos en PROD sin el hito inicial `PRE_01` (reunión informativa), ejecutar desde el editor:
+
+```javascript
+goPesBackfillHitoPRE01()
+```
+
+Crea `PRE_01` para todos los casos que no lo tienen, usando `fecha_ingreso` del caso como fecha del hito. Ver [`avance-hitos.md`](avance-hitos.md) para el catálogo de hitos.
 
 ---
 
@@ -458,13 +473,14 @@ Antes de anunciar un release a usuarios:
 □ CHANGELOG.md con entrada de la versión
 □ README.md refleja cambios estructurales (si aplica)
 □ Manual.html actualizado con cambios funcionales
-□ Tests pasan en DEV y PROD: 195/195 OK
+□ Tests pasan en DEV y PROD: 272/272 OK
 □ Validación funcional completa por usuario key
+□ Datos de prueba limpiados (si aplica) y backfill PRE_01 ejecutado
 □ Backup de PROD hecho
 □ Deploy a PROD ejecutado sin errores
 □ Post-deploy validation OK
 □ Comunicación a usuarios enviada (si cambios visibles)
-□ Tag en git: git tag v2.1.512 && git push --tags
+□ Tag en git: git tag vX.Y.Z && git push --tags (usar GO_PES_V2.VERSION)
 ```
 
 ---

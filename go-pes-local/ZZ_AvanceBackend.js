@@ -1803,3 +1803,102 @@ function goPesActualizarSociosAlConstituirOrganizacion_(solicitudId, organizacio
     // No lanzar error para no bloquear la constitución de la organización
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// BACKFILL DEL HITO INICIAL (PRE_01)
+// Reubicado desde ZZ_MigracionBackend.js (2026-08) al eliminar el módulo de
+// migración. Se usa en la puesta en marcha de PROD (ver docs/deploy.md).
+// ══════════════════════════════════════════════════════════════════════════
+
+/** Generador de IDs correlativos en lote (namespace/prefijo), vía ScriptProperties. */
+function bulkNextIds_(namespace, prefix, count) {
+  if (!count || count < 1) return [];
+  const props = PropertiesService.getScriptProperties();
+  const key = 'GO_PES_SEQ_' + namespace.toUpperCase();
+  const current = Number(props.getProperty(key) || '0');
+  props.setProperty(key, String(current + count));
+  return Array.from({ length: count }, function(_, i) {
+    return prefix + '-' + String(current + i + 1).padStart(6, '0');
+  });
+}
+
+/**
+ * Crea el hito PRE_01 para todos los casos que no lo tienen.
+ * Solo superusers pueden ejecutar esta función.
+ * Se puede llamar desde el módulo Configuración o desde el editor de Apps Script.
+ */
+function goPesBackfillHitoPRE01() {
+  const user = requireRole_(['superuser']);
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(60000);
+
+  try {
+    ensureSheetsSubset_([GO_PES_V2.SHEETS.MAE_CASOS, GO_PES_V2.SHEETS.FACT_AVANCE_HITOS]);
+
+    const now = new Date();
+
+    // Obtener todos los casos
+    const casos = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS);
+
+    // Obtener todos los hitos PRE_01 existentes
+    const hitosExistentes = {};
+    getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS).forEach(function(h) {
+      if (h.codigo_hito === 'PRE_01' && h.solicitud_id) {
+        hitosExistentes[h.solicitud_id] = true;
+      }
+    });
+
+    // Filtrar casos sin hito PRE_01
+    const casosSinHito = casos.filter(function(c) {
+      return c.solicitud_id && !hitosExistentes[c.solicitud_id];
+    });
+
+    if (!casosSinHito.length) {
+      return serializeForClient_({
+        ok: true,
+        total_casos: casos.length,
+        casos_procesados: 0,
+        message: 'Todos los casos ya tienen el hito PRE_01.'
+      });
+    }
+
+    // Crear hitos para los casos sin hito
+    const avanceHitoIds = bulkNextIds_('avance_hito', 'AVH', casosSinHito.length);
+    const hitoRows = [];
+
+    casosSinHito.forEach(function(caso, i) {
+      const fechaHito = asDateOrBlank_(caso.fecha_ingreso) || now;
+
+      hitoRows.push({
+        avance_hito_id: avanceHitoIds[i],
+        organizacion_id: '',
+        solicitud_id: caso.solicitud_id,
+        codigo_hito: 'PRE_01',
+        tramo: 'Preconstitución',
+        orden_hito: 1,
+        nombre_hito: 'Reunión informativa realizada',
+        fecha_hito: fechaHito,
+        usuario_registro: user.email || '',
+        timestamp_registro: now,
+        observacion: 'Backfill automático - Reunión informativa inicial',
+        numero_ingreso: ''
+      });
+    });
+
+    appendRowObjects_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS, hitoRows);
+
+    logProcessing_('INFO', 'goPesBackfillHitoPRE01', 'backfill', '', user.email, 'OK',
+      { total_casos: casos.length, hitos_creados: hitoRows.length });
+    logUserAction_('BACKFILL_HITO_PRE01', 'backfill', '', 'OK',
+      { total_casos: casos.length, hitos_creados: hitoRows.length });
+
+    return serializeForClient_({
+      ok: true,
+      total_casos: casos.length,
+      casos_procesados: hitoRows.length,
+      message: 'Backfill completado: ' + hitoRows.length + ' hitos PRE_01 creados.'
+    });
+  } finally {
+    lock.releaseLock();
+  }
+}

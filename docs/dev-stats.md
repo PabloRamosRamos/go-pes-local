@@ -10,7 +10,7 @@
 |---------|-------|
 | **Archivos de código** | 53 archivos fuente en go-pes-local/ |
 | **Líneas de código** | 44.486 (según análisis completo 2026-07-10) |
-| **Tests automatizados** | 262 (90 validators + 41 auth + 51 services + 35 avance + 32 beneficios + 13 security) |
+| **Tests automatizados** | 272 (90 validators + 41 auth + 51 services + 35 avance + 32 beneficios + 10 security + 13 alertas) |
 | **Fallos en tests** | 0 |
 | **Cobertura estimada** | ~78% (core + servicios + auth + módulos críticos) |
 | **Módulos funcionales** | 11 |
@@ -77,7 +77,7 @@
 
 ## Cobertura de tests
 
-### Suites implementadas (190 tests)
+### Suites implementadas (272 tests activos, 7 suites)
 
 | Suite | Tests | Descripción |
 |-------|-------|-------------|
@@ -86,18 +86,21 @@
 | `goPesTestServices_` | 51 | Búsqueda, ficha, dashboard, catálogos |
 | `goPesTestAvance_` | 35 | Módulo Avance (hitos, formateadores, estados) |
 | `goPesTestBeneficios_` | 32 | Módulo Beneficios (validaciones, estados, elegibilidad) |
-| `goPesTestSecurity_` | 13 | Auth guards, PINs, rate limiting, migración |
-| **TOTAL** | **262** | |
+| `goPesTestSecurity_` | 10 | Auth guards, PINs, rate limiting |
+| `goPesTestAlertas_` | 13 | Alertas operativas (plazos de formalización, beneficios) |
+| **TOTAL** | **272** | |
+
+> Conteo verificado por grep de `s.test(` en `Audith.js`. Si agregas tests, actualiza estos números.
 
 ### Estado de cobertura
 
 - ✅ **Core completo:** Auth (41 tests), Repository, Validators (90 tests), Services (51 tests)
-- ✅ **Seguridad completa:** Auth guards, PINs, rate limiting, migración (13 tests)
+- ✅ **Seguridad completa:** Auth guards, PINs, rate limiting (10 tests)
 - ✅ **Módulos críticos:** Avance (35 tests), Beneficios (32 tests)
 - ⚠️ **Módulos con cobertura parcial:** Organizaciones, Socios, NuevoIngreso
 - ❌ **Sin cobertura:** DerivedBuilders, Diagnostics
 
-**Tests con SKIPs:** 26 tests omitidos intencionalmente (requieren Session + lectura/escritura de hojas reales)
+**Tests con SKIPs:** 31 tests omitidos intencionalmente (requieren Session + lectura/escritura de hojas reales)
 
 ---
 
@@ -216,7 +219,7 @@
 
 | Métrica | Valor | Estado |
 |---------|-------|--------|
-| **Tests pasados** | 262/262 | ✅ 100% |
+| **Tests pasados** | 272/272 | ✅ 100% |
 | **Hallazgos seguridad cerrados** | 5/7 | ✅ 71% |
 | **Código duplicado** | 0 | ✅ Ninguno |
 | **CSS inline en JS** | 0 | ✅ Ninguno |
@@ -307,4 +310,4 @@
 ---
 
 **Documento generado automáticamente por Claude Code**  
-Para más información, ver: [`CLAUDE.md`](../CLAUDE.md)
+Para más información, ver: [`CLAUDE.md`](CLAUDE.md)

@@ -428,7 +428,7 @@ function validateNuevaEntidad_(p) {
 
 ## Documentos relacionados
 
-- [`CLAUDE.md`](../CLAUDE.md) — Historial de cambios (entrada 2026-06-01)
+- [`CLAUDE.md`](CLAUDE.md) — Historial de cambios (entrada 2026-06-01)
 - [`docs/dev-stats.md`](dev-stats.md) — Métricas del proyecto
 - [`docs/design-system.md`](design-system.md) — Sistema de diseño y UX
 

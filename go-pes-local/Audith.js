@@ -1446,42 +1446,6 @@ function goPesTestSecurity_() {
     );
   });
 
-  // ── Migración: Spreadsheet ID externalizado ──
-  s.test('ZZ_MigracionBackend: funciones de configuración existen', function() {
-    assertTrue_(typeof goPesConfigurarMigracionSourceId === 'function',
-      'goPesConfigurarMigracionSourceId debe estar definida');
-    assertTrue_(typeof goPesVerMigracionSourceId === 'function',
-      'goPesVerMigracionSourceId debe estar definida');
-  });
-
-  s.test('Migración: configurar Spreadsheet ID válido', function() {
-    var testId = '1Eb_mj3Ef6Ss0JiBuQvlshj3nbKTOqLgtNbDRDsBzJq8'; // ID real de migración
-
-    try {
-      var result = goPesConfigurarMigracionSourceId(testId);
-      assertEqual_(result.ok, true, 'debe retornar ok:true');
-      assertEqual_(result.spreadsheet_id, testId, 'debe retornar el ID configurado');
-
-      var check = goPesVerMigracionSourceId();
-      assertEqual_(check.spreadsheet_id, testId, 'debe poder recuperar el ID');
-    } catch (e) {
-      // Si falla por permisos o acceso al spreadsheet, verificar el mensaje
-      var validError =
-        e.message.indexOf('superuser') > -1 ||
-        e.message.indexOf('SUPERUSER') > -1 ||
-        e.message.indexOf('acceder al Spreadsheet') > -1;
-
-      assertTrue_(validError, 'debe ser error de permisos o acceso: ' + e.message);
-    }
-  });
-
-  s.test('Migración: rechazar Spreadsheet ID corto', function() {
-    assertThrows_(
-      function() { goPesConfigurarMigracionSourceId('abc123'); },
-      'debe rechazar ID menor a 20 caracteres'
-    );
-  });
-
   // ── Rate limiting (verificación de constantes) ──
   s.test('SecurityPins: constantes de rate limit definidas', function() {
     assertTrue_(typeof GO_PES_PIN_RATE_LIMIT_MAX_ATTEMPTS === 'number',

@@ -1,7 +1,7 @@
 # GO-PES v2 — Gestor Operativo PES
 
 > **📘 Nota:** Este es el README principal del proyecto, ahora ubicado en `docs/README.md`.  
-> **Para Claude:** Inicia con [INICIO-RAPIDO-CLAUDE.md](INICIO-RAPIDO-CLAUDE.md)  
+> **Para Claude:** Inicia con [inicio-rapido-claude.md](inicio-rapido-claude.md)  
 > **Toda la documentación está en:** `docs/` (sin archivos .md en raíz)
 
 **Programa Estamos Seguros · Municipalidad de Providencia, Chile**
@@ -49,21 +49,25 @@ GO Provi/
 │
 ├── docs/                        ← 📚 Toda la documentación (sin .md en raíz)
 │   ├── README.md                ← Estás aquí (Quick Start principal)
-│   ├── INICIO-RAPIDO-CLAUDE.md  ← Resumen ejecutivo para sesiones Claude
+│   ├── inicio-rapido-claude.md  ← Resumen ejecutivo para sesiones Claude
 │   ├── CLAUDE.md                ← Guía técnica extensa (fuente de verdad)
-│   ├── CHECKLIST-PRODUCCION.md  ← Verificación pre-deploy PROD
 │   │
 │   ├── — Documentación técnica —
-│   ├── MANTENER-DOCS.md         ← Guía de mantenimiento documentación
+│   ├── mantener-docs.md         ← Guía de mantenimiento documentación
 │   ├── arquitectura.md          ← Capas, módulos, flujo request→response
 │   ├── modelo-datos.md          ← Esquema hojas, relaciones, pipeline
+│   ├── api-interna.md           ← Inventario de funciones públicas (cliente↔backend)
 │   ├── deploy.md                ← Proceso despliegue DEV/PROD
 │   ├── seguridad.md             ← Roles, permisos, scopes, PINs
+│   ├── avance-hitos.md          ← Máquina de estados del Avance (hitos PRE_*/FOR_*)
+│   ├── alertas.md               ← Alertas operativas (plazos/umbrales)
+│   ├── branding-configuracion.md ← Configuración del sistema y branding
 │   ├── design-system.md         ← Sistema diseño (componentes, CSS, UX, loading)
 │   ├── dev-stats.md             ← Métricas del proyecto
+│   ├── testing.md               ← Estrategia, infra y cobertura de tests
 │   ├── mensajes-normalizados.md ← Sistema traducción mensajes técnicos
-│   ├── performance-*.md / plan-rendimiento-agresivo.md ← Análisis y planes de rendimiento
-│   ├── analisis-completo-2026-07-10.md ← Análisis integral del proyecto
+│   ├── performance.md           ← Rendimiento (plan consolidado + estado por fases)
+│   ├── performance-implementacion-pendiente.md ← Roadmap de optimización pendiente
 │   │
 │   └── archive/                 ← Documentos históricos completados
 │       (planes ejecutados, diagnósticos puntuales y registros de proceso;
@@ -110,7 +114,7 @@ GO Provi/
 │   ├── Loading.html             ← Loading overlay
 │   ├── Assets.js                ← Imágenes (data URIs)
 │   │
-│   └── Audith.js                ← Tests (262 tests)
+│   └── Audith.js                ← Tests (272 tests, 7 suites)
 │
 ├── push-dev.ps1                 ← Deploy DEV
 └── push-prod.ps1                ← Deploy PROD
@@ -177,12 +181,7 @@ Desde el **Spreadsheet** (abrir la hoja de cálculo):
    goPesConfigurePinDeSeguridad('evento_abierto', 'TU_PIN_3')
    ```
 
-4. **Configurar Spreadsheet de migración** (si aplica):
-   ```javascript
-   goPesConfigurarMigracionSourceId('SPREADSHEET_ID_ORIGEN')
-   ```
-
-5. **Menú GO-PES v2 → Abrir Gestor Operativo**
+4. **Menú GO-PES v2 → Abrir Gestor Operativo**
    - Abre la Web App en nueva pestaña
 
 ### Ejecutar tests
@@ -190,7 +189,7 @@ Desde el **Spreadsheet** (abrir la hoja de cálculo):
 ```javascript
 // Desde el editor de Apps Script, o menú GO-PES v2 → Ejecutar tests
 goPesRunAllTests()
-// → 195 tests, 0 fallos esperado
+// → 272 tests (7 suites), 0 fallos esperado
 ```
 
 ---
@@ -242,33 +241,38 @@ Desarrollar en DEV → Ejecutar tests → Push a PROD
 
 ### 📘 Para nuevos desarrolladores
 - **[README.md](README.md)** — Este archivo (Quick Start)
-- **[INICIO-RAPIDO-CLAUDE.md](INICIO-RAPIDO-CLAUDE.md)** — Resumen ejecutivo para sesiones Claude
+- **[inicio-rapido-claude.md](inicio-rapido-claude.md)** — Resumen ejecutivo para sesiones Claude
 - **[CLAUDE.md](CLAUDE.md)** — Guía técnica extensa (fuente de verdad)
 
 ### 🔧 Documentación técnica
-- **[docs/arquitectura.md](docs/arquitectura.md)** — Capas, módulos, flujo request→response
-- **[docs/modelo-datos.md](docs/modelo-datos.md)** — Esquema de hojas, relaciones, pipeline
-- **[docs/deploy.md](docs/deploy.md)** — Proceso completo de despliegue DEV/PROD
-- **[docs/seguridad.md](docs/seguridad.md)** — Roles, permisos, scopes, PINs
-- **[docs/design-system.md](docs/design-system.md)** — Sistema de diseño completo
-- **[docs/dev-stats.md](docs/dev-stats.md)** — Métricas del proyecto
+- **[docs/arquitectura.md](arquitectura.md)** — Capas, módulos, flujo request→response
+- **[docs/modelo-datos.md](modelo-datos.md)** — Esquema de hojas, relaciones, pipeline
+- **[docs/api-interna.md](api-interna.md)** — Inventario de funciones públicas (cliente↔backend)
+- **[docs/testing.md](testing.md)** — Estrategia, infraestructura y cobertura de tests
+- **[docs/deploy.md](deploy.md)** — Proceso completo de despliegue DEV/PROD
+- **[docs/seguridad.md](seguridad.md)** — Roles, permisos, scopes, PINs
+- **[docs/avance-hitos.md](avance-hitos.md)** — Máquina de estados del Avance (hitos y prerequisitos)
+- **[docs/alertas.md](alertas.md)** — Alertas operativas (plazos y umbrales entre hitos)
+- **[docs/branding-configuracion.md](branding-configuracion.md)** — Configuración del sistema y branding
+- **[docs/design-system.md](design-system.md)** — Sistema de diseño completo
+- **[docs/dev-stats.md](dev-stats.md)** — Métricas del proyecto
 
 ### 📋 Operación y mantenimiento
-- **[docs/CHECKLIST-PRODUCCION.md](docs/CHECKLIST-PRODUCCION.md)** — Verificación pre-deploy PROD
-- **[docs/MANTENER-DOCS.md](docs/MANTENER-DOCS.md)** — Guía de mantenimiento de documentación
-- **[Manual.html](go-pes-local/Manual.html)** — Manual de usuario embebido en la app
+- **[deploy.md](deploy.md)** — Proceso de deploy DEV/PROD + checklist pre-PROD
+- **[mantener-docs.md](mantener-docs.md)** — Guía de mantenimiento de documentación
+- **[Manual.html](../go-pes-local/Manual.html)** — Manual de usuario embebido en la app
 
 ### 📦 Archivo histórico
-- **[docs/archive/](docs/archive/)** — Documentos de análisis y deployment históricos
+- **[docs/archive/](archive/)** — Documentos de análisis y deployment históricos
 
 ---
 
 ## Soporte y contribución
 
 - **Issues y feedback:** https://github.com/PabloRamosRamos/go-pes-local/issues
-- **Mantenimiento de docs:** Lee [docs/MANTENER-DOCS.md](docs/MANTENER-DOCS.md) antes de contribuir
+- **Mantenimiento de docs:** Lee [docs/mantener-docs.md](mantener-docs.md) antes de contribuir
 - **Tests antes de PR:** Ejecutar `goPesRunAllTests()` → 0 fallos
-- **Commit de docs + código juntos:** Ver checklist en `docs/MANTENER-DOCS.md`
+- **Commit de docs + código juntos:** Ver checklist en `docs/mantener-docs.md`
 
 ---
 
@@ -282,17 +286,19 @@ Uso interno — Municipalidad de Providencia, Chile.
 
 | Situación | Documento |
 |-----------|-----------|
-| 🆕 Soy nuevo en el proyecto | README.md → [INICIO-RAPIDO-CLAUDE.md](INICIO-RAPIDO-CLAUDE.md) |
-| 🤖 Inicio sesión con Claude | [INICIO-RAPIDO-CLAUDE.md](INICIO-RAPIDO-CLAUDE.md) |
-| 🔧 Voy a programar backend | [CLAUDE.md](CLAUDE.md) → [docs/arquitectura.md](docs/arquitectura.md) |
-| 🎨 Voy a programar frontend | [docs/design-system.md](docs/design-system.md) |
-| 🚀 Voy a hacer deploy | [docs/CHECKLIST-PRODUCCION.md](docs/CHECKLIST-PRODUCCION.md) → [docs/deploy.md](docs/deploy.md) |
-| 📝 Voy a actualizar docs | [docs/MANTENER-DOCS.md](docs/MANTENER-DOCS.md) |
-| 🔐 Necesito info de seguridad | [docs/seguridad.md](docs/seguridad.md) |
-| 📊 Necesito métricas del proyecto | [docs/dev-stats.md](docs/dev-stats.md) |
+| 🆕 Soy nuevo en el proyecto | README.md → [inicio-rapido-claude.md](inicio-rapido-claude.md) |
+| 🤖 Inicio sesión con Claude | [inicio-rapido-claude.md](inicio-rapido-claude.md) |
+| 🔧 Voy a programar backend | [CLAUDE.md](CLAUDE.md) → [docs/arquitectura.md](arquitectura.md) |
+| 🎨 Voy a programar frontend | [docs/design-system.md](design-system.md) |
+| 🚀 Voy a hacer deploy | [deploy.md](deploy.md) (proceso + checklist pre-PROD) |
+| 📝 Voy a actualizar docs | [docs/mantener-docs.md](mantener-docs.md) |
+| 🔐 Necesito info de seguridad | [docs/seguridad.md](seguridad.md) |
+| 🧭 Voy a tocar el módulo Avance/hitos | [docs/avance-hitos.md](avance-hitos.md) → [docs/alertas.md](alertas.md) |
+| 🎨 Voy a configurar branding/colores | [docs/branding-configuracion.md](branding-configuracion.md) |
+| 📊 Necesito métricas del proyecto | [docs/dev-stats.md](dev-stats.md) |
 
 ---
 
-**Versión actual:** 2.1.512  
+**Versión actual:** 2.1.907  
 **Última actualización README:** 2026-06-19  
 **Próxima revisión:** Antes del próximo release mayor

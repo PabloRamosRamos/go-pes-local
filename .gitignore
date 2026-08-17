@@ -1,0 +1,6 @@
+# Carpeta de descarte — no versionar
+_to_delete/
+
+# Credenciales de clasp — nunca subir
+.clasprc.json
+**/.clasprc.json

@@ -1,0 +1,13 @@
+# Deploy a Apps Script (clasp): SOLO se sube el código de go-pes-local/.
+# El tooling de desarrollo (skills, docs, paquetes .skill, config de Claude)
+# se versiona en git/GitHub pero NUNCA se sube al servidor de Apps Script.
+skills/**
+dist/**
+docs/**
+.claude/**
+_to_delete/**
+*.md
+*.ps1
+.gitignore
+.claspignore
+.git/**

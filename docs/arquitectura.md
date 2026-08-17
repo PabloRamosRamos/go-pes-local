@@ -168,7 +168,6 @@ GO-PES es una **aplicación web monolítica** construida sobre Google Apps Scrip
 | **ZZ_OrganizacionesBackend.js** | Organizaciones | `getOrganizacionesConGruposClient()`, `getOrganizacionModuloDetalle()`, suspender/eliminar |
 | **ZZ_SociosBackend.js** | Socios y directivas | `getSociosModuloData()`, `guardarSocio()`, gestión de `FACT_Socios` |
 | **ZZ_AdminDataReset.js** | Utilidades admin (solo DEV) | `limpiarDatosPruebaAdmin()`, reset de datos de prueba, requiere PIN |
-| **ZZ_MigracionBackend.js** | Migración de datos legacy | `goPesConfigurarMigracionSourceId()`, importación desde spreadsheet externo |
 
 ### Testing
 
@@ -424,7 +423,6 @@ navigateTo_('ficha', { solicitud_id: 'SOL-000123' });
 **PropertiesService (persistente):**
 - Contadores de secuencias (IDs)
 - PINs de seguridad (hasheados)
-- Spreadsheet ID de migración
 
 ---
 

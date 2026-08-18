@@ -8496,9 +8496,21 @@ th.sortable.sort-desc .sort-icon {
 }
 
 .org-chip-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.5rem;
-  flex-wrap: wrap;
+}
+.org-chip-row .org-chip-btn {
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 0.74rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .org-toolbar__stats {
@@ -8699,6 +8711,15 @@ th.sortable.sort-desc .sort-icon {
   .org-chip-btn--attn{border-style:dashed}
 
   /* Organizaciones — layout maestro-detalle: visor + badges (2026-08-18) */
+  .org-head-stats{flex:0 0 auto}
+  .org-head-stats .org-stats-grid{grid-template-columns:repeat(4,minmax(84px,108px));gap:8px;height:auto}
+  .org-head-stats .org-stat-card{padding:8px;gap:2px}
+  .org-head-stats .org-stat-card__icon{font-size:1.1rem}
+  .org-head-stats .org-stat-card__num{font-size:1.25rem}
+  .org-head-stats .org-stat-card__label{font-size:.66rem}
+  .org-head-stats .org-stat-card__hito{display:none}
+  @media (max-width:900px){.org-head-stats{width:100%}.org-head-stats .org-stats-grid{grid-template-columns:repeat(4,1fr)}}
+  @media (max-width:520px){.org-head-stats .org-stats-grid{grid-template-columns:repeat(2,1fr)}}
   .org-ms{display:grid;grid-template-columns:1fr 340px;gap:14px;align-items:stretch;min-height:0}
   @media (min-width:901px){.org-ms{height:calc(100vh - 220px);min-height:560px}.org-ms__card{height:100%}}
   @media (max-width:900px){.org-ms{grid-template-columns:1fr}.org-ms__card{height:auto;max-height:70vh}}

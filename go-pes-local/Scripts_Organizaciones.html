@@ -10,6 +10,7 @@
             <h2>Organizaciones</h2>
             <p class="muted">Consulta, administra y actualiza la información integral de cada organización.</p>
           </div>
+          <div id="org-stats-row" class="org-head-stats"></div>
         </div>
 
         <div class="org-ms">
@@ -402,7 +403,6 @@
       '<span class="material-symbols-outlined" style="font-size:46px;opacity:.5">apartment</span>' +
       '<div><strong>Selecciona una organización</strong><br>' +
       '<span>Elige un elemento de la lista para ver toda su ficha aquí.</span></div>' +
-      '<div id="org-stats-row" style="width:100%;max-width:560px"></div>' +
     '</div>';
   }
 
@@ -589,7 +589,7 @@
         { key: 'grupo_vecinos',  label: 'En proceso (' + allItems.filter(function(o){ return o.tipo === 'grupo_vecinos'; }).length + ')' },
         { key: 'abandono',       label: 'Abandonaron (' + allItems.filter(esAbandonoProceso_).length + ')' },
         { key: 'estancada',      label: 'Estancadas (' + allItems.filter(esEstancada_).length + ')', attn: true },
-        { key: 'directiva',      label: 'Directiva por vencer (' + allItems.filter(esDirectivaPorVencer_).length + ')', attn: true },
+        { key: 'directiva',      label: 'Directiva (' + allItems.filter(esDirectivaPorVencer_).length + ')', attn: true },
         { key: 'sin_socios',     label: 'Sin socios (' + allItems.filter(esSinSocios_).length + ')', attn: true }
       ];
       chipRow.innerHTML = chips.map(function(c) {

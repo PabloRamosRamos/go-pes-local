@@ -1559,7 +1559,7 @@
     }
 
     if (!rows.length) {
-      tbody.innerHTML = `<tr><td colspan="7" class="muted">${
+      tbody.innerHTML = `<tr><td colspan="10" class="muted">${
         query.trim() ? 'Sin resultados para la búsqueda.' : (allRows.length ? 'Sin resultados.' : 'No hay vecinos registrados.')
       }</td></tr>`;
       return;
@@ -1570,14 +1570,30 @@
     const page = APP.state.buscarPage;
     const pageRows = rows.slice(page * BUSCAR_PAGE_SIZE, (page + 1) * BUSCAR_PAGE_SIZE);
 
+    const contactCell_ = (value, scheme, copyLabel) => {
+      const v = String(value || '').trim();
+      if (!v) return '<span class="muted">—</span>';
+      const safe = escapeHtml(v);
+      return `<a href="${scheme}:${safe}" class="buscar-contact-link">${safe}</a>` +
+        `<button type="button" class="buscar-copy-btn" data-copy="${safe}" title="Copiar ${copyLabel}" aria-label="Copiar ${copyLabel}">` +
+        `<span class="material-symbols-outlined">content_copy</span></button>`;
+    };
+    const territorio_ = r => {
+      const t = [r.uv, r.sector].map(x => String(x || '').trim()).filter(Boolean).join(' · ');
+      return t ? escapeHtml(t) : '<span class="muted">—</span>';
+    };
+
     tbody.innerHTML = pageRows.map(r => `
-      <tr>
+      <tr class="buscar-row" data-solicitud="${escapeHtml(r.solicitud_id || '')}" data-organizacion="${escapeHtml(r.organizacion_id || '')}">
         <td>${escapeHtml(r.solicitud_id || '')}</td>
         <td>${escapeHtml(formatFechaBuscar_(r.fecha_solicitud) || '')}</td>
         <td>${escapeHtml(r.nombre_completo || '')}</td>
-        <td>${escapeHtml(r.direccion_original || '')}</td>
+        <td>${contactCell_(r.telefono_contacto, 'tel', 'teléfono')}</td>
+        <td>${contactCell_(r.correo_contacto, 'mailto', 'correo')}</td>
+        <td>${r.direccion_original ? escapeHtml(r.direccion_original) : '<span class="muted">—</span>'}</td>
+        <td>${territorio_(r)}</td>
         <td><span class="badge">${escapeHtml(r.estado_actual || '')}</span></td>
-        <td>${escapeHtml(r.nombre_organizacion || '')}</td>
+        <td>${r.nombre_organizacion ? escapeHtml(r.nombre_organizacion) : '<span class="muted">—</span>'}</td>
         <td>
           <button class="secondary-btn js-open-ficha"
             data-solicitud="${escapeHtml(r.solicitud_id || '')}"
@@ -1588,11 +1604,30 @@
       </tr>
     `).join('');
 
+    // Fila clickeable (conveniencia de mouse); clicks sobre enlaces/botones los maneja cada control.
+    tbody.querySelectorAll('.buscar-row').forEach(tr =>
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('a, button')) return;
+        loadFicha({ solicitud_id: tr.dataset.solicitud, organizacion_id: tr.dataset.organizacion });
+      })
+    );
+
     tbody.querySelectorAll('.js-open-ficha').forEach(btn =>
       btn.addEventListener('click', () => loadFicha({
         solicitud_id: btn.dataset.solicitud,
         organizacion_id: btn.dataset.organizacion
       }))
+    );
+
+    tbody.querySelectorAll('.buscar-copy-btn').forEach(btn =>
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.copy || '';
+        if (val && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(val)
+            .then(() => showSuccess('Copiado: ' + val))
+            .catch(() => showError('No se pudo copiar.'));
+        }
+      })
     );
 
     // Actualizar indicadores de ordenamiento en headers
@@ -2070,8 +2105,8 @@
     const rows    = filterBuscarRows_(allRows, query);
     if (!rows.length) { showError('No hay registros para exportar.'); return; }
 
-    const headers = ['Solicitud','Vecino','Dirección','Estado','Organización'];
-    const keys    = ['solicitud_id','nombre_completo','direccion_original','estado_actual','nombre_organizacion'];
+    const headers = ['Solicitud','Vecino','Teléfono','Correo','Dirección','UV','Sector','Estado','Organización'];
+    const keys    = ['solicitud_id','nombre_completo','telefono_contacto','correo_contacto','direccion_original','uv','sector','estado_actual','nombre_organizacion'];
     const escape  = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
     const csv     = [headers.map(escape), ...rows.map(r => keys.map(k => escape(r[k] || '')))].map(r => r.join(',')).join('\r\n');
     const blob    = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });

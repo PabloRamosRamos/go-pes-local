@@ -45,6 +45,8 @@
         Selecciona una organización para visualizar su avance.
       </div>
 
+      <div id="avance-next-action" class="avance-next-action is-hidden"></div>
+
       <section class="avance-section">
         <div class="section-head">
           <div>
@@ -71,6 +73,9 @@
             <p class="eyebrow">Historial</p>
             <h3>Timeline de avance</h3>
           </div>
+          <button type="button" class="secondary-btn btn--sm is-hidden" id="avance-export-btn">
+            <span class="material-symbols-outlined">download</span>Exportar
+          </button>
         </div>
         <div id="avance-timeline" class="avance-timeline empty-state">
           No hay hitos registrados.
@@ -241,6 +246,12 @@
     if (reactivarBtn && !reactivarBtn.dataset.bound) {
       reactivarBtn.dataset.bound = 'true';
       reactivarBtn.addEventListener('click', () => cambiarEstadoAvanceUi_('Activo'));
+    }
+
+    const exportBtn = document.getElementById('avance-export-btn');
+    if (exportBtn && !exportBtn.dataset.bound) {
+      exportBtn.dataset.bound = 'true';
+      exportBtn.addEventListener('click', exportAvanceCSV_);
     }
 
     if (modalCloseBtn && !modalCloseBtn.dataset.bound) {
@@ -638,6 +649,9 @@
       renderAvanceResumen_(data);
       renderAvanceBotones_(data);
       renderAvanceTimeline_(data.timeline || []);
+      renderAvanceNextAction_(data);
+      const _expBtn = document.getElementById('avance-export-btn');
+      if (_expBtn) _expBtn.classList.toggle('is-hidden', !((data.timeline || []).length));
       lockAvanceActions_(false, data);
       setStatus('Avance cargado correctamente.', true);
     }).catch(err => {
@@ -657,6 +671,9 @@
       renderAvanceResumen_(data);
       renderAvanceBotones_(data);
       renderAvanceTimeline_(data.timeline || []);
+      renderAvanceNextAction_(data);
+      const _expBtn = document.getElementById('avance-export-btn');
+      if (_expBtn) _expBtn.classList.toggle('is-hidden', !((data.timeline || []).length));
       lockAvanceActions_(true, data);
       setStatus('Avance de Grupo de vecinos cargado correctamente.', true);
     }).catch(err => {
@@ -690,6 +707,80 @@
     const keys = (aliases || []).map(normalizeAvanceTramoKey_);
     const tramo = (tramos || []).find(t => keys.includes(normalizeAvanceTramoKey_(t && t.tramo)));
     return tramo && Array.isArray(tramo.items) ? tramo.items : [];
+  }
+
+  function avanceDiasDesde_(fecha) {
+    const d = fecha ? new Date(fecha) : null;
+    if (!d || isNaN(d.getTime())) return null;
+    const dias = Math.floor((Date.now() - d.getTime()) / 86400000);
+    if (dias < 0) return { dias, label: 'programado', level: 'ok' };
+    const level = dias > 60 ? 'danger' : (dias > 30 ? 'warn' : 'ok');
+    const label = dias === 0 ? 'hoy' : ('hace ' + dias + ' día' + (dias === 1 ? '' : 's'));
+    return { dias, label, level };
+  }
+
+  function renderAvanceNextAction_(data) {
+    const el = document.getElementById('avance-next-action');
+    if (!el) return;
+    const tramos = (data && data.botones && data.botones.tramos) || [];
+    const allItems = [].concat(
+      getAvanceTramoItems_(tramos, ['Preconstitucion']),
+      getAvanceTramoItems_(tramos, ['Formalizacion', 'Formalizacion posterior'])
+    );
+    const total = allItems.length;
+    if (!total) { el.className = 'avance-next-action is-hidden'; el.innerHTML = ''; return; }
+
+    const totalDone = allItems.filter(it => it.completed_flag).length;
+    const next = allItems.find(it => it.enabled_flag && !it.completed_flag);
+    const diasInfo = avanceDiasDesde_(((data && data.resumen) || {}).ultimo_hito_fecha);
+
+    if (!next) {
+      if (totalDone >= total) {
+        el.className = 'avance-next-action avance-next-action--done';
+        el.innerHTML = '<span class="material-symbols-outlined avance-next-action__icon">task_alt</span>' +
+          '<div class="avance-next-action__text"><span class="avance-next-action__eyebrow">Avance</span><strong>Todos los hitos están cumplidos</strong></div>';
+      } else {
+        const blocked = allItems.find(it => !it.enabled_flag && !it.completed_flag);
+        el.className = 'avance-next-action avance-next-action--blocked';
+        el.innerHTML = '<span class="material-symbols-outlined avance-next-action__icon">lock</span>' +
+          '<div class="avance-next-action__text"><span class="avance-next-action__eyebrow">Sin acciones disponibles</span><strong>' +
+          escapeHtml((blocked && blocked.blocked_reason) || 'Hitos pendientes bloqueados por prerequisitos.') + '</strong></div>';
+      }
+      return;
+    }
+
+    const diasChip = diasInfo
+      ? ` · <span class="avance-dias avance-dias--${diasInfo.level}">último hito ${escapeHtml(diasInfo.label)}</span>`
+      : '';
+    el.className = 'avance-next-action';
+    el.innerHTML =
+      '<span class="material-symbols-outlined avance-next-action__icon">arrow_circle_right</span>' +
+      '<div class="avance-next-action__text">' +
+        '<span class="avance-next-action__eyebrow">Siguiente paso' + diasChip + '</span>' +
+        '<strong>Hito ' + (Number(next.orden_hito || 0) || '') + ' — ' + escapeHtml(next.nombre_hito || '') + '</strong>' +
+      '</div>' +
+      '<button type="button" class="primary-btn avance-next-action__btn js-avance-next" data-codigo="' + escapeHtml(next.codigo_hito || '') + '">' +
+        '<span class="material-symbols-outlined">add_task</span>Registrar</button>';
+    const btn = el.querySelector('.js-avance-next');
+    if (btn) btn.addEventListener('click', () => registrarHitoAvanceUi_(btn.dataset.codigo));
+  }
+
+  function exportAvanceCSV_() {
+    const data = APP.state.currentAvance;
+    const rows = (data && data.timeline) || [];
+    if (!rows.length) { showError('No hay hitos para exportar.'); return; }
+    const headers = ['Hito', 'Tramo', 'Fecha', 'Usuario', 'N° ingreso'];
+    const keys = ['nombre_hito', 'tramo', 'fecha_hito', 'usuario_registro', 'numero_ingreso'];
+    const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const csv = [headers.map(esc), ...rows.map(r => keys.map(k => esc(r[k] || '')))].map(r => r.join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'GO-PES_avance_' + todayISO_() + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
   }
 
   function renderAvanceResumen_(data) {
@@ -734,6 +825,9 @@
 
         <section class="avance-resumen-progress" aria-label="Resumen de avance">
           <div class="avance-resumen-progress__title">Resumen de avance</div>
+          <div class="avance-pct-ring" style="--pct:${totalGeneral > 0 ? Math.round((doneGeneral / totalGeneral) * 100) : 0}" role="img" aria-label="${totalGeneral > 0 ? Math.round((doneGeneral / totalGeneral) * 100) : 0}% de avance total">
+            <span class="avance-pct-ring__num">${totalGeneral > 0 ? Math.round((doneGeneral / totalGeneral) * 100) : 0}%</span>
+          </div>
           <div class="avance-resumen-bars">
             ${buildProgressBarHtml_('Total hitos cumplidos', doneGeneral, totalGeneral)}
             ${buildProgressBarHtml_('Preconstitución', donePre, totalPre)}
@@ -1263,6 +1357,11 @@
       timeline.className = 'avance-timeline empty-state';
       timeline.innerHTML = 'No hay hitos registrados.';
     }
+
+    const nextAction = document.getElementById('avance-next-action');
+    if (nextAction) { nextAction.className = 'avance-next-action is-hidden'; nextAction.innerHTML = ''; }
+    const exportBtn = document.getElementById('avance-export-btn');
+    if (exportBtn) exportBtn.classList.add('is-hidden');
 
     closeAvanceHitoModal_();
     lockAvanceActions_(true);

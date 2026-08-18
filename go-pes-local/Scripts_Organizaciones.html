@@ -12,43 +12,44 @@
           </div>
         </div>
 
-        <div class="org-toolbar">
-          <div class="org-toolbar__filters">
-            <div class="panel organizaciones-selector-panel">
-              <div class="field field--grow">
-                <label for="org-search-input">Buscar organización</label>
-                <input type="text" id="org-search-input" placeholder="Nombre, tipo, UV, sector, responsable, dirección, contacto o ID…" autocomplete="off">
+        <div class="org-ms">
+          <div class="org-ms__card org-ms__viewer" id="org-viewer">
+            ${orgViewerEmptyHtml_()}
+          </div>
+          <aside class="org-ms__card org-rail">
+            <div class="org-rail__head">
+              <input type="text" id="org-search-input" placeholder="Nombre, UV, sector, contacto, ID…" autocomplete="off">
+              <div class="org-filter-row">
+                <div class="field"><label for="org-filter-uv">UV</label><select id="org-filter-uv"><option value="">Todas las UV</option></select></div>
+                <div class="field"><label for="org-filter-sector">Sector</label><select id="org-filter-sector"><option value="">Todos los sectores</option></select></div>
+                <div class="field"><label for="org-filter-etapa">Etapa</label><select id="org-filter-etapa">
+                  <option value="">Todas</option>
+                  <option value="T1">Preconstitución (T1)</option>
+                  <option value="T2">Formalización (T2)</option>
+                  <option value="completa">Completa (15/15)</option>
+                </select></div>
+                <div class="field"><label for="org-order">Orden</label><select id="org-order">
+                  <option value="nombre_asc">Nombre A → Z</option>
+                  <option value="nombre_desc">Nombre Z → A</option>
+                  <option value="avance_desc">Más avance</option>
+                  <option value="avance_asc">Menos avance</option>
+                  <option value="socios_desc">Más socios</option>
+                  <option value="mov_desc">Movimiento reciente</option>
+                  <option value="mov_asc">Sin movimiento primero</option>
+                </select></div>
+              </div>
+              <div id="org-chip-row" class="org-chip-row"></div>
+            </div>
+            <div class="org-rail__body">
+              <div class="org-rail__count" id="org-rail-count"></div>
+              <div class="org-badge-list" id="org-badge-list">
+                <div class="module-loading">
+                  <span class="material-symbols-outlined dash-spin">refresh</span>
+                  <span>Cargando…</span>
+                </div>
               </div>
             </div>
-            <div class="org-filter-row">
-              <div class="field"><label for="org-filter-uv">UV</label><select id="org-filter-uv"><option value="">Todas las UV</option></select></div>
-              <div class="field"><label for="org-filter-sector">Sector</label><select id="org-filter-sector"><option value="">Todos los sectores</option></select></div>
-              <div class="field"><label for="org-filter-etapa">Etapa</label><select id="org-filter-etapa">
-                <option value="">Todas</option>
-                <option value="T1">Preconstitución (T1)</option>
-                <option value="T2">Formalización (T2)</option>
-                <option value="completa">Completa (15/15)</option>
-              </select></div>
-              <div class="field"><label for="org-order">Orden</label><select id="org-order">
-                <option value="nombre_asc">Nombre A → Z</option>
-                <option value="nombre_desc">Nombre Z → A</option>
-                <option value="avance_desc">Más avance</option>
-                <option value="avance_asc">Menos avance</option>
-                <option value="socios_desc">Más socios</option>
-                <option value="mov_desc">Movimiento reciente</option>
-                <option value="mov_asc">Sin movimiento primero</option>
-              </select></div>
-            </div>
-            <div id="org-chip-row" class="org-chip-row"></div>
-          </div>
-          <div id="org-stats-row" class="org-toolbar__stats"></div>
-        </div>
-
-        <div id="organizaciones-grid-list">
-          <div class="module-loading">
-            <span class="material-symbols-outlined dash-spin">refresh</span>
-            <span>Cargando organizaciones...</span>
-          </div>
+          </aside>
         </div>
 
         ${renderOrganizacionDetalleModal_()}
@@ -62,6 +63,7 @@
     bindOrganizacionesView_();
     initLinkSociosHandlers_();
     renderOrganizacionesGridFromState_();
+    refreshOrganizacionesModuloList_();
   }
 
   // -- MODAL DETALLE --
@@ -313,37 +315,6 @@
     return estadoCaso === 'no continúa' || estadoCaso === 'no continua' || estadoCaso === 'desistido';
   }
 
-  // -- TARJETA ORGANIZACION --
-
-  function buildOrgStepper_(items, HITO_NOMBRES) {
-    return items.map(function(item, idx) {
-      // Si es invisible, renderizar espacio vacío sin línea
-      if (item.invisible) {
-        return '<span class="org-step-dot" style="opacity:0;pointer-events:none;"></span>';
-      }
-      var isDone = item.done;
-      var isCurr = item.current;
-      var dotMod = isDone ? 'org-step-dot--done' : isCurr ? 'org-step-dot--current' : 'org-step-dot--pending';
-      var sizeMod = item.n >= 10 ? 'org-step-dot--sm' : 'org-step-dot--lg';
-      var tooltip = 'Hito ' + item.n + (HITO_NOMBRES[item.n] ? ': ' + HITO_NOMBRES[item.n] : '');
-      var content = isDone ? '&#10003;' : String(item.n);
-      var lineMod = isDone ? 'org-step-line--done' : 'org-step-line--pending';
-      // No renderizar línea si el siguiente elemento es invisible
-      var nextItem = items[idx + 1];
-      var shouldRenderLine = idx < items.length - 1 && (!nextItem || !nextItem.invisible);
-      return '<span class="org-step-dot ' + dotMod + ' ' + sizeMod + '" title="' + tooltip + '">' + content + '</span>' +
-        (shouldRenderLine ? '<div class="org-step-line ' + lineMod + '"></div>' : '');
-    }).join('');
-  }
-
-  var ORG_HITO_NOMBRES = {
-    1:'Reunion informativa', 2:'Carta oficina partes', 3:'Fecha asignada',
-    4:'Asamblea constitutiva', 5:'Docs ingresados', 6:'Obs. subsanadas',
-    7:'Cert. provisorio', 8:'Ingreso com. electoral', 9:'Asamblea ratificacion',
-    10:'Docs ratificacion', 11:'Cert. definitivo', 12:'RUT obtenido',
-    13:'RCCE', 14:'Cta. bancaria', 15:'Reg. municipal'
-  };
-
   // -- HELPERS DE GESTIÓN / FILTROS / ORDEN --
 
   function orgCountDone_(hitos) {
@@ -391,170 +362,164 @@
     return isNaN(t) ? 0 : t;
   }
 
-  function orgCardBadgesHtml_(o) {
-    var out = [];
+  // -- BADGE (pill) DE LA LISTA --
+
+  function renderOrgBadgeHtml_(o) {
+    var pct = Math.round((orgCountDone_(o.hitos_cumplidos) / 15) * 100);
+    var alert = 'ok';
     if (esEstancada_(o)) {
-      var est = avanceDiasDesde_(o.ultimo_movimiento);
-      if (est) out.push('<span class="org-badge org-badge--' + (est.level === 'danger' ? 'danger' : 'warn') + '"><span class="material-symbols-outlined">schedule</span>Sin avance ' + escapeHtml(est.label) + '</span>');
+      var d = avanceDiasDesde_(o.ultimo_movimiento);
+      alert = (d && d.level === 'danger') ? 'danger' : 'warn';
+    } else if (esDirectivaPorVencer_(o)) {
+      var v = orgVigenciaEstado_(o.vigencia_directiva_hasta);
+      alert = (v && v.level === 'danger') ? 'danger' : 'warn';
     }
-    var v = orgVigenciaEstado_(o.vigencia_directiva_hasta);
-    if (o.tipo !== 'grupo_vecinos' && v && (v.level === 'warn' || v.level === 'danger')) {
-      out.push('<span class="org-badge org-badge--' + (v.level === 'danger' ? 'danger' : 'warn') + '"><span class="material-symbols-outlined">gavel</span>' + escapeHtml(v.label) + '</span>');
-    }
-    if (esSinSocios_(o)) {
-      out.push('<span class="org-badge org-badge--muted"><span class="material-symbols-outlined">group_off</span>Sin socios</span>');
-    }
-    return out.length ? '<div class="org-card__badges">' + out.join('') + '</div>' : '';
+    var dot = alert !== 'ok' ? '<span class="org-badge__dot org-badge__dot--' + alert + '"></span>' : '';
+    var sub = o.tipo === 'grupo_vecinos'
+      ? 'Grupo · UV ' + (o.uv || '-')
+      : 'UV ' + (o.uv || '-') + ' · ' + Number(o.total_socios || 0) + ' socios';
+    var active = String(o.value) === String(APP.state.orgSelectedId || '') ? ' org-badge--active' : '';
+    var attr = o.tipo === 'grupo_vecinos' ? 'data-grupo-badge' : 'data-org-badge';
+    return '<button type="button" class="org-badge' + active + '" ' + attr + '="' + escapeHtml(o.value || '') + '">' +
+      '<span class="org-badge__ring" style="--p:' + pct + '"><b>' + pct + '%</b></span>' +
+      '<span class="org-badge__main">' +
+        '<span class="org-badge__name">' + escapeHtml(o.label || 'Sin nombre') + '</span>' +
+        '<span class="org-badge__sub">' + dot + escapeHtml(sub) + '</span>' +
+      '</span>' +
+    '</button>';
   }
 
-  function orgContactoHtml_(o) {
-    if (!o.nombre_contacto) return '<span class="muted">Sin registrar</span>';
-    var html = escapeHtml(o.nombre_contacto);
-    if (o.contacto_telefono) {
-      var tel = String(o.contacto_telefono).replace(/[^\d+]/g, '');
-      html += ' <a class="org-contact-link" href="tel:' + escapeHtml(tel) + '" title="Llamar" onclick="event.stopPropagation()"><span class="material-symbols-outlined">call</span></a>';
-    }
-    if (o.contacto_correo) {
-      html += ' <a class="org-contact-link" href="mailto:' + escapeHtml(o.contacto_correo) + '" title="Enviar correo" onclick="event.stopPropagation()"><span class="material-symbols-outlined">mail</span></a>';
-    }
-    return html;
+  // -- VISOR (panel izquierdo) --
+
+  function orgViewerLoadingHtml_() {
+    return '<div class="org-viewer__empty">' +
+      '<span class="material-symbols-outlined dash-spin" style="font-size:40px">refresh</span>' +
+      '<span>Cargando ficha…</span></div>';
   }
 
-  function renderOrganizacionCardHtml_(org) {
-    if (org.tipo === 'grupo_vecinos') return renderGrupoVecinosCardHtml_(org);
-
-    var hitos = org.hitos_cumplidos || [];
-    var maxT1    = Math.max.apply(null, [0].concat(hitos.filter(function(n){ return n >= 1 && n <= 7; })));
-    var maxT2lin = Math.max.apply(null, [0].concat(hitos.filter(function(n){ return n >= 8 && n <= 11; })));
-    var doneT1   = function(n) { return n <= maxT1; };
-    var doneT2   = function(n) { return n <= 11 ? n <= maxT2lin : hitos.indexOf(n) !== -1; };
-    var countDone = maxT1
-      + (maxT2lin >= 8 ? maxT2lin - 7 : 0)
-      + hitos.filter(function(n){ return n >= 12 && n <= 15; }).length;
-    var nextT1 = maxT1 < 7 ? maxT1 + 1 : null;
-    var nextT2 = [8,9,10,11,12,13,14,15].find(function(n){ return !doneT2(n); }) || null;
-
-    var t1Items = [1,2,3,4,5,6,7].map(function(n){ return { n:n, done:doneT1(n), current:n===nextT1 }; });
-    // Agregar placeholder invisible al final de T1 para alinear con T2 (8 elementos)
-    t1Items.push({ n:0, done:false, current:false, invisible:true });
-    var t2Items = [8,9,10,11,12,13,14,15].map(function(n){ return { n:n, done:doneT2(n), current:n===nextT2 }; });
-
-    // Limpiar título: quitar prefijo "COMITE DE SEGURIDAD"
-    var titulo = String(org.label || 'Sin nombre')
-      .replace(/^COMITE DE SEGURIDAD\s+/i, '')
-      .replace(/^COMITÉ DE SEGURIDAD\s+/i, '');
-
-    // Construir metadata con nuevo formato
-    var meta = '';
-    var totalSocios = Number(org.total_socios || 0);
-    meta += '<span><strong>Socios:</strong> ' + (totalSocios > 0 ? totalSocios : '-') + '</span>';
-    meta += '<span><strong>UV:</strong> ' + (org.uv ? escapeHtml(org.uv) : '-') + '</span>';
-    meta += '<span class="full"><strong>Dirección:</strong> ' + (org.direccion ? escapeHtml(org.direccion) : '<span class="muted">Sin registrar</span>') + '</span>';
-    meta += '<span class="full"><strong>Contacto:</strong> ' + orgContactoHtml_(org) + '</span>';
-
-    var orgIdAttr = escapeHtml(org.value || '');
-    var orgNombreAttr = escapeHtml(titulo);
-    return '<div class="panel org-card stagger-item">' +
-      '<div class="org-card__header">' +
-        '<div class="org-card__title-row">' +
-          '<h4 class="org-card__title">' + escapeHtml(titulo) + '</h4>' +
-        '</div>' +
-        '<div class="org-card__meta">' + meta + '</div>' +
-        orgCardBadgesHtml_(org) +
-      '</div>' +
-      '<div class="org-card__avance">' +
-        '<div class="org-card__avance-head">' +
-          '<span class="org-card__avance-label">Avance</span>' +
-          '<span class="org-card__avance-count">' + countDone + ' / 15</span>' +
-        '</div>' +
-        '<div class="org-card__stepper">' +
-          '<div class="org-card__stepper-row">' +
-            '<span class="org-card__stepper-label">T1</span>' +
-            '<div class="org-card__stepper-track">' + buildOrgStepper_(t1Items, ORG_HITO_NOMBRES) + '</div>' +
-          '</div>' +
-          '<div class="org-card__stepper-gap"></div>' +
-          '<div class="org-card__stepper-row">' +
-            '<span class="org-card__stepper-label">T2</span>' +
-            '<div class="org-card__stepper-track">' + buildOrgStepper_(t2Items, ORG_HITO_NOMBRES) + '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="org-card__footer">' +
-        '<div class="org-card__footer-grid">' +
-          '<button type="button" class="secondary-btn" data-org-ir-avance="' + orgIdAttr + '">' +
-            '<span class="material-symbols-outlined">timeline</span>Avance' +
-          '</button>' +
-          '<button type="button" class="secondary-btn" data-org-ir-socios="' + orgIdAttr + '" data-org-nombre="' + orgNombreAttr + '">' +
-            '<span class="material-symbols-outlined">badge</span>Socios' +
-          '</button>' +
-        '</div>' +
-        '<button type="button" class="secondary-btn org-card__detalle-btn" data-org-ver-detalle="' + orgIdAttr + '">' +
-          '<span class="material-symbols-outlined">open_in_full</span>Ver detalle' +
-        '</button>' +
-      '</div>' +
+  function orgViewerEmptyHtml_() {
+    return '<div class="org-viewer__empty">' +
+      '<span class="material-symbols-outlined" style="font-size:46px;opacity:.5">apartment</span>' +
+      '<div><strong>Selecciona una organización</strong><br>' +
+      '<span>Elige un elemento de la lista para ver toda su ficha aquí.</span></div>' +
+      '<div id="org-stats-row" style="width:100%;max-width:560px"></div>' +
     '</div>';
   }
 
-  function renderGrupoVecinosCardHtml_(org) {
-    var hitos = org.hitos_cumplidos || [];
-    var maxHito = Math.max.apply(null, [0].concat(hitos.filter(function(n){ return n >= 1 && n <= 7; })));
-    var nextHito = maxHito < 7 ? maxHito + 1 : null;
+  function selectOrganizacionInline_(orgId) {
+    if (!orgId) return Promise.resolve();
+    APP.state.orgSelectedId = orgId;
+    document.querySelectorAll('#org-badge-list .org-badge').forEach(function(b){ b.classList.remove('org-badge--active'); });
+    var activeBtn = document.querySelector('#org-badge-list [data-org-badge="' + orgId + '"]');
+    if (activeBtn) activeBtn.classList.add('org-badge--active');
 
-    var t1Items = [1,2,3,4,5,6,7].map(function(n){ return { n:n, done:n<=maxHito, current:n===nextHito }; });
-    // Agregar placeholder invisible al final de T1 para alinear con T2 (8 elementos)
-    t1Items.push({ n:0, done:false, current:false, invisible:true });
-    // T2 vacío para grupos de vecinos (no han llegado a formalización)
-    var t2Items = [8,9,10,11,12,13,14,15].map(function(n){ return { n:n, done:false, current:false }; });
+    var viewer = document.getElementById('org-viewer');
+    if (viewer) viewer.innerHTML = orgViewerLoadingHtml_();
+    return api('getOrganizacionModuloDetalle', { organizacion_id: orgId }).then(function(data){
+      APP.state.currentOrganizacionDetalle = data || {};
+      renderOrganizacionViewer_(APP.state.currentOrganizacionDetalle);
+    }).catch(function(err){
+      if (viewer) viewer.innerHTML = orgViewerEmptyHtml_();
+      showError(err);
+    });
+  }
 
-    // Limpiar título: quitar prefijo "COMITE DE SEGURIDAD" si aplica
-    var titulo = String(org.label || 'Grupo de vecinos')
-      .replace(/^COMITE DE SEGURIDAD\s+/i, '')
-      .replace(/^COMITÉ DE SEGURIDAD\s+/i, '');
+  function selectGrupoInline_(solId) {
+    if (!solId) return;
+    APP.state.orgSelectedId = solId;
+    document.querySelectorAll('#org-badge-list .org-badge').forEach(function(b){ b.classList.remove('org-badge--active'); });
+    var activeBtn = document.querySelector('#org-badge-list [data-grupo-badge="' + solId + '"]');
+    if (activeBtn) activeBtn.classList.add('org-badge--active');
+    var grupo = (APP.state.organizacionesModulo || []).find(function(o){ return o.tipo === 'grupo_vecinos' && String(o.value) === String(solId); });
+    renderGrupoViewerInline_(grupo || { value: solId, label: 'Grupo de vecinos' });
+  }
 
-    // Construir metadata con nuevo formato (misma estructura que organizaciones)
-    var meta = '';
-    meta += '<span><strong>Socios:</strong> -</span>'; // Los grupos aún no tienen socios formales
-    meta += '<span><strong>UV:</strong> ' + (org.uv ? escapeHtml(org.uv) : '-') + '</span>';
-    meta += '<span class="full"><strong>Dirección:</strong> ' + (org.direccion ? escapeHtml(org.direccion) : '<span class="muted">Sin registrar</span>') + '</span>';
-    meta += '<span class="full"><strong>Contacto:</strong> ' + orgContactoHtml_(org) + '</span>';
+  function renderOrganizacionViewer_(data) {
+    var viewer = document.getElementById('org-viewer');
+    if (!viewer) return;
+    var org = data.organizacion || {};
+    var estado = String(org.estado_general_organizacion || '').toLowerCase();
+    var inactiva = estado.indexOf('suspend') !== -1 || estado.indexOf('elimin') !== -1 || estado.indexOf('inactiv') !== -1;
+    var orgId = escapeHtml(org.organizacion_id || '');
+    var nombre = escapeHtml(org.nombre_organizacion || 'Sin nombre');
 
-    return '<div class="panel org-card stagger-item">' +
-      '<div class="org-card__header">' +
-        '<div class="org-card__title-row">' +
-          '<h4 class="org-card__title">' + escapeHtml(titulo) + '</h4>' +
-          '<span class="org-card__badge org-card__badge--proceso">En proceso</span>' +
-        '</div>' +
-        '<div class="org-card__meta">' + meta + '</div>' +
-        orgCardBadgesHtml_(org) +
-      '</div>' +
-      '<div class="org-card__avance">' +
-        '<div class="org-card__avance-head">' +
-          '<span class="org-card__avance-label">Avance</span>' +
-          '<span class="org-card__avance-count">' + maxHito + ' / 15</span>' +
-        '</div>' +
-        '<div class="org-card__stepper">' +
-          '<div class="org-card__stepper-row">' +
-            '<span class="org-card__stepper-label">T1</span>' +
-            '<div class="org-card__stepper-track">' + buildOrgStepper_(t1Items, ORG_HITO_NOMBRES) + '</div>' +
-          '</div>' +
-          '<div class="org-card__stepper-gap"></div>' +
-          '<div class="org-card__stepper-row">' +
-            '<span class="org-card__stepper-label">T2</span>' +
-            '<div class="org-card__stepper-track">' + buildOrgStepper_(t2Items, ORG_HITO_NOMBRES) + '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="org-card__footer">' +
-        '<div class="org-card__footer-grid">' +
-          '<button type="button" class="secondary-btn" data-grupo-ver-ficha="' + escapeHtml(org.solicitud_id || '') + '">' +
-            '<span class="material-symbols-outlined">person_search</span>Ver ficha' +
-          '</button>' +
-          '<button type="button" class="secondary-btn" data-grupo-link-socios="' + escapeHtml(org.solicitud_id || '') + '">' +
-            '<span class="material-symbols-outlined">link</span>Link socios' +
-          '</button>' +
+    viewer.innerHTML =
+      '<div class="org-viewer__head">' +
+        '<div class="org-viewer__icon"><span class="material-symbols-outlined">apartment</span></div>' +
+        '<div class="org-viewer__ttl"><span class="eyebrow">Ficha de organización</span>' +
+        '<h3>' + nombre + '</h3></div>' +
+        '<div class="org-viewer__actions">' +
+          '<button type="button" class="secondary-btn btn--sm" data-v-avance="' + orgId + '"><span class="material-symbols-outlined">timeline</span>Avance</button>' +
+          '<button type="button" class="secondary-btn btn--sm" data-v-socios="' + orgId + '" data-v-nombre="' + nombre + '"><span class="material-symbols-outlined">badge</span>Socios</button>' +
+          '<button type="button" class="secondary-btn btn--sm" data-v-editar="1"><span class="material-symbols-outlined">edit</span>Editar</button>' +
+          (inactiva
+            ? '<button type="button" class="secondary-btn btn--sm" data-v-react="1"><span class="material-symbols-outlined">play_circle</span>Reactivar</button>'
+            : '<button type="button" class="secondary-btn btn--sm" data-v-suspend="1"><span class="material-symbols-outlined">pause_circle</span>Suspender</button>') +
         '</div>' +
       '</div>' +
-    '</div>';
+      '<div class="org-viewer__body">' + buildOrganizacionDetalleBodyHtml_(data) + '</div>';
+
+    bindOrganizacionSocioCargoButtons_();
+    bindOrgViewerActions_();
+  }
+
+  function bindOrgViewerActions_() {
+    var viewer = document.getElementById('org-viewer');
+    if (!viewer) return;
+    var av = viewer.querySelector('[data-v-avance]');
+    if (av) av.addEventListener('click', function(){ APP.state.avancePendingOrgId = av.dataset.vAvance; route('avance'); });
+    var so = viewer.querySelector('[data-v-socios]');
+    if (so) so.addEventListener('click', function(){
+      APP.state.sociosPendingOrgId = so.dataset.vSocios;
+      APP.state.sociosPendingOrgNombre = so.dataset.vNombre || '';
+      route('socios');
+    });
+    var ed = viewer.querySelector('[data-v-editar]');
+    if (ed) ed.addEventListener('click', openOrgEditFromViewer_);
+    var su = viewer.querySelector('[data-v-suspend]');
+    if (su) su.addEventListener('click', function(){ cambiarEstadoOrganizacionUi_('suspenderOrganizacion', 'suspender'); });
+    var re = viewer.querySelector('[data-v-react]');
+    if (re) re.addEventListener('click', function(){ cambiarEstadoOrganizacionUi_('reactivarOrganizacion', 'reactivar'); });
+  }
+
+  // Reutiliza el modal existente (solo modo edición) sobre la org seleccionada.
+  function openOrgEditFromViewer_() {
+    var data = APP.state.currentOrganizacionDetalle;
+    if (!data || !data.organizacion) { showError('Selecciona una organización.'); return; }
+    openOrganizacionDetalleModal_();
+    renderOrganizacionDetalle_(data);
+    switchToEditMode_();
+  }
+
+  function renderGrupoViewerInline_(g) {
+    var viewer = document.getElementById('org-viewer');
+    if (!viewer) return;
+    var sol = escapeHtml(g.value || g.solicitud_id || '');
+    viewer.innerHTML =
+      '<div class="org-viewer__head">' +
+        '<div class="org-viewer__icon"><span class="material-symbols-outlined">groups</span></div>' +
+        '<div class="org-viewer__ttl"><span class="eyebrow">Grupo de vecinos · en proceso</span>' +
+        '<h3>' + escapeHtml(g.label || 'Grupo de vecinos') + '</h3></div>' +
+        '<div class="org-viewer__actions">' +
+          '<button type="button" class="secondary-btn btn--sm" data-v-ficha="' + sol + '"><span class="material-symbols-outlined">person_search</span>Ver ficha</button>' +
+          '<button type="button" class="secondary-btn btn--sm" data-grupo-link-socios="' + sol + '"><span class="material-symbols-outlined">link</span>Link socios</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="org-viewer__body">' +
+        '<div class="organizaciones-grid organizaciones-grid--profile">' +
+          organizacionBlockHtml_('Datos del grupo', [
+            ['Solicitud', g.value],
+            ['UV', g.uv],
+            ['Sector', g.sector],
+            ['Dirección', g.direccion_original || g.direccion],
+            ['Contacto', g.nombre_contacto],
+            ['Estado', g.estado_actual || g.estado_avance]
+          ]) +
+        '</div>' +
+        '<p class="muted" style="margin-top:14px">Este grupo aún no está constituido. Para la ficha completa del vecino y su avance, usa <strong>Ver ficha</strong>.</p>' +
+      '</div>';
+    var f = viewer.querySelector('[data-v-ficha]');
+    if (f) f.addEventListener('click', function(){ loadFicha({ solicitud_id: f.dataset.vFicha }); route('ficha'); });
   }
 
   // -- RENDER GRID PRINCIPAL --
@@ -634,7 +599,7 @@
       }).join('');
     }
 
-    var gridEl = document.getElementById('organizaciones-grid-list');
+    var gridEl = document.getElementById('org-badge-list');
     if (!gridEl) return;
 
     // Poblar selects de UV / Sector con los valores distintos de la lista
@@ -675,56 +640,21 @@
 
     filtered.sort(orgSortComparator_(orden));
 
+    var countEl = document.getElementById('org-rail-count');
+    if (countEl) countEl.textContent = filtered.length + (filtered.length === 1 ? ' organización' : ' organizaciones');
+
     if (!filtered.length) {
       gridEl.innerHTML = goPesEmptyStateHtml_('search_off', 'Sin resultados', 'Ninguna coincidencia con los filtros aplicados.', 'organizaciones-detail');
       return;
     }
 
-    gridEl.innerHTML = '<div class="org-grid">' +
-      filtered.map(function(org) { return renderOrganizacionCardHtml_(org); }).join('') +
-    '</div>';
+    gridEl.innerHTML = filtered.map(renderOrgBadgeHtml_).join('');
 
-    gridEl.querySelectorAll('[data-org-ver-detalle]').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var orgId = btn.dataset.orgVerDetalle;
-        if (orgId) loadOrganizacionDetalle_(orgId);
-      });
+    gridEl.querySelectorAll('[data-org-badge]').forEach(function(btn) {
+      btn.addEventListener('click', function() { selectOrganizacionInline_(btn.dataset.orgBadge); });
     });
-
-    gridEl.querySelectorAll('[data-org-ir-avance]').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var orgId = btn.dataset.orgIrAvance;
-        if (!orgId) return;
-        APP.state.avancePendingOrgId = orgId;
-        route('avance');
-      });
-    });
-
-    gridEl.querySelectorAll('[data-org-ir-socios]').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var orgId = btn.dataset.orgIrSocios;
-        if (!orgId) return;
-        APP.state.sociosPendingOrgId    = orgId;
-        APP.state.sociosPendingOrgNombre = btn.dataset.orgNombre || '';
-        route('socios');
-      });
-    });
-
-    gridEl.querySelectorAll('[data-grupo-ver-ficha]').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        var solId = btn.dataset.grupoVerFicha;
-        if (solId) {
-          loadFicha({ solicitud_id: solId });
-          route('ficha');
-        }
-      });
-    });
-
-    // Activar animación stagger
-    requestAnimationFrame(function() {
-      gridEl.querySelectorAll('.stagger-item').forEach(function(item) {
-        item.classList.add('stagger-animate');
-      });
+    gridEl.querySelectorAll('[data-grupo-badge]').forEach(function(btn) {
+      btn.addEventListener('click', function() { selectGrupoInline_(btn.dataset.grupoBadge); });
     });
   }
 
@@ -769,7 +699,7 @@
       route('socios');
     });
     document.getElementById('org-edit-btn')?.addEventListener('click', switchToEditMode_);
-    document.getElementById('org-edit-cancel-btn')?.addEventListener('click', switchToViewMode_);
+    document.getElementById('org-edit-cancel-btn')?.addEventListener('click', closeOrganizacionDetalleModal_);
     document.getElementById('org-edit-save-btn')?.addEventListener('click', saveInlineOrganizacion_);
     document.getElementById('org-suspend-btn')?.addEventListener('click', () => cambiarEstadoOrganizacionUi_('suspenderOrganizacion', 'suspender'));
     document.getElementById('org-reactivate-btn')?.addEventListener('click', () => cambiarEstadoOrganizacionUi_('reactivarOrganizacion', 'reactivar'));
@@ -826,29 +756,11 @@
     ensureOrganizacionesModuloList_().then(() => {
       renderOrganizacionesGridFromState_();
       const openId = APP.state.fichaOpenOrgId;
-      if (openId) { APP.state.fichaOpenOrgId = null; loadOrganizacionDetalle_(openId); }
+      if (openId) { APP.state.fichaOpenOrgId = null; selectOrganizacionInline_(openId); }
     }).catch(showError);
   }
 
-  // -- DETALLE --
-
-  function loadOrganizacionDetalle_(organizacionId) {
-    // Primero abrir el modal con el loader visible
-    openOrganizacionDetalleModal_();
-    showModalLoading('org-detalle-modal', 'Cargando organización...');
-
-    return api('getOrganizacionModuloDetalle', { organizacion_id: organizacionId }).then(data => {
-      APP.state.currentOrganizacionDetalle = data || {};
-      const titleEl = document.getElementById('org-detalle-modal-title');
-      if (titleEl && data && data.organizacion) {
-        titleEl.textContent = data.organizacion.nombre_organizacion || 'Organización';
-      }
-      renderOrganizacionDetalle_(APP.state.currentOrganizacionDetalle);
-      setOrganizacionesActionState_(true);
-    }).catch(showError).finally(() => {
-      hideModalLoading('org-detalle-modal');
-    });
-  }
+  // -- DETALLE (modal, solo edición) --
 
   function openOrganizacionDetalleModal_() {
     setModalVisibility_('org-detalle-modal', true);
@@ -883,59 +795,31 @@
 
   // -- RENDER DETALLE --
 
-  function renderOrganizacionDetalle_(data) {
-    const detail = document.getElementById('org-detalle-modal-content');
-    if (!detail) return;
-
+  // Cuerpo de la ficha (métricas + bloques + tablas + mapa), sin hero.
+  // Compartido por el modal de edición y el visor inline.
+  function buildOrganizacionDetalleBodyHtml_(data) {
     const org = data.organizacion || {};
     const r   = data.resumen     || {};
-
-    // Extraer datos clave de los hitos para mostrar en el detalle
     const avanceHitos = (data.avance && data.avance.hitos) || [];
 
-    // Hito 3 (PRE_03): Fecha asignada asamblea
     const hitoPre03 = avanceHitos.find(h => String(h.codigo_hito || '') === 'PRE_03');
     const fechaAsambleaAsignada = hitoPre03 ? (hitoPre03.fecha_asamblea_asignada || 'Sin registrar') : 'Sin registrar';
-
-    // Hito 7 (PRE_07): Certificado provisorio - N° de registro
     const hitoPre07 = avanceHitos.find(h => String(h.codigo_hito || '') === 'PRE_07');
     const numeroRegistroProvisorio = hitoPre07 ? (hitoPre07.numero_registro || 'Sin registrar') : 'Sin registrar';
-
-    // Hito 11 (FOR_04): Certificado definitivo - N° de registro
     const hitoFor04 = avanceHitos.find(h => String(h.codigo_hito || '') === 'FOR_04');
     const numeroRegistroDefinitivo = hitoFor04 ? (hitoFor04.numero_registro || 'Sin registrar') : 'Sin registrar';
-
-    // Hito 12 (FOR_07): RUT de la organización
     const hitoFor07 = avanceHitos.find(h => String(h.codigo_hito || '') === 'FOR_07');
     const rutOrganizacion = hitoFor07 ? (hitoFor07.rut_organizacion || 'Sin registrar') : 'Sin registrar';
-
-    // Hito 14 (FOR_08): Cuenta bancaria
     const hitoFor08 = avanceHitos.find(h => String(h.codigo_hito || '') === 'FOR_08');
     const numeroCuenta = hitoFor08 ? (hitoFor08.numero_cuenta || 'Sin registrar') : 'Sin registrar';
     const banco = hitoFor08 ? (hitoFor08.banco || 'Sin especificar') : 'Sin especificar';
 
-    detail.innerHTML = `
-      <section class="organizaciones-hero-card" style="grid-template-columns:88px minmax(0,1.1fr) minmax(0,0.9fr);">
-        <div class="organizaciones-hero-card__icon" aria-hidden="true">
-          <span class="material-symbols-outlined">apartment</span>
-        </div>
-        <div class="organizaciones-hero-card__main">
-          <p class="eyebrow">Ficha de organización</p>
-          <h3>${escapeHtml(org.nombre_organizacion || 'Sin nombre')}</h3>
-          <div class="organizaciones-summary__meta">
-            <span>ID ${escapeHtml(org.organizacion_id || 'Sin ID')}</span>
-            <span>${escapeHtml(org.estado_general_organizacion || 'Sin estado')}</span>
-            <span>${escapeHtml(formatUiValue_(org.estado_constitucion || 'Sin dato'))}</span>
-          </div>
-        </div>
-        <div class="organizaciones-hero-card__stats" style="grid-column:auto;grid-template-columns:1fr;padding-left:var(--space-5);border-left:1px solid color-mix(in srgb, var(--border) 76%, transparent);">
-          <div class="organizaciones-metrics organizaciones-metrics--compact" style="grid-template-columns:repeat(3,minmax(0,1fr));align-self:center;gap:10px;">
-            ${organizacionMetricHtml_('Socios',     r.cantidad_socios      || 0)}
-            ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
-            ${organizacionMetricHtml_('Antigüedad', formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}
-          </div>
-        </div>
-      </section>
+    return `
+      <div class="organizaciones-metrics organizaciones-metrics--compact" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px;">
+        ${organizacionMetricHtml_('Socios',     r.cantidad_socios      || 0)}
+        ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
+        ${organizacionMetricHtml_('Antigüedad', formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}
+      </div>
 
       <div class="organizaciones-grid organizaciones-grid--profile">
         ${organizacionBlockHtml_('Datos generales', [
@@ -991,6 +875,29 @@
 
       ${renderOrganizacionMapSection_(org, data.socios || [])}
     `;
+  }
+
+  function renderOrganizacionDetalle_(data) {
+    const detail = document.getElementById('org-detalle-modal-content');
+    if (!detail) return;
+    const org = data.organizacion || {};
+
+    detail.innerHTML = `
+      <section class="organizaciones-hero-card" style="grid-template-columns:88px minmax(0,1fr);">
+        <div class="organizaciones-hero-card__icon" aria-hidden="true">
+          <span class="material-symbols-outlined">apartment</span>
+        </div>
+        <div class="organizaciones-hero-card__main">
+          <p class="eyebrow">Ficha de organización</p>
+          <h3>${escapeHtml(org.nombre_organizacion || 'Sin nombre')}</h3>
+          <div class="organizaciones-summary__meta">
+            <span>ID ${escapeHtml(org.organizacion_id || 'Sin ID')}</span>
+            <span>${escapeHtml(org.estado_general_organizacion || 'Sin estado')}</span>
+            <span>${escapeHtml(formatUiValue_(org.estado_constitucion || 'Sin dato'))}</span>
+          </div>
+        </div>
+      </section>
+    ` + buildOrganizacionDetalleBodyHtml_(data);
 
     bindOrganizacionSocioCargoButtons_();
     updateOrgEstadoActions_(org);
@@ -1029,27 +936,6 @@
 
     // Inicializar acordeones de hitos
     initInlineHitosAccordion_();
-  }
-
-  function switchToViewMode_() {
-    const modal = document.getElementById('org-detalle-modal');
-    const viewActions = document.getElementById('org-detalle-view-actions');
-    const editActions = document.getElementById('org-detalle-edit-actions');
-    const eyebrow = document.getElementById('org-detalle-modal-eyebrow');
-
-    if (!modal) return;
-
-    // Cambiar modo del modal
-    modal.setAttribute('data-mode', 'view');
-
-    // Cambiar eyebrow y ocultar/mostrar botones
-    if (eyebrow) eyebrow.textContent = 'Ficha de organización';
-    if (viewActions) viewActions.style.display = 'flex';
-    if (editActions) editActions.style.display = 'none';
-
-    // Renderizar detalle de solo lectura
-    const data = APP.state.currentOrganizacionDetalle;
-    if (data) renderOrganizacionDetalle_(data);
   }
 
   function renderOrganizacionEditForm_(org) {
@@ -1381,13 +1267,13 @@
           : 'Organización actualizada correctamente.';
         showSuccess(msg);
 
-        // Recargar el detalle en modo vista
+        // Cerrar el modal de edición y refrescar el visor inline + la lista
         const orgId = payload.organizacion_id;
         return api('getOrganizacionModuloDetalle', { organizacion_id: orgId }).then(data => {
           APP.state.currentOrganizacionDetalle = data || {};
-          switchToViewMode_();
+          closeOrganizacionDetalleModal_();
+          renderOrganizacionViewer_(APP.state.currentOrganizacionDetalle);
 
-          // Refrescar la lista de organizaciones en el fondo
           ensureOrganizacionesModuloList_().then(() => {
             renderOrganizacionesGridFromState_();
           }).catch(() => {});
@@ -1609,7 +1495,7 @@
     }).then(() => {
       closeOrganizacionSocioCargoModal_();
       showSuccess('Cargo de socio actualizado.');
-      return loadOrganizacionDetalle_(org.organizacion_id);
+      return selectOrganizacionInline_(org.organizacion_id);
     }).catch(showError).finally(() => {
       hideModalLoading('org-socio-cargo-modal');
     });
@@ -1632,7 +1518,7 @@
       APP.state.organizacionesModuloFetchedAt = 0;
       return ensureOrganizacionesModuloList_().then(() => {
         renderOrganizacionesGridFromState_();
-        return loadOrganizacionDetalle_(res.organizacion_id);
+        return selectOrganizacionInline_(res.organizacion_id);
       });
     }).catch(showError).finally(() => {
       hideModalLoading('org-edit-modal');
@@ -1651,7 +1537,7 @@
       APP.state.organizacionesModuloFetchedAt = 0;
       return ensureOrganizacionesModuloList_().then(() => {
         renderOrganizacionesGridFromState_();
-        return loadOrganizacionDetalle_(org.organizacion_id);
+        return selectOrganizacionInline_(org.organizacion_id);
       });
     }).catch(showError);
   }

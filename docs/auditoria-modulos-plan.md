@@ -25,7 +25,15 @@
 | 1 — validar proceso (chicos) | Ficha · Nuevo Ingreso · Calendario | ✅ completa |
 | 2 — core diario | Inicio/Dashboard · Socios · Organizaciones | ✅ completa |
 | 3 — grandes/complejos | Avance · Beneficios · Admin (Usuarios+Config) | ✅ completa |
-| 4 — transversal + cierre | Buscar/Historial · Infra (Auth/Repository/Styles/Loading/A11y) | ⏳ |
+| 4 — transversal + cierre | Buscar/Historial · Infra (Auth/Repository/Styles/Loading/A11y) | ✅ completa |
+
+## Resultado final (auditoría completa, 2026-08)
+**Todos los módulos revisados.** Hallazgos con impacto y ajustes aplicados:
+- **Perf D4 (guard antes del lock) — 7 escrituras corregidas:** `editarDatosVecino`, `guardarIngreso`, `editarDatosSocio`, `guardarSeguimiento`, `guardarOrganizacion`, `guardarInstrumento`, `guardarRequisito`. El barrido global ya no reporta lock-before-guard.
+- **Seguridad — guards en dev-utils:** `goPesDiagnosticoDashboard`, `debugInsertMaeCasos` guardados; diagnostics de `Diagnostics.js` privatizados (ronda previa). **Toda la API mutante queda guardada** (único sin-guard legítimo: `setUserPreference`, self-scoped).
+- **Higiene:** eliminado código muerto (`normalizar/validarNuevoIngresoPayload_`, 3 funciones `Legacy` en ronda previa).
+- **Frontend:** consistentemente limpio (loaders estándar, `showError`, sin `alert`/fugas/onclick tras las correcciones). Colores: Lote B en Beneficios; resto sin deuda de dark-mode (los `<style>` de categoría son theme-complete).
+- **Deuda registrada (no tocada, requiere trabajo dedicado):** wizards CÁMARAS/FONDESE ~150 líneas duplicadas; roadmap de performance 2.2/2.5/2.6; nombres `_cal*`/`renderFicha` cosméticos; `goPesDiagStart_` precede al guard en varias (inerte).
 
 ## Seguimiento por módulo
 | Módulo | Archivos | Estado | Build DEV | Notas |
@@ -39,8 +47,8 @@
 | Avance | `Scripts_Avance.html`, `ZZ_AvanceBackend/Phase1/Phase2.js` | ✅ | (sin cambios) | **Limpio, sin fixes.** Guards OK (diagnostico=superuser, backfill guard-first, escrituras=avance). `hito_key`=0 usos reales (solo comentario). Front limpio (0 hex/alert; anti-doble-submit presente; el `JSON.stringify` es a un `dataset`, no fuga). Módulo bien mantenido. |
 | Beneficios | `Scripts_Beneficios.html`, `ZZ_BeneficiosBackend.js` | ✅ | (sin cambios) | Sin fixes nuevos. Seguridad OK (todas las escrituras guardadas; PIN `evento_abierto` validado vía `GO_PES_PIN_CONTEXTS.EVENTO_ABIERTO`). Colores inline=0 (Lote B); quedan 19 hex en `<style>` (chips de categoría theme-complete, deuda documentada). `fugas` = JSON de FONDESE al payload (no fuga). Deuda conocida: wizards CÁMARAS/FONDESE ~150 líneas duplicadas (refactor dedicado). |
 | Admin (Usuarios+Config) | `Scripts_Admin.html`, `Auth.js`, `SystemConfig.js` | ✅ | (sin cambios) | **Limpio, sin fixes.** Seguridad sólida: escrituras privilegiadas con guard superuser (`updateUser`, `deactivateUser`+PIN `user_deactivate`, `saveSystemConfigSection`); sin lock-before-guard. Sin-guard legítimas (`getUsuarioActual`, prefs self-scoped, `goPesLogAppOpened`). Front limpio (0 hex/alert/onclick tras remover UI de migración). |
-| Buscar/Historial | `Services.js` (buscar*, listarHistorial), `Scripts.html` | ⏳ | — | — |
-| Infra transversal | `Auth.js`, `Repository*.js`, `Styles.html`, `ThemeDark.html`, `Loading.html`, `Scripts_A11y.html`, `Scripts.html` | ⏳ | — | — |
+| Buscar/Historial | `Services.js` (buscar*, listarHistorial), `Scripts.html` | ✅ | (ver commit) | Guards OK (`buscarVecino` guardado — el `diag` precede al guard; `buscarSolicitud` delega). Perf D4: guard antes del lock en `guardarOrganizacion`, `guardarInstrumento`, `guardarRequisito`. |
+| Infra transversal | `Auth.js`, `Repository*.js`, `Styles.html`, `ThemeDark.html`, `Loading.html`, `Scripts_A11y.html`, `Scripts.html` | ✅ | (sin cambios) | Barrido global: **toda la API mutante guardada** (único sin-guard = `setUserPreference`, self-scoped + whitelist, correcto). Sin legacy/muerto en cimientos. |
 
 ## Reglas
 - PROD tiene datos reales: nada a ciegas; la verificación visual claro/oscuro es del usuario.

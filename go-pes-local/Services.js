@@ -1057,11 +1057,11 @@ function guardarSeguimiento(payload) {
 }
 
 function guardarOrganizacion(payload) {
+  const user = requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
   const diag = goPesDiagStart_('Services.guardarOrganizacion', {});
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);
   try {
-  const user = requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
   validateOrganizacionV2_(payload);
   const now = new Date();
   const organizacionId = payload.organizacion_id || nextId_('organizacion', 'ORG');
@@ -1158,11 +1158,11 @@ function guardarOrganizacion(payload) {
 }
 
 function guardarInstrumento(payload) {
+  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   const diag = goPesDiagStart_('Services.guardarInstrumento', {});
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);
   try {
-  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   ensureSheetsSubset_([
     GO_PES_V2.SHEETS.RAW_INSTRUMENTOS,
     GO_PES_V2.SHEETS.FACT_INSTRUMENTOS,
@@ -1252,11 +1252,11 @@ function guardarInstrumento(payload) {
 }
 
 function guardarRequisito(payload) {
+  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   const diag = goPesDiagStart_('Services.guardarRequisito', {});
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);
   try {
-  const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   ensureSheetsSubset_([
     GO_PES_V2.SHEETS.RAW_REQUISITOS,
     GO_PES_V2.SHEETS.FACT_REQUISITOS,

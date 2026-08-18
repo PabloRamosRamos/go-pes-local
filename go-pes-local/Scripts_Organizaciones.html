@@ -318,6 +318,13 @@
 
   // -- HELPERS DE GESTIÓN / FILTROS / ORDEN --
 
+  // Abrevia el nombre quitando el prefijo "COMITÉ DE SEGURIDAD" (variantes de tilde/mayúsculas/espacios).
+  function orgNombreCorto_(name) {
+    var s = String(name || '').trim();
+    var out = s.replace(/^COMIT[EÉ]\s+DE\s+SEGURIDAD\s+/i, '').trim();
+    return out || s;
+  }
+
   function orgCountDone_(hitos) {
     hitos = hitos || [];
     var maxT1    = Math.max.apply(null, [0].concat(hitos.filter(function(n){ return n >= 1 && n <= 7; })));
@@ -384,7 +391,7 @@
     return '<button type="button" class="org-badge' + active + '" ' + attr + '="' + escapeHtml(o.value || '') + '">' +
       '<span class="org-badge__ring" style="--p:' + pct + '"><b>' + pct + '%</b></span>' +
       '<span class="org-badge__main">' +
-        '<span class="org-badge__name">' + escapeHtml(o.label || 'Sin nombre') + '</span>' +
+        '<span class="org-badge__name">' + escapeHtml(orgNombreCorto_(o.label || 'Sin nombre')) + '</span>' +
         '<span class="org-badge__sub">' + dot + escapeHtml(sub) + '</span>' +
       '</span>' +
     '</button>';
@@ -442,12 +449,13 @@
     var inactiva = estado.indexOf('suspend') !== -1 || estado.indexOf('elimin') !== -1 || estado.indexOf('inactiv') !== -1;
     var orgId = escapeHtml(org.organizacion_id || '');
     var nombre = escapeHtml(org.nombre_organizacion || 'Sin nombre');
+    var nombreCorto = escapeHtml(orgNombreCorto_(org.nombre_organizacion || 'Sin nombre'));
 
     viewer.innerHTML =
       '<div class="org-viewer__head">' +
         '<div class="org-viewer__icon"><span class="material-symbols-outlined">apartment</span></div>' +
         '<div class="org-viewer__ttl"><span class="eyebrow">Ficha de organización</span>' +
-        '<h3>' + nombre + '</h3></div>' +
+        '<h3 title="' + nombre + '">' + nombreCorto + '</h3></div>' +
         '<div class="org-viewer__actions">' +
           '<button type="button" class="secondary-btn btn--sm" data-v-avance="' + orgId + '"><span class="material-symbols-outlined">timeline</span>Avance</button>' +
           '<button type="button" class="secondary-btn btn--sm" data-v-socios="' + orgId + '" data-v-nombre="' + nombre + '"><span class="material-symbols-outlined">badge</span>Socios</button>' +
@@ -499,7 +507,7 @@
       '<div class="org-viewer__head">' +
         '<div class="org-viewer__icon"><span class="material-symbols-outlined">groups</span></div>' +
         '<div class="org-viewer__ttl"><span class="eyebrow">Grupo de vecinos · en proceso</span>' +
-        '<h3>' + escapeHtml(g.label || 'Grupo de vecinos') + '</h3></div>' +
+        '<h3 title="' + escapeHtml(g.label || 'Grupo de vecinos') + '">' + escapeHtml(orgNombreCorto_(g.label || 'Grupo de vecinos')) + '</h3></div>' +
         '<div class="org-viewer__actions">' +
           '<button type="button" class="secondary-btn btn--sm" data-v-ficha="' + sol + '"><span class="material-symbols-outlined">person_search</span>Ver ficha</button>' +
           '<button type="button" class="secondary-btn btn--sm" data-grupo-link-socios="' + sol + '"><span class="material-symbols-outlined">link</span>Link socios</button>' +
@@ -889,7 +897,7 @@
         </div>
         <div class="organizaciones-hero-card__main">
           <p class="eyebrow">Ficha de organización</p>
-          <h3>${escapeHtml(org.nombre_organizacion || 'Sin nombre')}</h3>
+          <h3 title="${escapeHtml(org.nombre_organizacion || 'Sin nombre')}">${escapeHtml(orgNombreCorto_(org.nombre_organizacion || 'Sin nombre'))}</h3>
           <div class="organizaciones-summary__meta">
             <span>ID ${escapeHtml(org.organizacion_id || 'Sin ID')}</span>
             <span>${escapeHtml(org.estado_general_organizacion || 'Sin estado')}</span>

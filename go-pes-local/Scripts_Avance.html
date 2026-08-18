@@ -41,31 +41,21 @@
         </div>
       </div>
 
-      <div id="avance-resumen" class="avance-resumen empty-state">
-        Selecciona una organización para visualizar su avance.
+      <div class="avance-dense">
+        <aside id="avance-resumen" class="avance-rail empty-state">
+          Selecciona una organización para visualizar su avance.
+        </aside>
+        <div class="avance-cols">
+          <div class="avance-col">
+            <h4 class="avance-col__title"><span class="eyebrow">Tramo 1</span> Preconstitución</h4>
+            <div id="avance-pre-grid" class="avance-hito-rows"></div>
+          </div>
+          <div class="avance-col">
+            <h4 class="avance-col__title"><span class="eyebrow">Tramo 2</span> Formalización posterior</h4>
+            <div id="avance-for-grid" class="avance-hito-rows"></div>
+          </div>
+        </div>
       </div>
-
-      <div id="avance-next-action" class="avance-next-action is-hidden"></div>
-
-      <section class="avance-section">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Tramo 1</p>
-            <h3>Preconstitución</h3>
-          </div>
-        </div>
-        <div id="avance-pre-grid" class="avance-hitos-grid" data-layout="grid"></div>
-      </section>
-
-      <section class="avance-section">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Tramo 2</p>
-            <h3>Formalización</h3>
-          </div>
-        </div>
-        <div id="avance-for-grid" class="avance-hitos-grid" data-layout="grid"></div>
-      </section>
 
       <section class="avance-section">
         <div class="section-head">
@@ -649,7 +639,6 @@
       renderAvanceResumen_(data);
       renderAvanceBotones_(data);
       renderAvanceTimeline_(data.timeline || []);
-      renderAvanceNextAction_(data);
       const _expBtn = document.getElementById('avance-export-btn');
       if (_expBtn) _expBtn.classList.toggle('is-hidden', !((data.timeline || []).length));
       lockAvanceActions_(false, data);
@@ -671,7 +660,6 @@
       renderAvanceResumen_(data);
       renderAvanceBotones_(data);
       renderAvanceTimeline_(data.timeline || []);
-      renderAvanceNextAction_(data);
       const _expBtn = document.getElementById('avance-export-btn');
       if (_expBtn) _expBtn.classList.toggle('is-hidden', !((data.timeline || []).length));
       lockAvanceActions_(true, data);
@@ -719,50 +707,28 @@
     return { dias, label, level };
   }
 
-  function renderAvanceNextAction_(data) {
-    const el = document.getElementById('avance-next-action');
-    if (!el) return;
+  function avanceNextActionHtml_(data) {
     const tramos = (data && data.botones && data.botones.tramos) || [];
-    const allItems = [].concat(
+    const all = [].concat(
       getAvanceTramoItems_(tramos, ['Preconstitucion']),
       getAvanceTramoItems_(tramos, ['Formalizacion', 'Formalizacion posterior'])
     );
-    const total = allItems.length;
-    if (!total) { el.className = 'avance-next-action is-hidden'; el.innerHTML = ''; return; }
-
-    const totalDone = allItems.filter(it => it.completed_flag).length;
-    const next = allItems.find(it => it.enabled_flag && !it.completed_flag);
-    const diasInfo = avanceDiasDesde_(((data && data.resumen) || {}).ultimo_hito_fecha);
-
+    if (!all.length) return '';
+    const done = all.filter(it => it.completed_flag).length;
+    const next = all.find(it => it.enabled_flag && !it.completed_flag);
     if (!next) {
-      if (totalDone >= total) {
-        el.className = 'avance-next-action avance-next-action--done';
-        el.innerHTML = '<span class="material-symbols-outlined avance-next-action__icon">task_alt</span>' +
-          '<div class="avance-next-action__text"><span class="avance-next-action__eyebrow">Avance</span><strong>Todos los hitos están cumplidos</strong></div>';
-      } else {
-        const blocked = allItems.find(it => !it.enabled_flag && !it.completed_flag);
-        el.className = 'avance-next-action avance-next-action--blocked';
-        el.innerHTML = '<span class="material-symbols-outlined avance-next-action__icon">lock</span>' +
-          '<div class="avance-next-action__text"><span class="avance-next-action__eyebrow">Sin acciones disponibles</span><strong>' +
-          escapeHtml((blocked && blocked.blocked_reason) || 'Hitos pendientes bloqueados por prerequisitos.') + '</strong></div>';
+      if (done >= all.length) {
+        return '<div class="avance-rail__next avance-rail__next--done"><span class="material-symbols-outlined">task_alt</span><span>Avance completo</span></div>';
       }
-      return;
+      const blocked = all.find(it => !it.enabled_flag && !it.completed_flag);
+      return '<div class="avance-rail__next avance-rail__next--blocked"><span class="material-symbols-outlined">lock</span><span>' +
+        escapeHtml((blocked && blocked.blocked_reason) || 'Sin acciones disponibles') + '</span></div>';
     }
-
-    const diasChip = diasInfo
-      ? ` · <span class="avance-dias avance-dias--${diasInfo.level}">último hito ${escapeHtml(diasInfo.label)}</span>`
-      : '';
-    el.className = 'avance-next-action';
-    el.innerHTML =
-      '<span class="material-symbols-outlined avance-next-action__icon">arrow_circle_right</span>' +
-      '<div class="avance-next-action__text">' +
-        '<span class="avance-next-action__eyebrow">Siguiente paso' + diasChip + '</span>' +
-        '<strong>Hito ' + (Number(next.orden_hito || 0) || '') + ' — ' + escapeHtml(next.nombre_hito || '') + '</strong>' +
-      '</div>' +
-      '<button type="button" class="primary-btn avance-next-action__btn js-avance-next" data-codigo="' + escapeHtml(next.codigo_hito || '') + '">' +
-        '<span class="material-symbols-outlined">add_task</span>Registrar</button>';
-    const btn = el.querySelector('.js-avance-next');
-    if (btn) btn.addEventListener('click', () => registrarHitoAvanceUi_(btn.dataset.codigo));
+    return '<div class="avance-rail__next">' +
+      '<div class="avance-rail__next-eyebrow">Siguiente paso</div>' +
+      '<div class="avance-rail__next-title">Hito ' + (Number(next.orden_hito || 0) || '') + ' — ' + escapeHtml(next.nombre_hito || '') + '</div>' +
+      '<button type="button" class="primary-btn js-avance-next" data-codigo="' + escapeHtml(next.codigo_hito || '') + '"><span class="material-symbols-outlined">add_task</span>Registrar</button>' +
+      '</div>';
   }
 
   function exportAvanceCSV_() {
@@ -807,35 +773,30 @@
     const totalGeneral = totalPre + totalFor;
     const doneGeneral = donePre + doneFor;
 
-    el.className = 'avance-resumen';
+    const pct = totalGeneral > 0 ? Math.round((doneGeneral / totalGeneral) * 100) : 0;
+    const dias = avanceDiasDesde_(r.ultimo_hito_fecha);
+    const estadoClass = /activo/i.test(estado) ? 'avance-pill--activo'
+      : (/finaliz/i.test(estado) ? 'avance-pill--done' : 'avance-pill--warn');
+
+    el.className = 'avance-rail';
     el.innerHTML = `
-      <div class="avance-resumen-layout">
-        <aside class="avance-resumen-card" aria-label="Resumen de organizacion">
-          <div class="avance-resumen-card__title">Ficha de avance</div>
-
-          <div class="avance-resumen-card__grid">
-            <div class="avance-resumen-card__item"><strong>Estado</strong><span>${escapeHtml(estado)}</span></div>
-            <div class="avance-resumen-card__item"><strong>${isGrupo ? 'Grupo de vecinos' : 'Organización'}</strong><span>${escapeHtml(r.nombre_organizacion || '')}</span></div>
-            <div class="avance-resumen-card__item"><strong>Solicitud</strong><span>${escapeHtml(r.solicitud_id || '')}</span></div>
-            <div class="avance-resumen-card__item"><strong>Último hito</strong><span>${escapeHtml(r.ultimo_hito_nombre || 'Sin registros')}</span></div>
-            <div class="avance-resumen-card__item"><strong>Fecha último hito</strong><span>${escapeHtml(formatFechaHoraUi_(r.ultimo_hito_fecha || ''))}</span></div>
-            <div class="avance-resumen-card__item"><strong>Usuario último hito</strong><span>${escapeHtml(r.usuario_ultimo_hito || '')}</span></div>
-          </div>
-        </aside>
-
-        <section class="avance-resumen-progress" aria-label="Resumen de avance">
-          <div class="avance-resumen-progress__title">Resumen de avance</div>
-          <div class="avance-pct-ring" style="--pct:${totalGeneral > 0 ? Math.round((doneGeneral / totalGeneral) * 100) : 0}" role="img" aria-label="${totalGeneral > 0 ? Math.round((doneGeneral / totalGeneral) * 100) : 0}% de avance total">
-            <span class="avance-pct-ring__num">${totalGeneral > 0 ? Math.round((doneGeneral / totalGeneral) * 100) : 0}%</span>
-          </div>
-          <div class="avance-resumen-bars">
-            ${buildProgressBarHtml_('Total hitos cumplidos', doneGeneral, totalGeneral)}
-            ${buildProgressBarHtml_('Preconstitución', donePre, totalPre)}
-            ${buildProgressBarHtml_('Formalización', doneFor, totalFor)}
-          </div>
-        </section>
+      <div class="avance-pct-ring" style="--pct:${pct}" role="img" aria-label="${pct}% de avance total">
+        <span class="avance-pct-ring__num">${pct}%</span>
       </div>
+      <div class="avance-rail__estado"><span class="avance-pill ${estadoClass}">${escapeHtml(estado)}</span></div>
+      <div class="avance-rail__title">${escapeHtml(r.nombre_organizacion || (isGrupo ? 'Grupo de vecinos' : 'Organización'))}</div>
+      <div class="avance-rail__stats">
+        <div class="avance-rail__row"><span>Cumplidos</span><span>${doneGeneral} / ${totalGeneral}</span></div>
+        <div class="avance-rail__row"><span>Preconstitución</span><span>${donePre} / ${totalPre}</span></div>
+        <div class="avance-rail__row"><span>Formalización</span><span>${doneFor} / ${totalFor}</span></div>
+        <div class="avance-rail__row"><span>Solicitud</span><span>${escapeHtml(r.solicitud_id || '—')}</span></div>
+        <div class="avance-rail__row"><span>Último hito</span><span class="${dias ? 'avance-dias avance-dias--' + dias.level : ''}">${dias ? escapeHtml(dias.label) : '—'}</span></div>
+      </div>
+      ${avanceNextActionHtml_(data)}
     `;
+
+    const nb = el.querySelector('.js-avance-next');
+    if (nb) nb.addEventListener('click', () => registrarHitoAvanceUi_(nb.dataset.codigo));
   }
 
   function renderAvanceBotones_(data) {
@@ -843,10 +804,10 @@
     const post = document.getElementById('avance-for-grid');
     if (!pre || !post) return;
 
-    pre.className = 'avance-hitos-grid';
-    post.className = 'avance-hitos-grid';
-    pre.dataset.layout = 'grid';
-    post.dataset.layout = 'grid';
+    pre.className = 'avance-hito-rows';
+    post.className = 'avance-hito-rows';
+    pre.dataset.layout = 'rows';
+    post.dataset.layout = 'rows';
 
     const tramos = (data && data.botones && data.botones.tramos) || [];
     const tramoPreItems = getAvanceTramoItems_(tramos, ['Preconstitucion']);
@@ -861,51 +822,29 @@
   }
 
   function renderAvanceProgressRow_(item) {
-    const disabled = !item.enabled_flag ? 'disabled' : '';
-    const completed = item.completed_flag ? 'is-completed' : '';
-    const blocked = !item.enabled_flag && !item.completed_flag ? 'is-blocked' : '';
-    const enabled = item.enabled_flag && !item.completed_flag ? 'is-enabled' : '';
-    const icon = item.completed_flag
-      ? 'check'
-      : (!item.enabled_flag && !item.completed_flag ? 'remove' : 'radio_button_unchecked');
-    const iconLabel = item.completed_flag
-      ? 'Hito cumplido'
-      : (!item.enabled_flag && !item.completed_flag ? 'Hito bloqueado' : 'Hito disponible');
-
-    const statusText = item.completed_flag
-      ? 'Cumplido'
-      : (!item.enabled_flag && !item.completed_flag ? 'Bloqueado' : 'Disponible');
-    const statusDetail = item.completed_flag
+    const done = !!item.completed_flag;
+    const enabled = !!item.enabled_flag && !done;
+    const state = done ? 'done' : (enabled ? 'next' : 'blocked');
+    const skip = item.permite_saltar ? ' is-skip' : '';
+    const num = Number(item.orden_hito || 0) || '';
+    const dot = done ? '✓' : String(num || '·');
+    const detail = done
       ? escapeHtml(formatFechaHoraUi_(item.fecha_hito || 'Registrado'))
-      : item.blocked_reason
-        ? escapeHtml(item.blocked_reason)
-        : 'Clic para registrar';
-    const titleAttr = item.blocked_reason
-      ? ` title="${escapeHtml(item.blocked_reason)}"`
-      : '';
-    const hitoLabel = `Hito ${Number(item.orden_hito || 0) || ''}`.trim();
+      : (enabled ? 'Disponible · registrar' : escapeHtml(item.blocked_reason || 'Bloqueado'));
+    const estadoLabel = done ? 'cumplido' : (enabled ? 'disponible' : 'bloqueado');
+    const titleAttr = item.blocked_reason ? ` title="${escapeHtml(item.blocked_reason)}"` : '';
 
     return `
-      <button
-        type="button"
-        class="avance-hito-card js-avance-hito ${completed} ${blocked} ${enabled}"
+      <button type="button"
+        class="avance-hrow js-avance-hito ${state}${skip}"
         data-codigo="${escapeHtml(item.codigo_hito || '')}"
-        aria-label="${iconLabel}: ${escapeHtml(item.nombre_hito || '')}"
-        aria-disabled="${disabled ? 'true' : 'false'}"
-        data-estado="${escapeHtml(statusText)}"
-        ${titleAttr}
-        ${disabled}>
-        <div class="avance-hito-card__head">
-          <div class="avance-hito-card__eyebrow">${escapeHtml(hitoLabel)}</div>
-          <div class="avance-hito-card__icon" aria-hidden="true">
-            <span class="material-symbols-outlined">${icon}</span>
-          </div>
-        </div>
-        <div class="avance-hito-card__body">
-          <div class="avance-hito-card__title">${escapeHtml(item.nombre_hito || '')}</div>
-          <div class="avance-hito-card__status">${escapeHtml(statusText)}</div>
-          <div class="avance-hito-card__detail">${statusDetail}</div>
-        </div>
+        aria-label="${escapeHtml(item.nombre_hito || '')}: ${estadoLabel}"
+        ${!item.enabled_flag ? 'disabled aria-disabled="true"' : ''}${titleAttr}>
+        <span class="avance-hrow__dot" aria-hidden="true">${dot}</span>
+        <span class="avance-hrow__t">
+          <b>${num ? num + ' · ' : ''}${escapeHtml(item.nombre_hito || '')}</b>
+          <small>${detail}</small>
+        </span>
       </button>
     `;
   }
@@ -1348,7 +1287,7 @@
 
     if (badge) badge.textContent = 'Sin selección';
     if (resumen) {
-      resumen.className = 'avance-resumen empty-state';
+      resumen.className = 'avance-rail empty-state';
       resumen.innerHTML = 'Selecciona una organización para visualizar su avance.';
     }
     if (pre) pre.innerHTML = '';
@@ -1358,8 +1297,6 @@
       timeline.innerHTML = 'No hay hitos registrados.';
     }
 
-    const nextAction = document.getElementById('avance-next-action');
-    if (nextAction) { nextAction.className = 'avance-next-action is-hidden'; nextAction.innerHTML = ''; }
     const exportBtn = document.getElementById('avance-export-btn');
     if (exportBtn) exportBtn.classList.add('is-hidden');
 

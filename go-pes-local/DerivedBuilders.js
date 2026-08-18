@@ -780,8 +780,16 @@ function reconstruirEstructurasDesdeRaw_() {
     '',
     'created_at',
     function(row) {
+      // Identidad = MEMBRESÍA (un RUT puede estar en varias orgs). Estable ante re-vínculo:
+      // NO usa organizacion_id. Con RUT: RUT + discriminador inmutable (fecha_registro del
+      // form, o comité/legacy de lo antiguo). Sin RUT: fallback al compuesto legacy.
+      var runNorm = normalizeText_(row.run_socio || '');
+      var disc = String(row.fecha_registro || row.grupo_label_origen || row.nombre_comite_origen || row.legacy_key || row.numero_registro || '').trim();
+      var socioId = runNorm
+        ? deterministicId_('SOC', [runNorm, disc])
+        : deterministicId_('SOC', ['norut', row.legacy_source, row.legacy_key, row.organizacion_id, row.numero_registro, row.nombre_socio]);
       return {
-        socio_id: deterministicId_('SOC', [row.legacy_source, row.legacy_key, row.organizacion_id, row.run_socio, row.numero_registro, row.nombre_socio]),
+        socio_id: socioId,
         organizacion_id: row.organizacion_id || '',
         run_socio: row.run_socio || '',
         numero_registro: row.numero_registro || '',
@@ -793,7 +801,13 @@ function reconstruirEstructurasDesdeRaw_() {
         nombre_comite_origen: row.nombre_comite_origen || '',
         status_carga: row.status_carga || '',
         updated_by: row.user_email || '',
-        updated_at: latestDateValue_(row.created_at)
+        updated_at: latestDateValue_(row.created_at),
+        solicitud_id: row.solicitud_id || '',
+        telefono_socio: row.telefono_socio || '',
+        correo_socio: row.correo_socio || '',
+        consentimiento: row.consentimiento || '',
+        fecha_registro: row.fecha_registro || '',
+        vinculo_estado: row.vinculo_estado || ''
       };
     },
     socioHeaders

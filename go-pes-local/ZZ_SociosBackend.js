@@ -224,3 +224,118 @@ function editarDatosSocio(payload) {
 function goPesSocioCargoPermitido_(cargo) {
   return getConfiguredSocioCargos_().indexOf(String(cargo || '').trim()) !== -1;
 }
+
+/**
+ * MIGRACIÓN (una vez, idempotente): consolida el vínculo de socios al nuevo modelo.
+ * - Backfill `solicitud_id`: si el socio está en una organización constituida, toma la
+ *   solicitud de esa org. Si su `organizacion_id` en realidad guardaba un solicitud_id
+ *   (patrón viejo de grupos), lo mueve a `solicitud_id` y limpia `organizacion_id`.
+ * - Marca `source=MIGRACION` (RAW) y `vinculo_estado`.
+ * - RAW-first (append corrección) + upsert FACT in-place (conserva el `socio_id` actual,
+ *   sin churn de ids en esta pasada).
+ * - Idempotente: salta los que ya tienen `solicitud_id`.
+ * Ejecutar manualmente (solo superuser). Devuelve reporte con conteos.
+ */
+function goPesMigrarSociosAntiguos() {
+  const user = requireModuleAccess_('socios', ['superuser']);
+  const now = new Date();
+
+  const socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
+  const orgs = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES) || [];
+  const casos = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS) || [];
+
+  const solByOrgId = {};
+  const orgIdSet = {};
+  orgs.forEach(function(o) {
+    const id = String(o.organizacion_id || '').trim();
+    if (!id) return;
+    orgIdSet[id] = true;
+    solByOrgId[id] = String(o.solicitud_id || '').trim();
+  });
+  const solIdSet = {};
+  casos.forEach(function(c) {
+    const s = String(c.solicitud_id || '').trim();
+    if (s) solIdSet[s] = true;
+  });
+
+  let backfilled = 0, movedGrupo = 0, sinMatch = 0, yaOk = 0;
+  const rawCorr = [];
+  const factUpd = [];
+
+  socios.forEach(function(row) {
+    const socioId = String(row.socio_id || '').trim();
+    if (!socioId) return;
+    if (String(row.solicitud_id || '').trim()) { yaOk++; return; } // idempotente
+
+    const orgVal = String(row.organizacion_id || '').trim();
+    let solicitudId = '';
+    let organizacionId = orgVal;
+
+    if (orgVal && orgIdSet[orgVal]) {
+      solicitudId = solByOrgId[orgVal] || '';   // org constituida → solicitud de la org
+      backfilled++;
+    } else if (orgVal && solIdSet[orgVal]) {
+      solicitudId = orgVal;                       // era un solicitud_id (grupo)
+      organizacionId = '';
+      movedGrupo++;
+    } else {
+      sinMatch++;                                 // no resoluble automáticamente
+    }
+
+    const estado = solicitudId ? 'auto' : (String(row.vinculo_estado || '').trim() || 'pendiente');
+
+    factUpd.push(Object.assign({}, row, {
+      solicitud_id: solicitudId,
+      organizacion_id: organizacionId,
+      vinculo_estado: estado,
+      updated_by: user.email,
+      updated_at: now
+    }));
+
+    rawCorr.push({
+      created_at: now,
+      source: 'MIGRACION',
+      user_email: user.email,
+      organizacion_id: organizacionId,
+      run_socio: row.run_socio || '',
+      numero_registro: row.numero_registro || '',
+      nombre_socio: row.nombre_socio || '',
+      edad: row.edad || '',
+      cargo: row.cargo || '',
+      direccion_socio: row.direccion_socio || '',
+      ubicacion_socio: row.ubicacion_socio || '',
+      nombre_comite_origen: row.nombre_comite_origen || '',
+      status_carga: row.status_carga || 'OK',
+      legacy_source: 'MIGRACION',
+      legacy_key: socioId,
+      solicitud_id: solicitudId,
+      grupo_label_origen: '',
+      telefono_socio: row.telefono_socio || '',
+      correo_socio: row.correo_socio || '',
+      consentimiento: row.consentimiento || '',
+      fecha_registro: row.fecha_registro || '',
+      vinculo_estado: estado
+    });
+  });
+
+  if (rawCorr.length) appendRowObjects_(GO_PES_V2.SHEETS.RAW_SOCIOS, rawCorr);
+  factUpd.forEach(function(m) {
+    upsertByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', m, false);
+  });
+
+  logProcessing_('INFO', 'migrarSociosAntiguos', 'socios', '', user.email, sinMatch ? 'PARCIAL' : 'OK', {
+    total: socios.length, backfilled, movedGrupo, sinMatch, yaOk
+  });
+  logUserAction_('MIGRAR_SOCIOS_ANTIGUOS', 'socios', '', sinMatch ? 'PARCIAL' : 'OK', {
+    total: socios.length, backfilled, movedGrupo, sinMatch, yaOk
+  });
+
+  return serializeForClient_({
+    ok: true,
+    total: socios.length,
+    backfilled: backfilled,
+    movedGrupo: movedGrupo,
+    sinMatch: sinMatch,
+    yaVinculados: yaOk
+  });
+}

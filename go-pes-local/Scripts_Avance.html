@@ -356,6 +356,9 @@
         });
       }
 
+      // Deep-link inverso desde Organizaciones: preseleccionar y cargar una org
+      applyAvancePendingOrg_();
+
       lockAvanceActions_(true);
     }).catch(showError);
   }
@@ -539,6 +542,26 @@
     `;
   }
 
+  // Preselecciona y carga una org si viene un deep-link desde Organizaciones.
+  function applyAvancePendingOrg_() {
+    const pendingOrgId = APP.state.avancePendingOrgId;
+    if (!pendingOrgId) return;
+    const select = document.getElementById('avance-organizacion-select');
+    if (!select) return;
+    const pOrg = (APP.state.avanceOrganizaciones || []).find(x => String(x.value) === String(pendingOrgId));
+    if (!pOrg) return;
+
+    APP.state.avancePendingOrgId = null;
+    const grupoSelect = document.getElementById('avance-grupo-select');
+    if (grupoSelect) grupoSelect.value = '';
+    const grupoSearchInput = document.getElementById('avance-grupo-search');
+    if (grupoSearchInput) grupoSearchInput.value = '';
+    select.value = pOrg.value;
+    const orgSearchInput = document.getElementById('avance-organizacion-search');
+    if (orgSearchInput) orgSearchInput.value = pOrg.label;
+    loadAvanceOrganizacion_(pOrg.value);
+  }
+
   function refreshAvanceViewOnRoute_() {
     const select = document.getElementById('avance-organizacion-select');
     const grupoSelect = document.getElementById('avance-grupo-select');
@@ -551,6 +574,7 @@
       APP.state.avanceOrganizacionesFetchedAt &&
       (now - APP.state.avanceOrganizacionesFetchedAt) < 30000
     ) {
+      applyAvancePendingOrg_();
       return;
     }
 
@@ -596,6 +620,7 @@
         if (grupo) document.getElementById('avance-grupo-search').value = grupo.label;
       }
 
+      applyAvancePendingOrg_();
       hideModuleLoading();
     }).catch(err => {
       hideModuleLoading();

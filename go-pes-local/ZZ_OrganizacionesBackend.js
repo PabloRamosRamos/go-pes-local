@@ -71,10 +71,15 @@ function getOrganizacionesConGruposClient() {
     var sociosOrg = sociosByOrgIndex[orgId] || [];
     sociosByOrg[orgId] = sociosOrg.length;
 
-    // Capturar contacto principal (preferir Presidente)
+    // Capturar contacto principal (preferir Presidente): nombre + telefono + correo
     sociosOrg.forEach(function(s) {
-      if (!contactoByOrg[orgId] || String(s.cargo_socio || '').toLowerCase().indexOf('president') !== -1) {
-        contactoByOrg[orgId] = String(s.nombre_socio || '').trim();
+      var esPresidente = String(s.cargo_socio || '').toLowerCase().indexOf('president') !== -1;
+      if (!contactoByOrg[orgId] || esPresidente) {
+        contactoByOrg[orgId] = {
+          nombre: String(s.nombre_socio || '').trim(),
+          telefono: String(s.telefono_contacto || '').trim(),
+          correo: String(s.correo_contacto || '').trim()
+        };
       }
     });
   });
@@ -95,29 +100,39 @@ function getOrganizacionesConGruposClient() {
 
   var hitosByOrg = {};
   var hitosBySolicitud = {};
+  var ultimoMovByOrg = {};        // [2026-08-18] fecha del hito mas reciente -> "estancadas"
+  var ultimoMovBySolicitud = {};
 
   // Procesar hitos por organización
   Object.keys(hitosByOrgIndex).forEach(function(orgId) {
     var hitosOrg = hitosByOrgIndex[orgId] || [];
     hitosByOrg[orgId] = [];
+    var maxTs = 0;
     hitosOrg.forEach(function(h) {
       var orden = Number(h.orden_hito || 0);
       if (orden > 0 && hitosByOrg[orgId].indexOf(orden) === -1) {
         hitosByOrg[orgId].push(orden);
       }
+      var ts = new Date(h.fecha_hito || h.timestamp_registro || 0).getTime();
+      if (ts && !isNaN(ts) && ts > maxTs) maxTs = ts;
     });
+    ultimoMovByOrg[orgId] = maxTs ? goPesOrgFechaIso_(new Date(maxTs), true) : '';
   });
 
   // Procesar hitos por solicitud
   Object.keys(hitosBySolicitudIndex).forEach(function(solId) {
     var hitosSol = hitosBySolicitudIndex[solId] || [];
     hitosBySolicitud[solId] = [];
+    var maxTsSol = 0;
     hitosSol.forEach(function(h) {
       var orden = Number(h.orden_hito || 0);
       if (orden > 0 && hitosBySolicitud[solId].indexOf(orden) === -1) {
         hitosBySolicitud[solId].push(orden);
       }
+      var ts = new Date(h.fecha_hito || h.timestamp_registro || 0).getTime();
+      if (ts && !isNaN(ts) && ts > maxTsSol) maxTsSol = ts;
     });
+    ultimoMovBySolicitud[solId] = maxTsSol ? goPesOrgFechaIso_(new Date(maxTsSol), true) : '';
   });
 
   var orgs = getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES)
@@ -138,13 +153,17 @@ function getOrganizacionesConGruposClient() {
         tipo_organizacion: String(r.tipo_organizacion || ''),
         responsable_actual: String(r.responsable_actual || ''),
         total_socios: sociosByOrg[orgId] || 0,
-        nombre_contacto: contactoByOrg[orgId] || '',
+        nombre_contacto: (contactoByOrg[orgId] && contactoByOrg[orgId].nombre) || '',
+        contacto_telefono: (contactoByOrg[orgId] && contactoByOrg[orgId].telefono) || '',
+        contacto_correo: (contactoByOrg[orgId] && contactoByOrg[orgId].correo) || '',
         certificado_definitivo_flag: String(r.certificado_definitivo_flag || ''),
         certificado_provisorio_flag: String(r.certificado_provisorio_flag || ''),
         personalidad_juridica_flag: String(r.personalidad_juridica_flag || ''),
         directiva_vigente_flag: String(r.directiva_vigente_flag || ''),
+        vigencia_directiva_hasta: goPesOrgFechaIso_(r.vigencia_directiva_hasta, false),
         organizacion_constituida_flag: String(r.organizacion_constituida_flag || ''),
         fecha_asamblea_constitucion: String(r.fecha_asamblea_constitucion || ''),
+        ultimo_movimiento: ultimoMovByOrg[orgId] || '',
         hitos_cumplidos: hitosByOrg[orgId] || [],
         estado_avance: ultimoEstadoAvance_(estadosByOrgIndex[orgId])
       };
@@ -171,7 +190,10 @@ function getOrganizacionesConGruposClient() {
         responsable_actual: String(r.responsable_actual || ''),
         total_socios: 0, // Los grupos de vecinos no tienen socios formales aún
         nombre_contacto: String(r.nombre_completo || '').trim(), // El vecino que hace la solicitud
+        contacto_telefono: String(r.telefono_contacto || '').trim(),
+        contacto_correo: String(r.correo_contacto || '').trim(),
         fecha_ingreso: r.fecha_ingreso ? Utilities.formatDate(r.fecha_ingreso instanceof Date ? r.fecha_ingreso : new Date(r.fecha_ingreso), Session.getScriptTimeZone(), 'dd/MM/yyyy') : '',
+        ultimo_movimiento: ultimoMovBySolicitud[solId] || '',
         hitos_cumplidos: hitosBySolicitud[solId] || [],
         estado_avance: ultimoEstadoAvance_(estadosBySolicitudIndex[solId]),
         estado_actual: String(r.estado_actual || '')
@@ -280,6 +302,10 @@ function eliminarOrganizacion(payload) {
   return cambiarEstadoAdministrativoOrganizacion_(payload, 'Eliminada', 'ELIMINAR_ORGANIZACION_LOGICA');
 }
 
+function reactivarOrganizacion(payload) {
+  return cambiarEstadoAdministrativoOrganizacion_(payload, 'Activo', 'REACTIVAR_ORGANIZACION');
+}
+
 function cambiarEstadoAdministrativoOrganizacion_(payload, estado, action) {
   const user = requireModuleAccess_('organizacion', ['coordinador', 'superuser']);
   const organizacionId = String(payload && payload.organizacion_id || '').trim();
@@ -342,4 +368,15 @@ function goPesOrgGetSheetRowsSafe_(sheetName, field, value) {
   } catch (err) {
     return [];
   }
+}
+
+/**
+ * Devuelve una fecha en formato ISO parseable por el cliente (o '' si es inválida).
+ * withTime=true incluye hora (para "estancadas"); false solo la fecha (vigencia).
+ */
+function goPesOrgFechaIso_(value, withTime) {
+  if (!value) return '';
+  var d = value instanceof Date ? value : new Date(value);
+  if (isNaN(d.getTime())) return '';
+  return Utilities.formatDate(d, Session.getScriptTimeZone(), withTime ? "yyyy-MM-dd'T'HH:mm:ss" : 'yyyy-MM-dd');
 }

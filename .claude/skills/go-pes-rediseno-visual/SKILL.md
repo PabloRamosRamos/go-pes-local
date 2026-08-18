@@ -16,6 +16,8 @@ Skill para rediseñar cómo se ve un módulo o componente **ya existente**, camb
 
 **Lee primero `references/reglas-go-pes.md`.**
 
+**Antes de maquetar desde cero, revisa `references/patrones-probados.md`** — catálogo de layouts ya aprobados (columnas de igual alto con scroll, cabeceras de 2 líneas, filas compactas, timeline vertical, riel con anillo) con su HTML/CSS mínimo y los *gotchas* que ya costaron un bug. Parte de un patrón existente cuando aplique.
+
 ## Regla de oro
 Es un rediseño de **render**, no de comportamiento. Los datos ya llegan del backend; solo cambia cómo se dibujan.
 
@@ -52,6 +54,9 @@ Es un rediseño de **render**, no de comportamiento. Los datos ya llegan del bac
 3. Confirma que las acciones (ej. registrar/guardar) siguen refrescando la vista correctamente.
 4. `goPesRunAllTests()` en 0 fallos (aunque sea render, confirma que nada se rompió).
 5. Reporta: archivos y funciones tocadas, por qué, y confirmación de que en `Styles.html`/`ThemeDark.html` **solo se agregó** el bloque nuevo al final (nada existente modificado ni eliminado).
+
+## Fase 4 — Capitalizar el resultado (tras aprobación del usuario)
+Cuando el usuario **apruebe** el rediseño, actualiza `references/patrones-probados.md`: agrega el patrón nuevo o refina uno existente (HTML/CSS mínimo, cuándo usarlo, gotchas encontrados). El objetivo es **no volver a maquetar desde cero** un layout equivalente. Luego re-empaqueta `dist/` y espeja a `.claude/skills/` (ver `skills/README.md`).
 
 ## Skills relacionadas
 - `go-pes-colores` — si hay que repensar el sistema de color.

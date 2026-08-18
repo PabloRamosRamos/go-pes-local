@@ -187,10 +187,10 @@ function actualizarCargoSocioOrganizacion(payload) {
 }
 
 function editarDatosSocio(payload) {
+  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);
   try {
-    const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
     const socioId = String(payload && payload.socio_id || '').trim();
     if (!socioId) throw new Error('Falta socio_id.');
 

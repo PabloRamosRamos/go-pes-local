@@ -1582,6 +1582,13 @@
       const t = [r.uv, r.sector].map(x => String(x || '').trim()).filter(Boolean).join(' · ');
       return t ? escapeHtml(t) : '<span class="muted">—</span>';
     };
+    const mapsCell_ = value => {
+      const v = String(value || '').trim();
+      if (!v) return '<span class="muted">—</span>';
+      const url = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(v + ', Providencia, Chile');
+      return `<a href="${url}" target="_blank" rel="noopener" class="buscar-contact-link buscar-maps-link" title="Ver en Google Maps">` +
+        `<span class="material-symbols-outlined">place</span>${escapeHtml(v)}</a>`;
+    };
 
     tbody.innerHTML = pageRows.map(r => `
       <tr class="buscar-row" data-solicitud="${escapeHtml(r.solicitud_id || '')}" data-organizacion="${escapeHtml(r.organizacion_id || '')}">
@@ -1590,7 +1597,7 @@
         <td>${escapeHtml(r.nombre_completo || '')}</td>
         <td>${contactCell_(r.telefono_contacto, 'tel', 'teléfono')}</td>
         <td>${contactCell_(r.correo_contacto, 'mailto', 'correo')}</td>
-        <td>${r.direccion_original ? escapeHtml(r.direccion_original) : '<span class="muted">—</span>'}</td>
+        <td>${mapsCell_(r.direccion_original)}</td>
         <td>${territorio_(r)}</td>
         <td><span class="badge">${escapeHtml(r.estado_actual || '')}</span></td>
         <td>${r.nombre_organizacion ? escapeHtml(r.nombre_organizacion) : '<span class="muted">—</span>'}</td>

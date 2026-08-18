@@ -41,36 +41,38 @@
         </div>
       </div>
 
-      <div class="avance-dense">
-        <aside id="avance-resumen" class="avance-rail empty-state">
-          Selecciona una organización para visualizar su avance.
-        </aside>
-        <div class="avance-cols">
-          <div class="avance-col">
-            <h4 class="avance-col__title"><span class="eyebrow">Tramo 1</span> Preconstitución</h4>
-            <div id="avance-pre-list" class="avance-hito-rows"></div>
+      <div class="avance-quad">
+        <section class="avance-seg avance-seg--rail">
+          <div class="avance-seg__head"><h4>Resumen</h4></div>
+          <div class="avance-seg__body">
+            <aside id="avance-resumen" class="avance-rail empty-state">
+              Selecciona una organización para visualizar su avance.
+            </aside>
           </div>
-          <div class="avance-col">
-            <h4 class="avance-col__title"><span class="eyebrow">Tramo 2</span> Formalización posterior</h4>
-            <div id="avance-for-list" class="avance-hito-rows"></div>
-          </div>
-        </div>
-      </div>
+        </section>
 
-      <section class="avance-section">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">Historial</p>
-            <h3>Timeline de avance</h3>
+        <section class="avance-seg">
+          <div class="avance-seg__head"><span class="eyebrow">Tramo 1</span><h4>Preconstitución</h4></div>
+          <div id="avance-pre-list" class="avance-seg__body avance-hito-rows"></div>
+        </section>
+
+        <section class="avance-seg">
+          <div class="avance-seg__head"><span class="eyebrow">Tramo 2</span><h4>Formalización posterior</h4></div>
+          <div id="avance-for-list" class="avance-seg__body avance-hito-rows"></div>
+        </section>
+
+        <section class="avance-seg avance-seg--hist">
+          <div class="avance-seg__head">
+            <span class="eyebrow">Historial</span><h4>Timeline</h4>
+            <button type="button" class="secondary-btn btn--sm is-hidden" id="avance-export-btn" title="Exportar historial">
+              <span class="material-symbols-outlined">download</span>
+            </button>
           </div>
-          <button type="button" class="secondary-btn btn--sm is-hidden" id="avance-export-btn">
-            <span class="material-symbols-outlined">download</span>Exportar
-          </button>
-        </div>
-        <div id="avance-timeline" class="avance-timeline empty-state">
-          No hay hitos registrados.
-        </div>
-      </section>
+          <div id="avance-timeline" class="avance-seg__body avance-timeline empty-state">
+            No hay hitos registrados.
+          </div>
+        </section>
+      </div>
 
       <div id="avance-hito-modal" class="avance-modal is-hidden" aria-hidden="true">
         <div class="avance-modal__backdrop" data-avance-modal-close="true"></div>
@@ -804,8 +806,8 @@
     const post = document.getElementById('avance-for-list');
     if (!pre || !post) return;
 
-    pre.className = 'avance-hito-rows';
-    post.className = 'avance-hito-rows';
+    pre.className = 'avance-seg__body avance-hito-rows';
+    post.className = 'avance-seg__body avance-hito-rows';
     pre.dataset.layout = 'rows';
     post.dataset.layout = 'rows';
 
@@ -854,27 +856,27 @@
     if (!el) return;
 
     if (!rows || !rows.length) {
-      el.className = 'avance-timeline';
+      el.className = 'avance-seg__body avance-timeline';
       el.innerHTML = goPesEmptyStateHtml_('timeline', 'Sin hitos registrados', 'Esta organización aún no tiene hitos en el sistema. Registra el primero desde el panel de avance.');
       return;
     }
 
-    el.className = 'avance-timeline';
-    el.innerHTML = rows.map(r => `
-      <div class="match-card">
-        <h4>${escapeHtml(r.nombre_hito || '')}</h4>
-        <p><strong>Tramo:</strong> ${escapeHtml(r.tramo || '')}</p>
-        <p><strong>Fecha:</strong> ${escapeHtml(formatFechaHoraUi_(r.fecha_hito || ''))}</p>
-        <p><strong>Usuario:</strong> ${escapeHtml(r.usuario_registro || '')}</p>
-        ${r.numero_ingreso ? '<p><strong>N&ordm; ingreso:</strong> ' + escapeHtml(formatNumIngreso_(r.numero_ingreso)) + '</p>' : ''}
-        ${r.fecha_asamblea_asignada ? '<p><strong>Fecha asamblea:</strong> ' + escapeHtml(formatFechaHoraUi_(r.fecha_asamblea_asignada)) + '</p>' : ''}
-        ${r.numero_registro ? '<p><strong>N&ordm; registro:</strong> ' + escapeHtml(r.numero_registro) + '</p>' : ''}
-        ${r.rut_organizacion ? '<p><strong>RUT:</strong> ' + escapeHtml(r.rut_organizacion) + '</p>' : ''}
-        ${r.numero_cuenta ? '<p><strong>N&ordm; cuenta:</strong> ' + escapeHtml(r.numero_cuenta) + '</p>' : ''}
-        ${r.banco ? '<p><strong>Banco:</strong> ' + escapeHtml(r.banco) + '</p>' : ''}
-        <p><strong>Observación:</strong> ${escapeHtml(r.observacion || '')}</p>
-      </div>
-    `).join('');
+    el.className = 'avance-seg__body avance-timeline';
+    const meta = (label, value) => value ? `<p class="avance-tl__meta"><b>${label}:</b> ${escapeHtml(value)}</p>` : '';
+    el.innerHTML = '<ol class="avance-tl">' + rows.map(r => `
+      <li class="avance-tl__item">
+        <p class="avance-tl__title">${escapeHtml(r.nombre_hito || '')}</p>
+        <p class="avance-tl__meta">${escapeHtml(formatFechaHoraUi_(r.fecha_hito || ''))}${r.usuario_registro ? ' &middot; ' + escapeHtml(r.usuario_registro) : ''}</p>
+        ${meta('Tramo', r.tramo)}
+        ${r.numero_ingreso ? meta('N&ordm; ingreso', formatNumIngreso_(r.numero_ingreso)) : ''}
+        ${r.fecha_asamblea_asignada ? meta('Fecha asamblea', formatFechaHoraUi_(r.fecha_asamblea_asignada)) : ''}
+        ${meta('N&ordm; registro', r.numero_registro)}
+        ${meta('RUT', r.rut_organizacion)}
+        ${meta('N&ordm; cuenta', r.numero_cuenta)}
+        ${meta('Banco', r.banco)}
+        ${meta('Observación', r.observacion)}
+      </li>
+    `).join('') + '</ol>';
   }
 
   function registrarHitoAvanceUi_(codigoHito) {
@@ -1293,7 +1295,7 @@
     if (pre) pre.innerHTML = '';
     if (post) post.innerHTML = '';
     if (timeline) {
-      timeline.className = 'avance-timeline empty-state';
+      timeline.className = 'avance-seg__body avance-timeline empty-state';
       timeline.innerHTML = 'No hay hitos registrados.';
     }
 

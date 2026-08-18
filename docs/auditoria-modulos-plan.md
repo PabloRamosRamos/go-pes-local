@@ -24,7 +24,7 @@
 |-----|---------|--------|
 | 1 — validar proceso (chicos) | Ficha · Nuevo Ingreso · Calendario | ✅ completa |
 | 2 — core diario | Inicio/Dashboard · Socios · Organizaciones | ✅ completa |
-| 3 — grandes/complejos | Avance · Beneficios · Admin (Usuarios+Config) | ⏳ |
+| 3 — grandes/complejos | Avance · Beneficios · Admin (Usuarios+Config) | ✅ completa |
 | 4 — transversal + cierre | Buscar/Historial · Infra (Auth/Repository/Styles/Loading/A11y) | ⏳ |
 
 ## Seguimiento por módulo
@@ -38,7 +38,7 @@
 | Organizaciones | `Scripts_Organizaciones.html`, `ZZ_OrganizacionesBackend.js` | ✅ | (sin cambios) | **Limpio, sin fixes.** Front 1503 LOC sin hallazgos (molde OK, 0 hex/alert). Backend: guards OK; helper suspender/eliminar con guard 1ª línea + rol elevado (coordinador/superuser). `hitosLegacy` = variable de datos antiguos (no código muerto). |
 | Avance | `Scripts_Avance.html`, `ZZ_AvanceBackend/Phase1/Phase2.js` | ✅ | (sin cambios) | **Limpio, sin fixes.** Guards OK (diagnostico=superuser, backfill guard-first, escrituras=avance). `hito_key`=0 usos reales (solo comentario). Front limpio (0 hex/alert; anti-doble-submit presente; el `JSON.stringify` es a un `dataset`, no fuga). Módulo bien mantenido. |
 | Beneficios | `Scripts_Beneficios.html`, `ZZ_BeneficiosBackend.js` | ✅ | (sin cambios) | Sin fixes nuevos. Seguridad OK (todas las escrituras guardadas; PIN `evento_abierto` validado vía `GO_PES_PIN_CONTEXTS.EVENTO_ABIERTO`). Colores inline=0 (Lote B); quedan 19 hex en `<style>` (chips de categoría theme-complete, deuda documentada). `fugas` = JSON de FONDESE al payload (no fuga). Deuda conocida: wizards CÁMARAS/FONDESE ~150 líneas duplicadas (refactor dedicado). |
-| Admin (Usuarios+Config) | `Scripts_Admin.html`, `Auth.js`, `SystemConfig.js` | ⏳ | — | — |
+| Admin (Usuarios+Config) | `Scripts_Admin.html`, `Auth.js`, `SystemConfig.js` | ✅ | (sin cambios) | **Limpio, sin fixes.** Seguridad sólida: escrituras privilegiadas con guard superuser (`updateUser`, `deactivateUser`+PIN `user_deactivate`, `saveSystemConfigSection`); sin lock-before-guard. Sin-guard legítimas (`getUsuarioActual`, prefs self-scoped, `goPesLogAppOpened`). Front limpio (0 hex/alert/onclick tras remover UI de migración). |
 | Buscar/Historial | `Services.js` (buscar*, listarHistorial), `Scripts.html` | ⏳ | — | — |
 | Infra transversal | `Auth.js`, `Repository*.js`, `Styles.html`, `ThemeDark.html`, `Loading.html`, `Scripts_A11y.html`, `Scripts.html` | ⏳ | — | — |
 

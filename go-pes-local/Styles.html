@@ -8723,7 +8723,7 @@ th.sortable.sort-desc .sort-icon {
   .org-ms{display:grid;grid-template-columns:1fr 340px;gap:14px;align-items:stretch;min-height:0}
   @media (min-width:901px){.org-ms{height:calc(100vh - 220px);min-height:560px}.org-ms__card{height:100%}}
   @media (max-width:900px){.org-ms{grid-template-columns:1fr}.org-ms__card{height:auto;max-height:70vh}}
-  .org-ms__card{display:flex;flex-direction:column;background:var(--surface,#fff);border:1px solid var(--border,#BFD9E7);border-radius:12px;overflow:hidden;min-height:0}
+  .org-ms__card{display:flex;flex-direction:column;background:var(--surface,#fff);border:1px solid var(--border,#BFD9E7);border-radius:12px;overflow:hidden;min-height:0;min-width:0}
   .org-ms__viewer{min-height:520px}
   .org-rail__head{flex:0 0 auto;display:flex;flex-direction:column;gap:8px;padding:12px;border-bottom:1px solid var(--border,#BFD9E7);background:var(--surface-alt,#F1F6FA)}
   .org-rail__head #org-search-input{width:100%;padding:7px 10px;border:1px solid var(--border,#BFD9E7);border-radius:8px;background:var(--surface,#fff);color:var(--text,#24364B);font:inherit;font-size:.84rem}
@@ -8749,7 +8749,7 @@ th.sortable.sort-desc .sort-icon {
   .org-viewer__ttl{min-width:0}
   .org-viewer__ttl h3{margin:0;font-size:1rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text,#24364B)}
   .org-viewer__actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
-  .org-viewer__body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:14px 16px}
+  .org-viewer__body{flex:1 1 auto;min-height:0;min-width:0;overflow-y:auto;overflow-x:hidden;padding:14px 16px}
   .org-viewer__body::-webkit-scrollbar{width:9px}.org-viewer__body::-webkit-scrollbar-thumb{background:var(--border,#BFD9E7);border-radius:6px}
   .org-viewer__empty{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;color:var(--text-muted,#64748B)}
 

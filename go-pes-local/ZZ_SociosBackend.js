@@ -22,12 +22,15 @@ function importarSocios(payload) {
 
   validRows.forEach(function(row) {
     const socioId = row.socio_id || nextId_('socio', 'SOC');
+    const solicitudId = String(row.solicitud_id || '').trim();
+    const organizacionId = String(row.organizacion_id || '').trim();
+    const vinc = (solicitudId || organizacionId) ? 'manual' : 'pendiente';
 
     rawRows.push({
       created_at: now,
       source: 'WEB_APP',
       user_email: user.email,
-      organizacion_id: row.organizacion_id,
+      organizacion_id: organizacionId,
       run_socio: row.run_socio || '',
       numero_registro: row.numero_registro || '',
       nombre_socio: row.nombre_socio,
@@ -36,12 +39,21 @@ function importarSocios(payload) {
       direccion_socio: row.direccion_socio || '',
       ubicacion_socio: row.ubicacion_socio || '',
       nombre_comite_origen: row.nombre_comite_origen || '',
-      status_carga: errors.length ? 'PARCIAL' : 'OK'
+      status_carga: errors.length ? 'PARCIAL' : 'OK',
+      legacy_source: '',
+      legacy_key: '',
+      solicitud_id: solicitudId,
+      grupo_label_origen: '',
+      telefono_socio: String(row.telefono_socio || '').trim(),
+      correo_socio: String(row.correo_socio || '').trim(),
+      consentimiento: String(row.consentimiento || '').trim(),
+      fecha_registro: String(row.fecha_registro || '').trim(),
+      vinculo_estado: vinc
     });
 
     factRows.push({
       socio_id: socioId,
-      organizacion_id: row.organizacion_id,
+      organizacion_id: organizacionId,
       run_socio: row.run_socio || '',
       numero_registro: row.numero_registro || '',
       nombre_socio: row.nombre_socio,
@@ -52,7 +64,13 @@ function importarSocios(payload) {
       nombre_comite_origen: row.nombre_comite_origen || '',
       status_carga: 'OK',
       updated_by: user.email,
-      updated_at: now
+      updated_at: now,
+      solicitud_id: solicitudId,
+      telefono_socio: String(row.telefono_socio || '').trim(),
+      correo_socio: String(row.correo_socio || '').trim(),
+      consentimiento: String(row.consentimiento || '').trim(),
+      fecha_registro: String(row.fecha_registro || '').trim(),
+      vinculo_estado: vinc
     });
   });
 
@@ -110,7 +128,7 @@ function getSociosModuloClient() {
     return {
       socio_id: row.socio_id || '',
       organizacion_id: organizacionId,
-      solicitud_id: String(org.solicitud_id || caseRow.solicitud_id || '').trim(),
+      solicitud_id: String(row.solicitud_id || org.solicitud_id || caseRow.solicitud_id || '').trim(),
       nombre_organizacion: String(org.nombre_organizacion || '').trim(),
       nombre_comite: nombreComite,
       nombre_comite_origen: String(row.nombre_comite_origen || '').trim(),
@@ -121,8 +139,13 @@ function getSociosModuloClient() {
       cargo: String(row.cargo || '').trim(),
       direccion_socio: String(row.direccion_socio || '').trim(),
       ubicacion_socio: String(row.ubicacion_socio || '').trim(),
-      telefono_contacto: String(caseRow.telefono_contacto || '').trim(),
-      correo_contacto: String(caseRow.correo_contacto || '').trim(),
+      // Contacto del socio (form nuevo); fallback al contacto del caso para datos antiguos.
+      telefono_contacto: String(row.telefono_socio || caseRow.telefono_contacto || '').trim(),
+      correo_contacto: String(row.correo_socio || caseRow.correo_contacto || '').trim(),
+      consentimiento: String(row.consentimiento || '').trim(),
+      vinculo_estado: String(row.vinculo_estado || '').trim(),
+      grupo_label_origen: String(row.grupo_label_origen || '').trim(),
+      fecha_registro: row.fecha_registro || '',
       status_carga: String(row.status_carga || '').trim(),
       updated_by: String(row.updated_by || '').trim(),
       updated_at: row.updated_at || ''
@@ -338,4 +361,105 @@ function goPesMigrarSociosAntiguos() {
     sinMatch: sinMatch,
     yaVinculados: yaOk
   });
+}
+
+/**
+ * Bandeja de socios SIN VINCULAR (vinculo_estado='pendiente' o sin grupo/org).
+ * Alimenta la UI de vinculación manual.
+ */
+function getSociosSinVincular() {
+  requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
+  const socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
+  const rows = socios.filter(function(s) {
+    const estado = String(s.vinculo_estado || '').trim().toLowerCase();
+    const sinVinculo = !String(s.solicitud_id || '').trim() && !String(s.organizacion_id || '').trim();
+    return estado === 'pendiente' || sinVinculo;
+  }).map(function(s) {
+    return {
+      socio_id: s.socio_id || '',
+      run_socio: String(s.run_socio || '').trim(),
+      nombre_socio: String(s.nombre_socio || '').trim(),
+      cargo: String(s.cargo || '').trim(),
+      grupo_label_origen: String(s.grupo_label_origen || '').trim(),
+      telefono_socio: String(s.telefono_socio || '').trim(),
+      correo_socio: String(s.correo_socio || '').trim(),
+      fecha_registro: s.fecha_registro || ''
+    };
+  }).sort(function(a, b) {
+    return String(a.nombre_socio || '').localeCompare(String(b.nombre_socio || ''), 'es');
+  });
+  return serializeForClient_({ rows: rows, total: rows.length });
+}
+
+/**
+ * Vincula (o reasigna) un socio a un grupo (solicitud). RAW-first + upsert FACT.
+ * Hereda organizacion_id si el grupo ya está constituido. Autogenera N° Registro si falta.
+ * Sirve tanto para resolver un 'pendiente' como para mover un socio ya vinculado a otro grupo.
+ */
+function vincularSocioManual(payload) {
+  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
+  payload = payload || {};
+  const socioId = String(payload.socio_id || '').trim();
+  const solicitudId = String(payload.solicitud_id || '').trim();
+  if (!socioId) throw new Error('Falta socio_id.');
+  if (!solicitudId) throw new Error('Debes indicar el grupo (solicitud).');
+
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    const socio = findByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioId, false);
+    if (!socio) throw new Error('No se encontró el socio indicado.');
+
+    const caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
+    if (!caso) throw new Error('No se encontró el grupo (solicitud) indicado.');
+    const organizacionId = String(caso.organizacion_id || '').trim(); // heredado si constituido
+
+    // N° Registro: conservar si ya tiene; si no, siguiente secuencial del grupo.
+    let numeroRegistro = String(socio.numero_registro || '').trim();
+    if (!numeroRegistro) {
+      let maxReg = 0;
+      (getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || []).forEach(function(s) {
+        if (String(s.solicitud_id || '').trim() === solicitudId) {
+          maxReg = Math.max(maxReg, Number(s.numero_registro || 0) || 0);
+        }
+      });
+      numeroRegistro = String(maxReg + 1);
+    }
+
+    const now = new Date();
+    const nombreComite = socio.nombre_comite_origen || String(caso.nombre_completo || '').trim();
+    const merged = Object.assign({}, socio, {
+      solicitud_id: solicitudId,
+      organizacion_id: organizacionId,
+      numero_registro: numeroRegistro,
+      nombre_comite_origen: nombreComite,
+      vinculo_estado: 'manual',
+      updated_by: user.email,
+      updated_at: now
+    });
+    upsertByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', merged, false);
+
+    appendRowObject_(GO_PES_V2.SHEETS.RAW_SOCIOS, {
+      created_at: now, source: 'VINCULO_MANUAL', user_email: user.email,
+      organizacion_id: organizacionId, run_socio: socio.run_socio || '',
+      numero_registro: numeroRegistro, nombre_socio: socio.nombre_socio || '',
+      edad: socio.edad || '', cargo: socio.cargo || '',
+      direccion_socio: socio.direccion_socio || '', ubicacion_socio: socio.ubicacion_socio || '',
+      nombre_comite_origen: nombreComite, status_carga: 'OK',
+      legacy_source: '', legacy_key: socioId,
+      solicitud_id: solicitudId, grupo_label_origen: socio.grupo_label_origen || '',
+      telefono_socio: socio.telefono_socio || '', correo_socio: socio.correo_socio || '',
+      consentimiento: socio.consentimiento || '', fecha_registro: socio.fecha_registro || '',
+      vinculo_estado: 'manual'
+    });
+
+    if (organizacionId) {
+      refreshPartialArtifacts_({ masterSolicitudIds: [solicitudId], vistaOrganizacionIds: [organizacionId] });
+    }
+
+    logUserAction_('VINCULAR_SOCIO_MANUAL', 'socio', socioId, 'OK', { socio_id: socioId, solicitud_id: solicitudId, organizacion_id: organizacionId });
+    return serializeForClient_({ ok: true, socio_id: socioId, solicitud_id: solicitudId, organizacion_id: organizacionId, numero_registro: numeroRegistro });
+  } finally {
+    lock.releaseLock();
+  }
 }

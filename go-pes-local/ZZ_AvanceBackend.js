@@ -1761,7 +1761,9 @@ function goPesActualizarSociosAlConstituirOrganizacion_(solicitudId, organizacio
   try {
     const socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
     const sociosAActualizar = socios.filter(function(socio) {
-      return String(socio.organizacion_id || '').trim() === solicitudId;
+      // Modelo nuevo: por solicitud_id. Defensivo: patrón viejo (organizacion_id guardaba el solicitud_id).
+      return String(socio.solicitud_id || '').trim() === solicitudId
+          || String(socio.organizacion_id || '').trim() === solicitudId;
     });
 
     if (sociosAActualizar.length === 0) {
@@ -1769,16 +1771,34 @@ function goPesActualizarSociosAlConstituirOrganizacion_(solicitudId, organizacio
       return;
     }
 
-    // Actualizar cada socio
+    // Actualizar cada socio: setear organizacion_id, conservar solicitud_id. RAW-first.
     const now = new Date();
+    const email = goPesGetUserEmail_(user);
+    const rawCorr = [];
     sociosAActualizar.forEach(function(socio) {
       const socioActualizado = Object.assign({}, socio, {
+        solicitud_id: solicitudId,
         organizacion_id: organizacionId,
-        updated_by: goPesGetUserEmail_(user),
+        vinculo_estado: 'auto',
+        updated_by: email,
         updated_at: now
       });
       upsertByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioActualizado, false);
+      rawCorr.push({
+        created_at: now, source: 'CONSTITUCION', user_email: email,
+        organizacion_id: organizacionId, run_socio: socio.run_socio || '',
+        numero_registro: socio.numero_registro || '', nombre_socio: socio.nombre_socio || '',
+        edad: socio.edad || '', cargo: socio.cargo || '',
+        direccion_socio: socio.direccion_socio || '', ubicacion_socio: socio.ubicacion_socio || '',
+        nombre_comite_origen: socio.nombre_comite_origen || '', status_carga: socio.status_carga || 'OK',
+        legacy_source: '', legacy_key: socio.socio_id || '',
+        solicitud_id: solicitudId, grupo_label_origen: '',
+        telefono_socio: socio.telefono_socio || '', correo_socio: socio.correo_socio || '',
+        consentimiento: socio.consentimiento || '', fecha_registro: socio.fecha_registro || '',
+        vinculo_estado: 'auto'
+      });
     });
+    if (rawCorr.length) appendRowObjects_(GO_PES_V2.SHEETS.RAW_SOCIOS, rawCorr);
 
     logProcessing_(
       'INFO',

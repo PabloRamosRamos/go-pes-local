@@ -104,9 +104,8 @@ function validateRequisitoV2_(p) {
 }
 
 function validateSocioRowV2_(row) {
-  if (!String(row.organizacion_id || '').trim()) {
-    return { ok: false, error: 'Debes seleccionar una organización.' };
-  }
+  // Acepta vínculo por solicitud_id (grupo) O por organizacion_id (org constituida).
+  // Sin ninguno, el socio queda 'pendiente' de vinculación manual (no se rechaza).
   if (!String(row.nombre_socio || '').trim()) {
     return { ok: false, error: 'Debes completar el nombre del socio.' };
   }

@@ -161,180 +161,198 @@ function importarRespuestasFormSocios(payload) {
   const validRows = [];
   const errors = [];
   const now = new Date();
+  const tz = Session.getScriptTimeZone();
+  const cfg = getRuntimeSystemConfig_() || {};
+  const addressSuffix = String((cfg.socios && cfg.socios.addressSuffix) || 'Providencia').trim();
 
-  // Obtener socios ya existentes (para evitar duplicados por RUT)
-  const existingSocios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
-  const existingRUTs = new Set(existingSocios.map(s => String(s.run_socio || '').trim().toLowerCase()));
-
-  // Mapear grupos de vecinos (solicitud_id → organizacion_id si existe)
+  // Grupos de vecinos indexados por label NORMALIZADO (matching tolerante).
   const casos = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS) || [];
   const grupoMap = {};
   casos.forEach(function(caso) {
     const nombreCompleto = String(caso.nombre_completo || '').trim();
     const sector = String(caso.sector || caso.uv || '').trim();
     const label = nombreCompleto + (sector ? ' - ' + sector : '');
-    grupoMap[label] = {
+    grupoMap[normalizeText_(label)] = {
       solicitud_id: String(caso.solicitud_id || '').trim(),
       organizacion_id: String(caso.organizacion_id || '').trim(),
       nombre_completo: nombreCompleto
     };
   });
 
-  rows.forEach(function(row, idx) {
-    const rowNum = idx + 2; // Fila en el sheet (1-indexed, +1 por header)
+  // Socios existentes: idempotencia por socio_id + contador de N° Registro por solicitud.
+  const existingSocios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
+  const existingIds = {};
+  const nextRegBySol = {};
+  existingSocios.forEach(function(s) {
+    existingIds[String(s.socio_id || '').trim()] = true;
+    const sol = String(s.solicitud_id || '').trim();
+    const reg = Number(s.numero_registro || 0);
+    if (sol && reg > 0) nextRegBySol[sol] = Math.max(nextRegBySol[sol] || 0, reg);
+  });
 
-    const grupoLabel = String(row[colMap.grupo] || '').trim();
+  let pendientes = 0;
+
+  rows.forEach(function(row, idx) {
+    const rowNum = idx + 2;
     const rut = String(row[colMap.rut] || '').trim();
     const nombre = String(row[colMap.nombre] || '').trim();
-    const edad = String(row[colMap.edad] || '').trim();
-    const direccion = String(row[colMap.direccion] || '').trim();
-    const cargo = String(row[colMap.cargo] || '').trim();
+    if (!rut && !nombre) return; // fila vacía → ignorar
+    if (!rut) { errors.push({ index: rowNum, error: 'RUT vacío', row: { nombre } }); return; }
+    if (!nombre) { errors.push({ index: rowNum, error: 'Nombre vacío', row: { rut } }); return; }
 
-    // Log de debug para primera fila
-    if (idx === 0) {
-      Logger.log('Primera fila - Valores: grupo=' + grupoLabel + ', rut=' + rut + ', nombre=' + nombre);
-      Logger.log('Primera fila - Índices usados: colMap.grupo=' + colMap.grupo + ', valor en row[' + colMap.grupo + ']=' + row[colMap.grupo]);
+    const grupoLabelRaw = String(row[colMap.grupo] || '').trim();
+    const fechaRegistro = colMap.timestamp !== undefined
+      ? goPesSocioFechaIso_(row[colMap.timestamp], tz)
+      : goPesSocioFechaIso_(now, tz);
+    const edad = colMap.edad !== undefined ? String(row[colMap.edad] || '').trim() : '';
+    const direccion = colMap.direccion !== undefined ? String(row[colMap.direccion] || '').trim() : '';
+    const cargo = colMap.cargo !== undefined ? String(row[colMap.cargo] || '').trim() : '';
+    const telefono = colMap.telefono !== undefined ? String(row[colMap.telefono] || '').trim() : '';
+    const correo = colMap.emailContacto !== undefined ? String(row[colMap.emailContacto] || '').trim() : '';
+    const consentimiento = colMap.acepta !== undefined ? String(row[colMap.acepta] || '').trim() : '';
+
+    // Identidad de MEMBRESÍA = RUT + fecha_registro (idéntica a la reconstrucción) → idempotente.
+    const runNorm = normalizeText_(rut);
+    const socioId = runNorm ? deterministicId_('SOC', [runNorm, fechaRegistro]) : nextId_('socio', 'SOC');
+    if (existingIds[socioId]) return; // ya importado (o duplicado en el lote)
+    existingIds[socioId] = true;
+
+    // Matching tolerante: si no calza el grupo, NO se pierde → queda 'pendiente'.
+    const grupo = grupoLabelRaw ? grupoMap[normalizeText_(grupoLabelRaw)] : null;
+    let solicitudId = '', organizacionId = '', vinculoEstado = 'pendiente', nombreComite = '', numeroRegistro = '';
+    if (grupo && grupo.solicitud_id) {
+      solicitudId = grupo.solicitud_id;
+      organizacionId = grupo.organizacion_id || ''; // heredado solo si el grupo ya está constituido
+      nombreComite = grupo.nombre_completo;
+      vinculoEstado = 'auto';
+      const nextReg = (nextRegBySol[solicitudId] || 0) + 1;
+      nextRegBySol[solicitudId] = nextReg;
+      numeroRegistro = String(nextReg);
+    } else {
+      pendientes++;
     }
 
-    // Validaciones básicas
-    if (!grupoLabel) {
-      errors.push({ index: rowNum, error: 'Grupo de vecinos vacío (columna índice: ' + colMap.grupo + ')', row: { rut, nombre } });
-      return;
-    }
-
-    if (!rut) {
-      errors.push({ index: rowNum, error: 'RUT vacío', row: { grupo: grupoLabel, nombre } });
-      return;
-    }
-
-    if (!nombre) {
-      errors.push({ index: rowNum, error: 'Nombre vacío', row: { grupo: grupoLabel, rut } });
-      return;
-    }
-
-    // Verificar si el RUT ya existe
-    const rutNorm = rut.toLowerCase();
-    if (existingRUTs.has(rutNorm)) {
-      errors.push({ index: rowNum, error: 'RUT ya registrado en el sistema', row: { grupo: grupoLabel, rut, nombre } });
-      return;
-    }
-
-    // Buscar el grupo en el mapa
-    const grupo = grupoMap[grupoLabel];
-    if (!grupo) {
-      errors.push({ index: rowNum, error: 'Grupo no encontrado en el sistema: ' + grupoLabel, row: { rut, nombre } });
-      return;
-    }
-
-    // Si el grupo ya tiene organizacion_id, usar ese; si no, usar solicitud_id como temporal
-    const organizacionId = grupo.organizacion_id || grupo.solicitud_id;
-
-    if (!organizacionId) {
-      errors.push({ index: rowNum, error: 'Grupo sin ID asignado', row: { grupo: grupoLabel, rut, nombre } });
-      return;
-    }
+    const ubicacion = direccion ? (direccion + (addressSuffix ? ', ' + addressSuffix : '')) : '';
 
     validRows.push({
-      timestamp: colMap.timestamp !== undefined ? row[colMap.timestamp] : new Date(),
-      grupo_label: grupoLabel,
+      socio_id: socioId,
+      solicitud_id: solicitudId,
       organizacion_id: organizacionId,
       run_socio: rut,
+      numero_registro: numeroRegistro,
       nombre_socio: nombre,
-      edad: edad,
-      direccion_socio: direccion,
-      ubicacion_socio: '', // No viene en el form actual
+      edad: asNumberOrBlank_(edad),
       cargo: cargo,
-      nombre_comite_origen: grupo.nombre_completo
+      direccion_socio: direccion,
+      ubicacion_socio: ubicacion,
+      nombre_comite_origen: nombreComite,
+      telefono_socio: telefono,
+      correo_socio: correo,
+      consentimiento: consentimiento,
+      fecha_registro: fechaRegistro,
+      grupo_label_origen: grupoLabelRaw,
+      vinculo_estado: vinculoEstado
     });
   });
 
-  // Importar usando la función existente
-  const rawRows = [];
-  const factRows = [];
-
-  validRows.forEach(function(row) {
-    const socioId = nextId_('socio', 'SOC');
-
-    rawRows.push({
+  // Escribir RAW (log) + FACT (upsert idempotente por socio_id).
+  const rawRows = validRows.map(function(row) {
+    return {
       created_at: now,
       source: 'GOOGLE_FORM',
       user_email: user.email,
       organizacion_id: row.organizacion_id,
       run_socio: row.run_socio,
-      numero_registro: '',
+      numero_registro: row.numero_registro,
       nombre_socio: row.nombre_socio,
-      edad: asNumberOrBlank_(row.edad),
+      edad: row.edad,
       cargo: row.cargo,
       direccion_socio: row.direccion_socio,
       ubicacion_socio: row.ubicacion_socio,
       nombre_comite_origen: row.nombre_comite_origen,
-      status_carga: errors.length ? 'PARCIAL' : 'OK'
-    });
-
-    factRows.push({
-      socio_id: socioId,
+      status_carga: 'OK',
+      legacy_source: '',
+      legacy_key: '',
+      solicitud_id: row.solicitud_id,
+      grupo_label_origen: row.grupo_label_origen,
+      telefono_socio: row.telefono_socio,
+      correo_socio: row.correo_socio,
+      consentimiento: row.consentimiento,
+      fecha_registro: row.fecha_registro,
+      vinculo_estado: row.vinculo_estado
+    };
+  });
+  const factRows = validRows.map(function(row) {
+    return {
+      socio_id: row.socio_id,
       organizacion_id: row.organizacion_id,
       run_socio: row.run_socio,
-      numero_registro: '',
+      numero_registro: row.numero_registro,
       nombre_socio: row.nombre_socio,
-      edad: asNumberOrBlank_(row.edad),
+      edad: row.edad,
       cargo: row.cargo,
       direccion_socio: row.direccion_socio,
       ubicacion_socio: row.ubicacion_socio,
       nombre_comite_origen: row.nombre_comite_origen,
       status_carga: 'OK',
       updated_by: user.email,
-      updated_at: now
-    });
+      updated_at: now,
+      solicitud_id: row.solicitud_id,
+      telefono_socio: row.telefono_socio,
+      correo_socio: row.correo_socio,
+      consentimiento: row.consentimiento,
+      fecha_registro: row.fecha_registro,
+      vinculo_estado: row.vinculo_estado,
+      grupo_label_origen: row.grupo_label_origen
+    };
   });
 
   if (factRows.length > 0) {
     appendRowObjects_(GO_PES_V2.SHEETS.RAW_SOCIOS, rawRows);
     upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', factRows, false);
 
-    const affectedOrgIds = uniqueNonBlank_(validRows.map(function(row) {
-      return row.organizacion_id;
-    }));
-    const solicitudesByOrg = {};
-    getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).forEach(function(row) {
-      const orgId = String(row.organizacion_id || '').trim();
-      if (!orgId) return;
-      solicitudesByOrg[orgId] = String(row.solicitud_id || '').trim();
-    });
-
-    refreshPartialArtifacts_({
-      masterSolicitudIds: uniqueNonBlank_(affectedOrgIds.map(function(orgId) {
-        return solicitudesByOrg[orgId] || '';
-      })),
-      vistaOrganizacionIds: affectedOrgIds
-    });
+    // Refrescar artefactos solo de las orgs afectadas (las que heredaron organizacion_id).
+    const affectedOrgIds = uniqueNonBlank_(validRows.map(function(row) { return row.organizacion_id; }));
+    if (affectedOrgIds.length) {
+      const solicitudesByOrg = {};
+      getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).forEach(function(row) {
+        const orgId = String(row.organizacion_id || '').trim();
+        if (orgId) solicitudesByOrg[orgId] = String(row.solicitud_id || '').trim();
+      });
+      refreshPartialArtifacts_({
+        masterSolicitudIds: uniqueNonBlank_(affectedOrgIds.map(function(orgId) { return solicitudesByOrg[orgId] || ''; })),
+        vistaOrganizacionIds: affectedOrgIds
+      });
+    }
   }
 
   logProcessing_('INFO', 'importarRespuestasFormSocios', 'socios', '', user.email, errors.length ? 'PARCIAL' : 'OK', {
-    total: rows.length,
-    validos: validRows.length,
-    errores: errors.length
+    total: rows.length, importados: validRows.length, pendientes: pendientes, errores: errors.length
   });
-
   logUserAction_('IMPORT_FORM_SOCIOS', 'socios', '', errors.length ? 'PARCIAL' : 'OK', {
-    total: rows.length,
-    imported: validRows.length,
-    errores: errors.length
+    total: rows.length, imported: validRows.length, pendientes: pendientes, errores: errors.length
   });
 
   const result = {
     ok: errors.length === 0,
     total: rows.length,
     imported: validRows.length,
+    pendientes: pendientes,
     errors: errors,
     importedRows: serializeForClient_(factRows)
   };
 
-  goPesDiagEnd_(diag, {
-    ok: result.ok,
-    imported: validRows.length,
-    errors: errors.length
-  });
-
+  goPesDiagEnd_(diag, { ok: result.ok, imported: validRows.length, pendientes: pendientes, errors: errors.length });
   return serializeForClient_(result);
+}
+
+/**
+ * Normaliza una marca temporal a string ISO estable (yyyy-MM-ddTHH:mm:ss), para que el
+ * socio_id determinístico (RUT + fecha_registro) sea idéntico en import y en reconstrucción.
+ */
+function goPesSocioFechaIso_(value, tz) {
+  if (!value) return '';
+  var d = value instanceof Date ? value : new Date(value);
+  if (isNaN(d.getTime())) return String(value).trim();
+  return Utilities.formatDate(d, tz || Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss");
 }

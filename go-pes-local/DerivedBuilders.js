@@ -807,7 +807,8 @@ function reconstruirEstructurasDesdeRaw_() {
         correo_socio: row.correo_socio || '',
         consentimiento: row.consentimiento || '',
         fecha_registro: row.fecha_registro || '',
-        vinculo_estado: row.vinculo_estado || ''
+        vinculo_estado: row.vinculo_estado || '',
+        grupo_label_origen: row.grupo_label_origen || ''
       };
     },
     socioHeaders

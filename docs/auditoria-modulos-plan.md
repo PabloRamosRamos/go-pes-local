@@ -23,7 +23,7 @@
 | Ola | Módulos | Estado |
 |-----|---------|--------|
 | 1 — validar proceso (chicos) | Ficha · Nuevo Ingreso · Calendario | ✅ completa |
-| 2 — core diario | Inicio/Dashboard · Socios · Organizaciones | ⏳ |
+| 2 — core diario | Inicio/Dashboard · Socios · Organizaciones | ✅ completa |
 | 3 — grandes/complejos | Avance · Beneficios · Admin (Usuarios+Config) | ⏳ |
 | 4 — transversal + cierre | Buscar/Historial · Infra (Auth/Repository/Styles/Loading/A11y) | ⏳ |
 
@@ -35,7 +35,7 @@
 | Calendario | `Scripts_Calendario.html`, `Calendario.html`, `ZZ_CalendarioBackend.js` | ✅ | (sin cambios) | **Limpio, sin fixes.** Backend con guard 1ª línea; `_calShowLoading` es el step-loader del diálogo (válido); a11y (`<a>`→`<button>`) ya resuelto en auditoría previa. Cosmético no forzado: nombres `_cal*` mezclan prefijo/sufijo `_`. |
 | Inicio/Dashboard | `Scripts_Inicio.html`, `Inicio.html`, `Dashboard.js` | ✅ | (ver commit) | 5 funciones de datos con guard OK (cache CacheService ya bien). Seguridad: `goPesDiagnosticoDashboard` (dev util público) → guard superuser. Colores: los 2 hex de Inicio.html son puntos de leyenda que coinciden con los `stroke` SVG del gráfico — se dejan (tokenizar solo los puntos los desincroniza en dark). |
 | Socios | `Scripts_Socios.html`, `ZZ_SociosBackend.js`, `ZZ_FormSociosIntegration.js` | ✅ | (ver commit) | Front limpio (alert ya arreglado). Guards OK (Form: config=superuser, import=socios). Perf D4: guard antes del lock en `editarDatosSocio`. Cosmético no forzado: `goPesDiagStart_` precede al guard en varias (inerte). |
-| Organizaciones | `Scripts_Organizaciones.html`, `ZZ_OrganizacionesBackend.js` | ⏳ | — | — |
+| Organizaciones | `Scripts_Organizaciones.html`, `ZZ_OrganizacionesBackend.js` | ✅ | (sin cambios) | **Limpio, sin fixes.** Front 1503 LOC sin hallazgos (molde OK, 0 hex/alert). Backend: guards OK; helper suspender/eliminar con guard 1ª línea + rol elevado (coordinador/superuser). `hitosLegacy` = variable de datos antiguos (no código muerto). |
 | Avance | `Scripts_Avance.html`, `ZZ_AvanceBackend/Phase1/Phase2.js` | ⏳ | — | (parcial: colores hechos) |
 | Beneficios | `Scripts_Beneficios.html`, `ZZ_BeneficiosBackend.js` | ⏳ | — | (parcial: colores Lote B) |
 | Admin (Usuarios+Config) | `Scripts_Admin.html`, `Auth.js`, `SystemConfig.js` | ⏳ | — | — |

@@ -14,6 +14,7 @@
  * Diagnóstico del dashboard - ejecutar desde el editor para verificar
  */
 function goPesDiagnosticoDashboard() {
+  requireRole_(['superuser']);
   try {
     Logger.log('=== DIAGNÓSTICO DASHBOARD ===');
     Logger.log('1. Verificando acceso a GO_PES_V2.DASHBOARD...');

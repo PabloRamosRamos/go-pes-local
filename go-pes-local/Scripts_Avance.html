@@ -48,11 +48,11 @@
         <div class="avance-cols">
           <div class="avance-col">
             <h4 class="avance-col__title"><span class="eyebrow">Tramo 1</span> Preconstitución</h4>
-            <div id="avance-pre-grid" class="avance-hito-rows"></div>
+            <div id="avance-pre-list" class="avance-hito-rows"></div>
           </div>
           <div class="avance-col">
             <h4 class="avance-col__title"><span class="eyebrow">Tramo 2</span> Formalización posterior</h4>
-            <div id="avance-for-grid" class="avance-hito-rows"></div>
+            <div id="avance-for-list" class="avance-hito-rows"></div>
           </div>
         </div>
       </div>
@@ -800,8 +800,8 @@
   }
 
   function renderAvanceBotones_(data) {
-    const pre = document.getElementById('avance-pre-grid');
-    const post = document.getElementById('avance-for-grid');
+    const pre = document.getElementById('avance-pre-list');
+    const post = document.getElementById('avance-for-list');
     if (!pre || !post) return;
 
     pre.className = 'avance-hito-rows';
@@ -1281,8 +1281,8 @@
 
     const badge = document.getElementById('avance-estado-badge');
     const resumen = document.getElementById('avance-resumen');
-    const pre = document.getElementById('avance-pre-grid');
-    const post = document.getElementById('avance-for-grid');
+    const pre = document.getElementById('avance-pre-list');
+    const post = document.getElementById('avance-for-list');
     const timeline = document.getElementById('avance-timeline');
 
     if (badge) badge.textContent = 'Sin selección';

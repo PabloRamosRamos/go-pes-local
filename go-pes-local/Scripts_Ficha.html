@@ -25,9 +25,9 @@
     const vecinoBlock = fichaBlock('person', 'Vecino / solicitud', [
       ['Solicitud', s.solicitud_id],
       ['Vecino', s.nombre_completo],
-      ['Teléfono', s.telefono_contacto],
-      ['Correo', s.correo_contacto],
-      ['Dirección', s.direccion_original],
+      ['Teléfono', s.telefono_contacto, 'tel'],
+      ['Correo', s.correo_contacto, 'mailto'],
+      ['Dirección', s.direccion_original, 'maps'],
       ['UV', s.uv],
       ['Sector', s.sector],
       ['Fecha ingreso', s.fecha_ingreso],
@@ -89,9 +89,6 @@
         <div class="ficha-universe__head">
           <p class="eyebrow">Universo 1</p>
           <h3>Vecino y solicitud</h3>
-          <button type="button" class="secondary-btn btn--sm" id="ficha-edit-contacto-btn">
-            <span class="material-symbols-outlined">edit</span>Editar contacto
-          </button>
         </div>
         <div id="ficha-edit-contacto-form" class="ficha-edit-form is-hidden"></div>
         <div class="ficha-grid ficha-grid--main">
@@ -119,15 +116,60 @@
       `
       : '';
 
+    const territorioHero = [s.uv, s.sector].map(x => String(x || '').trim()).filter(Boolean).join(' · ');
+    const telHero = String(s.telefono_contacto || '').trim();
+    const correoHero = String(s.correo_contacto || '').trim();
+    const direccionHero = String(s.direccion_original || '').trim();
+    const orgIdHero = String(s.organizacion_id || o.organizacion_id || '').trim();
+    const fichaActionBtn_ = (href, icon, label, extra) => href
+      ? `<a href="${href}" ${extra || ''} class="ficha-action-btn"><span class="material-symbols-outlined">${icon}</span>${label}</a>`
+      : '';
+    const fichaHero = `
+      <div class="ficha-hero">
+        <div class="ficha-hero__id">
+          <h2 class="ficha-hero__name">${escapeHtml(s.nombre_completo || '—')}</h2>
+          <div class="ficha-hero__meta">
+            ${s.estado_actual ? `<span class="badge">${escapeHtml(s.estado_actual)}</span>` : ''}
+            <span class="ficha-hero__sub">${s.solicitud_id ? 'Solicitud ' + escapeHtml(s.solicitud_id) : ''}${territorioHero ? ' · ' + escapeHtml(territorioHero) : ''}</span>
+          </div>
+        </div>
+        <div class="ficha-hero__actions">
+          ${fichaActionBtn_(telHero ? 'tel:' + escapeHtml(telHero) : '', 'call', 'Llamar')}
+          ${fichaActionBtn_(correoHero ? 'mailto:' + escapeHtml(correoHero) : '', 'mail', 'Correo')}
+          ${fichaActionBtn_(direccionHero ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(direccionHero + ', Providencia, Chile') : '', 'place', 'Mapa', 'target="_blank" rel="noopener"')}
+          <button type="button" class="ficha-action-btn" id="ficha-edit-contacto-btn"><span class="material-symbols-outlined">edit</span>Editar</button>
+          ${hasOrg && orgIdHero ? `<button type="button" class="ficha-action-btn js-ver-organizacion" data-org="${escapeHtml(orgIdHero)}"><span class="material-symbols-outlined">groups</span>Ver organización</button>` : ''}
+        </div>
+      </div>
+    `;
+
     const hitos = data.hitos || [];
     container.innerHTML = `
       <div class="ficha-layout-v2">
+        ${fichaHero}
         ${universoVecino}
         ${universoOrganizacion}
         ${renderHistorialGestionSection_(hitos, s)}
       </div>
     `;
     initFichaEditHandlers_(s);
+
+    container.querySelectorAll('.buscar-copy-btn').forEach(btn =>
+      btn.addEventListener('click', () => {
+        const val = btn.dataset.copy || '';
+        if (val && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(val)
+            .then(() => showSuccess('Copiado: ' + val))
+            .catch(() => showError('No se pudo copiar.'));
+        }
+      })
+    );
+    container.querySelectorAll('.js-ver-organizacion').forEach(btn =>
+      btn.addEventListener('click', () => {
+        APP.state.fichaOpenOrgId = btn.dataset.org;
+        route('organizacion');
+      })
+    );
   }
 
   function initFichaEditHandlers_(s) {
@@ -229,13 +271,24 @@
           <span class="material-symbols-outlined">${icon}</span>
           ${title}
         </h3>
-        ${cleanItems.map(([k, v]) => `
+        ${cleanItems.map(([k, v, type]) => `
           <div class="kv">
             <strong>${escapeHtml(k)}</strong>
-            <span>${escapeHtml(formatUiValue_(v || ''))}</span>
+            <span>${fichaValueHtml_(v, type)}</span>
           </div>
         `).join('')}
       </div>
     `;
+  }
+
+  function fichaValueHtml_(value, type) {
+    const v = String(value || '').trim();
+    if (!v) return '';
+    const safe = escapeHtml(v);
+    const copyBtn = (label) => `<button type="button" class="buscar-copy-btn" data-copy="${safe}" title="Copiar ${label}" aria-label="Copiar ${label}"><span class="material-symbols-outlined">content_copy</span></button>`;
+    if (type === 'tel')    return `<a href="tel:${safe}" class="buscar-contact-link">${safe}</a>${copyBtn('teléfono')}`;
+    if (type === 'mailto') return `<a href="mailto:${safe}" class="buscar-contact-link">${safe}</a>${copyBtn('correo')}`;
+    if (type === 'maps')   return `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(v + ', Providencia, Chile')}" target="_blank" rel="noopener" class="buscar-contact-link buscar-maps-link"><span class="material-symbols-outlined">place</span>${safe}</a>`;
+    return escapeHtml(formatUiValue_(v));
   }
 

@@ -608,7 +608,11 @@
   }
 
   function refreshOrganizacionesModuloList_() {
-    ensureOrganizacionesModuloList_().then(() => renderOrganizacionesGridFromState_()).catch(showError);
+    ensureOrganizacionesModuloList_().then(() => {
+      renderOrganizacionesGridFromState_();
+      const openId = APP.state.fichaOpenOrgId;
+      if (openId) { APP.state.fichaOpenOrgId = null; loadOrganizacionDetalle_(openId); }
+    }).catch(showError);
   }
 
   // -- DETALLE --

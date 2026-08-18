@@ -22,7 +22,7 @@
 ## Secuenciación (olas)
 | Ola | Módulos | Estado |
 |-----|---------|--------|
-| 1 — validar proceso (chicos) | Ficha · Nuevo Ingreso · Calendario | 🔄 en curso |
+| 1 — validar proceso (chicos) | Ficha · Nuevo Ingreso · Calendario | ✅ completa |
 | 2 — core diario | Inicio/Dashboard · Socios · Organizaciones | ⏳ |
 | 3 — grandes/complejos | Avance · Beneficios · Admin (Usuarios+Config) | ⏳ |
 | 4 — transversal + cierre | Buscar/Historial · Infra (Auth/Repository/Styles/Loading/A11y) | ⏳ |
@@ -32,7 +32,7 @@
 |--------|----------|--------|-----------|-------|
 | Ficha | `Scripts_Ficha.html`, `Services.js` (obtenerFicha, editarDatosVecino, recalcularFicha, guardarSeguimiento) | ✅ | (ver commit) | Front limpio. Fix perf D4: guard/validación **antes** del lock en `editarDatosVecino` y `guardarSeguimiento`; guard como 1ª línea en `obtenerFicha`. Notado (no forzado): `renderFicha` no sigue `render<Modulo>View_`; save inline usa botón-loader en vez de `showModalLoading`. |
 | Nuevo Ingreso | `Scripts_NuevoIngreso.html`, `NuevoIngreso.js`, `Services.js` (guardarIngreso) | ✅ | (ver commit) | Front limpio (`renderNuevoIngresoView_` sigue molde, loaders/showError OK). Higiene: eliminado código muerto en `NuevoIngreso.js` (`normalizar/validarNuevoIngresoPayload_` sin llamadores). Perf D4: guard antes del lock en `guardarIngreso`. |
-| Calendario | `Scripts_Calendario.html`, `Calendario.html`, `ZZ_CalendarioBackend.js` | ⏳ | — | — |
+| Calendario | `Scripts_Calendario.html`, `Calendario.html`, `ZZ_CalendarioBackend.js` | ✅ | (sin cambios) | **Limpio, sin fixes.** Backend con guard 1ª línea; `_calShowLoading` es el step-loader del diálogo (válido); a11y (`<a>`→`<button>`) ya resuelto en auditoría previa. Cosmético no forzado: nombres `_cal*` mezclan prefijo/sufijo `_`. |
 | Inicio/Dashboard | `Scripts_Inicio.html`, `Inicio.html`, `Dashboard.js` | ⏳ | — | — |
 | Socios | `Scripts_Socios.html`, `ZZ_SociosBackend.js`, `ZZ_FormSociosIntegration.js` | ⏳ | — | — |
 | Organizaciones | `Scripts_Organizaciones.html`, `ZZ_OrganizacionesBackend.js` | ⏳ | — | — |

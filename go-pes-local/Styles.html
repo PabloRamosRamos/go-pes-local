@@ -8633,9 +8633,9 @@ th.sortable.sort-desc .sort-icon {
   .ficha-action-btn .material-symbols-outlined{font-size:1.05rem}
 
   /* Avance (2026-08): vista densa — riel + filas compactas */
-  .avance-dense{display:grid;grid-template-columns:250px 1fr;gap:18px;align-items:start;margin-bottom:18px}
+  .avance-dense{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:stretch;margin-bottom:18px}
   @media (max-width:760px){.avance-dense{grid-template-columns:1fr}}
-  .avance-rail{background:var(--surface,#fff);border:1px solid var(--border,#BFD9E7);border-radius:12px;padding:16px}
+  .avance-rail{display:flex;flex-direction:column;background:var(--surface,#fff);border:1px solid var(--border,#BFD9E7);border-radius:12px;padding:16px}
   .avance-rail.empty-state{color:var(--text-muted,#64748B);text-align:center;padding:22px 16px}
   .avance-rail__estado{text-align:center;margin-bottom:8px}
   .avance-rail__title{text-align:center;font-weight:700;color:var(--text,#24364B);margin-bottom:12px;font-size:.95rem;line-height:1.3}
@@ -8643,7 +8643,7 @@ th.sortable.sort-desc .sort-icon {
   .avance-rail__row{display:flex;justify-content:space-between;gap:10px;font-size:.84rem;padding:6px 0;border-top:1px solid var(--border,#BFD9E7)}
   .avance-rail__row span:first-child{color:var(--text-muted,#64748B)}
   .avance-rail__row span:last-child{font-weight:600;color:var(--text,#24364B);font-variant-numeric:tabular-nums}
-  .avance-rail__next{margin-top:14px;padding:12px;border-radius:10px;background:var(--accent-soft,#EAF7FB);border:1px solid color-mix(in srgb,var(--runtime-brand-primary,#3D96B4) 30%,transparent)}
+  .avance-rail__next{margin-top:auto;padding:12px;border-radius:10px;background:var(--accent-soft,#EAF7FB);border:1px solid color-mix(in srgb,var(--runtime-brand-primary,#3D96B4) 30%,transparent)}
   .avance-rail__next-eyebrow{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--runtime-brand-primary,#3D96B4);font-weight:700}
   .avance-rail__next-title{font-size:.88rem;font-weight:600;color:var(--text,#24364B);margin:2px 0 8px;line-height:1.3}
   .avance-rail__next .primary-btn{width:100%;justify-content:center}

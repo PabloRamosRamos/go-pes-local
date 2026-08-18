@@ -182,8 +182,8 @@ function getAvanceOrganizacion(payload) {
   goPesEnsureEstadoAvanceInicial_(orgId, solicitudId, user);
 
   const estadoActual = goPesGetEstadoAvanceActual_(orgId, solicitudId);
-  const timeline = goPesGetTimelineAvanceRows_(orgId);
-  const botones = goPesBuildBotonesAvanceEstado_(orgId, solicitudId);
+  const timeline = goPesGetTimelineAvanceRows_(orgId, solicitudId);
+  const botones = goPesBuildBotonesAvanceEstado_(orgId, solicitudId, { timeline: timeline, estadoActual: estadoActual });
   const resumen = goPesBuildResumenAvance_(ctx.organizacion, estadoActual, timeline);
 
   const result = goPesAvanceToClientSafe_({
@@ -225,7 +225,7 @@ function getAvanceGrupoVecinos(payload) {
 
   const timeline = goPesGetTimelineAvanceRowsBySolicitud_(solicitudId);
   const estadoActual = goPesGetEstadoAvanceActualBySolicitud_(solicitudId);
-  const botones = goPesBuildBotonesAvanceGrupoVecinos_(solicitudId);
+  const botones = goPesBuildBotonesAvanceGrupoVecinos_(solicitudId, { timeline: timeline, estadoActual: estadoActual });
   const resumen = goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline);
 
   const result = goPesAvanceToClientSafe_({
@@ -1141,10 +1141,15 @@ function goPesCrearOrganizacionDesdeHitoDocumentacion_(org, payload, user) {
   return nextOrg;
 }
 
-function goPesGetTimelineAvanceRows_(organizacionId) {
+function goPesGetTimelineAvanceRows_(organizacionId, solicitudIdHint) {
   // [OPTIMIZACIÓN 2026-07-10] Usar índices globales en vez de filterByField_
-  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
-  const solicitudId = org && org.solicitud_id ? String(org.solicitud_id || '').trim() : '';
+  // [OPTIMIZACIÓN 2026-08-18] El caller puede pasar solicitud_id ya conocido
+  // para evitar un findByField_ (clon+scan de MAE_Organizaciones) redundante.
+  let solicitudId = String(solicitudIdHint || '').trim();
+  if (!solicitudId) {
+    const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+    solicitudId = org && org.solicitud_id ? String(org.solicitud_id || '').trim() : '';
+  }
 
   // Usar índice de hitos por org (lookup O(1))
   const hitosByOrgIndex = buildHitosByOrgIdIndex_();
@@ -1338,10 +1343,14 @@ function goPesValidatePuedeRegistrarHitoSolicitud_(solicitudId, hitoCatalogo) {
   };
 }
 
-function goPesBuildBotonesAvanceEstado_(organizacionId, solicitudId) {
+function goPesBuildBotonesAvanceEstado_(organizacionId, solicitudId, precomputed) {
+  // [OPTIMIZACIÓN 2026-08-18] Reutilizar timeline/estado ya calculados por el
+  // caller (getAvanceOrganizacion) para no recomputarlos. Callers standalone
+  // (getBotonesAvanceEstado) no pasan precomputed y siguen funcionando igual.
+  precomputed = precomputed || {};
   const hitos = goPesGetCatalogoHitosAvance_();
-  const timeline = goPesGetTimelineAvanceRows_(organizacionId);
-  const estadoActual = goPesGetEstadoAvanceActual_(organizacionId, solicitudId);
+  const timeline = precomputed.timeline || goPesGetTimelineAvanceRows_(organizacionId, solicitudId);
+  const estadoActual = precomputed.estadoActual || goPesGetEstadoAvanceActual_(organizacionId, solicitudId);
 
   const cumplidosMap = {};
   timeline.forEach(function(r) {
@@ -1404,12 +1413,14 @@ function goPesBuildBotonesAvanceEstado_(organizacionId, solicitudId) {
   };
 }
 
-function goPesBuildBotonesAvanceGrupoVecinos_(solicitudId) {
+function goPesBuildBotonesAvanceGrupoVecinos_(solicitudId, precomputed) {
+  // [OPTIMIZACIÓN 2026-08-18] Reutilizar timeline/estado ya calculados por el caller.
+  precomputed = precomputed || {};
   const hitos = goPesGetCatalogoHitosAvance_().filter(function(h) {
     return goPesIsTramoPreconstitucion_(h.tramo);
   });
-  const timeline = goPesGetTimelineAvanceRowsBySolicitud_(solicitudId);
-  const estadoActual = goPesGetEstadoAvanceActualBySolicitud_(solicitudId);
+  const timeline = precomputed.timeline || goPesGetTimelineAvanceRowsBySolicitud_(solicitudId);
+  const estadoActual = precomputed.estadoActual || goPesGetEstadoAvanceActualBySolicitud_(solicitudId);
 
   const cumplidosMap = {};
   timeline.forEach(function(r) {

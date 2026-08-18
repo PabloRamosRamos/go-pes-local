@@ -8755,4 +8755,34 @@ th.sortable.sort-desc .sort-icon {
   .org-viewer__body::-webkit-scrollbar{width:9px}.org-viewer__body::-webkit-scrollbar-thumb{background:var(--border,#BFD9E7);border-radius:6px}
   .org-viewer__empty{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:30px;text-align:center;color:var(--text-muted,#64748B)}
 
+  /* Socios — vista segmentada (Opción C) 2026-08-18 */
+  .socios-main{display:flex;flex-direction:column;background:var(--surface,#fff);border:1px solid var(--border,#BFD9E7);border-radius:12px;overflow:hidden;margin-bottom:16px}
+  .socios-segments{display:flex;gap:4px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--border,#BFD9E7);background:var(--surface-alt,#F1F6FA)}
+  .socios-segbtn{font-size:.82rem;font-weight:700;padding:6px 12px;border-radius:8px;border:1px solid transparent;background:transparent;color:var(--text-muted,#64748B);cursor:pointer}
+  .socios-segbtn:hover{background:var(--surface,#fff)}
+  .socios-segbtn--on{background:var(--surface,#fff);border-color:var(--border,#BFD9E7);color:var(--text,#24364B)}
+  .socios-segbtn--attn{border-style:dashed}
+  .socios-segbtn--attn.socios-segbtn--on{color:var(--warning,#B7791F)}
+  .socios-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--border,#BFD9E7)}
+  .socios-toolbar .socios-search-field{flex:1 1 260px}
+  .socios-tablewrap{overflow-x:auto;max-height:calc(100vh - 320px);overflow-y:auto}
+  .socios-table--full{width:100%;border-collapse:collapse;font-size:.84rem}
+  .socios-table--full thead th{position:sticky;top:0;z-index:1;text-align:left;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#64748B);font-weight:700;padding:9px 12px;border-bottom:1px solid var(--border,#BFD9E7);background:var(--surface-alt,#F1F6FA)}
+  .socios-table--full tbody td{padding:9px 12px;border-bottom:1px solid var(--border,#BFD9E7);vertical-align:middle}
+  .socios-table--full tbody tr:hover{background:var(--surface-alt,#F1F6FA)}
+  .socios-table--full .socios-table__name{font-weight:600}
+  .socios-vb{display:inline-flex;align-items:center;gap:4px;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:999px;border:1px solid var(--border,#BFD9E7)}
+  .socios-vb .material-symbols-outlined{font-size:13px}
+  .socios-vb--auto{background:var(--success-soft,#F3FAEA);color:var(--success-dark,#587A24);border-color:color-mix(in srgb,var(--success,#8CC63F) 40%,transparent)}
+  .socios-vb--manual{background:var(--accent-soft,#EAF7FB);color:var(--runtime-brand-primary,#3D96B4);border-color:color-mix(in srgb,var(--runtime-brand-primary,#3D96B4) 34%,transparent)}
+  .socios-vb--pend{background:var(--warning-soft,#FFF7E6);color:var(--warning,#B7791F);border-color:color-mix(in srgb,var(--warning,#B7791F) 34%,transparent)}
+  .socios-clink{color:var(--runtime-brand-primary,#3D96B4);text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:3px}
+  .socios-clink .material-symbols-outlined{font-size:15px}
+  .socios-clink:hover{color:var(--runtime-brand-secondary,#8CC63F)}
+  .socios-consent--ok{color:var(--success-dark,#587A24);font-size:18px}
+  .socios-consent--no{color:var(--danger,#B42318);font-size:18px}
+  .socios-org__tag{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--runtime-brand-primary,#3D96B4);background:var(--accent-soft,#EAF7FB);padding:1px 6px;border-radius:4px}
+  .socios-pend-label{color:var(--warning,#B7791F);font-style:italic}
+  .socios-dashboard-panel.is-hidden{display:none}
+
 </style>

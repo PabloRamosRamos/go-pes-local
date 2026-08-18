@@ -400,9 +400,10 @@ function vincularSocioManual(payload) {
   const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
   payload = payload || {};
   const socioId = String(payload.socio_id || '').trim();
-  const solicitudId = String(payload.solicitud_id || '').trim();
+  const solicitudIdIn = String(payload.solicitud_id || '').trim();
+  const organizacionIdIn = String(payload.organizacion_id || '').trim();
   if (!socioId) throw new Error('Falta socio_id.');
-  if (!solicitudId) throw new Error('Debes indicar el grupo (solicitud).');
+  if (!solicitudIdIn && !organizacionIdIn) throw new Error('Debes indicar el grupo u organización destino.');
 
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);
@@ -410,9 +411,21 @@ function vincularSocioManual(payload) {
     const socio = findByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioId, false);
     if (!socio) throw new Error('No se encontró el socio indicado.');
 
-    const caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
-    if (!caso) throw new Error('No se encontró el grupo (solicitud) indicado.');
-    const organizacionId = String(caso.organizacion_id || '').trim(); // heredado si constituido
+    // Resolver solicitud_id + organizacion_id destino, ya sea que venga por grupo o por org.
+    let solicitudId = solicitudIdIn;
+    let organizacionId = '';
+    let caso = null;
+    if (solicitudId) {
+      caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
+      if (!caso) throw new Error('No se encontró el grupo (solicitud) indicado.');
+      organizacionId = String(caso.organizacion_id || '').trim(); // heredado si el grupo ya se constituyó
+    } else {
+      const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionIdIn, false);
+      if (!org) throw new Error('No se encontró la organización indicada.');
+      organizacionId = organizacionIdIn;
+      solicitudId = String(org.solicitud_id || '').trim();
+      caso = solicitudId ? findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false) : null;
+    }
 
     // N° Registro: conservar si ya tiene; si no, siguiente secuencial del grupo.
     let numeroRegistro = String(socio.numero_registro || '').trim();
@@ -427,7 +440,7 @@ function vincularSocioManual(payload) {
     }
 
     const now = new Date();
-    const nombreComite = socio.nombre_comite_origen || String(caso.nombre_completo || '').trim();
+    const nombreComite = socio.nombre_comite_origen || (caso ? String(caso.nombre_completo || '').trim() : '');
     const merged = Object.assign({}, socio, {
       solicitud_id: solicitudId,
       organizacion_id: organizacionId,

@@ -118,24 +118,35 @@
 
   function updateSociosTableView_(rows) {
     const sourceRows = Array.isArray(rows) ? rows : (APP.state.sociosModuleRows || []);
+    const seg = APP.state.sociosSegment || 'todos';
+
+    renderSociosSegments_(sourceRows);
+
+    const segRows = seg === 'todos' ? sourceRows : sourceRows.filter(function(r) { return socioSegmentOf_(r) === seg; });
     const queryInput = document.getElementById('socios-table-search');
     const query = queryInput ? queryInput.value : (APP.state.sociosModuleQuery || '');
-    const filteredRows = filterSociosModuleRows_(sourceRows, query);
-    const body = document.getElementById('socios-table-body');
-    const count = document.querySelector('.socios-panel__count');
-    const summary = document.getElementById('socios-table-summary');
-    const hasQuery = !!normalizeSociosSearchText_(query);
-
     APP.state.sociosModuleQuery = query;
+    const filteredRows = filterSociosModuleRows_(segRows, query);
 
-    if (body) {
-      const emptyMessage = sourceRows.length
-        ? 'Sin resultados para la b\u00fasqueda actual.'
-        : 'No hay socios cargados.';
-      body.innerHTML = renderSociosTableRows_(filteredRows, { emptyMessage });
+    const head = document.getElementById('socios-table-head');
+    const body = document.getElementById('socios-table-body');
+    const summary = document.getElementById('socios-table-summary');
+    const isPend = seg === 'pendiente';
+
+    if (head) {
+      head.innerHTML = isPend
+        ? '<tr><th>Socio</th><th>Envi\u00f3 (grupo)</th><th>Contacto</th><th>Acci\u00f3n</th></tr>'
+        : '<tr><th>Socio</th><th>Grupo / Organizaci\u00f3n</th><th>Cargo</th><th>Contacto</th><th>Consent.</th><th>V\u00ednculo</th><th></th></tr>';
     }
-    if (count) count.textContent = hasQuery ? `${filteredRows.length}/${sourceRows.length}` : String(sourceRows.length || 0);
-    if (summary) summary.textContent = getSociosTableSummaryText_(filteredRows.length, sourceRows.length, query);
+    if (body) {
+      if (!filteredRows.length) {
+        const msg = segRows.length ? 'Sin resultados para la b\u00fasqueda actual.' : 'No hay socios en este segmento.';
+        body.innerHTML = goPesTableEmptyRowHtml_('badge', msg, isPend ? 4 : 7);
+      } else {
+        body.innerHTML = filteredRows.map(isPend ? renderPendienteRowHtml_ : renderSocioRowHtml_).join('');
+      }
+    }
+    if (summary) summary.textContent = getSociosTableSummaryText_(filteredRows.length, segRows.length, query);
     bindSociosTableActions_();
     return filteredRows;
   }
@@ -157,6 +168,9 @@
       ['Solicitud ID', socio.solicitud_id],
       ['Teléfono contacto', socio.telefono_contacto],
       ['Correo contacto', socio.correo_contacto],
+      ['Consentimiento', socio.consentimiento],
+      ['Estado de vínculo', socio.vinculo_estado],
+      ['Grupo que envió', socio.grupo_label_origen],
       ['Estado de carga', socio.status_carga],
       ['Actualizado por', socio.updated_by],
       ['Última actualización', socio.updated_at]
@@ -167,77 +181,107 @@
     return goPesTableEmptyRowHtml_('badge', message || 'Esta organización no tiene socios registrados.', 3);
   }
 
-  function renderSociosTableRows_(rows, options = {}) {
-    if (!rows.length) {
-      return renderSociosTableEmptyRow_(options.emptyMessage || 'No hay socios cargados.');
-    }
-
-    return rows.map(row => `
-      <tr>
-        <td>
-          <div class="socios-table__name">${escapeHtml(row.nombre_socio || 'Sin nombre')}</div>
-          <small>${escapeHtml(String(row.cargo || row.nombre_comite || row.nombre_comite_origen || '').trim() || 'Sin cargo')}</small>
-        </td>
-        <td>${escapeHtml(getSocioTelefonoDisplay_(row))}</td>
-        <td class="socios-table__action-cell">
-          <button
-            type="button"
-            class="table-action-btn socios-table__action-btn"
-            data-socio-detail-open="${escapeHtml(row.socio_id || '')}"
-            aria-label="Ver detalle de ${escapeHtml(row.nombre_socio || 'socio')}"
-            title="Ver detalle"
-          >
-            <span class="material-symbols-outlined">search</span>
-          </button>
-        </td>
-      </tr>
-    `).join('');
+  // Segmento al que pertenece un socio: pendiente / constituida / grupo.
+  function socioSegmentOf_(row) {
+    const estado = String(row.vinculo_estado || '').trim().toLowerCase();
+    const org = String(row.organizacion_id || '').trim();
+    const sol = String(row.solicitud_id || '').trim();
+    if (estado === 'pendiente' || (!org && !sol)) return 'pendiente';
+    if (org) return 'constituida';
+    return 'grupo';
   }
 
-  function renderSociosTableSection_(rows) {
-    const totalRows = rows.length || 0;
+  function socioVinculoBadgeHtml_(v) {
+    const e = String(v || '').trim().toLowerCase();
+    if (e === 'auto')      return '<span class="socios-vb socios-vb--auto"><span class="material-symbols-outlined">link</span>Auto</span>';
+    if (e === 'manual')    return '<span class="socios-vb socios-vb--manual"><span class="material-symbols-outlined">back_hand</span>Manual</span>';
+    if (e === 'pendiente') return '<span class="socios-vb socios-vb--pend"><span class="material-symbols-outlined">help</span>Pendiente</span>';
+    return '<span class="muted">—</span>';
+  }
+
+  function socioContactoHtml_(row) {
+    const tel = String(row.telefono_contacto || '').trim();
+    const mail = String(row.correo_contacto || '').trim();
+    let out = '';
+    if (tel) {
+      const t = tel.replace(/[^\d+]/g, '');
+      out += '<a class="socios-clink" href="tel:' + escapeHtml(t) + '" onclick="event.stopPropagation()"><span class="material-symbols-outlined">call</span>' + escapeHtml(tel) + '</a>';
+    }
+    if (mail) {
+      out += ' <a class="socios-clink" href="mailto:' + escapeHtml(mail) + '" title="' + escapeHtml(mail) + '" onclick="event.stopPropagation()"><span class="material-symbols-outlined">mail</span></a>';
+    }
+    return out || '<span class="muted">Sin contacto</span>';
+  }
+
+  function socioConsentHtml_(row) {
+    const c = String(row.consentimiento || '').trim();
+    if (!c) return '<span class="muted">—</span>';
+    return /(^no)|false|^0$/i.test(c)
+      ? '<span class="material-symbols-outlined socios-consent--no" title="No acepta">block</span>'
+      : '<span class="material-symbols-outlined socios-consent--ok" title="Acepta">verified</span>';
+  }
+
+  function renderSocioRowHtml_(row) {
+    const org = String(row.nombre_organizacion || row.nombre_comite || row.nombre_comite_origen || '').trim();
+    const esGrupo = socioSegmentOf_(row) === 'grupo';
+    return '<tr>' +
+      '<td><div class="socios-table__name">' + escapeHtml(row.nombre_socio || 'Sin nombre') + '</div><small>' + escapeHtml(row.run_socio || '') + '</small></td>' +
+      '<td><span class="socios-org">' + (esGrupo ? '<span class="socios-org__tag">Grupo</span> ' : '') + escapeHtml(org || 'Sin asignar') + '</span></td>' +
+      '<td>' + escapeHtml(row.cargo || '—') + '</td>' +
+      '<td>' + socioContactoHtml_(row) + '</td>' +
+      '<td>' + socioConsentHtml_(row) + '</td>' +
+      '<td>' + socioVinculoBadgeHtml_(row.vinculo_estado) + '</td>' +
+      '<td class="socios-table__action-cell"><button type="button" class="table-action-btn" data-socio-detail-open="' + escapeHtml(row.socio_id || '') + '" title="Ver detalle"><span class="material-symbols-outlined">search</span></button></td>' +
+    '</tr>';
+  }
+
+  function renderPendienteRowHtml_(row) {
+    return '<tr>' +
+      '<td><div class="socios-table__name">' + escapeHtml(row.nombre_socio || 'Sin nombre') + '</div><small>' + escapeHtml(row.run_socio || '') + (row.cargo ? ' · ' + escapeHtml(row.cargo) : '') + '</small></td>' +
+      '<td><span class="socios-pend-label">"' + escapeHtml(row.grupo_label_origen || '—') + '"</span></td>' +
+      '<td>' + socioContactoHtml_(row) + '</td>' +
+      '<td class="socios-table__action-cell"><button type="button" class="secondary-btn btn--sm" data-socio-vincular="' + escapeHtml(row.socio_id || '') + '"><span class="material-symbols-outlined">link</span>Vincular</button></td>' +
+    '</tr>';
+  }
+
+  function renderSociosSegments_(rows) {
+    const el = document.getElementById('socios-segments');
+    if (!el) return;
+    const seg = APP.state.sociosSegment || 'todos';
+    const counts = { todos: rows.length, constituida: 0, grupo: 0, pendiente: 0 };
+    rows.forEach(function(r) { const s = socioSegmentOf_(r); counts[s] = (counts[s] || 0) + 1; });
+    const segs = [
+      { key: 'todos', label: 'Todos', n: counts.todos },
+      { key: 'constituida', label: 'Constituidas', n: counts.constituida },
+      { key: 'grupo', label: 'Grupos', n: counts.grupo },
+      { key: 'pendiente', label: 'Pendientes', n: counts.pendiente, attn: true }
+    ];
+    el.innerHTML = segs.map(function(s) {
+      return '<button type="button" class="socios-segbtn' + (s.key === seg ? ' socios-segbtn--on' : '') + (s.attn ? ' socios-segbtn--attn' : '') + '" data-seg="' + s.key + '">' + s.label + ' (' + s.n + ')</button>';
+    }).join('');
+  }
+
+  function renderSociosVincularModal_() {
     return `
-      <section class="socios-data-panel socios-table-panel">
-        <div class="socios-panel__head">
-          <div>
-            <p class="eyebrow">Socios cargados</p>
-            <h3>Tabla operativa</h3>
-            <p class="muted">Listado registrado en los libros de socios de cada organización</p>
+      <div id="socios-vincular-modal" class="socios-modal is-hidden" aria-hidden="true">
+        <div class="socios-modal__backdrop" data-socios-vincular-close="true"></div>
+        <div class="socios-modal__dialog">
+          <div class="socios-modal__head">
+            <div><p class="eyebrow">Vincular socio</p><h3 id="socios-vincular-title">Vincular</h3></div>
+            <button type="button" class="secondary-btn" data-socios-vincular-close="true"><span class="material-symbols-outlined">close</span>Cerrar</button>
           </div>
-          <span class="socios-panel__count">${escapeHtml(String(totalRows))}</span>
-        </div>
-        <div class="socios-table-toolbar">
-          <label class="socios-search-field" for="socios-table-search">
-            <span class="material-symbols-outlined">search</span>
-            <input
-              id="socios-table-search"
-              type="search"
-              placeholder="Buscar por nombre, tel\u00e9fono o comit\u00e9"
-              value="${escapeHtml(APP.state.sociosModuleQuery || '')}"
-              autocomplete="off"
-            >
-          </label>
-          <p id="socios-table-summary" class="socios-table__summary muted">${escapeHtml(getSociosTableSummaryText_(totalRows, totalRows, APP.state.sociosModuleQuery || ''))}</p>
-        </div>
-        <div class="socios-table-wrap" style="position:relative;">
-          <div id="socios-table-loading" class="module-loading module-loading--overlay is-hidden">
-            <span class="material-symbols-outlined dash-spin">refresh</span>
-            <span>Cargando socios...</span>
+          <div style="padding:1rem 1.25rem">
+            <p class="muted" id="socios-vincular-sub"></p>
+            <label style="display:block;margin-top:10px">Grupo u organización destino
+              <select id="socios-vincular-select" style="width:100%;margin-top:6px"></select>
+            </label>
           </div>
-          <table class="socios-table">
-            <thead>
-              <tr>
-                <th>Nombre</th>
-                <th>Teléfono</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="socios-table-body">
-              ${renderSociosTableRows_(rows)}
-            </tbody>
-          </table>
+          <div class="actions">
+            <button type="button" class="secondary-btn" data-socios-vincular-close="true"><span class="material-symbols-outlined">undo</span>Cancelar</button>
+            <button type="button" class="primary-btn" id="socios-vincular-save-btn"><span class="material-symbols-outlined">link</span>Vincular</button>
+          </div>
         </div>
-      </section>
+      </div>
     `;
   }
 
@@ -318,7 +362,7 @@
       return APP.state.sociosModuleRows;
     }).catch(err => {
       if (body) {
-        body.innerHTML = '<tr><td colspan="3" class="socios-table__empty">No fue posible cargar los socios.</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" class="socios-table__empty">No fue posible cargar los socios.</td></tr>';
       }
       if (count) count.textContent = '0';
       // Ocultar loader en caso de error
@@ -340,46 +384,53 @@
         <div class="section-head socios-head">
           <div>
             <p class="eyebrow">Socios</p>
-            <h2>Visualización y carga de socios</h2>
-            <p class="muted">Visualiza el panel de socios y registra cargas asociadas a un comité existente.</p>
+            <h2>Socios</h2>
+            <p class="muted">Padrón por organización y grupo. Alta desde el formulario; vinculación manual para los pendientes.</p>
           </div>
           <div class="socios-actions">
-            <button type="button" class="secondary-btn" id="socios-open-bulk-btn">
-              <span class="material-symbols-outlined">upload_file</span>Agregar socios masivamente
-            </button>
-            <button type="button" class="secondary-btn" id="socios-open-manual-btn">
-              <span class="material-symbols-outlined">person_add</span>Agregar socio manualmente
-            </button>
-            <button type="button" class="primary-btn" id="socios-import-form-btn">
-              <span class="material-symbols-outlined">cloud_download</span>Importar desde formulario
-            </button>
+            <button type="button" class="secondary-btn" id="socios-open-manual-btn"><span class="material-symbols-outlined">person_add</span>Manual</button>
+            <button type="button" class="secondary-btn" id="socios-open-bulk-btn"><span class="material-symbols-outlined">upload_file</span>Masivo</button>
+            <button type="button" class="secondary-btn" id="socios-dash-toggle"><span class="material-symbols-outlined">analytics</span>Dashboard</button>
+            <button type="button" class="primary-btn" id="socios-import-form-btn"><span class="material-symbols-outlined">cloud_download</span>Importar del formulario</button>
           </div>
         </div>
 
-        <div class="socios-layout">
-          ${renderSociosTableSection_(cachedRows)}
-          <section class="socios-data-panel socios-dashboard-panel">
-            <div class="socios-panel__head">
-              <div>
-                <p class="eyebrow">Dashboard</p>
-                <h3>Panel embebido</h3>
-                <p class="muted">Se mantiene el mismo reporte actual, ahora contenido en el panel derecho del módulo.</p>
-              </div>
-              <span class="inicio-dashboard-pill">Looker Studio</span>
-            </div>
-            <div class="socios-embed-panel">
+        <div class="socios-main card">
+          <div class="socios-segments" id="socios-segments"></div>
+          <div class="socios-toolbar">
+            <label class="socios-search-field" for="socios-table-search">
+              <span class="material-symbols-outlined">search</span>
+              <input id="socios-table-search" type="search" placeholder="Buscar por nombre, RUT, teléfono o comité…" value="${escapeHtml(APP.state.sociosModuleQuery || '')}" autocomplete="off">
+            </label>
+            <p id="socios-table-summary" class="socios-table__summary muted"></p>
+          </div>
+          <div class="socios-tablewrap" style="position:relative;">
+            <div id="socios-table-loading" class="module-loading module-loading--overlay is-hidden"><span class="material-symbols-outlined dash-spin">refresh</span><span>Cargando socios...</span></div>
+            <table class="socios-table socios-table--full">
+              <thead id="socios-table-head"></thead>
+              <tbody id="socios-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <section id="socios-dash-panel" class="socios-data-panel socios-dashboard-panel is-hidden">
+          <div class="socios-panel__head">
+            <div><p class="eyebrow">Dashboard</p><h3>Panel embebido</h3></div>
+            <span class="inicio-dashboard-pill">Looker Studio</span>
+          </div>
+          <div class="socios-embed-panel">
           ${dashboardUrl
             ? `<iframe class="socios-embed" width="600" height="${escapeHtml(String(dashboardHeight || 443))}" src="${escapeHtml(dashboardUrl)}" frameborder="0" style="border:0" allowfullscreen sandbox="allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox" loading="lazy" scrolling="no" title="Panel de socios"></iframe>`
             : `<div class="socios-embed socios-embed--empty"><span class="material-symbols-outlined">analytics</span><strong>Panel Looker Studio pendiente de configuración</strong><span>Define la URL en <code>sociosDashboardUrl</code> para mostrar el panel embebido.</span></div>`}
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
 
         <div id="socios-preview" class="socios-preview"></div>
 
         ${renderSociosBulkModal_()}
         ${renderSociosManualModal_()}
         ${renderSociosDetailModal_()}
+        ${renderSociosVincularModal_()}
       </div>
     `;
 
@@ -518,6 +569,21 @@
     document.querySelectorAll('[data-socios-detail-close]').forEach(btn => {
       btn.addEventListener('click', closeSocioDetailModal_);
     });
+    document.querySelectorAll('[data-socios-vincular-close]').forEach(btn => {
+      btn.addEventListener('click', () => setModalVisibility_('socios-vincular-modal', false));
+    });
+    document.getElementById('socios-vincular-save-btn')?.addEventListener('click', saveSocioVincular_);
+
+    document.getElementById('socios-segments')?.addEventListener('click', function(e) {
+      const b = e.target.closest('[data-seg]');
+      if (!b) return;
+      APP.state.sociosSegment = b.dataset.seg || 'todos';
+      updateSociosTableView_();
+    });
+
+    document.getElementById('socios-dash-toggle')?.addEventListener('click', function() {
+      document.getElementById('socios-dash-panel')?.classList.toggle('is-hidden');
+    });
 
     const searchInput = document.getElementById('socios-table-search');
     if (searchInput && searchInput.dataset.boundSociosSearch !== '1') {
@@ -535,6 +601,49 @@
       btn.dataset.boundSocioDetail = '1';
       btn.addEventListener('click', () => openSocioDetailModal_(btn.dataset.socioDetailOpen));
     });
+    document.querySelectorAll('[data-socio-vincular]').forEach(btn => {
+      if (btn.dataset.boundSocioVincular === '1') return;
+      btn.dataset.boundSocioVincular = '1';
+      btn.addEventListener('click', () => openSocioVincularModal_(btn.dataset.socioVincular));
+    });
+  }
+
+  function openSocioVincularModal_(socioId) {
+    const id = String(socioId || '').trim();
+    const row = (APP.state.sociosModuleRows || []).find(r => String(r.socio_id || '').trim() === id);
+    if (!row) { showError('No se encontró el socio.'); return; }
+    APP.state.sociosVincularId = id;
+    const title = document.getElementById('socios-vincular-title');
+    const sub = document.getElementById('socios-vincular-sub');
+    if (title) title.textContent = row.nombre_socio || 'Vincular socio';
+    if (sub) sub.textContent = row.grupo_label_origen
+      ? `El socio envió: "${row.grupo_label_origen}". Elige el grupo u organización correcta.`
+      : 'Elige el grupo u organización destino.';
+    const ensure = (typeof ensureOrganizacionesModuloList_ === 'function') ? ensureOrganizacionesModuloList_() : Promise.resolve();
+    (ensure || Promise.resolve()).then(() => {
+      const items = (APP.state.organizacionesModulo || []).map(o => ({
+        value: (o.tipo === 'grupo_vecinos' ? 'sol:' : 'org:') + o.value,
+        label: (o.tipo === 'grupo_vecinos' ? 'Grupo · ' : '') + o.label
+      }));
+      fillSelect(document.getElementById('socios-vincular-select'), items, 'Seleccionar…');
+      setModalVisibility_('socios-vincular-modal', true);
+    }).catch(showError);
+  }
+
+  function saveSocioVincular_() {
+    const socioId = APP.state.sociosVincularId;
+    const sel = document.getElementById('socios-vincular-select');
+    const val = sel ? String(sel.value || '').trim() : '';
+    if (!socioId || !val) { showError('Selecciona un grupo u organización.'); return; }
+    const payload = { socio_id: socioId };
+    if (val.indexOf('sol:') === 0) payload.solicitud_id = val.slice(4);
+    else payload.organizacion_id = val.slice(4);
+    api('vincularSocioManual', payload).then(() => {
+      showSuccess('Socio vinculado.');
+      setModalVisibility_('socios-vincular-modal', false);
+      APP.state.sociosModuleFetchedAt = 0;
+      loadSociosModuleData_({ force: true }).catch(() => {});
+    }).catch(showError);
   }
 
   function fillSociosComiteSelects_() {

@@ -600,10 +600,10 @@ function formatInicioDate_(value) {
 }
 
 function editarDatosVecino(payload) {
+  const user = requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'superuser']);
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);
   try {
-    const user = requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'superuser']);
     const solicitudId = String(payload && payload.solicitud_id || '').trim();
     if (!solicitudId) throw new Error('Falta solicitud_id.');
 
@@ -628,8 +628,8 @@ function editarDatosVecino(payload) {
 }
 
 function obtenerFicha(payload) {
-  const diag = goPesDiagStart_('Services.obtenerFicha', payload || {});
   requireModuleAccess_('ficha', ['operador', 'coordinador', 'superuser']);
+  const diag = goPesDiagStart_('Services.obtenerFicha', payload || {});
 
   // [OPTIMIZACIÓN 2026-07-10] Medir performance
   const perfStart = Date.now();
@@ -983,11 +983,11 @@ function guardarIngreso(payload) {
 }
 
 function guardarSeguimiento(payload) {
+  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
+  validateSeguimientoV2_(payload);
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);
   try {
-  const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
-  validateSeguimientoV2_(payload);
   const now = new Date();
   const hitoId = payload.hito_id || nextId_('hito', 'HIT');
 

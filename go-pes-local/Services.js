@@ -826,12 +826,12 @@ function getHitoCreacionOrganizacionFromAvance_(rows) {
 }
 
 function guardarIngreso(payload) {
+  const user = requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'superuser']);
   const diag = goPesDiagStart_('Services.guardarIngreso', {});
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);
 
   try {
-    const user = requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'superuser']);
     ensureSheetsSubset_([GO_PES_V2.SHEETS.RAW_INGRESO, GO_PES_V2.SHEETS.MAE_CASOS]);
 
     payload = payload || {};

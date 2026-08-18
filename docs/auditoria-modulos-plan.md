@@ -31,7 +31,7 @@
 | Módulo | Archivos | Estado | Build DEV | Notas |
 |--------|----------|--------|-----------|-------|
 | Ficha | `Scripts_Ficha.html`, `Services.js` (obtenerFicha, editarDatosVecino, recalcularFicha, guardarSeguimiento) | ✅ | (ver commit) | Front limpio. Fix perf D4: guard/validación **antes** del lock en `editarDatosVecino` y `guardarSeguimiento`; guard como 1ª línea en `obtenerFicha`. Notado (no forzado): `renderFicha` no sigue `render<Modulo>View_`; save inline usa botón-loader en vez de `showModalLoading`. |
-| Nuevo Ingreso | `Scripts_NuevoIngreso.html`, `NuevoIngreso.js`, `Services.js` (guardarIngreso) | ⏳ | — | — |
+| Nuevo Ingreso | `Scripts_NuevoIngreso.html`, `NuevoIngreso.js`, `Services.js` (guardarIngreso) | ✅ | (ver commit) | Front limpio (`renderNuevoIngresoView_` sigue molde, loaders/showError OK). Higiene: eliminado código muerto en `NuevoIngreso.js` (`normalizar/validarNuevoIngresoPayload_` sin llamadores). Perf D4: guard antes del lock en `guardarIngreso`. |
 | Calendario | `Scripts_Calendario.html`, `Calendario.html`, `ZZ_CalendarioBackend.js` | ⏳ | — | — |
 | Inicio/Dashboard | `Scripts_Inicio.html`, `Inicio.html`, `Dashboard.js` | ⏳ | — | — |
 | Socios | `Scripts_Socios.html`, `ZZ_SociosBackend.js`, `ZZ_FormSociosIntegration.js` | ⏳ | — | — |

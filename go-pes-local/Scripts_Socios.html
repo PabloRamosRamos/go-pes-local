@@ -136,7 +136,7 @@
     if (head) {
       head.innerHTML = isPend
         ? '<tr><th>Socio</th><th>Envi\u00f3 (grupo)</th><th>Contacto</th><th>Acci\u00f3n</th></tr>'
-        : '<tr><th>Socio</th><th>Grupo / Organizaci\u00f3n</th><th>Cargo</th><th>Contacto</th><th>Consent.</th><th>V\u00ednculo</th><th></th></tr>';
+        : '<tr><th>Socio</th><th>RUT</th><th>Grupo / Organizaci\u00f3n</th><th>Cargo</th><th>Consent.</th><th>V\u00ednculo</th><th>Acciones</th></tr>';
     }
     if (body) {
       if (!filteredRows.length) {
@@ -221,17 +221,57 @@
       : '<span class="material-symbols-outlined socios-consent--ok" title="Acepta">check_circle</span>';
   }
 
+  function socioMapsUrl_(row) {
+    const addr = String(row.ubicacion_socio || row.direccion_socio || '').trim();
+    return addr ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr) : '';
+  }
+
+  function socioWhatsappUrl_(row) {
+    const org = String(row.nombre_organizacion || row.nombre_comite || row.nombre_comite_origen || '').trim();
+    const lines = [
+      'Ficha de socio',
+      'Nombre: ' + (row.nombre_socio || '—'),
+      'RUT: ' + (row.run_socio || '—'),
+      'Cargo: ' + (row.cargo || '—'),
+      org ? 'Organización/Grupo: ' + org : '',
+      row.telefono_contacto ? 'Teléfono: ' + row.telefono_contacto : '',
+      row.correo_contacto ? 'Correo: ' + row.correo_contacto : '',
+      row.direccion_socio ? 'Dirección: ' + (row.ubicacion_socio || row.direccion_socio) : ''
+    ].filter(Boolean);
+    return 'https://wa.me/?text=' + encodeURIComponent(lines.join('\n'));
+  }
+
+  function socioAccionesHtml_(row) {
+    const tel = String(row.telefono_contacto || '').trim();
+    const mail = String(row.correo_contacto || '').trim();
+    const maps = socioMapsUrl_(row);
+    let out = '<div class="socios-acts">';
+    out += tel
+      ? '<a class="socios-act" href="tel:' + escapeHtml(tel.replace(/[^\d+]/g, '')) + '" title="Llamar" onclick="event.stopPropagation()"><span class="material-symbols-outlined">call</span></a>'
+      : '<span class="socios-act socios-act--off" title="Sin teléfono"><span class="material-symbols-outlined">call</span></span>';
+    out += mail
+      ? '<a class="socios-act" href="mailto:' + escapeHtml(mail) + '" title="Escribir" onclick="event.stopPropagation()"><span class="material-symbols-outlined">mail</span></a>'
+      : '<span class="socios-act socios-act--off" title="Sin correo"><span class="material-symbols-outlined">mail</span></span>';
+    out += maps
+      ? '<a class="socios-act" href="' + escapeHtml(maps) + '" target="_blank" rel="noopener" title="Ubicación en Maps" onclick="event.stopPropagation()"><span class="material-symbols-outlined">location_on</span></a>'
+      : '<span class="socios-act socios-act--off" title="Sin dirección"><span class="material-symbols-outlined">location_on</span></span>';
+    out += '<a class="socios-act socios-act--wa" href="' + escapeHtml(socioWhatsappUrl_(row)) + '" target="_blank" rel="noopener" title="Compartir por WhatsApp" onclick="event.stopPropagation()"><span class="material-symbols-outlined">share</span></a>';
+    out += '<button type="button" class="socios-act" data-socio-detail-open="' + escapeHtml(row.socio_id || '') + '" title="Ver detalle"><span class="material-symbols-outlined">search</span></button>';
+    out += '</div>';
+    return out;
+  }
+
   function renderSocioRowHtml_(row) {
     const org = String(row.nombre_organizacion || row.nombre_comite || row.nombre_comite_origen || '').trim();
     const esGrupo = socioSegmentOf_(row) === 'grupo';
     return '<tr>' +
-      '<td><div class="socios-table__name">' + escapeHtml(row.nombre_socio || 'Sin nombre') + '</div><small>' + escapeHtml(row.run_socio || '') + '</small></td>' +
+      '<td><div class="socios-table__name">' + escapeHtml(row.nombre_socio || 'Sin nombre') + '</div></td>' +
+      '<td>' + escapeHtml(row.run_socio || '—') + '</td>' +
       '<td><span class="socios-org">' + (esGrupo ? '<span class="socios-org__tag">Grupo</span> ' : '') + escapeHtml(org || 'Sin asignar') + '</span></td>' +
       '<td>' + escapeHtml(row.cargo || '—') + '</td>' +
-      '<td>' + socioContactoHtml_(row) + '</td>' +
       '<td>' + socioConsentHtml_(row) + '</td>' +
       '<td>' + socioVinculoBadgeHtml_(row.vinculo_estado) + '</td>' +
-      '<td class="socios-table__action-cell"><button type="button" class="table-action-btn" data-socio-detail-open="' + escapeHtml(row.socio_id || '') + '" title="Ver detalle"><span class="material-symbols-outlined">search</span></button></td>' +
+      '<td class="socios-table__action-cell">' + socioAccionesHtml_(row) + '</td>' +
     '</tr>';
   }
 

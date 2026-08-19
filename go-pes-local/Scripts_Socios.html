@@ -136,7 +136,7 @@
     if (head) {
       head.innerHTML = isPend
         ? '<tr><th>Socio</th><th>Envi\u00f3 (grupo)</th><th>Contacto</th><th>Acci\u00f3n</th></tr>'
-        : '<tr><th>Socio</th><th>RUT</th><th>Grupo / Organizaci\u00f3n</th><th>Cargo</th><th>Consent.</th><th>V\u00ednculo</th><th>Acciones</th></tr>';
+        : '<tr><th>RUT</th><th>Socio</th><th>Grupo / Organizaci\u00f3n</th><th>Cargo</th><th>Consent.</th><th>V\u00ednculo</th><th>Acciones</th></tr>';
     }
     if (body) {
       if (!filteredRows.length) {
@@ -217,8 +217,8 @@
     const c = String(row.consentimiento || '').trim();
     if (!c) return '<span class="muted">—</span>';
     return /(^no)|false|^0$/i.test(c)
-      ? '<span class="material-symbols-outlined socios-consent--no" title="No acepta">cancel</span>'
-      : '<span class="material-symbols-outlined socios-consent--ok" title="Acepta">check_circle</span>';
+      ? '<span class="socios-consent-badge socios-consent-badge--no" title="No acepta"><span class="material-symbols-outlined">cancel</span>No</span>'
+      : '<span class="socios-consent-badge socios-consent-badge--si" title="Acepta"><span class="material-symbols-outlined">check_circle</span>Sí</span>';
   }
 
   function socioMapsUrl_(row) {
@@ -268,8 +268,8 @@
     const org = String(row.nombre_organizacion || row.nombre_comite || row.nombre_comite_origen || '').trim();
     const esGrupo = socioSegmentOf_(row) === 'grupo';
     return '<tr>' +
-      '<td><div class="socios-table__name">' + escapeHtml(row.nombre_socio || 'Sin nombre') + '</div></td>' +
       '<td>' + escapeHtml(row.run_socio || '—') + '</td>' +
+      '<td><div class="socios-table__name">' + escapeHtml(row.nombre_socio || 'Sin nombre') + '</div></td>' +
       '<td><span class="socios-org">' + (esGrupo ? '<span class="socios-org__tag">Grupo</span> ' : '') + escapeHtml(org || 'Sin asignar') + '</span></td>' +
       '<td>' + escapeHtml(row.cargo || '—') + '</td>' +
       '<td>' + socioConsentHtml_(row) + '</td>' +

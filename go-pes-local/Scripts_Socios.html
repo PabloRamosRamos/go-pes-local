@@ -118,7 +118,8 @@
 
   function updateSociosTableView_(rows) {
     const sourceRows = Array.isArray(rows) ? rows : (APP.state.sociosModuleRows || []);
-    const seg = APP.state.sociosSegment || 'todos';
+    let seg = APP.state.sociosSegment || 'todos';
+    if (['todos', 'constituida', 'pendiente'].indexOf(seg) === -1) { seg = 'todos'; APP.state.sociosSegment = 'todos'; }
 
     renderSociosSegments_(sourceRows);
 
@@ -132,18 +133,29 @@
     const body = document.getElementById('socios-table-body');
     const summary = document.getElementById('socios-table-summary');
     const isPend = seg === 'pendiente';
+    const pendSort = APP.state.sociosPendSort || 'asc';
 
     if (head) {
+      const arrow = pendSort === 'asc' ? 'arrow_upward' : 'arrow_downward';
       head.innerHTML = isPend
-        ? '<tr><th class="socios-check-cell"><input type="checkbox" id="socios-pend-check-all" title="Seleccionar todos"></th><th>Socio</th><th>Envi\u00f3 (grupo)</th><th>Contacto</th><th>Acci\u00f3n</th></tr>'
+        ? '<tr><th class="socios-check-cell"><input type="checkbox" id="socios-pend-check-all" title="Seleccionar todos"></th><th>Socio</th><th class="socios-th-sort" data-sort="grupo" title="Ordenar por grupo enviado">Envi\u00f3 (grupo) <span class="material-symbols-outlined">' + arrow + '</span></th><th>Contacto</th><th>Acci\u00f3n</th></tr>'
         : '<tr><th>RUT</th><th>Socio</th><th>Grupo / Organizaci\u00f3n</th><th>Cargo</th><th>Consent.</th><th>V\u00ednculo</th><th>Acciones</th></tr>';
     }
+
+    let displayRows = filteredRows;
+    if (isPend) {
+      displayRows = filteredRows.slice().sort(function(a, b) {
+        const r = String(a.grupo_label_origen || '').localeCompare(String(b.grupo_label_origen || ''), 'es', { sensitivity: 'base' });
+        return pendSort === 'asc' ? r : -r;
+      });
+    }
+
     if (body) {
-      if (!filteredRows.length) {
+      if (!displayRows.length) {
         const msg = segRows.length ? 'Sin resultados para la b\u00fasqueda actual.' : 'No hay socios en este segmento.';
         body.innerHTML = goPesTableEmptyRowHtml_('badge', msg, isPend ? 5 : 7);
       } else {
-        body.innerHTML = filteredRows.map(isPend ? renderPendienteRowHtml_ : renderSocioRowHtml_).join('');
+        body.innerHTML = displayRows.map(isPend ? renderPendienteRowHtml_ : renderSocioRowHtml_).join('');
       }
     }
     if (summary) summary.textContent = getSociosTableSummaryText_(filteredRows.length, segRows.length, query);
@@ -317,7 +329,6 @@
     const segs = [
       { key: 'todos', label: 'Todos', n: counts.todos },
       { key: 'constituida', label: 'Constituidas', n: counts.constituida },
-      { key: 'grupo', label: 'Grupos', n: counts.grupo },
       { key: 'pendiente', label: 'Pendientes', n: counts.pendiente, attn: true }
     ];
     el.innerHTML = segs.map(function(s) {
@@ -688,6 +699,14 @@
         document.querySelectorAll('.socios-pend-check').forEach(function(c) { c.checked = all.checked; });
         all.indeterminate = false;
         updateSociosBulkBtn_();
+      });
+    }
+    // El header "Envió (grupo)" se re-renderiza en cada pasada: se re-liga sin guard.
+    const sortTh = document.querySelector('#socios-table-head [data-sort="grupo"]');
+    if (sortTh) {
+      sortTh.addEventListener('click', function() {
+        APP.state.sociosPendSort = (APP.state.sociosPendSort === 'asc') ? 'desc' : 'asc';
+        updateSociosTableView_();
       });
     }
   }

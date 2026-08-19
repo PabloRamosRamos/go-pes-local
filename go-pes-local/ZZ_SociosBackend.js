@@ -476,3 +476,89 @@ function vincularSocioManual(payload) {
     lock.releaseLock();
   }
 }
+
+/**
+ * Vinculación MASIVA: varios socios a una misma organización (o grupo) en una sola pasada.
+ * payload = { socio_ids: [...], organizacion_id | solicitud_id }. RAW-first + upsert batch.
+ * N° Registro secuencial arrancando del máximo existente del destino.
+ */
+function vincularSociosManual(payload) {
+  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
+  payload = payload || {};
+  const ids = (Array.isArray(payload.socio_ids) ? payload.socio_ids : []).map(function(x) { return String(x || '').trim(); }).filter(Boolean);
+  const solicitudIdIn = String(payload.solicitud_id || '').trim();
+  const organizacionIdIn = String(payload.organizacion_id || '').trim();
+  if (!ids.length) throw new Error('No hay socios seleccionados.');
+  if (!solicitudIdIn && !organizacionIdIn) throw new Error('Debes indicar la organización destino.');
+
+  const lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    // Resolver el destino UNA sola vez.
+    let solicitudId = solicitudIdIn;
+    let organizacionId = '';
+    let caso = null;
+    if (solicitudId) {
+      caso = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
+      if (!caso) throw new Error('No se encontró el grupo (solicitud) indicado.');
+      organizacionId = String(caso.organizacion_id || '').trim();
+    } else {
+      const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionIdIn, false);
+      if (!org) throw new Error('No se encontró la organización indicada.');
+      organizacionId = organizacionIdIn;
+      solicitudId = String(org.solicitud_id || '').trim();
+      caso = solicitudId ? findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false) : null;
+    }
+    const nombreCasoComite = caso ? String(caso.nombre_completo || '').trim() : '';
+
+    const socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];
+    const byId = {};
+    let maxReg = 0;
+    socios.forEach(function(s) {
+      byId[String(s.socio_id || '').trim()] = s;
+      if (String(s.solicitud_id || '').trim() === solicitudId || (organizacionId && String(s.organizacion_id || '').trim() === organizacionId)) {
+        maxReg = Math.max(maxReg, Number(s.numero_registro || 0) || 0);
+      }
+    });
+
+    const now = new Date();
+    const factRows = [];
+    const rawRows = [];
+    ids.forEach(function(id) {
+      const socio = byId[id];
+      if (!socio) return;
+      let numeroRegistro = String(socio.numero_registro || '').trim();
+      if (!numeroRegistro) { maxReg += 1; numeroRegistro = String(maxReg); }
+      const nombreComite = socio.nombre_comite_origen || nombreCasoComite;
+      factRows.push(Object.assign({}, socio, {
+        solicitud_id: solicitudId, organizacion_id: organizacionId,
+        numero_registro: numeroRegistro, nombre_comite_origen: nombreComite,
+        vinculo_estado: 'manual', updated_by: user.email, updated_at: now
+      }));
+      rawRows.push({
+        created_at: now, source: 'VINCULO_MANUAL', user_email: user.email,
+        organizacion_id: organizacionId, run_socio: socio.run_socio || '',
+        numero_registro: numeroRegistro, nombre_socio: socio.nombre_socio || '',
+        edad: socio.edad || '', cargo: socio.cargo || '',
+        direccion_socio: socio.direccion_socio || '', ubicacion_socio: socio.ubicacion_socio || '',
+        nombre_comite_origen: nombreComite, status_carga: 'OK',
+        legacy_source: '', legacy_key: id,
+        solicitud_id: solicitudId, grupo_label_origen: socio.grupo_label_origen || '',
+        telefono_socio: socio.telefono_socio || '', correo_socio: socio.correo_socio || '',
+        consentimiento: socio.consentimiento || '', fecha_registro: socio.fecha_registro || '',
+        vinculo_estado: 'manual'
+      });
+    });
+
+    if (rawRows.length) appendRowObjects_(GO_PES_V2.SHEETS.RAW_SOCIOS, rawRows);
+    if (factRows.length) upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', factRows, false);
+    if (organizacionId && factRows.length) {
+      refreshPartialArtifacts_({ masterSolicitudIds: [solicitudId], vistaOrganizacionIds: [organizacionId] });
+    }
+
+    logUserAction_('VINCULAR_SOCIOS_MANUAL', 'socios', '', 'OK', { total: factRows.length, solicitud_id: solicitudId, organizacion_id: organizacionId });
+    return serializeForClient_({ ok: true, vinculados: factRows.length, solicitud_id: solicitudId, organizacion_id: organizacionId });
+  } finally {
+    lock.releaseLock();
+  }
+}

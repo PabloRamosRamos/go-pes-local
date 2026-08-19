@@ -135,20 +135,39 @@
 
     if (head) {
       head.innerHTML = isPend
-        ? '<tr><th>Socio</th><th>Envi\u00f3 (grupo)</th><th>Contacto</th><th>Acci\u00f3n</th></tr>'
+        ? '<tr><th class="socios-check-cell"><input type="checkbox" id="socios-pend-check-all" title="Seleccionar todos"></th><th>Socio</th><th>Envi\u00f3 (grupo)</th><th>Contacto</th><th>Acci\u00f3n</th></tr>'
         : '<tr><th>RUT</th><th>Socio</th><th>Grupo / Organizaci\u00f3n</th><th>Cargo</th><th>Consent.</th><th>V\u00ednculo</th><th>Acciones</th></tr>';
     }
     if (body) {
       if (!filteredRows.length) {
         const msg = segRows.length ? 'Sin resultados para la b\u00fasqueda actual.' : 'No hay socios en este segmento.';
-        body.innerHTML = goPesTableEmptyRowHtml_('badge', msg, isPend ? 4 : 7);
+        body.innerHTML = goPesTableEmptyRowHtml_('badge', msg, isPend ? 5 : 7);
       } else {
         body.innerHTML = filteredRows.map(isPend ? renderPendienteRowHtml_ : renderSocioRowHtml_).join('');
       }
     }
     if (summary) summary.textContent = getSociosTableSummaryText_(filteredRows.length, segRows.length, query);
+
+    const bulkBtn = document.getElementById('socios-vincular-bulk-btn');
+    if (bulkBtn) bulkBtn.classList.toggle('is-hidden', !isPend);
+
     bindSociosTableActions_();
+    updateSociosBulkBtn_();
     return filteredRows;
+  }
+
+  function getSociosCheckedIds_() {
+    return Array.prototype.map.call(document.querySelectorAll('.socios-pend-check:checked'), function(c) {
+      return String(c.dataset.socioCheck || '').trim();
+    }).filter(Boolean);
+  }
+
+  function updateSociosBulkBtn_() {
+    const btn = document.getElementById('socios-vincular-bulk-btn');
+    if (!btn) return;
+    const n = getSociosCheckedIds_().length;
+    btn.disabled = n === 0;
+    btn.innerHTML = '<span class="material-symbols-outlined">link</span>Vincular seleccionados' + (n ? ' (' + n + ')' : '');
   }
 
   function getSocioDetailFields_(row) {
@@ -279,11 +298,13 @@
   }
 
   function renderPendienteRowHtml_(row) {
+    const id = escapeHtml(row.socio_id || '');
     return '<tr>' +
+      '<td class="socios-check-cell"><input type="checkbox" class="socios-pend-check" data-socio-check="' + id + '"></td>' +
       '<td><div class="socios-table__name">' + escapeHtml(row.nombre_socio || 'Sin nombre') + '</div><small>' + escapeHtml(row.run_socio || '') + (row.cargo ? ' · ' + escapeHtml(row.cargo) : '') + '</small></td>' +
       '<td><span class="socios-pend-label">"' + escapeHtml(row.grupo_label_origen || '—') + '"</span></td>' +
       '<td>' + socioContactoHtml_(row) + '</td>' +
-      '<td class="socios-table__action-cell"><button type="button" class="secondary-btn btn--sm" data-socio-vincular="' + escapeHtml(row.socio_id || '') + '"><span class="material-symbols-outlined">link</span>Vincular</button></td>' +
+      '<td class="socios-table__action-cell"><button type="button" class="secondary-btn btn--sm" data-socio-vincular="' + id + '"><span class="material-symbols-outlined">link</span>Vincular</button></td>' +
     '</tr>';
   }
 
@@ -445,6 +466,7 @@
               <span class="material-symbols-outlined">search</span>
               <input id="socios-table-search" type="search" placeholder="Buscar por nombre, RUT, teléfono o comité…" value="${escapeHtml(APP.state.sociosModuleQuery || '')}" autocomplete="off">
             </label>
+            <button type="button" class="primary-btn is-hidden" id="socios-vincular-bulk-btn" disabled><span class="material-symbols-outlined">link</span>Vincular seleccionados</button>
             <p id="socios-table-summary" class="socios-table__summary muted"></p>
           </div>
           <div class="socios-tablewrap" style="position:relative;">
@@ -629,6 +651,10 @@
       document.getElementById('socios-dash-panel')?.classList.toggle('is-hidden');
     });
 
+    document.getElementById('socios-vincular-bulk-btn')?.addEventListener('click', function() {
+      openSociosVincularModal_(getSociosCheckedIds_());
+    });
+
     const searchInput = document.getElementById('socios-table-search');
     if (searchInput && searchInput.dataset.boundSociosSearch !== '1') {
       searchInput.dataset.boundSociosSearch = '1';
@@ -648,8 +674,31 @@
     document.querySelectorAll('[data-socio-vincular]').forEach(btn => {
       if (btn.dataset.boundSocioVincular === '1') return;
       btn.dataset.boundSocioVincular = '1';
-      btn.addEventListener('click', () => openSocioVincularModal_(btn.dataset.socioVincular));
+      btn.addEventListener('click', () => openSociosVincularModal_([btn.dataset.socioVincular]));
     });
+    document.querySelectorAll('.socios-pend-check').forEach(function(c) {
+      if (c.dataset.boundCheck === '1') return;
+      c.dataset.boundCheck = '1';
+      c.addEventListener('change', function() { syncSociosCheckAll_(); updateSociosBulkBtn_(); });
+    });
+    const all = document.getElementById('socios-pend-check-all');
+    if (all && all.dataset.boundCheckAll !== '1') {
+      all.dataset.boundCheckAll = '1';
+      all.addEventListener('change', function() {
+        document.querySelectorAll('.socios-pend-check').forEach(function(c) { c.checked = all.checked; });
+        all.indeterminate = false;
+        updateSociosBulkBtn_();
+      });
+    }
+  }
+
+  function syncSociosCheckAll_() {
+    const all = document.getElementById('socios-pend-check-all');
+    if (!all) return;
+    const boxes = document.querySelectorAll('.socios-pend-check');
+    const checked = document.querySelectorAll('.socios-pend-check:checked').length;
+    all.checked = boxes.length > 0 && checked === boxes.length;
+    all.indeterminate = checked > 0 && checked < boxes.length;
   }
 
   // Los socios existen solo dentro de una ORGANIZACIÓN → el picker ofrece solo
@@ -665,17 +714,26 @@
     if (p) Promise.resolve(p).catch(function() {});
   }
 
-  function openSocioVincularModal_(socioId) {
-    const id = String(socioId || '').trim();
-    const row = (APP.state.sociosModuleRows || []).find(r => String(r.socio_id || '').trim() === id);
-    if (!row) { showError('No se encontró el socio.'); return; }
-    APP.state.sociosVincularId = id;
+  function openSociosVincularModal_(ids) {
+    const list = (Array.isArray(ids) ? ids : [ids]).map(function(x) { return String(x || '').trim(); }).filter(Boolean);
+    if (!list.length) { showError('Selecciona al menos un socio.'); return; }
+    APP.state.sociosVincularIds = list;
+
+    const rows = (APP.state.sociosModuleRows || []).filter(function(r) { return list.indexOf(String(r.socio_id || '').trim()) !== -1; });
     const title = document.getElementById('socios-vincular-title');
     const sub = document.getElementById('socios-vincular-sub');
-    if (title) title.textContent = row.nombre_socio || 'Vincular socio';
-    if (sub) sub.textContent = row.grupo_label_origen
-      ? `El socio envió: "${row.grupo_label_origen}". Elige la organización correcta.`
-      : 'Elige la organización destino.';
+    if (title) title.textContent = list.length === 1
+      ? ((rows[0] && rows[0].nombre_socio) || 'Vincular socio')
+      : ('Vincular ' + list.length + ' socios');
+    if (sub) {
+      if (list.length === 1 && rows[0] && rows[0].grupo_label_origen) {
+        sub.textContent = `El socio envió: "${rows[0].grupo_label_origen}". Elige la organización correcta.`;
+      } else {
+        sub.textContent = list.length === 1
+          ? 'Elige la organización destino.'
+          : ('Elige la organización a la que se vincularán los ' + list.length + ' socios seleccionados.');
+      }
+    }
 
     // Abrir el modal AL INSTANTE.
     setModalVisibility_('socios-vincular-modal', true);
@@ -692,15 +750,16 @@
   }
 
   function saveSocioVincular_() {
-    const socioId = APP.state.sociosVincularId;
+    const ids = APP.state.sociosVincularIds || [];
     const sel = document.getElementById('socios-vincular-select');
     const val = sel ? String(sel.value || '').trim() : '';
-    if (!socioId || !val) { showError('Selecciona una organización.'); return; }
-    api('vincularSocioManual', { socio_id: socioId, organizacion_id: val }).then(() => {
-      showSuccess('Socio vinculado.');
+    if (!ids.length || !val) { showError('Selecciona una organización.'); return; }
+    api('vincularSociosManual', { socio_ids: ids, organizacion_id: val }).then(function(res) {
+      const n = (res && res.vinculados) || ids.length;
+      showSuccess(n + (n === 1 ? ' socio vinculado.' : ' socios vinculados.'));
       setModalVisibility_('socios-vincular-modal', false);
       APP.state.sociosModuleFetchedAt = 0;
-      loadSociosModuleData_({ force: true }).catch(() => {});
+      loadSociosModuleData_({ force: true }).catch(function() {});
     }).catch(showError);
   }
 

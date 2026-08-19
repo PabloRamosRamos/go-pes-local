@@ -261,7 +261,8 @@
     return 'https://wa.me/?text=' + encodeURIComponent(lines.join('\n'));
   }
 
-  function socioAccionesHtml_(row) {
+  function socioAccionesHtml_(row, opts) {
+    opts = opts || {};
     const tel = String(row.telefono_contacto || '').trim();
     const mail = String(row.correo_contacto || '').trim();
     const maps = socioMapsUrl_(row);
@@ -276,7 +277,9 @@
       ? '<a class="socios-act" href="' + escapeHtml(maps) + '" target="_blank" rel="noopener" title="Ubicación en Maps" onclick="event.stopPropagation()"><span class="material-symbols-outlined">location_on</span></a>'
       : '<span class="socios-act socios-act--off" title="Sin dirección"><span class="material-symbols-outlined">location_on</span></span>';
     out += '<a class="socios-act socios-act--wa" href="' + escapeHtml(socioWhatsappUrl_(row)) + '" target="_blank" rel="noopener" title="Compartir por WhatsApp" onclick="event.stopPropagation()"><span class="material-symbols-outlined">share</span></a>';
-    out += '<button type="button" class="socios-act" data-socio-detail-open="' + escapeHtml(row.socio_id || '') + '" title="Ver detalle"><span class="material-symbols-outlined">search</span></button>';
+    if (opts.detalle !== false) {
+      out += '<button type="button" class="socios-act" data-socio-detail-open="' + escapeHtml(row.socio_id || '') + '" title="Ver detalle"><span class="material-symbols-outlined">search</span></button>';
+    }
     out += '</div>';
     return out;
   }
@@ -364,6 +367,7 @@
           </div>
           <div id="socios-detail-content" class="socios-detail-card"></div>
           <div class="actions" id="socios-detail-actions">
+            <div id="socios-detail-quick" class="socios-detail-quick"></div>
             <button type="button" class="secondary-btn" id="socios-detail-edit-btn">
               <span class="material-symbols-outlined">edit</span>Editar
             </button>
@@ -823,6 +827,8 @@
       ? `Comité asociado: ${comiteLabel}`
       : 'Información completa del registro seleccionado.';
     content.innerHTML = renderSocioDetailContent_(row);
+    const quick = document.getElementById('socios-detail-quick');
+    if (quick) quick.innerHTML = socioAccionesHtml_(row, { detalle: false });
     setModalVisibility_(modal, true);
     bindSocioDetailEditBtn_();
   }

@@ -622,6 +622,7 @@
       if (!b) return;
       APP.state.sociosSegment = b.dataset.seg || 'todos';
       updateSociosTableView_();
+      if (APP.state.sociosSegment === 'pendiente') warmSociosVincularList_();
     });
 
     document.getElementById('socios-dash-toggle')?.addEventListener('click', function() {
@@ -651,6 +652,24 @@
     });
   }
 
+  function fillSociosVincularSelect_(list) {
+    const items = (list || []).map(function(o) {
+      return {
+        value: (o.tipo === 'grupo_vecinos' ? 'sol:' : 'org:') + o.value,
+        label: (o.tipo === 'grupo_vecinos' ? 'Grupo · ' : '') + o.label
+      };
+    });
+    fillSelect(document.getElementById('socios-vincular-select'), items, 'Seleccionar…');
+  }
+
+  // Precarga (en segundo plano) la lista de grupos/orgs para que el modal abra instantáneo.
+  function warmSociosVincularList_() {
+    if ((APP.state.organizacionesModulo || []).length) return;
+    if (typeof ensureOrganizacionesModuloList_ === 'function') {
+      Promise.resolve(ensureOrganizacionesModuloList_()).catch(function() {});
+    }
+  }
+
   function openSocioVincularModal_(socioId) {
     const id = String(socioId || '').trim();
     const row = (APP.state.sociosModuleRows || []).find(r => String(r.socio_id || '').trim() === id);
@@ -662,15 +681,21 @@
     if (sub) sub.textContent = row.grupo_label_origen
       ? `El socio envió: "${row.grupo_label_origen}". Elige el grupo u organización correcta.`
       : 'Elige el grupo u organización destino.';
-    const ensure = (typeof ensureOrganizacionesModuloList_ === 'function') ? ensureOrganizacionesModuloList_() : Promise.resolve();
-    (ensure || Promise.resolve()).then(() => {
-      const items = (APP.state.organizacionesModulo || []).map(o => ({
-        value: (o.tipo === 'grupo_vecinos' ? 'sol:' : 'org:') + o.value,
-        label: (o.tipo === 'grupo_vecinos' ? 'Grupo · ' : '') + o.label
-      }));
-      fillSelect(document.getElementById('socios-vincular-select'), items, 'Seleccionar…');
-      setModalVisibility_('socios-vincular-modal', true);
-    }).catch(showError);
+
+    // Abrir el modal AL INSTANTE.
+    setModalVisibility_('socios-vincular-modal', true);
+
+    const cached = APP.state.organizacionesModulo || [];
+    if (cached.length) {
+      fillSociosVincularSelect_(cached);   // instantáneo desde caché
+    } else {
+      const sel = document.getElementById('socios-vincular-select');
+      if (sel) sel.innerHTML = '<option value="">Cargando grupos…</option>';
+      const ensure = (typeof ensureOrganizacionesModuloList_ === 'function') ? ensureOrganizacionesModuloList_() : Promise.resolve();
+      Promise.resolve(ensure).then(function() {
+        fillSociosVincularSelect_(APP.state.organizacionesModulo || []);
+      }).catch(showError);
+    }
   }
 
   function saveSocioVincular_() {

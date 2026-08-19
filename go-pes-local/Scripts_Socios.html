@@ -315,7 +315,7 @@
           </div>
           <div style="padding:1rem 1.25rem">
             <p class="muted" id="socios-vincular-sub"></p>
-            <label style="display:block;margin-top:10px">Grupo u organización destino
+            <label style="display:block;margin-top:10px">Organización destino
               <select id="socios-vincular-select" style="width:100%;margin-top:6px"></select>
             </label>
           </div>
@@ -652,22 +652,17 @@
     });
   }
 
-  function fillSociosVincularSelect_(list) {
-    const items = (list || []).map(function(o) {
-      return {
-        value: (o.tipo === 'grupo_vecinos' ? 'sol:' : 'org:') + o.value,
-        label: (o.tipo === 'grupo_vecinos' ? 'Grupo · ' : '') + o.label
-      };
-    });
-    fillSelect(document.getElementById('socios-vincular-select'), items, 'Seleccionar…');
+  // Los socios existen solo dentro de una ORGANIZACIÓN → el picker ofrece solo
+  // organizaciones (catálogo liviano ya cacheado), sin cargar grupos de vecinos.
+  function fillSociosVincularSelect_() {
+    fillSelect(document.getElementById('socios-vincular-select'), getSociosComiteOptions_(), 'Seleccionar organización…');
   }
 
-  // Precarga (en segundo plano) la lista de grupos/orgs para que el modal abra instantáneo.
+  // Precarga (en segundo plano) el catálogo de organizaciones para que el modal abra instantáneo.
   function warmSociosVincularList_() {
-    if ((APP.state.organizacionesModulo || []).length) return;
-    if (typeof ensureOrganizacionesModuloList_ === 'function') {
-      Promise.resolve(ensureOrganizacionesModuloList_()).catch(function() {});
-    }
+    if ((APP.state.sociosOrganizaciones || []).length) return;
+    const p = ensureSociosCatalogs_();
+    if (p) Promise.resolve(p).catch(function() {});
   }
 
   function openSocioVincularModal_(socioId) {
@@ -679,21 +674,19 @@
     const sub = document.getElementById('socios-vincular-sub');
     if (title) title.textContent = row.nombre_socio || 'Vincular socio';
     if (sub) sub.textContent = row.grupo_label_origen
-      ? `El socio envió: "${row.grupo_label_origen}". Elige el grupo u organización correcta.`
-      : 'Elige el grupo u organización destino.';
+      ? `El socio envió: "${row.grupo_label_origen}". Elige la organización correcta.`
+      : 'Elige la organización destino.';
 
     // Abrir el modal AL INSTANTE.
     setModalVisibility_('socios-vincular-modal', true);
 
-    const cached = APP.state.organizacionesModulo || [];
-    if (cached.length) {
-      fillSociosVincularSelect_(cached);   // instantáneo desde caché
+    if ((APP.state.sociosOrganizaciones || []).length) {
+      fillSociosVincularSelect_();   // instantáneo desde caché
     } else {
       const sel = document.getElementById('socios-vincular-select');
-      if (sel) sel.innerHTML = '<option value="">Cargando grupos…</option>';
-      const ensure = (typeof ensureOrganizacionesModuloList_ === 'function') ? ensureOrganizacionesModuloList_() : Promise.resolve();
-      Promise.resolve(ensure).then(function() {
-        fillSociosVincularSelect_(APP.state.organizacionesModulo || []);
+      if (sel) sel.innerHTML = '<option value="">Cargando organizaciones…</option>';
+      Promise.resolve(ensureSociosCatalogs_()).then(function() {
+        fillSociosVincularSelect_();
       }).catch(showError);
     }
   }
@@ -702,11 +695,8 @@
     const socioId = APP.state.sociosVincularId;
     const sel = document.getElementById('socios-vincular-select');
     const val = sel ? String(sel.value || '').trim() : '';
-    if (!socioId || !val) { showError('Selecciona un grupo u organización.'); return; }
-    const payload = { socio_id: socioId };
-    if (val.indexOf('sol:') === 0) payload.solicitud_id = val.slice(4);
-    else payload.organizacion_id = val.slice(4);
-    api('vincularSocioManual', payload).then(() => {
+    if (!socioId || !val) { showError('Selecciona una organización.'); return; }
+    api('vincularSocioManual', { socio_id: socioId, organizacion_id: val }).then(() => {
       showSuccess('Socio vinculado.');
       setModalVisibility_('socios-vincular-modal', false);
       APP.state.sociosModuleFetchedAt = 0;

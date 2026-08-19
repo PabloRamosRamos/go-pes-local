@@ -228,6 +228,7 @@
 
   function socioWhatsappUrl_(row) {
     const org = String(row.nombre_organizacion || row.nombre_comite || row.nombre_comite_origen || '').trim();
+    const addr = String(row.ubicacion_socio || row.direccion_socio || '').trim();
     const maps = socioMapsUrl_(row);
     const lines = [
       'Datos de nuestro vecino',
@@ -237,7 +238,8 @@
       org ? 'Organización/Grupo: ' + org : '',
       row.telefono_contacto ? 'Teléfono: ' + row.telefono_contacto : '',
       row.correo_contacto ? 'Correo: ' + row.correo_contacto : '',
-      maps ? 'Dirección: ' + maps : ''
+      addr ? 'Dirección: ' + addr : '',
+      maps ? maps : ''
     ].filter(Boolean);
     return 'https://wa.me/?text=' + encodeURIComponent(lines.join('\n'));
   }

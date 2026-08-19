@@ -138,7 +138,7 @@
     if (head) {
       const arrow = pendSort === 'asc' ? 'arrow_upward' : 'arrow_downward';
       head.innerHTML = isPend
-        ? '<tr><th class="socios-check-cell"><input type="checkbox" id="socios-pend-check-all" title="Seleccionar todos"></th><th>Socio</th><th class="socios-th-sort" data-sort="grupo" title="Ordenar por grupo enviado">Envi\u00f3 (grupo) <span class="material-symbols-outlined">' + arrow + '</span></th><th>Contacto</th><th>Acci\u00f3n</th></tr>'
+        ? '<tr><th class="socios-check-cell"><input type="checkbox" id="socios-pend-check-all" title="Seleccionar todos"></th><th>RUT</th><th>Nombre</th><th>Cargo</th><th class="socios-th-sort" data-sort="grupo" title="Ordenar por grupo enviado">Envi\u00f3 (grupo) <span class="material-symbols-outlined">' + arrow + '</span></th><th>Acci\u00f3n</th></tr>'
         : '<tr><th>RUT</th><th>Socio</th><th>Grupo / Organizaci\u00f3n</th><th>Cargo</th><th>Consent.</th><th>V\u00ednculo</th><th>Acciones</th></tr>';
     }
 
@@ -153,7 +153,7 @@
     if (body) {
       if (!displayRows.length) {
         const msg = segRows.length ? 'Sin resultados para la b\u00fasqueda actual.' : 'No hay socios en este segmento.';
-        body.innerHTML = goPesTableEmptyRowHtml_('badge', msg, isPend ? 5 : 7);
+        body.innerHTML = goPesTableEmptyRowHtml_('badge', msg, isPend ? 6 : 7);
       } else {
         body.innerHTML = displayRows.map(isPend ? renderPendienteRowHtml_ : renderSocioRowHtml_).join('');
       }
@@ -230,20 +230,6 @@
     return '<span class="muted">—</span>';
   }
 
-  function socioContactoHtml_(row) {
-    const tel = String(row.telefono_contacto || '').trim();
-    const mail = String(row.correo_contacto || '').trim();
-    let out = '';
-    if (tel) {
-      const t = tel.replace(/[^\d+]/g, '');
-      out += '<a class="socios-clink" href="tel:' + escapeHtml(t) + '" onclick="event.stopPropagation()"><span class="material-symbols-outlined">call</span>' + escapeHtml(tel) + '</a>';
-    }
-    if (mail) {
-      out += ' <a class="socios-clink" href="mailto:' + escapeHtml(mail) + '" title="' + escapeHtml(mail) + '" onclick="event.stopPropagation()"><span class="material-symbols-outlined">mail</span></a>';
-    }
-    return out || '<span class="muted">Sin contacto</span>';
-  }
-
   function socioConsentHtml_(row) {
     const c = String(row.consentimiento || '').trim();
     if (!c) return '<span class="muted">—</span>';
@@ -313,9 +299,10 @@
     const id = escapeHtml(row.socio_id || '');
     return '<tr>' +
       '<td class="socios-check-cell"><input type="checkbox" class="socios-pend-check" data-socio-check="' + id + '"></td>' +
-      '<td><div class="socios-table__name">' + escapeHtml(row.nombre_socio || 'Sin nombre') + '</div><small>' + escapeHtml(row.run_socio || '') + (row.cargo ? ' · ' + escapeHtml(row.cargo) : '') + '</small></td>' +
+      '<td>' + escapeHtml(row.run_socio || '—') + '</td>' +
+      '<td><div class="socios-table__name">' + escapeHtml(row.nombre_socio || 'Sin nombre') + '</div></td>' +
+      '<td>' + escapeHtml(row.cargo || '—') + '</td>' +
       '<td><span class="socios-pend-label">"' + escapeHtml(row.grupo_label_origen || '—') + '"</span></td>' +
-      '<td>' + socioContactoHtml_(row) + '</td>' +
       '<td class="socios-table__action-cell"><button type="button" class="secondary-btn btn--sm" data-socio-vincular="' + id + '"><span class="material-symbols-outlined">link</span>Vincular</button></td>' +
     '</tr>';
   }

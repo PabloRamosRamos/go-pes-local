@@ -217,8 +217,8 @@
     const c = String(row.consentimiento || '').trim();
     if (!c) return '<span class="muted">—</span>';
     return /(^no)|false|^0$/i.test(c)
-      ? '<span class="material-symbols-outlined socios-consent--no" title="No acepta">block</span>'
-      : '<span class="material-symbols-outlined socios-consent--ok" title="Acepta">verified</span>';
+      ? '<span class="material-symbols-outlined socios-consent--no" title="No acepta">cancel</span>'
+      : '<span class="material-symbols-outlined socios-consent--ok" title="Acepta">check_circle</span>';
   }
 
   function renderSocioRowHtml_(row) {

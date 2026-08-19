@@ -370,6 +370,23 @@
     return isNaN(t) ? 0 : t;
   }
 
+  // Mínimo legal de socios exigido para una organización.
+  var ORG_SOCIOS_MIN = 15;
+
+  // Constituida con 1..14 socios (bajo el mínimo, pero no vacía; "Sin socios" cubre el 0).
+  function esBajoMinimoSocios_(o) {
+    var n = Number(o.total_socios || 0);
+    return o.tipo !== 'grupo_vecinos' && n > 0 && n < ORG_SOCIOS_MIN;
+  }
+
+  function orgSociosMinBadgeHtml_(cantidad) {
+    var n = Number(cantidad || 0);
+    if (n >= ORG_SOCIOS_MIN) {
+      return '<div class="org-socios-min org-socios-min--ok"><span class="material-symbols-outlined">check_circle</span>Cumple el mínimo legal de ' + ORG_SOCIOS_MIN + ' socios (' + n + ')</div>';
+    }
+    return '<div class="org-socios-min org-socios-min--warn"><span class="material-symbols-outlined">warning</span>Bajo el mínimo legal: ' + n + '/' + ORG_SOCIOS_MIN + ' socios (faltan ' + (ORG_SOCIOS_MIN - n) + ')</div>';
+  }
+
   // -- BADGE (pill) DE LA LISTA --
 
   function renderOrgBadgeHtml_(o) {
@@ -383,16 +400,21 @@
       alert = (v && v.level === 'danger') ? 'danger' : 'warn';
     }
     var dot = alert !== 'ok' ? '<span class="org-badge__dot org-badge__dot--' + alert + '"></span>' : '';
-    var sub = o.tipo === 'grupo_vecinos'
-      ? 'Grupo · UV ' + (o.uv || '-')
-      : 'UV ' + (o.uv || '-') + ' · ' + Number(o.total_socios || 0) + ' socios';
+    var subHtml;
+    if (o.tipo === 'grupo_vecinos') {
+      subHtml = 'Grupo · UV ' + escapeHtml(o.uv || '-');
+    } else {
+      var n = Number(o.total_socios || 0);
+      var low = n < ORG_SOCIOS_MIN;
+      subHtml = 'UV ' + escapeHtml(o.uv || '-') + ' · <span' + (low ? ' class="org-badge__lowmin" title="Mínimo legal ' + ORG_SOCIOS_MIN + '"' : '') + '>' + n + (low ? '/' + ORG_SOCIOS_MIN : '') + ' socios</span>';
+    }
     var active = String(o.value) === String(APP.state.orgSelectedId || '') ? ' org-badge--active' : '';
     var attr = o.tipo === 'grupo_vecinos' ? 'data-grupo-badge' : 'data-org-badge';
     return '<button type="button" class="org-badge' + active + '" ' + attr + '="' + escapeHtml(o.value || '') + '">' +
       '<span class="org-badge__ring" style="--p:' + pct + '"><b>' + pct + '%</b></span>' +
       '<span class="org-badge__main">' +
         '<span class="org-badge__name">' + escapeHtml(orgNombreCorto_(o.label || 'Sin nombre')) + '</span>' +
-        '<span class="org-badge__sub">' + dot + escapeHtml(sub) + '</span>' +
+        '<span class="org-badge__sub">' + dot + subHtml + '</span>' +
       '</span>' +
     '</button>';
   }
@@ -598,7 +620,8 @@
         { key: 'abandono',       label: 'Abandonaron (' + allItems.filter(esAbandonoProceso_).length + ')' },
         { key: 'estancada',      label: 'Estancadas (' + allItems.filter(esEstancada_).length + ')', attn: true },
         { key: 'directiva',      label: 'Directiva (' + allItems.filter(esDirectivaPorVencer_).length + ')', attn: true },
-        { key: 'sin_socios',     label: 'Sin socios (' + allItems.filter(esSinSocios_).length + ')', attn: true }
+        { key: 'sin_socios',     label: 'Sin socios (' + allItems.filter(esSinSocios_).length + ')', attn: true },
+        { key: 'bajo_minimo',    label: 'Bajo mínimo <' + ORG_SOCIOS_MIN + ' (' + allItems.filter(esBajoMinimoSocios_).length + ')', attn: true }
       ];
       chipRow.innerHTML = chips.map(function(c) {
         var active = c.key === chipFiltro;
@@ -625,6 +648,7 @@
           if (chipFiltro === 'estancada')  return esEstancada_(o);
           if (chipFiltro === 'directiva')  return esDirectivaPorVencer_(o);
           if (chipFiltro === 'sin_socios') return esSinSocios_(o);
+          if (chipFiltro === 'bajo_minimo') return esBajoMinimoSocios_(o);
           return o.tipo === chipFiltro;
         });
 
@@ -823,11 +847,12 @@
     const banco = hitoFor08 ? (hitoFor08.banco || 'Sin especificar') : 'Sin especificar';
 
     return `
-      <div class="organizaciones-metrics organizaciones-metrics--compact" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px;">
+      <div class="organizaciones-metrics organizaciones-metrics--compact" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px;">
         ${organizacionMetricHtml_('Socios',     r.cantidad_socios      || 0)}
         ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
         ${organizacionMetricHtml_('Antigüedad', formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}
       </div>
+      ${orgSociosMinBadgeHtml_(r.cantidad_socios || 0)}
 
       <div class="organizaciones-grid organizaciones-grid--profile">
         ${organizacionBlockHtml_('Datos generales', [

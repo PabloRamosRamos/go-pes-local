@@ -44,6 +44,7 @@
       return;
     }
 
+    showModalLoading('socios-bulk-modal', 'Guardando socios...');
     api('importarSocios', { rows }).then(res => {
       showSuccess(`Socios importados: ${res.imported} de ${res.total}`);
       closeSociosModals_();
@@ -61,7 +62,7 @@
         `;
         document.getElementById('socios-preview').insertAdjacentHTML('beforeend', errorSummary);
       }
-    }).catch(showError);
+    }).catch(showError).finally(function() { hideModalLoading('socios-bulk-modal'); });
   }
 
   function getSociosComiteOptions_() {
@@ -764,13 +765,14 @@
     const sel = document.getElementById('socios-vincular-select');
     const val = sel ? String(sel.value || '').trim() : '';
     if (!ids.length || !val) { showError('Selecciona una organización.'); return; }
+    showModalLoading('socios-vincular-modal', ids.length > 1 ? ('Vinculando ' + ids.length + ' socios...') : 'Vinculando socio...');
     api('vincularSociosManual', { socio_ids: ids, organizacion_id: val }).then(function(res) {
       const n = (res && res.vinculados) || ids.length;
       showSuccess(n + (n === 1 ? ' socio vinculado.' : ' socios vinculados.'));
       setModalVisibility_('socios-vincular-modal', false);
       APP.state.sociosModuleFetchedAt = 0;
       loadSociosModuleData_({ force: true }).catch(function() {});
-    }).catch(showError);
+    }).catch(showError).finally(function() { hideModalLoading('socios-vincular-modal'); });
   }
 
   function fillSociosComiteSelects_() {

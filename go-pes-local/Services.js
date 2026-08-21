@@ -781,6 +781,8 @@ function obtenerFicha(payload) {
     ultima_actualizacion: lastAction.timestamp || (caseRow && caseRow.updated_at) || (orgRow && orgRow.updated_at) || ''
   });
 
+  const capacitaciones = getCapacitacionesByRut_(String((caseRow && caseRow.rut_vecino) || ''));
+
   const result = toClientSafe_({
     summary: summary,
     vecino: caseRow || {},
@@ -790,6 +792,7 @@ function obtenerFicha(payload) {
     instrumentos: instrumentos,
     requisitos: requisitos,
     socios: socios,
+    capacitaciones: capacitaciones,
     trazabilidad: acciones
   });
 

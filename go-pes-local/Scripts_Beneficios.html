@@ -163,838 +163,152 @@
     `;
   }
 
-  function renderBeneficiosMetric_(label, value, icon) {
-    return `
-      <article class="beneficios-metric">
-        <span class="material-symbols-outlined">${escapeHtml(icon || 'insights')}</span>
-        <strong>${escapeHtml(String(value == null ? 0 : value))}</strong>
-        <span>${escapeHtml(label || '')}</span>
-      </article>
-    `;
-  }
-
-  function beneficioAlertClass_(tone) {
-    switch (String(tone || '').trim()) {
-      case 'danger':
-        return 'beneficios-inline-status--danger';
-      case 'warning':
-        return 'beneficios-inline-status--warning';
-      case 'success':
-        return 'beneficios-inline-status--success';
-      default:
-        return 'beneficios-inline-status--info';
-    }
-  }
-
-  function getCamaras1414EligibilityIssue_(row) {
-    const item = row || {};
-    if (!String(item.organizacion_id || '').trim()) return 'La organización no tiene identificador válido para gestionar CAMARAS 1414.';
-    if (!String(item.fecha_hito_11 || '').trim()) return 'La organización no cumple requisitos: falta la fecha del hito 11 / certificado definitivo.';
-    if (String(item.elegible_flag || 'Si').trim().toLowerCase() === 'no') return 'La organización no cumple los requisitos para cargar la ficha operativa.';
-    return '';
-  }
-
-  function renderBeneficiosAlertCard_(alert) {
-    const item = alert || {};
-    const heading = item.nombre_organizacion || item.title || '';
-    const subline = item.nombre_organizacion && item.title ? item.title : '';
-    const iconByTone = {
-      danger: 'warning',
-      warning: 'schedule',
-      success: 'check_circle',
-      info: 'info'
-    };
-    const iconName = iconByTone[String(item.tone || '').trim()] || 'notification_important';
-    return `
-      <article class="beneficios-alert ${beneficioAlertClass_(item.tone)}">
-        <div class="beneficios-alert__body">
-          <strong>${escapeHtml(heading)}</strong>
-          ${subline ? `<span>${escapeHtml(subline)}</span>` : ''}
-        </div>
-        <div class="beneficios-alert__meta">
-          ${item.detail ? `<small>${escapeHtml(item.detail || '')}</small>` : ''}
-          <span class="beneficios-alert__icon" aria-hidden="true">
-            <span class="material-symbols-outlined">${iconName}</span>
-          </span>
-        </div>
-      </article>
-    `;
-  }
-
   function renderCamaras1414Panel_(panel, activeTab) {
     const data = panel || {};
-    const summary = data.summary || {};
-    const config = data.config || {};
-    const eligibleRows = data.eligible_rows || [];
-    const activeRows = data.active_rows || [];
-    const detail = data.detail || null;
-    const alerts = data.alerts_preview || [];
-
+    const orgs = data.orgs || [];
+    const s = data.summary || {};
     return `
       <article class="beneficios-panel beneficios-panel--operativo" role="tabpanel">
-        <div class="beneficios-panel__head beneficios-panel__head--camaras">
-          <div class="beneficios-panel__hero" style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px">
-            <div style="display:grid;gap:6px;min-width:0">
-              <p class="eyebrow">Beneficio operativo</p>
-              <h3>${escapeHtml(activeTab.titulo || '')}</h3>
-              <span class="beneficios-panel__status beneficios-panel__status--inline">${escapeHtml(activeTab.estado || 'Operativo')}</span>
-              <p class="muted">${escapeHtml(activeTab.descripcion || '')}</p>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;min-width:160px">
-              <button type="button" class="secondary-btn js-camaras1414-stepper-btn" style="justify-content:center">
-                <span class="material-symbols-outlined">format_list_numbered</span>Paso a paso
-              </button>
-              <button type="button" class="secondary-btn js-camaras1414-infodoc-btn" style="justify-content:center">
-                <span class="material-symbols-outlined">description</span>Información
-              </button>
-            </div>
+        <div class="beneficios-panel__head">
+          <div class="cam-header">
+            <p class="eyebrow">Beneficio municipal</p>
+            <h3>${escapeHtml(activeTab.titulo || 'Cámaras 1414')}</h3>
+            <p class="muted">Beneficio único por organización · solicitar y registrar · plazo 5 días hábiles.</p>
           </div>
-          <div class="beneficios-summary__metrics beneficios-summary__metrics--compact">
-            ${renderBeneficiosMetric_('Elegibles', summary.totalEligible || 0, 'groups')}
-            ${renderBeneficiosMetric_('En gestion', summary.totalActive || 0, 'handshake')}
-            ${renderBeneficiosMetric_('Alertas', summary.totalAlerts || 0, 'notifications_active')}
+          <div style="display:flex;gap:8px;flex-shrink:0;align-items:flex-start;flex-wrap:wrap;justify-content:flex-end">
+            <button type="button" class="secondary-btn js-camaras1414-stepper-btn"><span class="material-symbols-outlined">format_list_numbered</span>Paso a paso</button>
+            <button type="button" class="secondary-btn js-camaras1414-infodoc-btn"><span class="material-symbols-outlined">description</span>Información</button>
           </div>
         </div>
-
-        <section class="beneficios-top-strip">
-          <section class="beneficios-block beneficios-top-strip__config">
-            <div class="beneficios-block__head">
-              <div>
-                <p class="eyebrow">Configuracion de plazos</p>
-                <h4>Plazos configurables de CAMARAS 1414</h4>
-              </div>
-            </div>
-            <form id="camaras1414-config-form" class="beneficios-form" novalidate>
-              <div class="beneficios-form__grid beneficios-form__grid--camaras-config">
-                <div class="field">
-                  <label>Dias desde hito 11 para recordar inicio</label>
-                  <input type="number" min="0" name="reminderDaysFromEligibility" value="${escapeHtml(String(config.reminderDaysFromEligibility || 0))}">
-                </div>
-                <div class="field">
-                  <label>Dias maximos para enviar solicitud</label>
-                  <input type="number" min="0" name="maxDaysToSendRequest" value="${escapeHtml(String(config.maxDaysToSendRequest || 0))}">
-                </div>
-                <div class="field">
-                  <label>Dias de espera sin respuesta</label>
-                  <input type="number" min="0" name="maxDaysWithoutVisitResponse" value="${escapeHtml(String(config.maxDaysWithoutVisitResponse || 0))}">
-                </div>
-                <div class="field">
-                  <label>Dias posteriores a visita</label>
-                  <input type="number" min="0" name="maxDaysPostVisitFollowup" value="${escapeHtml(String(config.maxDaysPostVisitFollowup || 0))}">
-                </div>
-                <div class="field">
-                  <label>Dias hasta convenio</label>
-                  <input type="number" min="0" name="maxDaysToConvenio" value="${escapeHtml(String(config.maxDaysToConvenio || 0))}">
-                </div>
-                <div class="field">
-                  <label>Dias sin avance para alertar</label>
-                  <input type="number" min="0" name="maxDaysWithoutProgress" value="${escapeHtml(String(config.maxDaysWithoutProgress || 0))}">
-                </div>
-                <div class="field">
-                  <label>Alerta alta antes del vencimiento</label>
-                  <input type="number" min="0" name="alertHighDays" value="${escapeHtml(String(config.alertHighDays || 0))}">
-                </div>
-                <div class="field">
-                  <label>Alerta media antes del vencimiento</label>
-                  <input type="number" min="0" name="alertMediumDays" value="${escapeHtml(String(config.alertMediumDays || 0))}">
-                </div>
-              </div>
-              <div class="beneficios-form__actions">
-                <button type="submit" class="primary-btn">
-                  <span class="material-symbols-outlined">save</span>Guardar plazos
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="beneficios-block beneficios-top-strip__alerts">
-            <div class="beneficios-block__head">
-              <div>
-                <p class="eyebrow">Alertas base</p>
-                <h4>Base para inicio y seguimiento operativo</h4>
-              </div>
-            </div>
-            ${alerts.length ? `
-              <div class="beneficios-alerts">
-                ${alerts.map(alert => `
-                  <article class="beneficios-alert">
-                    <strong>${escapeHtml(alert.nombre_organizacion || '')}</strong>
-                    <span>${escapeHtml(alert.title || '')}</span>
-                    <small>${escapeHtml(alert.detail || '')}</small>
-                  </article>
-                `).join('')}
-              </div>
-            ` : '<div class="empty-state">Sin alertas operativas dentro del rango configurado.</div>'}
-          </section>
-        </section>
-
-        <section class="beneficios-layout beneficios-layout--camaras">
-          <div class="beneficios-org-panel">
-            <section class="beneficios-block beneficios-block--wide beneficios-block--eligible">
-              <div class="beneficios-block__head">
-                <div>
-                  <p class="eyebrow">Elegibles</p>
-                  <h4>Organizaciones elegibles</h4>
-                </div>
-              </div>
-              ${renderCamaras1414Table_(eligibleRows, 'elegible')}
-            </section>
-
-            <section class="beneficios-block beneficios-block--wide">
-              <div class="beneficios-block__head">
-                <div>
-                  <p class="eyebrow">En gestion</p>
-                  <h4>Organizaciones en seguimiento</h4>
-                </div>
-              </div>
-              ${renderCamaras1414Table_(activeRows, 'active')}
-            </section>
-          </div>
-
-          <div class="beneficios-org-detail">
-            <section class="beneficios-block beneficios-block--wide">
-              <div class="beneficios-block__head beneficios-block__head--detail">
-                <div>
-                  <p class="eyebrow">Ficha por organizacion</p>
-                  <h4>Detalle operativo CAMARAS 1414</h4>
-                </div>
-                ${detail ? `
-                  <button type="button" class="secondary-btn beneficios-detail__clear-btn" id="camaras1414-clear-selection-btn">
-                    <span class="material-symbols-outlined">close</span>Quitar seleccion
-                  </button>
-                ` : ''}
-              </div>
-              ${detail ? renderCamaras1414Detail_(detail) : '<div class="empty-state">Selecciona una organizacion elegible o en gestion para administrar el beneficio.</div>'}
-            </section>
-          </div>
-        </section>
+        <div class="cam-stats">
+          ${camStat_(s.vencidos || 0, 'Plazo vencido', 'danger')}
+          ${camStat_(s.elegible || 0, 'Por solicitar', '')}
+          ${camStat_(s.solicitado || 0, 'En espera', '')}
+          ${camStat_(s.instalado || 0, 'Instaladas', 'ok')}
+        </div>
+        <div id="cam-list-container">${renderCamaras1414TrackingTable_(orgs)}</div>
       </article>
     `;
   }
 
-  function renderCamaras1414Table_(rows, mode) {
-    const list = rows || [];
-    if (!list.length) {
-      const emptyMsg = mode === 'elegible'
-        ? 'No hay organizaciones que hayan completado los hitos requeridos para este beneficio.'
-        : 'No hay organizaciones en seguimiento del beneficio Cámaras 1414.';
-      return goPesEmptyStateHtml_('videocam_off', 'Sin registros', emptyMsg);
-    }
-
-    const isEligible = mode === 'elegible';
-    return `
-      <div class="table-wrap table-wrap--camaras1414">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Organizacion</th>
-              <th>Fecha hito 11</th>
-              ${isEligible ? '<th>Accion</th>' : '<th>Estado</th><th>Proximo paso</th><th>Accion</th>'}
-            </tr>
-          </thead>
-          <tbody>
-            ${list.map(row => {
-              const issue = isEligible ? getCamaras1414EligibilityIssue_(row) : '';
-              return `
-              <tr
-                class="camaras1414-row ${String(APP.state.currentBeneficioOrganizacionId || '') === String(row.organizacion_id || '') ? 'is-selected' : ''}"
-                data-camaras1414-row="${escapeHtml(row.organizacion_id || '')}"
-                data-camaras1414-row-mode="${escapeHtml(mode)}"
-                data-camaras1414-row-issue="${escapeHtml(issue)}"
-                tabindex="0"
-                role="button"
-                aria-label="Seleccionar organizacion ${escapeHtml(row.nombre_organizacion || '')}"
-              >
-                <td>
-                  <div class="beneficios-table__org-name">${escapeHtml(row.nombre_organizacion || '')}</div>
-                  ${String(APP.state.currentBeneficioOrganizacionId || '') === String(row.organizacion_id || '')
-                    ? '<small class="beneficios-table__meta">Seleccionada</small>'
-                    : `<small class="beneficios-table__meta">${escapeHtml(isEligible ? 'Lista para gestionar' : 'Caso en seguimiento')}</small>`}
-                </td>
-                <td>${escapeHtml(formatFechaHoraUi_(row.fecha_hito_11 || ''))}</td>
-                ${isEligible
-                  ? `<td class="beneficios-table__action-cell">
-                      <button
-                        type="button"
-                        class="secondary-btn js-camaras1414-eligible-action"
-                        data-organizacion-id="${escapeHtml(row.organizacion_id || '')}"
-                        data-eligibility-issue="${escapeHtml(issue)}"
-                      >
-                        <span class="material-symbols-outlined">play_circle</span>Gestionar
-                      </button>
-                    </td>`
-                  : `<td>${escapeHtml(row.estado_beneficio || '')}</td>
-                     <td>${escapeHtml(row.proximo_hito_beneficio || '')}</td>
-                     <td class="beneficios-table__action-cell beneficios-table__action-cell--icon">
-                       <button
-                         type="button"
-                         class="secondary-btn beneficios-table__icon-action js-camaras1414-open-detail"
-                         data-organizacion-id="${escapeHtml(row.organizacion_id || '')}"
-                         title="Ver detalle"
-                         aria-label="Ver detalle de ${escapeHtml(row.nombre_organizacion || '')}"
-                       >
-                         <span class="material-symbols-outlined">search</span>
-                       </button>
-                     </td>`}
-              </tr>
-            `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
+  function camStat_(v, label, tone) {
+    return `<div class="cam-stat${tone ? ' cam-stat--' + tone : ''}"><span class="v">${escapeHtml(String(v))}</span><span class="k">${escapeHtml(label)}</span></div>`;
   }
 
-  function renderCamaras1414Detail_(detail) {
-    const org = detail.organizacion || {};
-    const contacto = detail.contacto || {};
-    const committeeContact = detail.committeeContact || {};
-    const assignment = detail.assignment || {};
-    const workflow = detail.workflow || {};
-    const checklist = detail.checklist || [];
-    const email = detail.email || {};
-    const response = detail.response || {};
-    const visit = detail.visit || {};
-    const installation = detail.installation || {};
-    const agreement = detail.agreement || {};
-    const closure = detail.closure || {};
-    const tracking = detail.tracking || {};
-    const responseWait = tracking.responseWait || null;
-    const inactivity = tracking.inactivity || null;
-    const detailAlerts = detail.alerts || [];
-    const committeeOptions = Array.isArray(committeeContact.options) ? committeeContact.options.slice() : [];
-    if (committeeContact.socio_id && !committeeOptions.some(item => String(item.socio_id || '').trim() === String(committeeContact.socio_id || '').trim())) {
-      committeeOptions.unshift({
-        socio_id: committeeContact.socio_id || '',
-        nombre_socio: committeeContact.nombre_socio || 'Contacto guardado',
-        cargo: committeeContact.cargo || '',
-        telefono_contacto: committeeContact.telefono_contacto || '',
-        correo_contacto: committeeContact.correo_contacto || '',
-        direccion: committeeContact.direccion || '',
-        unavailable: true
-      });
+  function renderCamaras1414TrackingTable_(orgs) {
+    APP.state = APP.state || {};
+    APP.state.camarasOrgs = orgs;
+    if (!orgs.length) {
+      return goPesEmptyStateHtml_('videocam_off', 'Sin organizaciones', 'No hay organizaciones con certificado definitivo para gestionar Cámaras 1414.');
     }
+    const rows = orgs.map(o => `
+      <tr>
+        <td class="cam-org"><strong>${escapeHtml(o.nombre_organizacion)}</strong><small>Certificado ${escapeHtml(formatFechaHoraUi_(o.fecha_certificado))}</small></td>
+        <td>${camProgress_(o.estado_index)}</td>
+        <td>${camPlazoBadge_(o)}</td>
+        <td class="cam-actions-cell" data-cam-actions="${escapeHtml(o.organizacion_id)}">${camActionsHtml_(o)}</td>
+      </tr>`).join('');
+    return `<div class="fnd-table-wrap"><table class="cam-track">
+      <thead><tr><th>Organización</th><th>Progreso</th><th>Plazo / resultado</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  }
 
-    return `
-      <form id="camaras1414-detail-form" class="beneficios-form" novalidate>
-        <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">
-        <div class="beneficios-detail__head">
-          <div>
-            <h3>${escapeHtml(org.nombre_organizacion || '')}</h3>
-            <p class="muted">${escapeHtml(org.organizacion_id || '')} · Elegible desde ${escapeHtml(formatFechaHoraUi_(detail.elegibilidad && detail.elegibilidad.fecha_hito_11 || ''))}</p>
-          </div>
-          <div class="beneficios-detail__head-badges">
-            <span class="beneficio-chip ${beneficioBadgeClass_('ok')}">${escapeHtml(assignment.estado_beneficio || workflow.status || '')}</span>
-            <span class="beneficio-chip ${beneficioBadgeClass_('info')}">Avance ${escapeHtml(String(assignment.avance_beneficio_pct || workflow.progressPct || 0))}%</span>
-          </div>
-        </div>
+  function camProgress_(index) {
+    const labels = ['Elegible', 'Solicitado', 'Instalado'];
+    let html = '<div class="cam-prog">';
+    for (let i = 0; i < 3; i++) {
+      const cls = i < index ? 'cam-prog__dot--done' : i === index ? 'cam-prog__dot--active' : '';
+      const lcls = i === index ? 'cam-prog__label--active' : '';
+      html += `<div class="cam-prog__step"><span class="cam-prog__dot ${cls}">${i < index ? '✓' : (i + 1)}</span><span class="cam-prog__label ${lcls}">${labels[i]}</span></div>`;
+      if (i < 2) html += `<span class="cam-prog__bar ${i < index ? 'cam-prog__bar--done' : ''}"></span>`;
+    }
+    return html + '</div>';
+  }
 
-        <section class="beneficios-detail-strip">
-          <section class="beneficios-block beneficios-block--subtle">
-            <h4>Resumen operativo</h4>
-            <div class="beneficios-form__grid">
-              <div class="field">
-                <label>Responsable</label>
-                <input type="text" name="responsable_beneficio" value="${escapeHtml(assignment.responsable_beneficio || '')}" aria-label="Responsable del beneficio">
-              </div>
-              <div class="field">
-                <label>Proximo paso</label>
-                <input type="text" value="${escapeHtml(assignment.proximo_hito_beneficio || workflow.nextStep || '')}" disabled aria-label="Próximo paso">
-              </div>
-              <div class="field" data-span="2">
-                <label>Contacto del comite</label>
-                <select name="committee_contact_socio_id" data-camaras-contact-select ${committeeOptions.length ? '' : 'disabled'}>
-                  <option value="">${escapeHtml(committeeOptions.length ? 'Seleccionar socio del comite' : 'No hay socios disponibles para seleccionar')}</option>
-                  ${committeeOptions.map(item => `
-                    <option
-                      value="${escapeHtml(item.socio_id || '')}"
-                      data-contact-name="${escapeHtml(item.nombre_socio || '')}"
-                      data-contact-cargo="${escapeHtml(item.cargo || '')}"
-                      data-contact-phone="${escapeHtml(item.telefono_contacto || '')}"
-                      data-contact-email="${escapeHtml(item.correo_contacto || '')}"
-                      data-contact-address="${escapeHtml(item.direccion || '')}"
-                      data-contact-unavailable="${item.unavailable ? '1' : '0'}"
-                      ${String(item.socio_id || '').trim() === String(committeeContact.socio_id || '').trim() ? 'selected' : ''}
-                    >
-                      ${escapeHtml(item.nombre_socio || 'Socio sin nombre')}${item.cargo ? ' · ' + escapeHtml(item.cargo) : ''}${item.unavailable ? ' · No disponible en socios' : ''}
-                    </option>
-                  `).join('')}
-                </select>
-                ${committeeOptions.length
-                  ? '<p class="muted">Selecciona el socio definido por la organizacion como contacto operativo del beneficio.</p>'
-                  : `<p class="muted">${escapeHtml(committeeContact.emptyMessage || 'No hay socios disponibles para seleccionar.')}</p>`}
-              </div>
-              <div class="field" data-span="2">
-                <label>Observacion general</label>
-                <textarea name="observacion_beneficio" rows="3">${escapeHtml(assignment.observacion_beneficio || '')}</textarea>
-              </div>
-            </div>
-            <div class="beneficios-summary-stack">
-            ${(responseWait || inactivity)
-              ? `<div class="beneficios-inline-statuses">
-                  ${responseWait ? `
-                    <article class="beneficios-inline-status ${beneficioAlertClass_(responseWait.tone)}">
-                      <strong>Seguimiento correo</strong>
-                      <span>${escapeHtml(responseWait.label || '')}</span>
-                    </article>
-                  ` : ''}
-                  ${inactivity ? `
-                    <article class="beneficios-inline-status ${beneficioAlertClass_(inactivity.active ? 'danger' : 'info')}">
-                      <strong>Sin avance</strong>
-                      <span>${escapeHtml(inactivity.days + ' dias desde el ultimo hito operativo')}</span>
-                      <small>${escapeHtml(inactivity.label || '')}</small>
-                    </article>
-                  ` : ''}
-                </div>`
-              : ''}
-            ${detailAlerts.length
-              ? `<div class="beneficios-alerts beneficios-alerts--inline">
-                  ${detailAlerts.map(alert => renderBeneficiosAlertCard_(Object.assign({}, alert, { nombre_organizacion: '', title: alert.title || '', detail: alert.detail || '' }))).join('')}
-                </div>`
-              : ''}
-            <div class="beneficios-contact-grid">
-              <div><strong>Contacto</strong><span data-camaras-contact-display="name" data-default-value="${escapeHtml(contacto.contacto_nombre || 'Sin definir')}">${escapeHtml(contacto.contacto_nombre || 'Sin definir')}</span></div>
-              <div><strong>Telefono</strong><span data-camaras-contact-display="phone" data-default-value="${escapeHtml(contacto.telefono_contacto || 'Sin dato')}">${escapeHtml(contacto.telefono_contacto || 'Sin dato')}</span></div>
-              <div><strong>Correo</strong><span data-camaras-contact-display="email" data-default-value="${escapeHtml(contacto.correo_contacto || 'Sin dato')}">${escapeHtml(contacto.correo_contacto || 'Sin dato')}</span></div>
-              <div><strong>Direccion</strong><span data-camaras-contact-display="address" data-default-value="${escapeHtml(contacto.direccion_referencia || 'Sin dato')}">${escapeHtml(contacto.direccion_referencia || 'Sin dato')}</span></div>
-              <div><strong>UV / Sector</strong><span>${escapeHtml([contacto.uv ? 'UV ' + contacto.uv : '', contacto.sector || ''].filter(Boolean).join(' / ') || 'Sin dato')}</span></div>
-            </div>
-            </div>
-          </section>
+  function camPlazoBadge_(o) {
+    if (o.estado_index === 2) {
+      return `<span class="cam-badge cam-badge--ok"><span class="material-symbols-outlined">check</span>${escapeHtml(String(o.camaras || ''))} cámaras · ${escapeHtml(formatFechaHoraUi_(o.fecha_convenio))}</span>`;
+    }
+    if (o.estado_index === 1) {
+      return `<span class="cam-badge cam-badge--info"><span class="material-symbols-outlined">send</span>Solicitado ${escapeHtml(formatFechaHoraUi_(o.fecha_solicitud))}</span>`;
+    }
+    const tone = o.plazo_tono || 'ok';
+    const cls = tone === 'danger' ? 'cam-badge--danger' : tone === 'warning' ? 'cam-badge--warn' : 'cam-badge--ok';
+    const ic = tone === 'danger' ? 'warning' : 'schedule';
+    return `<span class="cam-badge ${cls}"><span class="material-symbols-outlined">${ic}</span>${escapeHtml(o.plazo_badge || o.plazo_mensaje || '')}</span>`;
+  }
 
-          <section class="beneficios-block beneficios-block--subtle">
-            <h4>Checklist documental</h4>
-            <div class="beneficios-checklist beneficios-checklist--simple">
-              ${checklist.map(item => {
-                const currentStatus = item.status || '';
-                const isAvailable = currentStatus && currentStatus !== 'Pendiente';
-                return `
-                  <label class="beneficios-checklist__row" data-checklist-code="${escapeHtml(item.code || '')}">
-                    <input type="checkbox" data-doc-toggle ${isAvailable ? 'checked' : ''}>
-                    <span>${escapeHtml(item.label || '')}</span>
-                    <input type="hidden" data-doc-status value="${escapeHtml(currentStatus || (isAvailable ? 'Disponible' : 'Pendiente'))}">
-                    <input type="hidden" data-doc-date value="${escapeHtml(String(item.date || '').slice(0, 10))}">
-                    <textarea data-doc-observation hidden>${escapeHtml(item.observation || '')}</textarea>
-                  </label>
-                `;
-              }).join('')}
-            </div>
-          </section>
-        </section>
+  function camActionsHtml_(o) {
+    if (o.estado_index === 0) {
+      return `<button type="button" class="primary-btn cam-act-btn" data-cam-act="sol"><span class="material-symbols-outlined">send</span>Marcar solicitud</button>`;
+    }
+    if (o.estado_index === 1) {
+      return `<button type="button" class="primary-btn cam-act-btn" data-cam-act="inst"><span class="material-symbols-outlined">photo_camera</span>Registrar instalación</button>`;
+    }
+    return `<span class="cam-badge cam-badge--ok"><span class="material-symbols-outlined">check</span>Completado</span>`;
+  }
 
-        <section class="beneficios-block beneficios-block--subtle">
-          <div class="beneficios-block__head">
-            <div>
-              <h4>Correo formal de solicitud</h4>
-              <p class="muted">No envia nada automaticamente. Prepara el borrador y permite copiar o abrir mailto.</p>
-            </div>
-            <div class="beneficios-inline-actions beneficios-inline-actions--mail">
-              <button type="button" class="secondary-btn js-camaras1414-copy-subject"><span class="material-symbols-outlined">content_copy</span>Copiar asunto</button>
-              <button type="button" class="secondary-btn js-camaras1414-copy-body"><span class="material-symbols-outlined">content_copy</span>Copiar cuerpo</button>
-              <button type="button" class="secondary-btn js-camaras1414-mailto"><span class="material-symbols-outlined">mail</span>Abrir mailto</button>
-            </div>
-          </div>
-          <div class="beneficios-form__grid">
-            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
-              <input type="checkbox" name="email_sent_confirmed" ${email.sentConfirmed ? 'checked' : ''}>
-              <span>Correo enviado</span>
-            </label>
-            <div class="field">
-              <label>Destinatario</label>
-              <input type="email" name="email_recipient" value="${escapeHtml(email.recipient || '')}">
-            </div>
-            <div class="field">
-              <label>Fecha de envio</label>
-              <input type="date" name="email_sent_date" value="${escapeHtml(String(email.sentDate || '').slice(0, 10))}">
-            </div>
-            <div class="field" data-span="2">
-              <label>Asunto</label>
-              <input type="text" name="email_subject" value="${escapeHtml(email.subject || '')}">
-            </div>
-            <div class="field" data-span="2">
-              <label>Cuerpo</label>
-              <textarea rows="7" name="email_body">${escapeHtml(email.body || '')}</textarea>
-            </div>
-            <div class="field" data-span="2">
-              <label>Observaciones del correo</label>
-              <textarea rows="2" name="email_notes">${escapeHtml(email.notes || '')}</textarea>
-            </div>
-          </div>
-        </section>
-
-        <section class="beneficios-block beneficios-block--subtle">
-          <h4>Respuesta y coordinacion</h4>
-          <div class="beneficios-form__grid">
-            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
-              <input type="checkbox" name="response_has_response" ${response.hasResponse ? 'checked' : ''}>
-              <span>Respuesta recibida</span>
-            </label>
-            <div class="field">
-              <label>Fecha de respuesta</label>
-              <input type="date" name="response_date" value="${escapeHtml(String(response.responseDate || '').slice(0, 10))}">
-            </div>
-            <div class="field">
-              <label>Fecha de visita agendada</label>
-              <input type="date" name="response_visit_date" value="${escapeHtml(String(response.visitDate || '').slice(0, 10))}">
-            </div>
-            <div class="field" data-span="2">
-              <label>Observaciones de respuesta</label>
-              <textarea rows="3" name="response_observations">${escapeHtml(response.observations || '')}</textarea>
-            </div>
-          </div>
-        </section>
-
-        <section class="beneficios-block beneficios-block--subtle">
-          <h4>Resultado de visita tecnica</h4>
-          <div class="beneficios-form__grid">
-            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
-              <input type="checkbox" name="visit_completed" ${visit.visitCompleted ? 'checked' : ''}>
-              <span>Visita tecnica realizada</span>
-            </label>
-            <div class="field">
-              <label>Fecha visita realizada</label>
-              <input type="date" name="visit_performed_date" value="${escapeHtml(String(visit.performedDate || '').slice(0, 10))}">
-            </div>
-            <div class="field">
-              <label>Cantidad de camaras</label>
-              <input type="number" min="0" name="visit_camera_count" value="${escapeHtml(String(visit.cameraCount === '' ? '' : (visit.cameraCount || '')))}">
-            </div>
-            <div class="field" data-span="2">
-              <label>Observaciones tecnicas</label>
-              <textarea rows="4" name="visit_observations">${escapeHtml(visit.technicalObservations || '')}</textarea>
-            </div>
-          </div>
-        </section>
-
-        <section class="beneficios-block beneficios-block--subtle">
-          <h4>Seguimiento de instalacion</h4>
-          <div class="beneficios-form__grid">
-            <div class="field">
-              <label>Estado de instalacion</label>
-              <select name="installation_status">
-                ${['Sin informacion', 'Pendiente', 'En proceso', 'Instalada'].map(option => `
-                  <option value="${escapeHtml(option)}" ${String(installation.status || '') === option ? 'selected' : ''}>${escapeHtml(option)}</option>
-                `).join('')}
-              </select>
-            </div>
-            <div class="field">
-              <label>Fecha conocida</label>
-              <input type="date" name="installation_date" value="${escapeHtml(String(installation.knownDate || '').slice(0, 10))}">
-            </div>
-            <div class="field" data-span="2">
-              <label>Observaciones de instalacion</label>
-              <textarea rows="3" name="installation_observations">${escapeHtml(installation.observations || '')}</textarea>
-            </div>
-          </div>
-        </section>
-
-        <section class="beneficios-block beneficios-block--subtle">
-          <h4>Convenio</h4>
-          <div class="beneficios-form__grid">
-            <label class="checkbox-row checkbox-row--camaras1414" data-span="2">
-              <input type="checkbox" name="agreement_received" ${agreement.received ? 'checked' : ''}>
-              <span>Convenio recibido</span>
-            </label>
-            <div class="field">
-              <label>Fecha convenio recibido</label>
-              <input type="date" name="agreement_received_date" value="${escapeHtml(String(agreement.receivedDate || '').slice(0, 10))}">
-            </div>
-            <div class="field field--hidden-spacer" aria-hidden="true"></div>
-            <div class="field" data-span="2">
-              <label>Observaciones del convenio</label>
-              <textarea rows="3" name="agreement_observations">${escapeHtml(agreement.observations || '')}</textarea>
-            </div>
-          </div>
-        </section>
-
-        <section class="beneficios-block beneficios-block--subtle">
-          <h4>Cierre</h4>
-          <p class="muted">El convenio de colaboracion marca el cierre y entrega efectiva del beneficio.</p>
-          <div class="beneficios-form__grid">
-            <label class="checkbox-row checkbox-row--camaras1414 checkbox-row--camaras1414-closure" data-span="2">
-              <input type="checkbox" name="closure_closed" ${closure.closed ? 'checked' : ''}>
-              <span>Beneficio cerrado</span>
-            </label>
-            <div class="field">
-              <label>Fecha de cierre</label>
-              <input type="date" name="closure_closed_date" value="${escapeHtml(String(closure.closedDate || '').slice(0, 10))}">
-            </div>
-            <div class="field field--hidden-spacer" aria-hidden="true"></div>
-            <div class="field" data-span="2">
-              <label>Observaciones de cierre</label>
-              <textarea rows="3" name="closure_observations">${escapeHtml(closure.observations || '')}</textarea>
-            </div>
-          </div>
-        </section>
-
-        <div class="beneficios-form__actions">
-          <button type="submit" class="primary-btn">
-            <span class="material-symbols-outlined">save</span>Guardar gestion CAMARAS 1414
-          </button>
-        </div>
-      </form>
-    `;
+  function camEditorHtml_(kind) {
+    if (kind === 'sol') {
+      return `<div class="cam-editor">
+        <div class="cam-fld"><label>Fecha de solicitud</label><input type="date" class="cam-date"></div>
+        <button type="button" class="primary-btn" data-cam-save="sol"><span class="material-symbols-outlined">check</span>Guardar</button>
+        <button type="button" class="secondary-btn" data-cam-cancel="1">Cancelar</button>
+      </div>`;
+    }
+    return `<div class="cam-editor">
+      <div class="cam-fld"><label>Fecha convenio</label><input type="date" class="cam-date"></div>
+      <div class="cam-fld"><label>N° cámaras</label><input type="number" min="1" class="cam-cameras" style="width:76px"></div>
+      <button type="button" class="primary-btn" data-cam-save="inst"><span class="material-symbols-outlined">check</span>Guardar</button>
+      <button type="button" class="secondary-btn" data-cam-cancel="1">Cancelar</button>
+    </div>`;
   }
 
   function bindCamaras1414Panel_() {
-    document.querySelectorAll('[data-camaras1414-row]').forEach(row => {
-      const selectRow = () => {
-        const issue = String(row.dataset.camaras1414RowIssue || '').trim();
-        if (issue) {
-          showError(issue);
-          return;
-        }
-        APP.state.currentBeneficioOrganizacionId = row.dataset.camaras1414Row || '';
-        refreshBeneficiosModuloMinimo_();
-      };
-      row.addEventListener('click', selectRow);
-      row.addEventListener('keydown', ev => {
-        if (ev.key !== 'Enter' && ev.key !== ' ') return;
-        ev.preventDefault();
-        selectRow();
-      });
-    });
+    document.querySelector('.js-camaras1414-stepper-btn')?.addEventListener('click', () => renderCamaras1414InfoModal_());
+    document.querySelector('.js-camaras1414-infodoc-btn')?.addEventListener('click', () => renderCamaras1414InfoDocModal_());
 
-    document.querySelectorAll('.js-camaras1414-eligible-action').forEach(btn => {
-      btn.addEventListener('click', ev => {
-        ev.stopPropagation();
-        const issue = String(btn.dataset.eligibilityIssue || '').trim();
-        if (issue) {
-          showError(issue);
-          return;
-        }
-        APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
-        refreshBeneficiosModuloMinimo_();
-      });
-    });
+    const container = document.getElementById('cam-list-container');
+    if (!container) return;
 
-    document.querySelectorAll('.js-camaras1414-open-detail').forEach(btn => {
-      btn.addEventListener('click', ev => {
-        ev.stopPropagation();
-        APP.state.currentBeneficioOrganizacionId = btn.dataset.organizacionId || '';
-        refreshBeneficiosModuloMinimo_();
-      });
-    });
-
-    document.getElementById('camaras1414-clear-selection-btn')?.addEventListener('click', () => {
-      APP.state.currentBeneficioOrganizacionId = '';
-      refreshBeneficiosModuloMinimo_();
-    });
-
-    const configForm = document.getElementById('camaras1414-config-form');
-    if (configForm) {
-      configForm.addEventListener('submit', ev => {
-        ev.preventDefault();
-        const payload = serializeForm(configForm);
-        showModuleLoading('Guardando plazos...');
-        api('guardarConfiguracionCamaras1414', payload).then(res => {
-          APP.state.systemConfig = APP.state.systemConfig || {};
-          APP.state.systemConfig.beneficios = APP.state.systemConfig.beneficios || {};
-          APP.state.systemConfig.beneficios.camaras1414 = res && res.config ? res.config : {};
-          showSuccess('Plazos de CAMARAS 1414 guardados.');
-          return refreshBeneficiosModuloMinimo_();
-        }).catch(showError).finally(hideModuleLoading);
-      });
-    }
-
-    const detailForm = document.getElementById('camaras1414-detail-form');
-    if (detailForm) {
-      const committeeContactSelect = detailForm.querySelector('[data-camaras-contact-select]');
-      if (committeeContactSelect) {
-        committeeContactSelect.addEventListener('change', () => syncCamarasCommitteeContactUi_(detailForm));
-        syncCamarasCommitteeContactUi_(detailForm);
+    container.addEventListener('click', ev => {
+      const actBtn = ev.target.closest('[data-cam-act]');
+      if (actBtn) {
+        const cell = actBtn.closest('.cam-actions-cell');
+        cell.innerHTML = camEditorHtml_(actBtn.dataset.camAct);
+        cell.querySelector('.cam-date')?.focus();
+        return;
       }
-
-      detailForm.querySelectorAll('[data-doc-toggle]').forEach(toggle => {
-        toggle.addEventListener('change', () => {
-          const card = toggle.closest('[data-checklist-code]');
-          const statusInput = card?.querySelector('[data-doc-status]');
-          if (statusInput) {
-            statusInput.value = toggle.checked ? 'Disponible' : 'Pendiente';
-          }
-        });
-      });
-
-      detailForm.addEventListener('submit', ev => {
-        ev.preventDefault();
-        const validationError = validateCamaras1414DetailForm_(detailForm);
-        if (validationError) {
-          showError(validationError);
-          return;
+      const cancelBtn = ev.target.closest('[data-cam-cancel]');
+      if (cancelBtn) {
+        const cell = cancelBtn.closest('.cam-actions-cell');
+        const org = (APP.state.camarasOrgs || []).find(o => o.organizacion_id === cell.dataset.camActions);
+        cell.innerHTML = camActionsHtml_(org || { estado_index: 0 });
+        return;
+      }
+      const saveBtn = ev.target.closest('[data-cam-save]');
+      if (saveBtn) {
+        const cell = saveBtn.closest('.cam-actions-cell');
+        const orgId = cell.dataset.camActions;
+        const kind = saveBtn.dataset.camSave;
+        const dateVal = cell.querySelector('.cam-date')?.value || '';
+        if (!dateVal) { showError('Ingresa la fecha.'); cell.querySelector('.cam-date')?.focus(); return; }
+        const payload = { organizacion_id: orgId };
+        if (kind === 'sol') {
+          payload.solicitud = { requested: true, requestDate: dateVal };
+        } else {
+          const cam = Number(cell.querySelector('.cam-cameras')?.value || 0);
+          if (!cam || cam <= 0) { showError('Indica cuántas cámaras se instalaron.'); cell.querySelector('.cam-cameras')?.focus(); return; }
+          payload.instalacion = { installed: true, agreementDate: dateVal, cameras: cam };
         }
-        const payload = collectCamaras1414DetailPayload_(detailForm);
-        APP.state.currentBeneficioOrganizacionId = payload.organizacion_id || APP.state.currentBeneficioOrganizacionId || '';
-        showModuleLoading('Guardando gestión CAMARAS 1414...');
+        saveBtn.disabled = true;
+        showModuleLoading(kind === 'sol' ? 'Registrando solicitud...' : 'Registrando instalación...');
         api('guardarCamaras1414Organizacion', payload).then(() => {
-          showSuccess('Gestión CAMARAS 1414 guardada.');
+          showSuccess(kind === 'sol' ? 'Solicitud registrada.' : 'Instalación registrada.');
           return refreshBeneficiosModuloMinimo_();
-        }).catch(showError).finally(hideModuleLoading);
-      });
-    }
-
-    document.querySelector('.js-camaras1414-copy-subject')?.addEventListener('click', () => {
-      copyTextToClipboard_(document.querySelector('[name="email_subject"]')?.value || '', 'Asunto copiado.');
-    });
-    document.querySelector('.js-camaras1414-copy-body')?.addEventListener('click', () => {
-      copyTextToClipboard_(document.querySelector('[name="email_body"]')?.value || '', 'Cuerpo copiado.');
-    });
-    document.querySelector('.js-camaras1414-mailto')?.addEventListener('click', () => {
-      openCamaras1414Mailto_();
-    });
-    document.querySelector('.js-camaras1414-stepper-btn')?.addEventListener('click', () => {
-      renderCamaras1414InfoModal_();
-    });
-    document.querySelector('.js-camaras1414-infodoc-btn')?.addEventListener('click', () => {
-      renderCamaras1414InfoDocModal_();
-    });
-  }
-
-  function collectCamaras1414DetailPayload_(form) {
-    const selectedContactOption = (() => {
-      const select = form.querySelector('[name="committee_contact_socio_id"]');
-      return select && select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
-    })();
-    return {
-      organizacion_id: form.querySelector('[name="organizacion_id"]')?.value || '',
-      responsable_beneficio: form.querySelector('[name="responsable_beneficio"]')?.value || '',
-      observacion_beneficio: form.querySelector('[name="observacion_beneficio"]')?.value || '',
-      checklist: Array.from(form.querySelectorAll('[data-checklist-code]')).map(card => ({
-        code: card.dataset.checklistCode || '',
-        status: card.querySelector('[data-doc-status]')?.value || '',
-        date: card.querySelector('[data-doc-date]')?.value || '',
-        observation: card.querySelector('[data-doc-observation]')?.value || ''
-      })),
-      email: {
-        recipient: form.querySelector('[name="email_recipient"]')?.value || '',
-        subject: form.querySelector('[name="email_subject"]')?.value || '',
-        body: form.querySelector('[name="email_body"]')?.value || '',
-        sentConfirmed: !!form.querySelector('[name="email_sent_confirmed"]')?.checked,
-        sentDate: form.querySelector('[name="email_sent_date"]')?.value || '',
-        notes: form.querySelector('[name="email_notes"]')?.value || ''
-      },
-      committeeContact: {
-        socio_id: form.querySelector('[name="committee_contact_socio_id"]')?.value || '',
-        nombre_socio: selectedContactOption ? selectedContactOption.dataset.contactName || '' : '',
-        cargo: selectedContactOption ? selectedContactOption.dataset.contactCargo || '' : '',
-        telefono_contacto: selectedContactOption ? selectedContactOption.dataset.contactPhone || '' : '',
-        correo_contacto: selectedContactOption ? selectedContactOption.dataset.contactEmail || '' : '',
-        direccion: selectedContactOption ? selectedContactOption.dataset.contactAddress || '' : '',
-        unavailable: selectedContactOption ? selectedContactOption.dataset.contactUnavailable === '1' : false
-      },
-      response: {
-        hasResponse: !!form.querySelector('[name="response_has_response"]')?.checked,
-        responseDate: form.querySelector('[name="response_date"]')?.value || '',
-        visitDate: form.querySelector('[name="response_visit_date"]')?.value || '',
-        observations: form.querySelector('[name="response_observations"]')?.value || ''
-      },
-      visit: {
-        visitCompleted: !!form.querySelector('[name="visit_completed"]')?.checked,
-        performedDate: form.querySelector('[name="visit_performed_date"]')?.value || '',
-        cameraCount: form.querySelector('[name="visit_camera_count"]')?.value || '',
-        installationLocations: form.querySelector('[name="visit_locations"]')?.value || '',
-        powerPoints: form.querySelector('[name="visit_power_points"]')?.value || '',
-        internetPoints: form.querySelector('[name="visit_internet_points"]')?.value || '',
-        technicalObservations: form.querySelector('[name="visit_observations"]')?.value || ''
-      },
-      installation: {
-        status: form.querySelector('[name="installation_status"]')?.value || '',
-        knownDate: form.querySelector('[name="installation_date"]')?.value || '',
-        observations: form.querySelector('[name="installation_observations"]')?.value || ''
-      },
-      agreement: {
-        received: !!form.querySelector('[name="agreement_received"]')?.checked,
-        receivedDate: form.querySelector('[name="agreement_received_date"]')?.value || '',
-        observations: form.querySelector('[name="agreement_observations"]')?.value || ''
-      },
-      closure: {
-        closed: !!form.querySelector('[name="closure_closed"]')?.checked,
-        closedDate: form.querySelector('[name="closure_closed_date"]')?.value || '',
-        observations: form.querySelector('[name="closure_observations"]')?.value || ''
+        }).catch(err => { showError(err); saveBtn.disabled = false; }).finally(hideModuleLoading);
       }
-    };
-  }
-
-  function validateCamaras1414DetailForm_(form) {
-    const sentConfirmed = !!form.querySelector('[name="email_sent_confirmed"]')?.checked;
-    const sentDate = String(form.querySelector('[name="email_sent_date"]')?.value || '').trim();
-    if (sentConfirmed && !sentDate) {
-      return 'Marca "Correo enviado" solo si registras tambien la fecha de envio.';
-    }
-    if (!sentConfirmed && sentDate) {
-      return 'Si registras fecha de envio, debes marcar tambien "Correo enviado".';
-    }
-    return '';
-  }
-
-  function syncCamarasCommitteeContactUi_(form) {
-    if (!form) return;
-    const select = form.querySelector('[data-camaras-contact-select]');
-    if (!select) return;
-
-    const option = select.options && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
-    const values = {
-      name: option && select.value ? String(option.dataset.contactName || '').trim() : '',
-      phone: option && select.value ? String(option.dataset.contactPhone || '').trim() : '',
-      email: option && select.value ? String(option.dataset.contactEmail || '').trim() : '',
-      address: option && select.value ? String(option.dataset.contactAddress || '').trim() : ''
-    };
-
-    const setText = (selector, value, fallback) => {
-      const node = form.querySelector(selector);
-      if (node) node.textContent = value || node.dataset.defaultValue || fallback;
-    };
-
-    setText('[data-camaras-contact-display="name"]', values.name, 'Sin definir');
-    setText('[data-camaras-contact-display="phone"]', values.phone, 'Sin dato');
-    setText('[data-camaras-contact-display="email"]', values.email, 'Sin dato');
-    setText('[data-camaras-contact-display="address"]', values.address, 'Sin dato');
-  }
-
-  function copyTextToClipboard_(value, successMessage) {
-    const text = String(value || '');
-    if (!text.trim()) {
-      showError('No hay contenido para copiar.');
-      return;
-    }
-
-    const fallback = () => {
-      const area = document.createElement('textarea');
-      area.value = text;
-      document.body.appendChild(area);
-      area.select();
-      document.execCommand('copy');
-      area.remove();
-      showSuccess(successMessage || 'Contenido copiado.');
-    };
-
-    if (!navigator.clipboard || typeof navigator.clipboard.writeText !== 'function') {
-      fallback();
-      return;
-    }
-
-    navigator.clipboard.writeText(text).then(() => {
-      showSuccess(successMessage || 'Contenido copiado.');
-    }).catch(() => {
-      fallback();
     });
-  }
-
-  function openCamaras1414Mailto_() {
-    const recipient = document.querySelector('[name="email_recipient"]')?.value || '';
-    const subject = document.querySelector('[name="email_subject"]')?.value || '';
-    const body = document.querySelector('[name="email_body"]')?.value || '';
-    const href = `mailto:${encodeURIComponent(recipient)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    window.open(href, '_blank');
-  }
-
-  function beneficioBadgeClass_(tone) {
-    const map = {
-      ok: 'beneficio-chip--ok',
-      warning: 'beneficio-chip--warning',
-      info: 'beneficio-chip--info',
-      muted: 'beneficio-chip--muted'
-    };
-    return map[tone] || map.muted;
   }
 
   function renderCamaras1414InfoModal_() {
@@ -1684,6 +998,8 @@
       .fnd-doc-bar__label{font-size:0.75rem;color:var(--text-muted,#6b7a8d)}
       .fnd-estado{display:inline-flex;align-items:center;padding:3px 9px;border-radius:12px;font-size:0.72rem;font-weight:700;white-space:nowrap}
       .fnd-estado--postulando{background:#e8f0fe;color:#1a73e8}
+      .fnd-estado--en_armado{background:#ede9fe;color:#6d28d9}
+      .fnd-estado--ingresada{background:#e8f0fe;color:#1a73e8}
       .fnd-estado--en_evaluacion{background:var(--warning-soft);color:var(--warning)}
       .fnd-estado--adjudicado{background:var(--success-soft);color:var(--success-dark)}
       .fnd-estado--firma_convenio{background:#e8f0fe;color:#1a73e8}
@@ -1737,7 +1053,89 @@
       html[data-theme="dark"] .fnd-section{background:var(--surface,#14202d);border-color:var(--border,#294356)}
       html[data-theme="dark"] .fnd-modal{background:var(--surface,#14202d)}
       html[data-theme="dark"] .fnd-step__dot{background:var(--surface,#14202d)}
-      @media(max-width:640px){.fnd-checklist{grid-template-columns:1fr}.fnd-stepper{gap:0}}
+      /* ===== Listado de habilitadas (puerta de entrada FONDESE) ===== */
+      .fnd-years{display:inline-flex;gap:4px;background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:10px;padding:3px}
+      .fnd-years button{appearance:none;border:0;background:none;cursor:pointer;font:inherit;font-weight:700;font-size:0.82rem;color:var(--text-muted,#6b7a8d);padding:6px 12px;border-radius:7px;display:flex;align-items:center;gap:7px}
+      .fnd-years__tag{font-size:0.6rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:1px 5px;border-radius:4px;background:var(--surface,#fff);color:var(--text-muted,#6b7a8d)}
+      .fnd-years button[aria-selected="true"]{background:var(--surface,#fff);color:var(--text,#24364B);box-shadow:0 1px 3px rgba(0,0,0,.09)}
+      .fnd-years button[aria-selected="true"] .fnd-years__tag{background:color-mix(in srgb,var(--runtime-brand-primary,#3D96B4) 16%,var(--surface,#fff));color:var(--runtime-brand-primary,#3D96B4)}
+      .fnd-hab-topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px 20px;flex-wrap:wrap;margin-bottom:14px}
+      .fnd-hab-topbar .fnd-llamados{margin:0;flex:1 1 auto}
+      .fnd-hab-topbar .fnd-years{flex:0 0 auto}
+      .fnd-llamados{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+      .fnd-llamados button{appearance:none;cursor:pointer;text-align:left;font:inherit;background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:11px;padding:9px 14px;color:var(--text-muted,#6b7a8d);display:flex;flex-direction:column;gap:1px}
+      .fnd-ll__name{font-weight:700;font-size:0.85rem;color:var(--text,#24364B)}
+      .fnd-ll__sub{font-size:0.72rem}
+      .fnd-llamados button[aria-selected="true"]{border-color:var(--runtime-brand-primary,#3D96B4);background:color-mix(in srgb,var(--runtime-brand-primary,#3D96B4) 9%,var(--surface,#fff))}
+      .fnd-bases{border:1px solid var(--border,#D6E0EA);border-radius:12px;background:var(--surface-alt,#f7fafc);overflow:hidden;margin-bottom:14px}
+      .fnd-bases>summary{cursor:pointer;list-style:none;padding:11px 16px;font-size:0.84rem;font-weight:600;color:var(--text,#24364B);display:flex;align-items:center;gap:9px}
+      .fnd-bases>summary::-webkit-details-marker{display:none}
+      .fnd-bases>summary .fnd-bases__ico{font-size:16px;color:var(--runtime-brand-primary,#3D96B4)}
+      .fnd-bases__hint{margin-left:auto;font-size:0.72rem;font-weight:600;color:var(--text-muted,#6b7a8d);background:var(--surface,#fff);border:1px solid var(--border,#D6E0EA);padding:2px 8px;border-radius:99px}
+      .fnd-bases__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1px;background:var(--border,#D6E0EA);border-top:1px solid var(--border,#D6E0EA)}
+      .fnd-bblock{background:var(--surface,#fff);padding:13px 16px}
+      .fnd-bblock h6{margin:0 0 8px;font-size:0.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted,#6b7a8d);font-weight:700}
+      .fnd-bfecha{display:flex;justify-content:space-between;gap:10px;font-size:0.8rem;padding:2px 0}
+      .fnd-bfecha span:first-child{color:var(--text-muted,#6b7a8d)}
+      .fnd-bfecha span:last-child{white-space:nowrap;font-weight:600}
+      .fnd-bmonto{font-size:1.2rem;font-weight:800;color:var(--text,#24364B)}
+      .fnd-bmonto small{display:block;font-size:0.72rem;font-weight:500;color:var(--text-muted,#6b7a8d)}
+      .fnd-bblock--lineas{background:var(--surface,#fff);padding:13px 16px;border-top:1px solid var(--border,#D6E0EA)}
+      .fnd-lineas{display:grid;grid-template-columns:repeat(auto-fill,minmax(196px,1fr));gap:6px}
+      .fnd-linea-pill{font-size:0.75rem;background:var(--surface-alt,#f7fafc);border:1px solid var(--border,#D6E0EA);border-radius:8px;padding:5px 10px;display:flex;gap:8px;align-items:center;justify-content:space-between;color:var(--text,#24364B)}
+      .fnd-linea-pill b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .fnd-linea-pill .m{color:var(--runtime-brand-primary,#3D96B4);font-weight:600;white-space:nowrap}
+      .fnd-hab-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px;background:var(--border,#D6E0EA);border:1px solid var(--border,#D6E0EA);border-radius:10px;overflow:hidden;margin-bottom:14px}
+      .fnd-hab-stat{background:var(--surface,#fff);padding:11px 14px;display:flex;flex-direction:column;gap:1px}
+      .fnd-hab-stat .v{font-size:1.25rem;font-weight:800;line-height:1.1;color:var(--text,#24364B)}
+      .fnd-hab-stat .k{font-size:0.7rem;color:var(--text-muted,#6b7a8d)}
+      .fnd-hab-stat--alert .v{color:var(--danger)}
+      .fnd-hab-stat--adj .v{color:var(--success-dark)}
+      .fnd-hab-group td{background:var(--surface-alt,#f7fafc);font-size:0.72rem;text-transform:uppercase;letter-spacing:.06em;font-weight:700;color:var(--text-muted,#6b7a8d);padding:7px 12px}
+      .fnd-hab-sub{color:var(--text-muted,#6b7a8d);font-size:0.76rem;margin-top:1px}
+      .fnd-lock{display:inline-flex;align-items:center;gap:5px;font-size:0.72rem;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--surface-alt,#f7fafc);color:var(--text-muted,#6b7a8d);border:1px solid var(--border,#D6E0EA)}
+      .fnd-alert-badge{display:inline-flex;align-items:center;gap:5px;font-size:0.72rem;font-weight:600;padding:3px 9px;border-radius:99px}
+      .fnd-alert-badge--warning{background:var(--warning-soft);color:var(--warning)}
+      .fnd-alert-badge--danger{background:var(--danger-soft);color:var(--danger)}
+      html[data-theme="dark"] .fnd-years,html[data-theme="dark"] .fnd-llamados button,html[data-theme="dark"] .fnd-bases,html[data-theme="dark"] .fnd-hab-group td{background:var(--surface-alt,#182635)}
+      html[data-theme="dark"] .fnd-bblock,html[data-theme="dark"] .fnd-hab-stat{background:var(--surface,#14202d)}
+      /* ===== CÁMARAS 1414 — tabla de seguimiento ===== */
+      .cam-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:1px;background:var(--border,#D6E0EA);border:1px solid var(--border,#D6E0EA);border-radius:10px;overflow:hidden;margin:14px 0}
+      .cam-stat{background:var(--surface,#fff);padding:11px 14px;display:flex;flex-direction:column;gap:1px}
+      .cam-stat .v{font-size:1.3rem;font-weight:800;line-height:1;color:var(--text,#24364B)}
+      .cam-stat .k{font-size:.7rem;color:var(--text-muted,#6b7a8d)}
+      .cam-stat--danger .v{color:var(--danger)}
+      .cam-stat--ok .v{color:var(--success-dark)}
+      table.cam-track{width:100%;border-collapse:collapse;font-size:0.86rem}
+      table.cam-track th{text-align:left;font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted,#6b7a8d);font-weight:600;padding:11px 14px;background:var(--surface-alt,#f7fafc);border-bottom:1px solid var(--border,#D6E0EA)}
+      table.cam-track td{padding:12px 14px;border-bottom:1px solid var(--border,#D6E0EA);vertical-align:middle}
+      table.cam-track tr:last-child td{border-bottom:0}
+      .cam-org strong{font-weight:600}
+      .cam-org small{display:block;color:var(--text-muted,#6b7a8d);font-size:.75rem;margin-top:1px}
+      .cam-prog{display:flex;align-items:center}
+      .cam-prog__step{display:flex;align-items:center;gap:6px}
+      .cam-prog__dot{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;border:2px solid var(--border,#D6E0EA);background:var(--surface,#fff);color:var(--text-muted,#6b7a8d)}
+      .cam-prog__dot--done{background:var(--runtime-brand-primary,#3D96B4);border-color:var(--runtime-brand-primary,#3D96B4);color:#fff}
+      .cam-prog__dot--active{border-color:var(--runtime-brand-primary,#3D96B4);color:var(--runtime-brand-primary,#3D96B4)}
+      .cam-prog__label{font-size:.72rem;color:var(--text-muted,#6b7a8d);white-space:nowrap}
+      .cam-prog__label--active{color:var(--text,#24364B);font-weight:600}
+      .cam-prog__bar{width:22px;height:2px;background:var(--border,#D6E0EA);margin:0 5px}
+      .cam-prog__bar--done{background:var(--runtime-brand-primary,#3D96B4)}
+      .cam-badge{display:inline-flex;align-items:center;gap:5px;font-size:.73rem;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+      .cam-badge .material-symbols-outlined{font-size:13px}
+      .cam-badge--ok{background:var(--success-soft);color:var(--success-dark);border-color:color-mix(in srgb,var(--success-dark) 26%,transparent)}
+      .cam-badge--warn{background:var(--warning-soft);color:var(--warning);border-color:color-mix(in srgb,var(--warning) 30%,transparent)}
+      .cam-badge--danger{background:var(--danger-soft);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 32%,transparent)}
+      .cam-badge--info{background:#e8f0fe;color:#1a56c4;border-color:rgba(26,86,196,.28)}
+      .cam-actions-cell{text-align:right;min-width:230px}
+      .cam-act-btn{padding:6px 12px;font-size:0.79rem}
+      .cam-editor{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;justify-content:flex-end}
+      .cam-editor .cam-fld{display:flex;flex-direction:column;gap:3px}
+      .cam-editor label{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted,#6b7a8d);font-weight:600}
+      .cam-editor input{font:inherit;font-size:.82rem;padding:6px 8px;border:1px solid var(--border,#D6E0EA);border-radius:7px;background:var(--surface,#fff);color:var(--text,#24364B)}
+      html[data-theme="dark"] table.cam-track th{background:var(--surface-alt,#182635)}
+      html[data-theme="dark"] .cam-stat,html[data-theme="dark"] .cam-prog__dot{background:var(--surface,#14202d)}
+      @media(max-width:640px){.fnd-checklist{grid-template-columns:1fr}.fnd-stepper{gap:0}.cam-actions-cell{min-width:0}.cam-prog__label{display:none}}
     `;
     document.head.appendChild(s);
   })();
@@ -1753,20 +1151,15 @@
           <div class="fnd-header" id="fnd-panel-header">
             <p class="eyebrow">Beneficio municipal</p>
             <h3 id="fnd-panel-title">${escapeHtml(activeTab.titulo || 'FONDESE')}</h3>
-            <p class="muted">Fondo de Seguridad Providencia &mdash; seguimiento de postulaciones por organización</p>
-            <div class="fnd-chips" id="fnd-panel-chips"></div>
-            <p class="fnd-monto" id="fnd-panel-monto"></p>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;flex-shrink:0;align-items:start;">
-            <div style="display:flex;flex-direction:column;gap:8px;">
-              <button type="button" class="secondary-btn js-fnd-stepper-btn" style="justify-content:center">
-                <span class="material-symbols-outlined">format_list_numbered</span>Paso a paso
-              </button>
-              <button type="button" class="secondary-btn js-fnd-infodoc-btn" style="justify-content:center">
-                <span class="material-symbols-outlined">info</span>Información
-              </button>
-            </div>
-            <div id="fnd-panel-actions" style="display:flex;flex-direction:column;gap:8px;"></div>
+          <div style="display:flex;gap:8px;flex-shrink:0;align-items:flex-start;flex-wrap:wrap;justify-content:flex-end;">
+            <button type="button" class="secondary-btn js-fnd-stepper-btn" style="justify-content:center">
+              <span class="material-symbols-outlined">format_list_numbered</span>Paso a paso
+            </button>
+            <button type="button" class="secondary-btn js-fnd-infodoc-btn" style="justify-content:center">
+              <span class="material-symbols-outlined">info</span>Información
+            </button>
+            <span id="fnd-panel-actions" style="display:flex;gap:8px;"></span>
           </div>
         </div>
         <div id="fnd-list-container" style="min-height:80px">
@@ -1777,115 +1170,26 @@
   }
 
   /* =========================================================
-     FONDESE — tabla de registros
-     ========================================================= */
-
-  function renderFondeseTable_(registros, edicion) {
-    const rows = registros || [];
-    const convMap = {};
-    ((edicion && edicion.convocatorias) || []).forEach(function(c) { convMap[String(c.id)] = c.label; });
-    const lineasMap = {};
-    ((edicion && edicion.lineas_producto) || []).forEach(function(l) { lineasMap[l.id] = l.nombre; });
-    const anioLabel = edicion ? String(edicion.anio || '') : '';
-
-    if (!rows.length) {
-      return `
-        <div class="fnd-empty">
-          <span class="material-symbols-outlined" style="font-size:36px;display:block;margin-bottom:8px;opacity:.4">savings</span>
-          <p>No hay postulaciones registradas aún.</p>
-          <button type="button" class="primary-btn" style="margin-top:12px" id="fnd-nueva-btn-empty">
-            <span class="material-symbols-outlined">add</span>Nueva postulación
-          </button>
-        </div>
-      `;
-    }
-
-    const stateLabel = {
-      postulando: 'Postulando', en_evaluacion: 'En evaluación',
-      adjudicado: 'Adjudicado', firma_convenio: 'Firma convenio',
-      en_ejecucion: 'En ejecución', en_rendicion: 'En rendición', cerrado: 'Cerrado'
-    };
-
-    const rowsHtml = rows.map(function(r) {
-      const pct = Number(r.pct_docs || 0);
-      const total = Number(r.total_docs || 0);
-      const entregados = Number(r.docs_entregados || 0);
-      const fillClass = pct >= 100 ? 'fnd-doc-bar__fill--ok' : pct >= 50 ? 'fnd-doc-bar__fill--mid' : 'fnd-doc-bar__fill--low';
-      const estado = String(r.estado_proceso || 'postulando');
-      const resultado = String(r.resultado_adj || '');
-      const convLabel = convMap[String(r.convocatoria_id || '')] || r.convocatoria_id || '—';
-      const lineaNombre = lineasMap[String(r.linea_producto_id || '')] || r.linea_producto_id || '—';
-      return `
-        <tr>
-          <td><strong>${escapeHtml(r.nombre_organizacion || r.organizacion_id || '—')}</strong></td>
-          <td><span class="fnd-chip" style="font-size:0.7rem">${escapeHtml(anioLabel)}</span></td>
-          <td style="white-space:nowrap">${escapeHtml(convLabel)}</td>
-          <td>${escapeHtml(lineaNombre)}</td>
-          <td>
-            <div class="fnd-doc-bar">
-              <div class="fnd-doc-bar__track">
-                <div class="fnd-doc-bar__fill ${fillClass}" style="width:${pct}%"></div>
-              </div>
-              <span class="fnd-doc-bar__label">${escapeHtml(String(entregados))}/${escapeHtml(String(total))}</span>
-            </div>
-          </td>
-          <td><span class="fnd-estado fnd-estado--${escapeHtml(estado)}">${escapeHtml(stateLabel[estado] || estado)}</span></td>
-          <td>
-            ${resultado
-              ? `<span class="fnd-estado fnd-resultado--${escapeHtml(resultado)}">${escapeHtml(resultado.charAt(0).toUpperCase() + resultado.slice(1))}</span>`
-              : '<span style="color:var(--text-muted,#6b7a8d);font-size:0.8rem">—</span>'}
-          </td>
-          <td>
-            <button type="button" class="secondary-btn js-fnd-detalle-btn" data-id="${escapeHtml(r.fondese_id || '')}" style="padding:4px 10px;font-size:0.78rem">
-              Ver detalle
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    return `
-      <div class="fnd-table-wrap">
-        <table class="fnd-table">
-          <thead>
-            <tr>
-              <th>Organización</th>
-              <th>Edición</th>
-              <th>Convocatoria</th>
-              <th>Línea producto</th>
-              <th>Documentos</th>
-              <th>Estado</th>
-              <th>Resultado</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  /* =========================================================
      FONDESE — vista detalle
      ========================================================= */
 
   function renderFondeseDetalle_(idFondese) {
     const container = document.getElementById('fnd-list-container');
     if (!container) return;
-    container.innerHTML = '<div class="empty-state" style="padding:32px 0">Cargando detalle...</div>';
+    container.innerHTML = fndLoadingHtml_('Cargando detalle...');
 
     api('goPesGetFondeseDetalle', idFondese).then(function(data) {
       const r = data.registro || {};
       const edicion = data.edicion || {};
-      const ESTADOS = ['postulando','en_evaluacion','adjudicado','firma_convenio','en_ejecucion','en_rendicion','cerrado'];
-      const estadoIdx = ESTADOS.indexOf(String(r.estado_proceso || 'postulando'));
+      const ESTADOS = ['en_armado','ingresada','en_evaluacion','adjudicado','firma_convenio','en_ejecucion','en_rendicion','cerrado'];
+      const estadoIdx = ESTADOS.indexOf(String(r.estado_proceso || 'en_armado'));
 
       const stateLabel = {
-        postulando: 'Postulando', en_evaluacion: 'En evaluación',
+        en_armado: 'En armado', ingresada: 'Ingresada', en_evaluacion: 'En evaluación',
         adjudicado: 'Adjudicado', firma_convenio: 'Firma convenio',
         en_ejecucion: 'En ejecución', en_rendicion: 'En rendición', cerrado: 'Cerrado'
       };
-      const stepperLabels = ['Postulación','Evaluación','Adjudicación','Firma convenio','Ejecución','Rendición','Cerrado'];
+      const stepperLabels = ['Armado','Ingresada','Evaluación','Adjudicación','Firma convenio','Ejecución','Rendición','Cerrado'];
 
       const stepperHtml = ESTADOS.map(function(est, i) {
         const isDone = i < estadoIdx;
@@ -1948,7 +1252,7 @@
               <p class="eyebrow">Detalle postulación · ${escapeHtml(String(edicion.anio || edicion.nombre || ''))}</p>
               <h3 style="margin:0">${escapeHtml(r.nombre_organizacion || r.organizacion_id || '—')}</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-                <span class="fnd-estado fnd-estado--${escapeHtml(r.estado_proceso || 'postulando')}">${escapeHtml(stateLabel[r.estado_proceso] || r.estado_proceso || '—')}</span>
+                <span class="fnd-estado fnd-estado--${escapeHtml(r.estado_proceso || 'en_armado')}">${escapeHtml(stateLabel[r.estado_proceso] || r.estado_proceso || '—')}</span>
                 <span class="fnd-chip">${escapeHtml(convNombre)}</span>
                 <span class="fnd-chip">${escapeHtml(lineaNombre)}</span>
               </div>
@@ -1960,7 +1264,7 @@
             <input type="hidden" name="organizacion_id"     value="${escapeHtml(r.organizacion_id || '')}">
             <input type="hidden" name="nombre_organizacion" value="${escapeHtml(r.nombre_organizacion || '')}">
             <input type="hidden" name="convocatoria_id"     value="${escapeHtml(r.convocatoria_id || '')}">
-            <input type="hidden" name="linea_producto_id"   value="${escapeHtml(r.linea_producto_id || '')}">
+            ${r.estado_proceso === 'en_armado' ? '' : `<input type="hidden" name="linea_producto_id" value="${escapeHtml(r.linea_producto_id || '')}">`}
             <input type="hidden" name="id_edicion"          value="${escapeHtml(r.id_edicion || '')}">
             <input type="hidden" name="fecha_creacion"      value="${escapeHtml(String(r.fecha_creacion || ''))}">
             <input type="hidden" name="creado_por"          value="${escapeHtml(r.creado_por || '')}">
@@ -1976,6 +1280,18 @@
                   }).join('')}
                 </select>
               </div>
+              ${r.estado_proceso === 'en_armado' ? `
+              <div class="field" style="margin-top:12px">
+                <label>Línea de postulación</label>
+                <select name="linea_producto_id">
+                  <option value="">— Sin definir —</option>
+                  ${((edicion && edicion.lineas_producto) || []).map(function(l) {
+                    return `<option value="${escapeHtml(String(l.id))}" ${String(l.id) === String(r.linea_producto_id || '') ? 'selected' : ''}>${escapeHtml(l.nombre)}${l.monto_max ? ' — $' + Number(l.monto_max).toLocaleString('es-CL') : ''}</option>`;
+                  }).join('')}
+                </select>
+                <p class="muted" style="margin-top:4px;font-size:0.78rem">Editable mientras la postulación está en armado; se fija al ingresarla.</p>
+              </div>
+              ` : ''}
             </div>
 
             <div class="fnd-section">
@@ -1998,6 +1314,17 @@
               ${r.resultado_adj ? `<div style="margin-top:10px"><span class="fnd-result-badge fnd-result-badge--${escapeHtml(r.resultado_adj)}">${r.resultado_adj === 'adjudicado' ? '✓ Adjudicado' : r.resultado_adj === 'rechazado' ? '✗ Rechazado' : '⚠ Inadmisible'}</span></div>` : ''}
             </div>
             ` : `<input type="hidden" name="resultado_adj" value="${escapeHtml(r.resultado_adj || '')}">` }
+
+            ${ejecucionVisible ? `
+            <div class="fnd-section">
+              <h4>Monto adjudicado</h4>
+              <div class="field">
+                <label>Monto adjudicado (CLP)</label>
+                <input type="number" name="monto_adjudicado" min="0" step="1" value="${escapeHtml(String(r.monto_adjudicado || ''))}" placeholder="Ej: 2500000">
+                <p class="muted" style="margin-top:4px;font-size:0.78rem">Se registra una vez adjudicados los fondos.</p>
+              </div>
+            </div>
+            ` : `<input type="hidden" name="monto_adjudicado" value="${escapeHtml(String(r.monto_adjudicado || ''))}">` }
 
             ${ejecucionVisible ? `
             <div class="fnd-section">
@@ -2029,6 +1356,10 @@
                   <label>Fecha de rendición</label>
                   <input type="date" name="fecha_rendicion" value="${escapeHtml(r.fecha_rendicion || '')}">
                 </div>
+                <div class="field">
+                  <label>Monto ejecutado (CLP)</label>
+                  <input type="number" name="monto_ejecutado" min="0" step="1" value="${escapeHtml(String(r.monto_ejecutado || ''))}" placeholder="Ej: 2350000">
+                </div>
                 <div class="field" data-span="2">
                   <label>Observaciones</label>
                   <textarea name="observaciones_rendicion" rows="3" placeholder="Notas sobre el estado de la rendición...">${escapeHtml(r.observaciones_rendicion || '')}</textarea>
@@ -2039,7 +1370,8 @@
             </div>
             ` : `<input type="hidden" name="estado_rendicion" value="${escapeHtml(r.estado_rendicion || '')}">
             <input type="hidden" name="fecha_rendicion" value="${escapeHtml(r.fecha_rendicion || '')}">
-            <input type="hidden" name="observaciones_rendicion" value="">` }
+            <input type="hidden" name="monto_ejecutado" value="${escapeHtml(String(r.monto_ejecutado || ''))}">
+            <input type="hidden" name="observaciones_rendicion" value="${escapeHtml(r.observaciones_rendicion || '')}">` }
 
             <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:4px">
               <button type="button" class="secondary-btn" id="fnd-volver-btn2">
@@ -2103,169 +1435,6 @@
       });
 
     }).catch(showError);
-  }
-
-  /* =========================================================
-     FONDESE — formulario nueva postulación
-     ========================================================= */
-
-  function openFondeseForm_(edicion) {
-    const existingModal = document.getElementById('fnd-modal');
-    if (existingModal) existingModal.remove();
-
-    document.body.insertAdjacentHTML('beforeend', `
-      <div class="fnd-modal-overlay" id="fnd-modal">
-        <div class="fnd-modal">
-          <div class="fnd-modal__head">
-            <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#3D96B4)">savings</span>
-            <span class="fnd-modal__title">Nueva postulación FONDESE</span>
-            <button type="button" class="fnd-modal__close" id="fnd-modal-close">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-          <div class="fnd-modal__body" id="fnd-modal-body">
-            <div class="empty-state" style="padding:32px 0">Cargando organizaciones elegibles...</div>
-          </div>
-          <div class="fnd-modal__foot" id="fnd-modal-foot" style="display:none">
-            <button type="button" class="secondary-btn" id="fnd-modal-cancel">Cancelar</button>
-            <button type="button" class="primary-btn" id="fnd-modal-submit">
-              <span class="material-symbols-outlined">add</span>Crear postulación
-            </button>
-          </div>
-        </div>
-      </div>
-    `);
-
-    function closeModal() { const m = document.getElementById('fnd-modal'); if (m) m.remove(); }
-    document.getElementById('fnd-modal-close').addEventListener('click', closeModal);
-    document.getElementById('fnd-modal').addEventListener('click', function(e) {
-      if (e.target === this) closeModal();
-    });
-    document.addEventListener('keydown', function onEsc(e) {
-      if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onEsc); }
-    });
-
-    api('goPesGetOrgsElegiblesFondese', null).then(function(data) {
-      const orgs = data.orgs || [];
-      const existingFondese = data.existingFondese || [];
-      const CONVS  = (edicion && edicion.convocatorias)   || [];
-      const LINEAS = (edicion && edicion.lineas_producto)  || [];
-
-      const body = document.getElementById('fnd-modal-body');
-      const foot = document.getElementById('fnd-modal-foot');
-      if (!body) return;
-
-      if (!orgs.length) {
-        body.innerHTML = `
-          <div class="empty-state" style="padding:32px 0">
-            <span class="material-symbols-outlined" style="font-size:32px;display:block;margin-bottom:8px;opacity:.4">info</span>
-            <p>No hay organizaciones con Tramo 2 completado disponibles para postular.</p>
-            <p class="muted" style="margin-top:6px;font-size:0.82rem">Una organización puede postular a FONDESE cuando ha completado la formalización en el módulo Avance.</p>
-          </div>
-        `;
-        if (foot) {
-          foot.style.display = 'flex';
-          const cancelBtn = document.getElementById('fnd-modal-cancel');
-          if (cancelBtn) cancelBtn.style.display = 'none';
-          const submitBtn = document.getElementById('fnd-modal-submit');
-          if (submitBtn) submitBtn.style.display = 'none';
-          const closeBtn2 = document.createElement('button');
-          closeBtn2.type = 'button';
-          closeBtn2.className = 'secondary-btn';
-          closeBtn2.textContent = 'Cerrar';
-          closeBtn2.addEventListener('click', closeModal);
-          foot.appendChild(closeBtn2);
-        }
-        return;
-      }
-
-      body.innerHTML = `
-        <form id="fnd-new-form" novalidate>
-          <div class="field" style="margin-bottom:14px">
-            <label>Organización <span style="color:var(--danger)">*</span></label>
-            <select name="organizacion_id" id="fnd-org-select" required>
-              <option value="">— Seleccionar organización —</option>
-              ${orgs.map(function(o) {
-                return `<option value="${escapeHtml(o.organizacion_id)}" data-nombre="${escapeHtml(o.nombre_organizacion)}">${escapeHtml(o.nombre_organizacion)}</option>`;
-              }).join('')}
-            </select>
-            <input type="hidden" name="nombre_organizacion" id="fnd-org-nombre">
-          </div>
-          <div class="field" style="margin-bottom:14px">
-            <label>Convocatoria <span style="color:var(--danger)">*</span></label>
-            <select name="convocatoria_id" id="fnd-conv-select" required>
-              <option value="">— Seleccionar convocatoria —</option>
-              ${CONVS.map(function(c) {
-                return `<option value="${escapeHtml(String(c.id))}">${escapeHtml(c.label)} — cierre ${escapeHtml(c.fecha_cierre)}</option>`;
-              }).join('')}
-            </select>
-            <p class="muted" style="font-size:0.75rem;margin-top:6px">Si la organización postula a ambos llamados, crea un registro independiente por cada uno.</p>
-          </div>
-          <div id="fnd-dup-warning" style="display:none;margin-bottom:14px;padding:10px 12px;border-radius:8px;background:var(--warning-soft,#fff3cd);color:var(--warning);font-size:0.82rem;border:1px solid rgba(244,180,0,.3)">
-            <span class="material-symbols-outlined" style="font-size:15px;vertical-align:middle;margin-right:4px">warning</span>
-            Ya existe un registro para esta organización y convocatoria. Puedes continuar si deseas crear un duplicado.
-          </div>
-          <div class="field" style="margin-bottom:14px">
-            <label>Línea de producto <span style="color:var(--danger)">*</span></label>
-            <select name="linea_producto_id" required>
-              <option value="">— Seleccionar —</option>
-              ${LINEAS.map(function(l) {
-                return `<option value="${escapeHtml(l.id)}">${escapeHtml(l.nombre)} — $${Number(l.monto_max || 0).toLocaleString('es-CL')}</option>`;
-              }).join('')}
-            </select>
-          </div>
-          <input type="hidden" name="estado_proceso" value="postulando">
-        </form>
-      `;
-
-      if (foot) foot.style.display = 'flex';
-      document.getElementById('fnd-modal-cancel').addEventListener('click', closeModal);
-
-      function checkDuplicate() {
-        const sel = document.getElementById('fnd-org-select');
-        const orgId = sel ? sel.value : '';
-        const convSel = document.getElementById('fnd-conv-select');
-        const conv = convSel ? convSel.value : '';
-        const orgNombreEl = document.getElementById('fnd-org-nombre');
-        if (sel && sel.value && sel.selectedIndex > 0) {
-          orgNombreEl.value = sel.options[sel.selectedIndex].dataset.nombre || '';
-        }
-        const isDup = orgId && conv && existingFondese.some(function(e) {
-          return String(e.organizacion_id) === orgId && String(e.convocatoria_id) === conv;
-        });
-        const warn = document.getElementById('fnd-dup-warning');
-        if (warn) warn.style.display = isDup ? 'block' : 'none';
-      }
-      document.getElementById('fnd-org-select').addEventListener('change', checkDuplicate);
-      document.getElementById('fnd-conv-select').addEventListener('change', checkDuplicate);
-
-      document.getElementById('fnd-modal-submit').addEventListener('click', function() {
-        const form = document.getElementById('fnd-new-form');
-        if (!form.checkValidity()) { form.reportValidity(); return; }
-        const fd = new FormData(form);
-        const payload = {};
-        fd.forEach(function(v, k) { payload[k] = v; });
-        const initChecklist = {};
-        ((edicion && edicion.documentos) || []).forEach(function(d) { initChecklist[d.id] = false; });
-        payload.checklist_docs = initChecklist;
-        this.disabled = true;
-        this.innerHTML = 'Creando...';
-        api('goPesUpsertFondese', payload).then(function() {
-          closeModal();
-          showSuccess('Postulación creada correctamente.');
-          bindFondesePanel_();
-        }).catch(function(err) {
-          showError(err);
-          const btn = document.getElementById('fnd-modal-submit');
-          if (btn) { btn.disabled = false; btn.innerHTML = '<span class="material-symbols-outlined">add</span>Crear postulación'; }
-        });
-      });
-
-    }).catch(function(err) {
-      const body = document.getElementById('fnd-modal-body');
-      if (body) body.innerHTML = '<div class="empty-state" style="padding:24px;color:var(--danger)">' + escapeHtml(String(err && err.message || err || 'Error al cargar')) + '</div>';
-      showError(err);
-    });
   }
 
   /* =========================================================
@@ -2551,86 +1720,240 @@
   }
 
   /* =========================================================
+     FONDESE — puerta de entrada: listado de organizaciones habilitadas
+     ========================================================= */
+
+  function fndLoadingHtml_(msg) {
+    return `<div class="module-loading" style="padding:32px 0"><span class="material-symbols-outlined dash-spin">refresh</span><span>${escapeHtml(msg || 'Cargando...')}</span></div>`;
+  }
+
+  function loadFondeseHabilitadas_(idEdicion, convId) {
+    const container = document.getElementById('fnd-list-container');
+    if (!container) return;
+    container.innerHTML = fndLoadingHtml_('Cargando organizaciones...');
+    api('goPesGetFondeseHabilitadas', { id_edicion: idEdicion || '', convocatoria_id: convId || '' })
+      .then(function(data) {
+        const ediciones = (APP.state && APP.state.fondeseEdiciones) || [];
+        container.innerHTML = renderFondeseHabilitadasListado_(data, ediciones);
+        bindFondeseHabilitadasListado_(container, data);
+      })
+      .catch(showError);
+  }
+
+  function renderFondeseHabilitadasListado_(data, ediciones) {
+    const ed     = data.edicion || {};
+    const edId   = ed.id_edicion || '';
+    const anio   = data.anio || ed.anio || '';
+    const convId = data.convocatoria_id || '';
+    const conv   = data.convocatorias || [];
+    const habs   = data.habilitadas || [];
+    const edList = (ediciones || []).slice().sort(function(a, b) { return Number(b.anio || 0) - Number(a.anio || 0); });
+
+    const yearsHtml = edList.map(function(e) {
+      const sel = String(e.id_edicion) === String(edId);
+      return `<button type="button" class="js-fnd-year" data-edicion="${escapeHtml(e.id_edicion)}" role="tab" aria-selected="${sel}">${escapeHtml(String(e.anio || ''))}<span class="fnd-years__tag">${escapeHtml(e.estado || '')}</span></button>`;
+    }).join('');
+
+    const llamadosHtml = conv.map(function(c) {
+      const sel = String(c.id) === String(convId);
+      return `<button type="button" class="js-fnd-llamado" data-conv="${escapeHtml(c.id)}" role="tab" aria-selected="${sel}"><span class="fnd-ll__name">${escapeHtml(c.nombre_completo)}</span><span class="fnd-ll__sub">cierre ${escapeHtml(c.fecha_cierre || '—')}</span></button>`;
+    }).join('');
+
+    const cf = (ed.convocatorias || []).find(function(c) { return String(c.id) === String(convId); }) || {};
+    const fechaRows = [['Apertura', cf.fecha_apertura], ['Cierre', cf.fecha_cierre], ['Evaluación', cf.fecha_evaluacion], ['Firma convenio', cf.fecha_firma], ['Cierre rendición', cf.fecha_cierre_rendicion]]
+      .filter(function(f) { return f[1]; })
+      .map(function(f) { return `<div class="fnd-bfecha"><span>${escapeHtml(f[0])}</span><span>${escapeHtml(String(f[1]))}</span></div>`; }).join('');
+    const lineasHtml = (ed.lineas_producto || []).map(function(l) {
+      return `<span class="fnd-linea-pill"><b>${escapeHtml(l.nombre)}</b><span class="m">$${Number(l.monto_max || 0).toLocaleString('es-CL')}</span></span>`;
+    }).join('');
+    const basesHtml = `
+      <details class="fnd-bases">
+        <summary><span class="material-symbols-outlined fnd-bases__ico">description</span>Bases del llamado — montos, líneas y fechas${cf.label ? ' de ' + escapeHtml(cf.label) : ''}<span class="fnd-bases__hint">cambian cada año</span></summary>
+        <div class="fnd-bases__grid">
+          <div class="fnd-bblock"><h6>Fechas clave</h6>${fechaRows || '<span class="fnd-hab-sub">Sin fechas configuradas</span>'}</div>
+          <div class="fnd-bblock"><h6>Presupuesto</h6><div class="fnd-bmonto">$${Number(cf.monto || 0).toLocaleString('es-CL')}<small>del llamado · $${Number(ed.presupuesto_total || 0).toLocaleString('es-CL')} la edición</small></div></div>
+          <div class="fnd-bblock"><h6>Documentos</h6><div class="fnd-bmonto">${(ed.documentos || []).length}<small>anexos requeridos</small></div></div>
+        </div>
+        <div class="fnd-bblock--lineas"><h6>Líneas de postulación (${(ed.lineas_producto || []).length}) · monto máximo</h6><div class="fnd-lineas">${lineasHtml || '<span class="fnd-hab-sub">Sin líneas configuradas</span>'}</div></div>
+      </details>`;
+
+    const cnt = function(code) { return habs.filter(function(o) { return o.estado_fondese === code; }).length; };
+    const nHab = cnt('habilitada'), nArm = cnt('en_armado'), nEv = cnt('ingresada') + cnt('en_evaluacion');
+    const nV2 = cnt('adjudicado') + cnt('en_ejecucion') + cnt('en_rendicion') + cnt('cerrado');
+    const nAlert = habs.filter(function(o) { return o.alerta; }).length;
+    const nAdj = habs.filter(function(o) { return o.adjudicada_este_anio; }).length;
+    const statCell = function(v, k, cls) { return `<div class="fnd-hab-stat${cls || ''}"><span class="v">${v}</span><span class="k">${escapeHtml(k)}</span></div>`; };
+    const statsHtml = `<div class="fnd-hab-stats">
+      ${statCell(nHab, 'Habilitadas s/ingresar')}${statCell(nArm, 'En armado (V1)')}${statCell(nEv, 'Ingresadas / evaluación')}
+      ${statCell(nV2, 'Adjudicadas y V2')}${statCell(nAdj, 'Adjudicadas ' + anio, ' fnd-hab-stat--adj')}${statCell(nAlert, 'Con alerta de plazo', ' fnd-hab-stat--alert')}
+    </div>`;
+
+    const stateLabel = { habilitada:'Habilitada', en_armado:'En armado', ingresada:'Ingresada', en_evaluacion:'En evaluación', adjudicado:'Adjudicado', firma_convenio:'Firma convenio', en_ejecucion:'En ejecución', en_rendicion:'En rendición', cerrado:'Cerrado' };
+    const pendientes = habs.filter(function(o) { return !o.en_proceso; });
+    const proceso    = habs.filter(function(o) { return o.en_proceso; });
+
+    const plazoHtml = function(o) {
+      if (o.alerta) return `<span class="fnd-alert-badge fnd-alert-badge--${escapeHtml(o.alerta.tone)}"><span class="material-symbols-outlined" style="font-size:13px">${o.alerta.tone === 'danger' ? 'warning' : 'schedule'}</span>${escapeHtml(o.alerta.text)}</span>`;
+      if (o.monto_adjudicado) return `<span style="font-weight:600">$${Number(o.monto_adjudicado).toLocaleString('es-CL')}</span>`;
+      return '<span style="color:var(--text-muted,#6b7a8d)">—</span>';
+    };
+    const rowProc = function(o) {
+      return `<tr>
+        <td><strong>${escapeHtml(o.nombre_organizacion || o.organizacion_id)}</strong><div class="fnd-hab-sub">${escapeHtml(o.linea_nombre || '—')}</div></td>
+        <td><span class="fnd-estado fnd-estado--${escapeHtml(o.estado_fondese)}">${escapeHtml(stateLabel[o.estado_fondese] || o.estado_label)}</span></td>
+        <td style="min-width:150px"><div class="fnd-doc-bar"><div class="fnd-doc-bar__track"><div class="fnd-doc-bar__fill fnd-doc-bar__fill--mid" style="width:${Number(o.avance_pct || 0)}%"></div></div><span class="fnd-doc-bar__label">${Number(o.avance_pct || 0)}%</span></div></td>
+        <td>${plazoHtml(o)}</td>
+        <td style="text-align:right"><button type="button" class="secondary-btn js-fnd-detalle-btn" data-id="${escapeHtml(o.fondese_id)}" style="padding:4px 10px;font-size:0.78rem">Abrir</button></td>
+      </tr>`;
+    };
+    const rowPend = function(o) {
+      const lock = o.adjudicada_este_anio ? `<span class="fnd-lock"><span class="material-symbols-outlined" style="font-size:13px">lock</span>Ya adjudicada ${escapeHtml(String(anio))}</span>` : '<span style="color:var(--text-muted,#6b7a8d)">—</span>';
+      return `<tr>
+        <td><strong>${escapeHtml(o.nombre_organizacion || o.organizacion_id)}</strong><div class="fnd-hab-sub">Elegible · sin ingresar a este llamado</div></td>
+        <td><span class="fnd-estado fnd-estado--habilitada">Habilitada</span></td>
+        <td><span style="color:var(--text-muted,#6b7a8d)">—</span></td>
+        <td>${lock}</td>
+        <td style="text-align:right"><button type="button" class="primary-btn js-fnd-ingresar-btn" data-org="${escapeHtml(o.organizacion_id)}" data-nombre="${escapeHtml(o.nombre_organizacion)}" style="padding:5px 12px;font-size:0.78rem"><span class="material-symbols-outlined" style="font-size:15px">add</span>Ingreso al proceso</button></td>
+      </tr>`;
+    };
+
+    const tableHtml = `<div class="fnd-table-wrap"><table class="fnd-table">
+      <thead><tr><th>Organización</th><th>Estado en el llamado</th><th>Avance</th><th>Plazo / monto</th><th></th></tr></thead>
+      <tbody>
+        <tr class="fnd-hab-group"><td colspan="5">Requieren ingreso al proceso · ${pendientes.length}</td></tr>
+        ${pendientes.length ? pendientes.map(rowPend).join('') : '<tr><td colspan="5" style="padding:12px;color:var(--text-muted,#6b7a8d)">Todas las habilitadas ya están en proceso en este llamado.</td></tr>'}
+        <tr class="fnd-hab-group"><td colspan="5">En proceso en este llamado · ${proceso.length}</td></tr>
+        ${proceso.length ? proceso.map(rowProc).join('') : '<tr><td colspan="5" style="padding:12px;color:var(--text-muted,#6b7a8d)">Ninguna organización en proceso todavía.</td></tr>'}
+      </tbody></table></div>`;
+
+    return `
+      <div class="fnd-hab-topbar">
+        <div class="fnd-llamados" role="tablist" aria-label="Llamado FONDESE">${llamadosHtml}</div>
+        <div class="fnd-years" role="tablist" aria-label="Año / edición">${yearsHtml}</div>
+      </div>
+      ${basesHtml}${statsHtml}${tableHtml}`;
+  }
+
+  function bindFondeseHabilitadasListado_(container, data) {
+    const edId   = (data.edicion && data.edicion.id_edicion) || '';
+    const convId = data.convocatoria_id || '';
+
+    container.querySelectorAll('.js-fnd-year').forEach(function(btn) {
+      btn.addEventListener('click', function() { loadFondeseHabilitadas_(this.dataset.edicion, ''); });
+    });
+    container.querySelectorAll('.js-fnd-llamado').forEach(function(btn) {
+      btn.addEventListener('click', function() { loadFondeseHabilitadas_(edId, this.dataset.conv); });
+    });
+    container.querySelectorAll('.js-fnd-detalle-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { renderFondeseDetalle_(this.dataset.id); });
+    });
+    container.querySelectorAll('.js-fnd-ingresar-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        openFondeseIngresarArmado_({ organizacion_id: this.dataset.org, nombre_organizacion: this.dataset.nombre }, data.edicion, convId, function() { loadFondeseHabilitadas_(edId, convId); });
+      });
+    });
+  }
+
+  function openFondeseIngresarArmado_(org, edicion, convId, onDone) {
+    const ed   = edicion || {};
+    const conv = (ed.convocatorias || []).find(function(c) { return String(c.id) === String(convId); }) || {};
+    const lineas = ed.lineas_producto || [];
+    const convNombre = conv.label ? (conv.label + ' FONDESE ' + (ed.anio || '')) : 'Llamado seleccionado';
+    const existing = document.getElementById('fnd-modal'); if (existing) existing.remove();
+    document.body.insertAdjacentHTML('beforeend', `
+      <div class="fnd-modal-overlay" id="fnd-modal">
+        <div class="fnd-modal">
+          <div class="fnd-modal__head">
+            <span class="material-symbols-outlined" style="color:var(--runtime-brand-primary,#3D96B4)">how_to_reg</span>
+            <span class="fnd-modal__title">Ingreso al proceso</span>
+            <button type="button" class="fnd-modal__close" id="fnd-modal-close"><span class="material-symbols-outlined">close</span></button>
+          </div>
+          <div class="fnd-modal__body">
+            <p style="margin:0 0 4px;font-weight:700">${escapeHtml(org.nombre_organizacion || org.organizacion_id)}</p>
+            <p class="muted" style="margin:0 0 16px;font-size:0.82rem">${escapeHtml(convNombre)} · el equipo acompañará el armado antes de ingresar la postulación.</p>
+            <div class="field">
+              <label>Línea de postulación</label>
+              <select id="fnd-ing-linea">
+                <option value="">— Definir después —</option>
+                ${lineas.map(function(l) { return `<option value="${escapeHtml(String(l.id))}">${escapeHtml(l.nombre)} — $${Number(l.monto_max || 0).toLocaleString('es-CL')}</option>`; }).join('')}
+              </select>
+              <p class="muted" style="margin-top:4px;font-size:0.78rem">Editable mientras la postulación esté en armado.</p>
+            </div>
+          </div>
+          <div class="fnd-modal__foot">
+            <button type="button" class="secondary-btn" id="fnd-ing-cancel">Cancelar</button>
+            <button type="button" class="primary-btn" id="fnd-ing-submit"><span class="material-symbols-outlined">add</span>Ingreso al proceso</button>
+          </div>
+        </div>
+      </div>`);
+    function close() { const m = document.getElementById('fnd-modal'); if (m) m.remove(); }
+    document.getElementById('fnd-modal-close').addEventListener('click', close);
+    document.getElementById('fnd-ing-cancel').addEventListener('click', close);
+    document.getElementById('fnd-modal').addEventListener('click', function(e) { if (e.target === this) close(); });
+    document.addEventListener('keydown', function onEsc(e) { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } });
+    document.getElementById('fnd-ing-submit').addEventListener('click', function() {
+      const btn = this; btn.disabled = true;
+      btn.innerHTML = '<span class="material-symbols-outlined dash-spin">refresh</span>Ingresando...';
+      api('goPesIngresarFondeseArmado', {
+        organizacion_id: org.organizacion_id,
+        nombre_organizacion: org.nombre_organizacion || '',
+        id_edicion: ed.id_edicion || '',
+        convocatoria_id: convId,
+        linea_producto_id: document.getElementById('fnd-ing-linea').value || ''
+      }).then(function() {
+        showSuccess('Organización ingresada al proceso.');
+        close();
+        if (typeof onDone === 'function') onDone();
+      }).catch(function(err) {
+        showError(err);
+        btn.disabled = false;
+        btn.innerHTML = '<span class="material-symbols-outlined">add</span>Ingreso al proceso';
+      });
+    });
+  }
+
+  /* =========================================================
      FONDESE — bindings principales
      ========================================================= */
 
   function bindFondesePanel_() {
     const container = document.getElementById('fnd-list-container');
-    const chipsEl   = document.getElementById('fnd-panel-chips');
-    const montoEl   = document.getElementById('fnd-panel-monto');
-    const titleEl   = document.getElementById('fnd-panel-title');
     const actionsEl = document.getElementById('fnd-panel-actions');
     if (!container) return;
-    container.innerHTML = '<div class="empty-state" style="padding:32px 0">Cargando...</div>';
+    container.innerHTML = fndLoadingHtml_('Cargando...');
 
     document.querySelector('.js-fnd-stepper-btn')?.addEventListener('click', () => { renderFondeseInfoModal_(); });
     document.querySelector('.js-fnd-infodoc-btn')?.addEventListener('click', () => { renderFondeseInfoDocModal_(); });
 
-    api('goPesGetFondeseEdicionActiva', null).then(function(data) {
-      const edicion     = data.edicion;
-      const isSuperuser = APP && APP.state && APP.state.user && APP.state.user.superuser_flag;
+    const isSuperuser = APP && APP.state && APP.state.user && APP.state.user.superuser_flag;
 
-      if (edicion) {
-        if (titleEl) titleEl.textContent = edicion.nombre || 'FONDESE';
-        if (chipsEl) {
-          chipsEl.innerHTML = (edicion.convocatorias || []).map(function(c) {
-            return `<span class="fnd-chip"><span class="material-symbols-outlined" style="font-size:13px">event</span>${escapeHtml(c.label + ' · cierre ' + c.fecha_cierre)}</span>`;
-          }).join('');
-        }
-        if (montoEl) {
-          const totalFmt  = '$' + Number(edicion.presupuesto_total || 0).toLocaleString('es-CL');
-          const cuotasFmt = (edicion.convocatorias || []).map(function(c) { return '$' + Number(c.monto || 0).toLocaleString('es-CL'); }).join(' + ');
-          montoEl.innerHTML = `Monto total fondo: <strong>${escapeHtml(totalFmt)}</strong>&nbsp;&middot;&nbsp;Cuotas: <strong>${escapeHtml(cuotasFmt)}</strong>`;
-        }
-      } else {
-        if (chipsEl) chipsEl.innerHTML = '';
-        if (montoEl) montoEl.innerHTML = '';
-      }
+    api('goPesGetFondeseEdiciones', null).then(function(data) {
+      const ediciones = data.ediciones || [];
+      APP.state = APP.state || {};
+      APP.state.fondeseEdiciones = ediciones;
 
       if (actionsEl) {
-        let html = '';
-        if (edicion && edicion.estado === 'activa') {
-          html += `<button type="button" class="primary-btn" id="fnd-nueva-btn"><span class="material-symbols-outlined">add</span>Nueva postulación</button>`;
-        }
-        if (isSuperuser) {
-          html += `<button type="button" class="secondary-btn" id="fnd-gestionar-btn"><span class="material-symbols-outlined">settings</span>Ediciones</button>`;
-        }
-        actionsEl.innerHTML = html;
+        actionsEl.innerHTML = isSuperuser
+          ? `<button type="button" class="secondary-btn" id="fnd-gestionar-btn"><span class="material-symbols-outlined">settings</span>Ediciones</button>`
+          : '';
+        const gestionarBtn = document.getElementById('fnd-gestionar-btn');
+        if (gestionarBtn) gestionarBtn.addEventListener('click', renderFondeseEdicionesAdmin_);
       }
 
-      const nuevaBtn = document.getElementById('fnd-nueva-btn');
-      if (nuevaBtn) nuevaBtn.addEventListener('click', function() { openFondeseForm_(edicion); });
-
-      const gestionarBtn = document.getElementById('fnd-gestionar-btn');
-      if (gestionarBtn) gestionarBtn.addEventListener('click', renderFondeseEdicionesAdmin_);
-
-      if (!edicion) {
+      if (!ediciones.length) {
         container.innerHTML = `
           <div class="fnd-empty">
             <span class="material-symbols-outlined" style="font-size:36px;display:block;margin-bottom:8px;opacity:.4">info</span>
-            <p>No hay una edición de FONDESE activa.</p>
-            <p class="muted" style="font-size:0.82rem;margin-top:4px">${isSuperuser ? 'Usa "Ediciones" para configurar o activar una edición.' : 'Un administrador debe configurar y activar una edición.'}</p>
+            <p>No hay ediciones de FONDESE configuradas.</p>
+            <p class="muted" style="font-size:0.82rem;margin-top:4px">${isSuperuser ? 'Usa "Ediciones" para configurar y activar una edición.' : 'Un administrador debe configurar y activar una edición.'}</p>
           </div>
         `;
         return;
       }
 
-      APP.state = APP.state || {};
-      APP.state.fondeseEdicionActiva = edicion;
-
-      api('goPesGetFondeseList', null).then(function(listData) {
-        const rows      = listData.rows    || [];
-        const listEdicion = listData.edicion || edicion;
-        container.innerHTML = renderFondeseTable_(rows, listEdicion);
-
-        container.querySelectorAll('.js-fnd-detalle-btn').forEach(function(btn) {
-          btn.addEventListener('click', function() { renderFondeseDetalle_(this.dataset.id); });
-        });
-
-        const emptyNewBtn = document.getElementById('fnd-nueva-btn-empty');
-        if (emptyNewBtn) emptyNewBtn.addEventListener('click', function() { openFondeseForm_(edicion); });
-      }).catch(showError);
-
+      const activa = ediciones.find(function(e) { return e.estado === 'activa'; })
+        || ediciones.slice().sort(function(a, b) { return Number(b.anio || 0) - Number(a.anio || 0); })[0];
+      loadFondeseHabilitadas_(activa.id_edicion, '');
     }).catch(showError);
   }
 

@@ -93,6 +93,8 @@ Ver también `avance-hitos.md`.
 | `getBeneficiosModuloPanel()` | Panel del módulo |
 | `guardarConfiguracionCamaras1414()` · `guardarCamaras1414Organizacion()` | CÁMARAS 1414 |
 | `goPesGetFondese*` / `goPesUpsertFondese*` | FONDESE (ediciones por año — ver esquema evolutivo en `modelo-datos.md`) |
+| `goPesGetFondeseHabilitadas()` · `goPesIngresarFondeseArmado()` | Puerta de entrada FONDESE: listado de orgs habilitadas (FOR_04) con su estado; ingreso al armado |
+| `goPesBackfillFondeseInstrumentos()` · `goPesMigrateFondeseEstados()` | One-run (superuser): reflejar postulaciones en `FACT_Instrumentos`; migrar estado `postulando`→`ingresada` |
 | `goPesGetFormEventos` / `goPesUpsertFormEvento` / `goPesGetFormInscripciones` / … | Eventos de formación + inscripciones (algunas usan PIN `evento_abierto`) |
 
 ## Calendario (`ZZ_CalendarioBackend.js`)

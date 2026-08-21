@@ -13,6 +13,7 @@
     const instrumentos = data.instrumentos || [];
     const requisitos = data.requisitos || [];
     const socios = data.socios || [];
+    const capacitaciones = data.capacitaciones || [];
     const avanceHitos = data.avance_hitos || [];
     const lastAction = trazabilidad[0] || {};
     const lastAvanceHito = avanceHitos[0] || {};
@@ -148,6 +149,7 @@
       <div class="ficha-layout-v2">
         ${fichaHero}
         ${universoVecino}
+        ${renderFichaCapacitacionesSection_(capacitaciones)}
         ${universoOrganizacion}
         ${renderHistorialGestionSection_(hitos, s)}
       </div>
@@ -170,6 +172,28 @@
         route('organizacion');
       })
     );
+  }
+
+  function renderFichaCapacitacionesSection_(caps) {
+    const list = caps || [];
+    const tipoMap = { capacitacion: 'Capacitación', certificacion: 'Certificación', charla: 'Charla' };
+    const rows = list.length
+      ? list.map(c => `
+          <div class="ficha-cap-row">
+            <span class="ficha-cap-tipo ficha-cap-tipo--${escapeHtml(c.tipo || 'otro')}">${escapeHtml(tipoMap[c.tipo] || c.tipo || 'Evento')}</span>
+            <span class="ficha-cap-titulo">${escapeHtml(c.titulo || '—')}</span>
+            <span class="ficha-cap-fecha">${escapeHtml(c.fecha_evento ? formatFechaHoraUi_(c.fecha_evento) : '—')}</span>
+          </div>`).join('')
+      : '<div class="ficha-cap-empty">Sin capacitaciones registradas para este vecino.</div>';
+    return `
+      <section class="ficha-universe">
+        <div class="ficha-universe__head">
+          <p class="eyebrow">Beneficio del vecino</p>
+          <h3>Capacitaciones y formación${list.length ? ' · ' + list.length : ''}</h3>
+        </div>
+        <div class="ficha-cap-list">${rows}</div>
+      </section>
+    `;
   }
 
   function initFichaEditHandlers_(s) {

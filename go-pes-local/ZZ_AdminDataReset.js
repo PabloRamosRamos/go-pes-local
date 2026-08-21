@@ -211,7 +211,7 @@ function goPesRepararFondeseSheets() {
   if (shFact) {
     const lastRowFact = shFact.getLastRow();
     const lastColFact = shFact.getLastColumn();
-    const expectedCols = 14;
+    const expectedCols = 18;
 
     if (lastRowFact > 1) {
       shFact.getRange(2, 1, lastRowFact - 1, lastColFact).clearContent();
@@ -222,8 +222,8 @@ function goPesRepararFondeseSheets() {
     ensureSheetWithHeaders_(S.FACT_FONDESE, [
       'fondese_id', 'id_edicion', 'organizacion_id', 'nombre_organizacion',
       'convocatoria_id', 'linea_producto_id', 'estado_proceso', 'resultado_adj',
-      'estado_ejecucion', 'estado_rendicion', 'checklist_docs',
-      'fecha_creacion', 'fecha_actualizacion', 'creado_por'
+      'estado_ejecucion', 'estado_rendicion', 'fecha_rendicion', 'observaciones_rendicion', 'checklist_docs',
+      'fecha_creacion', 'fecha_actualizacion', 'creado_por', 'monto_adjudicado', 'monto_ejecutado'
     ]);
     invalidateSheetRuntimeCache_(S.FACT_FONDESE);
     reparado.push('FACT_FONDESE: datos limpiados, ' + Math.max(0, lastColFact - expectedCols) + ' columna(s) extra eliminada(s)');

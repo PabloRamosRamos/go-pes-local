@@ -1208,136 +1208,85 @@ function goPesTestAvance_() {
 function goPesTestBeneficios_() {
   var s = createTestSuite_('Beneficios');
 
-  // getCamarasStateOptions_
-  s.test('stateOptions: retorna array no vacio', function() {
-    assertTrue_(getCamarasStateOptions_().length > 0);
-  });
-  s.test('stateOptions: contiene "Beneficio cerrado"', function() {
-    assertTrue_(getCamarasStateOptions_().indexOf('Beneficio cerrado') !== -1);
-  });
-  s.test('stateOptions: contiene "Solicitud enviada"', function() {
-    assertTrue_(getCamarasStateOptions_().indexOf('Solicitud enviada') !== -1);
-  });
-  s.test('stateOptions: contiene "Visita agendada"', function() {
-    assertTrue_(getCamarasStateOptions_().indexOf('Visita agendada') !== -1);
+  // getCamarasStateOptions_ (flujo simplificado: 3 estados)
+  s.test('stateOptions: 3 estados Elegible/Solicitado/Instalado', function() {
+    var st = getCamarasStateOptions_();
+    assertEqual_(st.length, 3, 'debe haber 3 estados');
+    assertTrue_(st.indexOf('Elegible') !== -1);
+    assertTrue_(st.indexOf('Solicitado') !== -1);
+    assertTrue_(st.indexOf('Instalado') !== -1);
   });
 
-  // getCamarasChecklistDefinitions_
-  s.test('checklistDefs: retorna array no vacio', function() {
-    assertTrue_(getCamarasChecklistDefinitions_().length > 0);
+  // isCamarasEligibleListRow_ / isCamarasActiveListRow_
+  s.test('isEligible: "Elegible" → true', function() {
+    assertTrue_(isCamarasEligibleListRow_({ estado_beneficio: 'Elegible' }));
   });
-  s.test('checklistDefs: cada item tiene code y label', function() {
-    getCamarasChecklistDefinitions_().forEach(function(d) {
-      assertTrue_(typeof d.code === 'string' && d.code.length > 0);
-      assertTrue_(typeof d.label === 'string' && d.label.length > 0);
-    });
+  s.test('isEligible: "Solicitado" → false', function() {
+    assertFalse_(isCamarasEligibleListRow_({ estado_beneficio: 'Solicitado' }));
   });
-  s.test('checklistDefs: contiene DOC_CERT_VIGENCIA', function() {
-    assertTrue_(getCamarasChecklistDefinitions_().some(function(d) { return d.code === 'DOC_CERT_VIGENCIA'; }));
-  });
-  s.test('checklistDefs: contiene DOC_CERT_DIRECTORIO', function() {
-    assertTrue_(getCamarasChecklistDefinitions_().some(function(d) { return d.code === 'DOC_CERT_DIRECTORIO'; }));
-  });
-
-  // isCamarasEligibleListRow_
-  s.test('isEligible: "Elegible por certificado definitivo" → true', function() {
-    assertTrue_(isCamarasEligibleListRow_({ estado_beneficio: 'Elegible por certificado definitivo' }));
-  });
-  s.test('isEligible: "Gestion pendiente" → true', function() {
-    assertTrue_(isCamarasEligibleListRow_({ estado_beneficio: 'Gestion pendiente' }));
-  });
-  s.test('isEligible: "Solicitud de visita tecnica preparada" → true', function() {
-    assertTrue_(isCamarasEligibleListRow_({ estado_beneficio: 'Solicitud de visita tecnica preparada' }));
-  });
-  s.test('isEligible: "Solicitud enviada" → false', function() {
-    assertFalse_(isCamarasEligibleListRow_({ estado_beneficio: 'Solicitud enviada' }));
-  });
-  s.test('isEligible: "Beneficio cerrado" → false', function() {
-    assertFalse_(isCamarasEligibleListRow_({ estado_beneficio: 'Beneficio cerrado' }));
-  });
-  s.test('isEligible: null row → false', function() {
+  s.test('isEligible: null → false', function() {
     assertFalse_(isCamarasEligibleListRow_(null));
   });
-  s.test('isEligible: estado vacio → false', function() {
-    assertFalse_(isCamarasEligibleListRow_({ estado_beneficio: '' }));
+  s.test('isActive: "Solicitado" → true', function() {
+    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Solicitado' }));
+  });
+  s.test('isActive: "Instalado" → true', function() {
+    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Instalado' }));
+  });
+  s.test('isActive: "Elegible" → false', function() {
+    assertFalse_(isCamarasActiveListRow_({ estado_beneficio: 'Elegible' }));
   });
 
-  // isCamarasActiveListRow_
-  s.test('isActive: "Solicitud enviada" → true', function() {
-    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Solicitud enviada' }));
+  // buildCamarasWorkflowState_ (3 estados desde detail rows)
+  s.test('workflow: sin datos → Elegible (index 0)', function() {
+    var wf = buildCamarasWorkflowState_({}, {}, new Date());
+    assertEqual_(wf.index, 0);
+    assertEqual_(wf.status, 'Elegible');
   });
-  s.test('isActive: "Visita agendada" → true', function() {
-    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Visita agendada' }));
+  s.test('workflow: con solicitud → Solicitado (index 1)', function() {
+    var wf = buildCamarasWorkflowState_({}, { SOLICITUD_SP: { payload_json: JSON.stringify({ requested: true, requestDate: '2026-01-10' }) } }, new Date());
+    assertEqual_(wf.index, 1);
+    assertEqual_(wf.status, 'Solicitado');
   });
-  s.test('isActive: "Visita realizada" → true', function() {
-    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Visita realizada' }));
+  s.test('workflow: con instalacion → Instalado (index 2)', function() {
+    var wf = buildCamarasWorkflowState_({}, { INSTALACION_REG: { payload_json: JSON.stringify({ installed: true, cameras: 4 }) } }, new Date());
+    assertEqual_(wf.index, 2);
+    assertEqual_(wf.status, 'Instalado');
   });
-  s.test('isActive: "Convenio recibido" → true', function() {
-    assertTrue_(isCamarasActiveListRow_({ estado_beneficio: 'Convenio recibido' }));
+  s.test('workflow: instalacion prevalece sobre solicitud', function() {
+    var wf = buildCamarasWorkflowState_({}, {
+      SOLICITUD_SP:    { payload_json: JSON.stringify({ requested: true, requestDate: '2026-01-10' }) },
+      INSTALACION_REG: { payload_json: JSON.stringify({ installed: true, cameras: 2 }) }
+    }, new Date());
+    assertEqual_(wf.index, 2);
   });
-  s.test('isActive: "Gestion pendiente" → false', function() {
-    assertFalse_(isCamarasActiveListRow_({ estado_beneficio: 'Gestion pendiente' }));
-  });
-  s.test('isActive: "Beneficio cerrado" → false', function() {
-    assertFalse_(isCamarasActiveListRow_({ estado_beneficio: 'Beneficio cerrado' }));
-  });
-  s.test('isActive: null row → false', function() {
-    assertFalse_(isCamarasActiveListRow_(null));
+  s.test('workflow: cada estado tiene nextStep no vacio', function() {
+    assertTrue_(buildCamarasWorkflowState_({}, {}, new Date()).nextStep.length > 0);
+    assertTrue_(buildCamarasWorkflowState_({}, { SOLICITUD_SP: { payload_json: JSON.stringify({ requested: true, requestDate: '2026-01-10' }) } }, new Date()).nextStep.length > 0);
   });
 
-  // resolveCamarasStageIndex_
-  s.test('stageIndex: closure cerrada → index 9', function() {
-    assertEqual_(resolveCamarasStageIndex_({ closure: { closed: true, closedDate: new Date() } }).index, 9);
+  // dias habiles (lun-vie)
+  s.test('businessDaysBetween_: lun→vie misma semana = 4', function() {
+    assertEqual_(businessDaysBetween_(new Date(2026, 0, 5), new Date(2026, 0, 9)), 4);
   });
-  s.test('stageIndex: closure → label "Beneficio cerrado"', function() {
-    assertEqual_(resolveCamarasStageIndex_({ closure: { closed: true, closedDate: new Date() } }).label, 'Beneficio cerrado');
+  s.test('businessDaysBetween_: vie→lun siguiente = 1 (salta finde)', function() {
+    assertEqual_(businessDaysBetween_(new Date(2026, 0, 9), new Date(2026, 0, 12)), 1);
   });
-  s.test('stageIndex: convenio recibido → index 8', function() {
-    assertEqual_(resolveCamarasStageIndex_({ agreement: { received: true, receivedDate: new Date() } }).index, 8);
+  s.test('businessDaysBetween_: lun→lun siguiente = 5', function() {
+    assertEqual_(businessDaysBetween_(new Date(2026, 0, 5), new Date(2026, 0, 12)), 5);
   });
-  s.test('stageIndex: visita completada → index 6', function() {
-    assertEqual_(resolveCamarasStageIndex_({ visit: { visitCompleted: true } }).index, 6);
-  });
-  s.test('stageIndex: visita agendada → index 5', function() {
-    assertEqual_(resolveCamarasStageIndex_({ response: { visitDate: new Date() } }).index, 5);
-  });
-  s.test('stageIndex: email enviado → index 3', function() {
-    assertEqual_(resolveCamarasStageIndex_({ email: { sentConfirmed: true, sentDate: new Date() } }).index, 3);
-  });
-  s.test('stageIndex: solo eligibilityDate → index 0', function() {
-    assertEqual_(resolveCamarasStageIndex_({ eligibilityDate: new Date() }).index, 0);
-  });
-  s.test('stageIndex: sin datos → index 1 (gestion pendiente)', function() {
-    assertEqual_(resolveCamarasStageIndex_({}).index, 1);
-  });
-  s.test('stageIndex: closure prevalece sobre convenio', function() {
-    assertEqual_(resolveCamarasStageIndex_({
-      closure:   { closed: true, closedDate: new Date() },
-      agreement: { received: true, receivedDate: new Date() }
-    }).index, 9);
-  });
-  s.test('stageIndex: cada resultado tiene nextStep no vacio', function() {
-    var fixtures = [
-      { closure: { closed: true, closedDate: new Date() } },
-      { agreement: { received: true, receivedDate: new Date() } },
-      { visit: { visitCompleted: true } },
-      { response: { visitDate: new Date() } },
-      { eligibilityDate: new Date() },
-      {}
-    ];
-    fixtures.forEach(function(f) {
-      assertTrue_(resolveCamarasStageIndex_(f).nextStep.length > 0);
-    });
+  s.test('addBusinessDays_: vie + 1 habil = lun', function() {
+    assertEqual_(addBusinessDays_(new Date(2026, 0, 9), 1).getDate(), 12);
   });
 
   // funciones que requieren spreadsheet o auth
   s.skip('getBeneficiosModuloPanel',        'requiere auth + lectura FACT_Instrumentos');
   s.skip('guardarCamaras1414Organizacion',   'requiere auth + escritura FACT_Beneficios');
-  s.skip('goPesGetFondeseList',              'requiere auth + lectura FACT_Fondese');
+  s.skip('goPesGetFondeseHabilitadas',       'requiere auth + lectura MAE_Organizaciones + FACT_Fondese');
   s.skip('goPesUpsertFondese',               'requiere auth + escritura FACT_Fondese');
   s.skip('goPesGetFormEventos',              'requiere auth + lectura FACT_Form_Eventos');
   s.skip('goPesUpsertFormEvento',            'requiere auth + escritura + trigger de tiempo');
-  s.skip('goPesGetOrgsElegiblesFondese',     'requiere auth + lectura MAE_Organizaciones + FACT_Avance_Hitos');
+  s.skip('goPesIngresarFondeseArmado',       'requiere auth + validación FOR_04 + escritura FACT_Fondese');
 
   return s.run();
 }
@@ -1516,6 +1465,13 @@ function goPesTestAlertas_() {
     assertEqual_(ids.FORM_HITO7POST5, 'form_hito7post5', 'ID form_hito7post5 válido');
     assertEqual_(ids.FORM_HITO11POST10, 'form_hito11post10', 'ID form_hito11post10 válido');
     assertEqual_(ids.BEN_CAMARAS_POST_CERT, 'ben_camaras_post_cert', 'ID ben_camaras_post_cert válido');
+    assertEqual_(ids.BEN_FONDESE_CIERRE_CONV, 'ben_fondese_cierre_conv', 'ID ben_fondese_cierre_conv válido');
+    assertEqual_(ids.BEN_FONDESE_RENDICION, 'ben_fondese_rendicion', 'ID ben_fondese_rendicion válido');
+  });
+
+  s.test('Evaluadores de alertas FONDESE existen', function() {
+    assertTrue_(typeof evaluarBenFondeseCierreConv_ === 'function', 'evaluarBenFondeseCierreConv_ debe existir');
+    assertTrue_(typeof evaluarBenFondeseRendicion_ === 'function', 'evaluarBenFondeseRendicion_ debe existir');
   });
 
   // ── API Pública ──
@@ -1572,6 +1528,8 @@ function goPesTestAlertas_() {
     assertTrue_(umbrales.form_hito7despues5_dias >= 1, 'form_hito7despues5_dias debe ser >= 1');
     assertTrue_(umbrales.form_hito11despues10_dias >= 1, 'form_hito11despues10_dias debe ser >= 1');
     assertTrue_(umbrales.ben_camaras_post_cert_dias >= 1, 'ben_camaras_post_cert_dias debe ser >= 1');
+    assertTrue_(umbrales.ben_fondese_cierre_conv_dias >= 1, 'ben_fondese_cierre_conv_dias debe ser >= 1');
+    assertTrue_(umbrales.ben_fondese_rendicion_dias >= 1, 'ben_fondese_rendicion_dias debe ser >= 1');
   });
 
   // ── Integración con SystemConfig ──

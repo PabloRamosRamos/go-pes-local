@@ -277,6 +277,12 @@ Vistas pre-calculadas para consultas frecuentes.
 | `CFG_Parametros` | `config_section` | SystemConfig.js | Configuración del sistema (JSON serializado) |
 | `CFG_FONDESE_Ediciones` | `id_edicion` | Módulo Fondese | Ediciones de Fondese |
 
+**Esquema evolutivo FONDESE (dos capas).** `CFG_FONDESE_Ediciones` guarda por año la config variable en JSON (`convocatorias`, `lineas_producto`, `documentos`); `FACT_Fondese` referencia su edición por `id_edicion` y se deserializa con la config de **esa** edición, no de la activa.
+
+**Ciclo de vida (`FACT_Fondese.estado_proceso`):** `en_armado` → `ingresada` → `en_evaluacion` → `adjudicado` → `firma_convenio` → `en_ejecucion` → `en_rendicion` → `cerrado`. `en_armado` es la Ventana 1 (el equipo PES acompaña el armado; la línea es editable); al pasar a `ingresada` la postulación sale de manos del equipo. Columnas de monto `monto_adjudicado` y `monto_ejecutado` se capturan **solo tras la adjudicación**. Cada postulación se refleja en `FACT_Instrumentos` (`syncFactInstrumentoFromFondese_`) para aparecer en la ficha de la organización y el dashboard.
+
+**Dos llamados por año + regla de adjudicación.** Cada edición tiene siempre **Primer** y **Segundo Llamado FONDESE 20XX** (convocatorias del JSON de la edición). Una organización puede tener proceso en **ambos** llamados (unicidad por llamado, no por edición), pero solo puede **adjudicarse una vez por año calendario** y únicamente si toda adjudicación anterior se cerró con `estado_rendicion='aprobada'` (`goPesAssertAdjudicacionFondese_`).
+
 ### LOG (Logs de auditoría)
 
 | Hoja | PK | Gestión | Descripción |

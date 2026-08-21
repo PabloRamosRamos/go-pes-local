@@ -61,7 +61,23 @@
       "Bash(grep -oE '#[0-9A-Fa-f]{3,6}')",
       "Bash(grep -nA3 '^function goPesEnableDiagnostics' Diagnostics.js)",
       "Bash(grep -nA3 '^function goPesDisableDiagnostics' Diagnostics.js)",
-      "Bash(grep -nA2 '^function debugInsertMaeCasos' Audith.js)"
+      "Bash(grep -nA2 '^function debugInsertMaeCasos' Audith.js)",
+      "Bash(grep -nA6 '^function cambiarEstadoAdministrativoOrganizacion_' ZZ_OrganizacionesBackend.js)",
+      "Bash(grep -nB2 -A2 'JSON\\\\.stringify' Scripts_Avance.html)",
+      "Bash(awk '/^function [a-z][A-Za-z0-9]*\\\\\\(/{name=$0; body=\"\"; inbody=1} inbody{body=body\"\\\\n\"$0} /^}/{if\\(inbody && name!=\"\"\\){ if\\(body ~ /appendRow|setValues|\\\\.setValue\\\\\\(|deleteRow|replaceSheetData_|upsert[A-Z]|PropertiesService.*set/ && body !~ /requireRole_|requireModuleAccess_|goPesValidatePin_/\\){ split\\(name,a,\"\\(\"\\); gsub\\(/^function /,\"\",a[1]\\); print a[1]} } name=\"\"; inbody=0}' ZZ_BeneficiosBackend.js)",
+      "Bash(grep -coE 'style=\\\\\"[^\\\\\"]*#[0-9A-Fa-f]{3,6}' Scripts_Beneficios.html)",
+      "Bash(echo \"loaders=$\\(grep -coE 'showModuleLoading|showModalLoading' Scripts_Beneficios.html\\) showError=$\\(grep -coE 'showError' Scripts_Beneficios.html\\) alert=$\\(grep -coE '\\\\balert\\\\\\(' Scripts_Beneficios.html\\) onclick=$\\(grep -coE 'onclick=' Scripts_Beneficios.html\\) hexInlineStyle=$\\(grep -coE 'style=\\\\\"[^\\\\\"]*#[0-9A-Fa-f]{3,6}' Scripts_Beneficios.html\\) fugas=$\\(grep -coE 'JSON\\\\.stringify|F12|consola del navegador' Scripts_Beneficios.html\\)\")",
+      "Bash(grep -nA20 'function sortBuscarRows_' Scripts.html)",
+      "Bash(grep -nA15 'function exportBuscarCSV_' Scripts.html)",
+      "Bash(grep -nA25 'function route\\\\\\(view, params' Scripts.html)",
+      "Bash(grep -nB2 -A4 'function loadOrganizacionDetalle_' Scripts_Organizaciones.html)",
+      "Bash(grep -nA10 'function buildProgressBarHtml_' Scripts_Avance.html)",
+      "Bash(grep -nA12 'function clearAvanceView_' Scripts_Avance.html)",
+      "Bash(grep -nA3 '\\\\.avance-hitos-grid\\\\b' Styles.html)",
+      "Bash(command -v zip)",
+      "Bash(rm -rf .claude/skills/go-pes-rediseno-visual)",
+      "Bash(cp -r skills/go-pes-rediseno-visual .claude/skills/)",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\peram\\\\Documents\\\\Sitios\\\\GO Provi\"; $tmp = Join-Path $env:TEMP 'go-pes-rediseno-visual.zip'; if \\(Test-Path $tmp\\) { Remove-Item $tmp -Force }; Compress-Archive -Path 'skills\\\\go-pes-rediseno-visual' -DestinationPath $tmp -Force; Move-Item -Force $tmp 'dist\\\\go-pes-rediseno-visual.skill'; Write-Output \"dist actualizado:\"; Get-Item 'dist\\\\go-pes-rediseno-visual.skill' | Select-Object Name,Length,LastWriteTime)"
     ],
     "additionalDirectories": [
       "c:\\Users\\peram\\.claude\\projects\\c--Users-peram-Documents-Sitios-GO-Provi\\memory"

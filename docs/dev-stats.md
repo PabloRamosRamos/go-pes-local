@@ -77,7 +77,7 @@
 
 ## Cobertura de tests
 
-### Suites implementadas (272 tests activos, 7 suites)
+### Suites implementadas (257 tests activos, 7 suites)
 
 | Suite | Tests | Descripción |
 |-------|-------|-------------|
@@ -85,10 +85,10 @@
 | `goPesTestAuth_` | 41 | Autenticación, autorización, roles, permisos por módulo |
 | `goPesTestServices_` | 51 | Búsqueda, ficha, dashboard, catálogos |
 | `goPesTestAvance_` | 35 | Módulo Avance (hitos, formateadores, estados) |
-| `goPesTestBeneficios_` | 32 | Módulo Beneficios (validaciones, estados, elegibilidad) |
+| `goPesTestBeneficios_` | 16 | Módulo Beneficios (estados CÁMARAS/FONDESE, workflow, días hábiles, elegibilidad) |
 | `goPesTestSecurity_` | 10 | Auth guards, PINs, rate limiting |
-| `goPesTestAlertas_` | 13 | Alertas operativas (plazos de formalización, beneficios) |
-| **TOTAL** | **272** | |
+| `goPesTestAlertas_` | 14 | Alertas operativas (plazos de formalización, beneficios) |
+| **TOTAL** | **257** | |
 
 > Conteo verificado por grep de `s.test(` en `Audith.js`. Si agregas tests, actualiza estos números.
 
@@ -96,7 +96,7 @@
 
 - ✅ **Core completo:** Auth (41 tests), Repository, Validators (90 tests), Services (51 tests)
 - ✅ **Seguridad completa:** Auth guards, PINs, rate limiting (10 tests)
-- ✅ **Módulos críticos:** Avance (35 tests), Beneficios (32 tests)
+- ✅ **Módulos críticos:** Avance (35 tests), Beneficios (16 tests)
 - ⚠️ **Módulos con cobertura parcial:** Organizaciones, Socios, NuevoIngreso
 - ❌ **Sin cobertura:** DerivedBuilders, Diagnostics
 

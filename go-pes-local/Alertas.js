@@ -33,7 +33,9 @@ function getDefaultAlertasConfig_() {
       form_hito8antes9_dias: 15,
       form_hito7despues5_dias: 10,
       form_hito11despues10_dias: 30,
-      ben_camaras_post_cert_dias: 5
+      ben_camaras_post_cert_dias: 5,
+      ben_fondese_cierre_conv_dias: 10,
+      ben_fondese_rendicion_dias: 15
     },
     usuarios_perfiles: []
   };
@@ -394,14 +396,111 @@ function evaluarAlertasBeneficios_(umbrales) {
   // ALERTA: Cámaras post certificado definitivo
   alertas.push(evaluarBenCamarasPostCert_(hitos, casos, orgs, instrumentos, umbrales.ben_camaras_post_cert_dias));
 
+  // ALERTAS FONDESE (Fase D): dos ventanas de responsabilidad del equipo PES.
+  var fondeseRows = getSheetData_(GO_PES_V2.SHEETS.FACT_FONDESE);
+  var edicionesMap = {};
+  getSheetData_(GO_PES_V2.SHEETS.CFG_FONDESE_EDICIONES).forEach(function(r) {
+    edicionesMap[String(r.id_edicion || '').trim()] = goPesParseFondeseEdicion_(r);
+  });
+  var orgsMap = {};
+  orgs.forEach(function(o) { if (o.organizacion_id) orgsMap[String(o.organizacion_id).trim()] = o; });
+
+  alertas.push(evaluarBenFondeseCierreConv_(fondeseRows, edicionesMap, orgsMap, umbrales.ben_fondese_cierre_conv_dias || 10));
+  alertas.push(evaluarBenFondeseRendicion_(fondeseRows, edicionesMap, orgsMap, umbrales.ben_fondese_rendicion_dias || 15));
+
   return alertas.filter(function(a) { return a.conteo > 0; });
+}
+
+/* Ventana 1 — org en armado con la convocatoria proxima a cerrar (o cerrada) sin ingresar. */
+function evaluarBenFondeseCierreConv_(fondeseRows, edicionesMap, orgsMap, umbralDias) {
+  var afectados = [];
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+
+  fondeseRows.forEach(function(r) {
+    if (String(r.estado_proceso || '').trim() !== 'en_armado') return;
+    var ed = edicionesMap[String(r.id_edicion || '').trim()];
+    if (!ed) return;
+    var conv = (ed.convocatorias || []).filter(function(c) {
+      return String(c.id || '').trim() === String(r.convocatoria_id || '').trim();
+    })[0];
+    if (!conv || !conv.fecha_cierre) return;
+    var cierre = new Date(String(conv.fecha_cierre).replace(/-/g, '/'));
+    if (isNaN(cierre)) return;
+    var diasRestantes = Math.ceil((cierre - hoy) / 86400000);
+    if (diasRestantes > umbralDias) return;
+    var orgId = String(r.organizacion_id || '').trim();
+    var org = orgsMap[orgId] || {};
+    afectados.push({
+      solicitud_id: String(org.solicitud_id || ''),
+      organizacion_id: orgId,
+      nombre_vecino: '',
+      organizacion_nombre: r.nombre_organizacion || org.nombre_organizacion || '',
+      dias_transcurridos: diasRestantes,
+      fecha_hito_origen: Utilities.formatDate(cierre, Session.getScriptTimeZone(), 'dd/MM/yyyy'),
+      fecha_hito_destino: diasRestantes < 0 ? 'Convocatoria cerrada' : 'Cierra en ' + diasRestantes + ' dias'
+    });
+  });
+
+  return {
+    id: GO_PES_V2.ALERTAS.ALERTAS_IDS.BEN_FONDESE_CIERRE_CONV,
+    titulo: 'FONDESE en armado con convocatoria por cerrar',
+    descripcion: afectados.length + ' organización' + (afectados.length === 1 ? '' : 'es') + ' en armado con la convocatoria a ' + umbralDias + ' días o menos del cierre sin ingresar la postulación.',
+    tipo: GO_PES_V2.ALERTAS.TIPOS.WARNING,
+    conteo: afectados.length,
+    umbral: umbralDias,
+    casos: afectados.slice(0, 10)
+  };
+}
+
+/* Ventana 2 — org adjudicada en ejecución/rendición con la rendición por vencer o vencida (sin aprobar). */
+function evaluarBenFondeseRendicion_(fondeseRows, edicionesMap, orgsMap, umbralDias) {
+  var afectados = [];
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+
+  fondeseRows.forEach(function(r) {
+    var estado = String(r.estado_proceso || '').trim();
+    if (estado !== 'en_ejecucion' && estado !== 'en_rendicion') return;
+    if (String(r.resultado_adj || '').trim() !== 'adjudicado') return;
+    if (String(r.estado_rendicion || '').trim() === 'aprobada') return;
+    var ed = edicionesMap[String(r.id_edicion || '').trim()];
+    if (!ed) return;
+    var conv = (ed.convocatorias || []).filter(function(c) {
+      return String(c.id || '').trim() === String(r.convocatoria_id || '').trim();
+    })[0];
+    if (!conv || !conv.fecha_cierre_rendicion) return;
+    var cierre = new Date(String(conv.fecha_cierre_rendicion).replace(/-/g, '/'));
+    if (isNaN(cierre)) return;
+    var diasRestantes = Math.ceil((cierre - hoy) / 86400000);
+    if (diasRestantes > umbralDias) return;
+    var orgId = String(r.organizacion_id || '').trim();
+    var org = orgsMap[orgId] || {};
+    afectados.push({
+      solicitud_id: String(org.solicitud_id || ''),
+      organizacion_id: orgId,
+      nombre_vecino: '',
+      organizacion_nombre: r.nombre_organizacion || org.nombre_organizacion || '',
+      dias_transcurridos: diasRestantes,
+      fecha_hito_origen: Utilities.formatDate(cierre, Session.getScriptTimeZone(), 'dd/MM/yyyy'),
+      fecha_hito_destino: diasRestantes < 0 ? 'Rendición vencida hace ' + Math.abs(diasRestantes) + ' días' : 'Vence en ' + diasRestantes + ' días'
+    });
+  });
+
+  return {
+    id: GO_PES_V2.ALERTAS.ALERTAS_IDS.BEN_FONDESE_RENDICION,
+    titulo: 'FONDESE con rendición por vencer o vencida',
+    descripcion: afectados.length + ' organización' + (afectados.length === 1 ? '' : 'es') + ' adjudicada' + (afectados.length === 1 ? '' : 's') + ' con la rendición a ' + umbralDias + ' días o menos del cierre sin aprobar.',
+    tipo: GO_PES_V2.ALERTAS.TIPOS.DANGER,
+    conteo: afectados.length,
+    umbral: umbralDias,
+    casos: afectados.slice(0, 10)
+  };
 }
 
 function evaluarBenCamarasPostCert_(hitos, casos, orgs, instrumentos, umbralDias) {
   var afectados = [];
   var hoy = new Date();
 
-  // Buscar todos los hitos 11 (certificado definitivo)
+  // Hitos 11 (certificado definitivo)
   var hitosH11 = hitos.filter(function(h) {
     return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_11;
   });
@@ -411,41 +510,38 @@ function evaluarBenCamarasPostCert_(hitos, casos, orgs, instrumentos, umbralDias
   var orgsMap = {};
   orgs.forEach(function(o) { if (o.organizacion_id) orgsMap[o.organizacion_id] = o; });
 
-  // Verificar si tienen solicitud de Cámaras
   hitosH11.forEach(function(h11) {
-    var fecha11 = h11.fecha_hito instanceof Date ? h11.fecha_hito : new Date(h11.fecha_hito);
-    var diasDesde11 = Math.round((hoy - fecha11) / (24 * 60 * 60 * 1000));
-
-    if (diasDesde11 <= umbralDias) return; // Todavía están dentro del plazo
-
     var orgId = h11.organizacion_id;
     if (!orgId) return;
+    var fecha11 = h11.fecha_hito instanceof Date ? h11.fecha_hito : new Date(h11.fecha_hito);
 
-    // Buscar si existe solicitud de Cámaras para esta org
-    var tieneSolicitud = instrumentos.some(function(inst) {
-      return inst.organizacion_id === orgId &&
-             String(inst.instrumento_nombre || '').toLowerCase().indexOf('camaras') !== -1;
+    // ¿Ya solicitó la instalación? (detail row SOLICITUD_SP del beneficio CÁMARAS)
+    var assignment = findCamarasAssignmentByOrgId_(orgId);
+    var solicitud = assignment
+      ? parseCamarasDetailPayload_(indexCamarasDetailRows_(getCamarasDetailRowsByAssignmentId_(assignment.beneficio_org_id)).SOLICITUD_SP)
+      : {};
+    if (solicitud.requested && solicitud.requestDate) return; // ya solicitó
+
+    var habiles = businessDaysBetween_(fecha11, hoy);
+    if (habiles <= umbralDias) return; // dentro de plazo hábil
+
+    var caso = casosMap[h11.solicitud_id] || {};
+    var org = orgsMap[orgId] || {};
+    afectados.push({
+      solicitud_id: h11.solicitud_id || '',
+      organizacion_id: orgId,
+      nombre_vecino: caso.nombre_completo || '',
+      organizacion_nombre: org.nombre_organizacion || '',
+      dias_transcurridos: habiles,
+      fecha_hito_origen: Utilities.formatDate(fecha11, Session.getScriptTimeZone(), 'dd/MM/yyyy'),
+      fecha_hito_destino: 'Sin solicitar'
     });
-
-    if (!tieneSolicitud) {
-      var caso = casosMap[h11.solicitud_id] || {};
-      var org = orgsMap[orgId] || {};
-      afectados.push({
-        solicitud_id: h11.solicitud_id || '',
-        organizacion_id: orgId,
-        nombre_vecino: caso.nombre_completo || '',
-        organizacion_nombre: org.nombre_organizacion || '',
-        dias_transcurridos: diasDesde11,
-        fecha_hito_origen: Utilities.formatDate(fecha11, Session.getScriptTimeZone(), 'dd/MM/yyyy'),
-        fecha_hito_destino: 'Sin solicitud'
-      });
-    }
   });
 
   return {
     id: GO_PES_V2.ALERTAS.ALERTAS_IDS.BEN_CAMARAS_POST_CERT,
-    titulo: 'Solicitud Cámaras 1414 no realizada post certificado',
-    descripcion: afectados.length + ' organización' + (afectados.length === 1 ? '' : 'es') + ' supera' + (afectados.length === 1 ? '' : 'n') + ' los ' + umbralDias + ' días sin solicitar Cámaras.',
+    titulo: 'Instalación Cámaras 1414 sin solicitar',
+    descripcion: afectados.length + ' organización' + (afectados.length === 1 ? '' : 'es') + ' supera' + (afectados.length === 1 ? '' : 'n') + ' los ' + umbralDias + ' días hábiles sin solicitar la instalación.',
     tipo: GO_PES_V2.ALERTAS.TIPOS.DANGER,
     conteo: afectados.length,
     umbral: umbralDias,
@@ -507,6 +603,29 @@ function getAlertasMock_() {
       umbral: 5,
       casos: [
         { id: 'ORG-006', nombre: 'Comité Los Leones', detalle: '7 días desde certificado definitivo (2 días de atraso)' }
+      ]
+    },
+    {
+      id: GO_PES_V2.ALERTAS.ALERTAS_IDS.BEN_FONDESE_CIERRE_CONV,
+      titulo: 'FONDESE en armado con convocatoria por cerrar',
+      descripcion: '2 organizaciones en armado con la convocatoria a 10 días o menos del cierre sin ingresar la postulación',
+      tipo: GO_PES_V2.ALERTAS.TIPOS.WARNING,
+      conteo: 2,
+      umbral: 10,
+      casos: [
+        { id: 'ORG-007', nombre: 'Junta de Vecinos El Aguilucho', detalle: 'Cierra en 6 días' },
+        { id: 'ORG-008', nombre: 'Comité Pedro de Valdivia', detalle: 'Cierra en 9 días' }
+      ]
+    },
+    {
+      id: GO_PES_V2.ALERTAS.ALERTAS_IDS.BEN_FONDESE_RENDICION,
+      titulo: 'FONDESE con rendición por vencer o vencida',
+      descripcion: '1 organización adjudicada con la rendición a 15 días o menos del cierre sin aprobar',
+      tipo: GO_PES_V2.ALERTAS.TIPOS.DANGER,
+      conteo: 1,
+      umbral: 15,
+      casos: [
+        { id: 'ORG-009', nombre: 'Comité Los Leones', detalle: 'Vence en 4 días' }
       ]
     }
   ];
@@ -663,7 +782,9 @@ function saveAlertasConfigAdmin(payload) {
       form_hito8antes9_dias: Math.max(1, parseInt(incoming.form_hito8antes9_dias || 15)),
       form_hito7despues5_dias: Math.max(1, parseInt(incoming.form_hito7despues5_dias || 10)),
       form_hito11despues10_dias: Math.max(1, parseInt(incoming.form_hito11despues10_dias || 30)),
-      ben_camaras_post_cert_dias: Math.max(1, parseInt(incoming.ben_camaras_post_cert_dias || 5))
+      ben_camaras_post_cert_dias: Math.max(1, parseInt(incoming.ben_camaras_post_cert_dias || 5)),
+      ben_fondese_cierre_conv_dias: Math.max(1, parseInt(incoming.ben_fondese_cierre_conv_dias || 10)),
+      ben_fondese_rendicion_dias: Math.max(1, parseInt(incoming.ben_fondese_rendicion_dias || 15))
     },
     usuarios_perfiles: Array.isArray(incoming.usuarios_perfiles)
       ? incoming.usuarios_perfiles

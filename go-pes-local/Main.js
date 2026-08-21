@@ -6,8 +6,8 @@ const GO_PES_V2 = {
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
   VERSION: '2.1.907',
-  BUILD: '526296f',
-  BUILD_DATE: '20260818',
+  BUILD: 'b051388',
+  BUILD_DATE: '20260820',
   ENVIRONMENT: 'DEV',
 
   // Script IDs para detección de entorno (centralizados 2026-07-10)
@@ -118,7 +118,9 @@ const GO_PES_V2 = {
       FORM_HITO8ANTES9: 'form_hito8antes9',
       FORM_HITO7POST5: 'form_hito7post5',
       FORM_HITO11POST10: 'form_hito11post10',
-      BEN_CAMARAS_POST_CERT: 'ben_camaras_post_cert'
+      BEN_CAMARAS_POST_CERT: 'ben_camaras_post_cert',
+      BEN_FONDESE_CIERRE_CONV: 'ben_fondese_cierre_conv',
+      BEN_FONDESE_RENDICION: 'ben_fondese_rendicion'
     }
   },
   DASHBOARD: {

@@ -612,10 +612,9 @@ function goPesTestValidators_() {
   s.test('validateSocio: row valida → {ok: true}', function() {
     assertTrue_(validateSocioRowV2_({ organizacion_id: 'ORG-1', nombre_socio: 'Juan' }).ok);
   });
-  s.test('validateSocio: sin organizacion_id → {ok: false, error}', function() {
-    var r = validateSocioRowV2_({ organizacion_id: '', nombre_socio: 'Juan' });
-    assertFalse_(r.ok);
-    assertTrue_(!!r.error);
+  s.test('validateSocio: sin organizacion_id puede quedar pendiente → {ok: true}', function() {
+    var r = validateSocioRowV2_({ organizacion_id: '', solicitud_id: '', nombre_socio: 'Juan' });
+    assertTrue_(r.ok);
   });
   s.test('validateSocio: sin nombre_socio → {ok: false, error}', function() {
     var r = validateSocioRowV2_({ organizacion_id: 'ORG-1', nombre_socio: '' });

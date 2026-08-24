@@ -1,5 +1,5 @@
 ---
-name: appsscript-dashboard
+name: go-pes-appsscript-dashboard
 description: >-
   Construye y mantiene el dashboard de KPIs de GO-PES como una app Google Apps
   Script STANDALONE y de SOLO LECTURA, que lee el Spreadsheet de PROD con

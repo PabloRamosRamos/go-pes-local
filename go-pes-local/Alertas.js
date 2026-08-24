@@ -231,7 +231,7 @@ function evaluarFormHito5a9_(hitosPorCaso, casosMap, orgsMap, umbralDias) {
   Object.keys(hitosPorCaso).forEach(function(key) {
     var hitosDelCaso = hitosPorCaso[key];
     var h5 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_05; });
-    var h9 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_09; });
+    var h9 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.FOR_02; });
 
     if (!h5 || !h9) return;
 
@@ -270,8 +270,8 @@ function evaluarFormHito8Antes9_(hitosPorCaso, casosMap, orgsMap, minimoAntesDia
 
   Object.keys(hitosPorCaso).forEach(function(key) {
     var hitosDelCaso = hitosPorCaso[key];
-    var h8 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_08; });
-    var h9 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_09; });
+    var h8 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.FOR_01; });
+    var h9 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.FOR_02; });
 
     if (!h8 || !h9) return;
 
@@ -351,8 +351,8 @@ function evaluarFormHito11Post10_(hitosPorCaso, casosMap, orgsMap, esperadoDias)
 
   Object.keys(hitosPorCaso).forEach(function(key) {
     var hitosDelCaso = hitosPorCaso[key];
-    var h10 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_10; });
-    var h11 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_11; });
+    var h10 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.FOR_03; });
+    var h11 = hitosDelCaso.find(function(h) { return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.FOR_04; });
 
     if (!h10 || h11) return; // Si h11 existe, no hay alerta
 
@@ -500,9 +500,9 @@ function evaluarBenCamarasPostCert_(hitos, casos, orgs, instrumentos, umbralDias
   var afectados = [];
   var hoy = new Date();
 
-  // Hitos 11 (certificado definitivo)
+  // Hito 11 = certificado definitivo (FOR_04)
   var hitosH11 = hitos.filter(function(h) {
-    return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.PRE_11;
+    return h.codigo_hito === GO_PES_V2.ALERTAS.HITOS.FOR_04;
   });
 
   var casosMap = {};
@@ -574,9 +574,9 @@ function getAlertasMock_() {
       conteo: 3,
       umbral: 14,
       casos: [
-        { id: 'ORG-001', nombre: 'Comité de Seguridad Los Castaños', detalle: '18 días transcurridos (4 días de atraso)' },
-        { id: 'ORG-002', nombre: 'Junta de Vecinos Sector Norte', detalle: '21 días transcurridos (7 días de atraso)' },
-        { id: 'ORG-003', nombre: 'Comité Nueva Providencia', detalle: '16 días transcurridos (2 días de atraso)' }
+        { organizacion_nombre: 'Comité de Seguridad Los Castaños', dias_transcurridos: 18, fecha_hito_origen: '01/08/2026', fecha_hito_destino: '19/08/2026' },
+        { organizacion_nombre: 'Junta de Vecinos Sector Norte', dias_transcurridos: 21, fecha_hito_origen: '28/07/2026', fecha_hito_destino: '18/08/2026' },
+        { organizacion_nombre: 'Comité Nueva Providencia', dias_transcurridos: 16, fecha_hito_origen: '03/08/2026', fecha_hito_destino: '19/08/2026' }
       ]
     },
     {
@@ -587,8 +587,8 @@ function getAlertasMock_() {
       conteo: 2,
       umbral: 10,
       casos: [
-        { id: 'ORG-004', nombre: 'Comité Test UV 15', detalle: '12 días desde escritura pública' },
-        { id: 'ORG-005', nombre: 'Agrupación Vecinal Central', detalle: '14 días desde escritura pública' }
+        { organizacion_nombre: 'Comité Test UV 15', dias_transcurridos: 12, fecha_hito_origen: '07/08/2026', fecha_hito_destino: 'Pendiente' },
+        { organizacion_nombre: 'Agrupación Vecinal Central', dias_transcurridos: 14, fecha_hito_origen: '05/08/2026', fecha_hito_destino: 'Pendiente' }
       ]
     }
   ];
@@ -602,7 +602,7 @@ function getAlertasMock_() {
       conteo: 1,
       umbral: 5,
       casos: [
-        { id: 'ORG-006', nombre: 'Comité Los Leones', detalle: '7 días desde certificado definitivo (2 días de atraso)' }
+        { organizacion_nombre: 'Comité Los Leones', dias_transcurridos: 7, fecha_hito_origen: '12/08/2026', fecha_hito_destino: 'Sin solicitar' }
       ]
     },
     {
@@ -613,8 +613,8 @@ function getAlertasMock_() {
       conteo: 2,
       umbral: 10,
       casos: [
-        { id: 'ORG-007', nombre: 'Junta de Vecinos El Aguilucho', detalle: 'Cierra en 6 días' },
-        { id: 'ORG-008', nombre: 'Comité Pedro de Valdivia', detalle: 'Cierra en 9 días' }
+        { organizacion_nombre: 'Junta de Vecinos El Aguilucho', dias_transcurridos: 6, fecha_hito_origen: '30/08/2026', fecha_hito_destino: 'Cierra en 6 días' },
+        { organizacion_nombre: 'Comité Pedro de Valdivia', dias_transcurridos: 9, fecha_hito_origen: '02/09/2026', fecha_hito_destino: 'Cierra en 9 días' }
       ]
     },
     {
@@ -625,7 +625,7 @@ function getAlertasMock_() {
       conteo: 1,
       umbral: 15,
       casos: [
-        { id: 'ORG-009', nombre: 'Comité Los Leones', detalle: 'Vence en 4 días' }
+        { organizacion_nombre: 'Comité Los Leones', dias_transcurridos: 4, fecha_hito_origen: '28/08/2026', fecha_hito_destino: 'Vence en 4 días' }
       ]
     }
   ];

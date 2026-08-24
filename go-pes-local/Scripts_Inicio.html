@@ -195,19 +195,26 @@
             <table class="alerta-operativa-detalle-table">
               <thead>
                 <tr>
-                  <th>Caso</th>
                   <th>Organización / Vecino</th>
-                  <th>Detalle</th>
+                  <th>Días</th>
+                  <th>Plazo</th>
                 </tr>
               </thead>
               <tbody>
-                ${alerta.casos.map(caso => `
+                ${alerta.casos.map(caso => {
+                  const quien = caso.organizacion_nombre || caso.nombre_vecino || 'Sin identificar';
+                  const dias = (caso.dias_transcurridos !== undefined && caso.dias_transcurridos !== null)
+                    ? String(caso.dias_transcurridos) : '—';
+                  const plazo = (caso.fecha_hito_origen || caso.fecha_hito_destino)
+                    ? `${escapeHtml(caso.fecha_hito_origen || '—')} → ${escapeHtml(caso.fecha_hito_destino || '—')}`
+                    : '—';
+                  return `
                   <tr>
-                    <td>${escapeHtml(caso.id || 'N/A')}</td>
-                    <td>${escapeHtml(caso.nombre || 'Sin nombre')}</td>
-                    <td>${escapeHtml(caso.detalle || '')}</td>
-                  </tr>
-                `).join('')}
+                    <td>${escapeHtml(quien)}</td>
+                    <td>${escapeHtml(dias)}</td>
+                    <td>${plazo}</td>
+                  </tr>`;
+                }).join('')}
               </tbody>
             </table>
           </div>

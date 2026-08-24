@@ -5,8 +5,8 @@ const GO_PES_V2 = {
   APP_NAME: 'GO-PES',
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
-  VERSION: '2.1.908',
-  BUILD: '59a87c7',
+  VERSION: '2.1.909',
+  BUILD: '6c37c25',
   BUILD_DATE: '20260824',
   ENVIRONMENT: 'DEV',
 
@@ -103,14 +103,18 @@ const GO_PES_V2 = {
     CACHE_TTL_MS: 5 * 60 * 1000, // 5 minutos
     TIPOS: { DANGER: 'danger', WARNING: 'warning', INFO: 'info' },
     AREAS: { FORMALIZACION: 'formalizacion', BENEFICIOS: 'beneficios' },
+    // Códigos reales del catálogo CAT_Hitos_Avance. Los "hitos 8-11" del negocio
+    // son del tramo Formalización (FOR_*), no PRE_08..PRE_11 (que no existen):
+    // 8=FOR_01 (Asamblea ordinaria), 9=FOR_02 (Cuenta pública),
+    // 10=FOR_03 (Renovación directiva), 11=FOR_04 (Certificado definitivo).
     HITOS: {
       PRE_04: 'PRE_04',
       PRE_05: 'PRE_05',
       PRE_07: 'PRE_07',
-      PRE_08: 'PRE_08',
-      PRE_09: 'PRE_09',
-      PRE_10: 'PRE_10',
-      PRE_11: 'PRE_11'
+      FOR_01: 'FOR_01',
+      FOR_02: 'FOR_02',
+      FOR_03: 'FOR_03',
+      FOR_04: 'FOR_04'
     },
     ALERTAS_IDS: {
       FORM_HITO4A5: 'form_hito4a5',

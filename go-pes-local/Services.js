@@ -993,6 +993,7 @@ function guardarSeguimiento(payload) {
   try {
   const now = new Date();
   const hitoId = payload.hito_id || nextId_('hito', 'HIT');
+  assertOrganizacionActiva_(payload.organizacion_id); // suspendida = solo lectura
 
   appendRowObject_(GO_PES_V2.SHEETS.RAW_SEGUIMIENTO, {
     created_at: now,

@@ -8,10 +8,24 @@ function importarSocios(payload) {
   const errors = [];
   const now = new Date();
 
+  // Orgs suspendidas/eliminadas: no se importan socios hacia ellas (solo lectura).
+  const orgsSuspendidas_ = {};
+  getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).forEach(function(o) {
+    const e = String(o.estado_general_organizacion || '').toLowerCase();
+    if (e.indexOf('suspend') !== -1 || e.indexOf('elimin') !== -1) {
+      orgsSuspendidas_[String(o.organizacion_id || '').trim()] = true;
+    }
+  });
+
   rows.forEach((row, idx) => {
     const check = validateSocioRowV2_(row);
     if (!check.ok) {
       errors.push({ index: idx + 1, error: check.error, row: row });
+      return;
+    }
+    const orgIdRow = String(row.organizacion_id || '').trim();
+    if (orgIdRow && orgsSuspendidas_[orgIdRow]) {
+      errors.push({ index: idx + 1, error: 'La organización está suspendida: solo lectura.', row: row });
       return;
     }
     validRows.push(row);
@@ -512,6 +526,7 @@ function vincularSociosManual(payload) {
       solicitudId = String(org.solicitud_id || '').trim();
       caso = solicitudId ? findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false) : null;
     }
+    assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
     const nombreCasoComite = caso ? String(caso.nombre_completo || '').trim() : '';
 
     const socios = getSheetData_(GO_PES_V2.SHEETS.FACT_SOCIOS) || [];

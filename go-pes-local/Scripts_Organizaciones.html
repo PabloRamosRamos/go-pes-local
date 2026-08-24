@@ -54,7 +54,6 @@
         </div>
 
         ${renderOrganizacionDetalleModal_()}
-        ${renderOrganizacionEditModal_()}
         ${renderOrganizacionSocioCargoModal_()}
         ${renderLinkSociosModal_()}
       </div>
@@ -114,52 +113,6 @@
   }
 
   // -- MODAL EDICION (sin cambios) --
-
-  function renderOrganizacionEditModal_() {
-    return `
-      <div id="org-edit-modal" class="organizaciones-modal is-hidden" aria-hidden="true">
-        <div class="organizaciones-modal__backdrop" data-org-modal-close="true"></div>
-        <form id="org-edit-form" class="organizaciones-modal__dialog">
-          <div class="organizaciones-modal__head">
-            <div>
-              <p class="eyebrow">Organizaciones</p>
-              <h3 id="org-edit-title">Organización</h3>
-            </div>
-            <button type="button" class="secondary-btn" data-org-modal-close="true">
-              <span class="material-symbols-outlined">close</span>Cerrar
-            </button>
-          </div>
-
-          <input type="hidden" name="organizacion_id">
-          <input type="hidden" name="solicitud_id">
-
-          <div class="form-grid organizaciones-form-grid">
-            <div class="field field--full"><label>Nombre organización</label><input name="nombre_organizacion" type="text" required></div>
-            <div class="field field--half"><label>UV</label><select name="uv" data-options-key="uvList"></select></div>
-            <div class="field field--half"><label>Sector</label><select name="sector" data-options-key="sectorByUv"></select></div>
-            <div class="field field--full"><label>Dirección referencia</label><input name="direccion_referencia" type="text"></div>
-            <div class="field field--half"><label>Fecha inicio acompañamiento</label><input name="fecha_inicio_acompanamiento" type="date"></div>
-            <div class="field field--half"><label>Fecha asamblea constitución</label><input name="fecha_asamblea_constitucion" type="date"></div>
-            <div class="field field--half"><label>Fecha ratificación</label><input name="fecha_ratificacion" type="date"></div>
-            <div class="field field--half"><label>Vigencia directiva hasta</label><input name="vigencia_directiva_hasta" type="date"></div>
-            <div class="field field--half"><label>Personalidad jurídica</label><select name="personalidad_juridica_flag"><option value="">Seleccionar</option><option>Sí</option><option>No</option></select></div>
-            <div class="field field--half"><label>Directiva vigente</label><select name="directiva_vigente_flag"><option value="">Seleccionar</option><option>Sí</option><option>No</option></select></div>
-            <div class="field field--half"><label>Organización constituida</label><select name="organizacion_constituida_flag"><option value="">Seleccionar</option><option>Sí</option><option>No</option></select></div>
-            <div class="field field--full"><label>Observaciones</label><textarea name="observacion_resumen" rows="4"></textarea></div>
-          </div>
-
-          <div class="actions">
-            <button type="button" class="secondary-btn" data-org-modal-close="true">
-              <span class="material-symbols-outlined">undo</span>Cancelar
-            </button>
-            <button type="submit" class="primary-btn">
-              <span class="material-symbols-outlined">save</span>Guardar organización
-            </button>
-          </div>
-        </form>
-      </div>
-    `;
-  }
 
   // -- MODAL CARGO SOCIO (sin cambios) --
 
@@ -736,7 +689,6 @@
     document.getElementById('org-edit-save-btn')?.addEventListener('click', saveInlineOrganizacion_);
     document.getElementById('org-suspend-btn')?.addEventListener('click', () => cambiarEstadoOrganizacionUi_('suspenderOrganizacion', 'suspender'));
     document.getElementById('org-reactivate-btn')?.addEventListener('click', () => cambiarEstadoOrganizacionUi_('reactivarOrganizacion', 'reactivar'));
-    document.getElementById('org-edit-form')?.addEventListener('submit', saveOrganizacionDesdeModulo_);
     document.getElementById('org-socio-cargo-form')?.addEventListener('submit', saveOrganizacionSocioCargo_);
 
     document.querySelectorAll('[data-org-detalle-close]').forEach(btn => {
@@ -753,9 +705,6 @@
         closeOrganizacionDetalleModal_();
       });
     });
-    document.querySelectorAll('[data-org-modal-close]').forEach(btn => {
-      btn.addEventListener('click', closeOrganizacionEditModal_);
-    });
     document.querySelectorAll('[data-org-socio-cargo-close]').forEach(btn => {
       btn.addEventListener('click', closeOrganizacionSocioCargoModal_);
     });
@@ -766,24 +715,9 @@
     });
 
     fillSelect(document.getElementById('org-socio-cargo-select'), getSocioCargoOptions_(), 'Seleccionar cargo');
-
-    const form = document.getElementById('org-edit-form');
-    if (form) {
-      populateSelectsInForm_(form);
-      const uv     = form.querySelector('select[name="uv"]');
-      const sector = form.querySelector('select[name="sector"]');
-      if (uv && sector) {
-        syncSectorOptions(sector, uv.value);
-        uv.addEventListener('change', () => syncSectorOptions(sector, uv.value));
-      }
-    }
   }
 
   // -- LISTA (compatibilidad con Scripts.html) --
-
-  function fillOrganizacionesSelect_() {
-    /* La vista de lista ya no usa un select; función conservada por compatibilidad. */
-  }
 
   function refreshOrganizacionesModuloList_() {
     ensureOrganizacionesModuloList_().then(() => {
@@ -822,8 +756,10 @@
     const inactiva = estado.indexOf('suspend') !== -1 || estado.indexOf('elimin') !== -1 || estado.indexOf('inactiv') !== -1;
     const suspendBtn = document.getElementById('org-suspend-btn');
     const reactBtn = document.getElementById('org-reactivate-btn');
+    const editBtn = document.getElementById('org-edit-btn');
     if (suspendBtn) suspendBtn.style.display = inactiva ? 'none' : '';
     if (reactBtn) reactBtn.style.display = inactiva ? '' : 'none';
+    if (editBtn) editBtn.style.display = inactiva ? 'none' : ''; // suspendida = solo lectura
   }
 
   // -- RENDER DETALLE --
@@ -1453,36 +1389,6 @@
 
   // -- MODALES ACCIONES --
 
-  function openOrganizacionEditModal_(data) {
-    data = data || {};
-    const modal = document.getElementById('org-edit-modal');
-    const form  = document.getElementById('org-edit-form');
-    const title = document.getElementById('org-edit-title');
-    if (!modal || !form) return;
-    if (!data || !data.organizacion_id) {
-      showError('Selecciona una organización existente para editar.');
-      return;
-    }
-
-    form.reset();
-    if (title) title.textContent = 'Editar organización';
-    Array.from(form.elements).forEach(el => {
-      if (!el.name) return;
-      setFormFieldValue_(el, data[el.name] !== undefined ? data[el.name] : '');
-    });
-    const uv     = form.querySelector('select[name="uv"]');
-    const sector = form.querySelector('select[name="sector"]');
-    if (uv && sector) {
-      syncSectorOptions(sector, uv.value);
-      if (data.sector) sector.value = data.sector;
-    }
-    setModalVisibility_(modal, true);
-  }
-
-  function closeOrganizacionEditModal_() {
-    setModalVisibility_('org-edit-modal', false);
-  }
-
   function openOrganizacionSocioCargoModal_(socioId) {
     const detalle = APP.state.currentOrganizacionDetalle || {};
     const socio   = (detalle.socios || []).find(row => String(row.socio_id || '') === String(socioId || ''));
@@ -1542,30 +1448,6 @@
       return selectOrganizacionInline_(org.organizacion_id);
     }).catch(showError).finally(() => {
       hideModalLoading('org-socio-cargo-modal');
-    });
-  }
-
-  function saveOrganizacionDesdeModulo_(ev) {
-    ev.preventDefault();
-    const payload = serializeForm(ev.target);
-    if (!String(payload.organizacion_id || '').trim()) {
-      showError('El módulo Organizaciones solo permite editar organizaciones existentes.');
-      return;
-    }
-
-    // Mostrar loader dentro del modal
-    showModalLoading('org-edit-modal', 'Guardando organización...');
-
-    api('guardarOrganizacion', payload).then(res => {
-      showSuccess('Organización guardada correctamente.');
-      closeOrganizacionEditModal_();
-      APP.state.organizacionesModuloFetchedAt = 0;
-      return ensureOrganizacionesModuloList_().then(() => {
-        renderOrganizacionesGridFromState_();
-        return selectOrganizacionInline_(res.organizacion_id);
-      });
-    }).catch(showError).finally(() => {
-      hideModalLoading('org-edit-modal');
     });
   }
 

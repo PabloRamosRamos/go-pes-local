@@ -311,10 +311,6 @@ function suspenderOrganizacion(payload) {
   return cambiarEstadoAdministrativoOrganizacion_(payload, 'Suspendida', 'SUSPENDER_ORGANIZACION');
 }
 
-function eliminarOrganizacion(payload) {
-  return cambiarEstadoAdministrativoOrganizacion_(payload, 'Eliminada', 'ELIMINAR_ORGANIZACION_LOGICA');
-}
-
 function reactivarOrganizacion(payload) {
   return cambiarEstadoAdministrativoOrganizacion_(payload, 'Activo', 'REACTIVAR_ORGANIZACION');
 }

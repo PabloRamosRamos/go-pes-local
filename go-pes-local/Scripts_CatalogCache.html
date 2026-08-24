@@ -73,10 +73,13 @@
     if (window.APP.state.catalogStatus.organizacion) return Promise.resolve();
 
     return window.api('getOrganizacionesModuloClient').then(data => {
-      window.APP.state.organizacionesModulo = (data && data.organizaciones) || [];
-      window.APP.state.organizacionesModuloFetchedAt = Date.now();
+      // Lista liviana SOLO para autocomplete/catálogo. No tocar organizacionesModulo
+      // ni su timestamp: ese estado es de la grilla y lo llena
+      // getOrganizacionesConGruposClient (con grupos de vecinos + contactos +
+      // estado de avance). Compartirlo hacía que la grilla mostrara datos
+      // incompletos si el catálogo cargaba primero (TTL 30s → retorno temprano).
       mergeCatalogs_({
-        organizacionesList: window.APP.state.organizacionesModulo
+        organizacionesList: (data && data.organizaciones) || []
       });
       window.APP.state.catalogStatus.organizacion = true;
     });

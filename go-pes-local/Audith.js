@@ -1192,6 +1192,29 @@ function goPesTestAvance_() {
     assertFalse_(goPesIsHitoCreacionOrganizacion_(null));
   });
 
+  // goPesHitoRowMatchesOrgOrSolicitud_ (regresión: hitos de preconstitución
+  // guardados solo con solicitud_id — bug "El hito PRE_0X no existe")
+  s.test('hitoMatch: coincide por organizacion_id', function() {
+    assertTrue_(goPesHitoRowMatchesOrgOrSolicitud_(
+      { organizacion_id: 'ORG-1', solicitud_id: 'SOL-1' }, 'ORG-1', 'SOL-1'));
+  });
+  s.test('hitoMatch: hito preconstitución (org en blanco) coincide por solicitud_id', function() {
+    assertTrue_(goPesHitoRowMatchesOrgOrSolicitud_(
+      { organizacion_id: '', solicitud_id: 'SOL-1' }, 'ORG-1', 'SOL-1'));
+  });
+  s.test('hitoMatch: no coincide si org y solicitud son distintas', function() {
+    assertFalse_(goPesHitoRowMatchesOrgOrSolicitud_(
+      { organizacion_id: 'ORG-2', solicitud_id: 'SOL-2' }, 'ORG-1', 'SOL-1'));
+  });
+  s.test('hitoMatch: fila vacía sin org ni solicitud no coincide', function() {
+    assertFalse_(goPesHitoRowMatchesOrgOrSolicitud_(
+      { organizacion_id: '', solicitud_id: '' }, 'ORG-1', 'SOL-1'));
+  });
+  s.test('hitoMatch: no coincide por solicitud vacía en criterio', function() {
+    assertFalse_(goPesHitoRowMatchesOrgOrSolicitud_(
+      { organizacion_id: '', solicitud_id: '' }, 'ORG-1', ''));
+  });
+
   // funciones que requieren spreadsheet o auth
   s.skip('getCatalogosAvanceClient',      'requiere lectura CAT_Hitos_Avance + auth');
   s.skip('getOrganizacionesAvanceClient', 'requiere lectura MAE_Organizaciones + auth');

@@ -1517,6 +1517,20 @@ function goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline) {
 }
 
 /**
+ * ¿La fila de hito pertenece a esta organización? Coincide por organizacion_id
+ * O por solicitud_id (mismo criterio con que goPesGetTimelineAvanceRows_ arma el
+ * timeline). Necesario porque los hitos de preconstitución se registran antes de
+ * que exista la organización y quedan guardados solo con solicitud_id.
+ */
+function goPesHitoRowMatchesOrgOrSolicitud_(row, organizacionId, solicitudId) {
+  const rowOrgId = String((row && row.organizacion_id) || '').trim();
+  const rowSolId = String((row && row.solicitud_id) || '').trim();
+  const orgId = String(organizacionId || '').trim();
+  const solId = String(solicitudId || '').trim();
+  return (!!orgId && rowOrgId === orgId) || (!!solId && rowSolId === solId);
+}
+
+/**
  * Actualizar fechas de hitos existentes de una organización
  * Solo permite editar la fecha, no otros campos ni crear nuevos hitos
  */
@@ -1538,14 +1552,14 @@ function actualizarFechasHitos(payload) {
   if (!org) throw new Error('No se encontró la organización indicada.');
 
   const solicitudId = String(org.solicitud_id || '').trim();
-  const timeline = goPesGetTimelineAvanceRows_(organizacionId);
+  const timeline = goPesGetTimelineAvanceRows_(organizacionId, solicitudId);
 
-  // Validar que solo se editen hitos existentes
-  const hitosExistentes = timeline.filter(function(h) {
-    return String(h.organizacion_id || '').trim() === organizacionId;
-  });
-
-  const codigosExistentes = hitosExistentes.map(function(h) {
+  // Validar que solo se editen hitos existentes. El timeline ya viene acotado a
+  // esta organización uniendo por organizacion_id Y por solicitud_id: los hitos
+  // de preconstitución (PRE_01..PRE_04) se registran antes de que exista la
+  // organización, por lo que quedan guardados solo con solicitud_id. Por eso NO
+  // se re-filtra por organizacion_id (rechazaría esos hitos como inexistentes).
+  const codigosExistentes = timeline.map(function(h) {
     return String(h.codigo_hito || '').trim();
   });
 
@@ -1614,7 +1628,10 @@ function actualizarFechasHitos(payload) {
 
   for (var i = 0; i < data.length; i++) {
     const row = data[i];
-    if (String(row.organizacion_id || '') !== organizacionId) continue;
+    // Coincidir con el mismo criterio del timeline (organizacion_id O
+    // solicitud_id), para poder actualizar hitos de preconstitución guardados
+    // solo con solicitud_id antes de que existiera la organización.
+    if (!goPesHitoRowMatchesOrgOrSolicitud_(row, organizacionId, solicitudId)) continue;
 
     const codigoHito = String(row.codigo_hito || '').trim();
     const act = actualizaciones.find(function(a) {

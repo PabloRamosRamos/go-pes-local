@@ -266,8 +266,21 @@ function getOrganizacionModuloDetalle(payload) {
     })
     .slice(0, 10);
 
+  const catalogoHitos = (getSheetData_(GO_PES_V2.SHEETS.CAT_HITOS_AVANCE) || [])
+    .filter(function(r) { return String(r.codigo_hito || '').trim(); })
+    .map(function(r) {
+      return {
+        codigo_hito: String(r.codigo_hito || '').trim(),
+        nombre_hito: String(r.nombre_hito || '').trim(),
+        orden_hito: Number(r.orden_hito || 0),
+        tramo: String(r.tramo || '').trim()
+      };
+    })
+    .sort(function(a, b) { return a.orden_hito - b.orden_hito; });
+
   return serializeForClient_({
     organizacion: org,
+    catalogo_hitos: catalogoHitos,
     resumen: {
       cantidad_socios: socios.length,
       cantidad_casos: casos.length,
@@ -359,6 +372,23 @@ function cambiarEstadoAdministrativoOrganizacion_(payload, estado, action) {
   logProcessing_('INFO', action, 'organizacion', organizacionId, user.email, 'OK', { estado: estado, motivo: motivo });
   logUserAction_(action, 'organizacion', organizacionId, 'OK', { estado: estado, motivo: motivo });
   return serializeForClient_({ ok: true, organizacion_id: organizacionId, estado_general_organizacion: estado });
+}
+
+/**
+ * Guard de solo-lectura: lanza si la organización está suspendida o eliminada.
+ * Se llama en cada endpoint mutante que opera sobre una organización, para que
+ * una org suspendida solo pueda visualizarse (no editar, avanzar, beneficios ni socios).
+ * Si el id viene vacío (p. ej. grupo de vecinos sin organización), no aplica.
+ */
+function assertOrganizacionActiva_(organizacionId) {
+  var id = String(organizacionId || '').trim();
+  if (!id) return;
+  var org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', id, false);
+  if (!org) return; // org aún no existe (p. ej. hito de creación): no bloquear
+  var estado = String(org.estado_general_organizacion || '').toLowerCase();
+  if (estado.indexOf('suspend') !== -1 || estado.indexOf('elimin') !== -1) {
+    throw new Error('La organización está suspendida: solo se permite visualizar. Reactívala para poder modificarla.');
+  }
 }
 
 function goPesOrgGetSheetRowsSafe_(sheetName, field, value) {

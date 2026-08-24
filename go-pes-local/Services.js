@@ -1071,6 +1071,7 @@ function guardarOrganizacion(payload) {
   const existingOrg = payload.organizacion_id
     ? findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', payload.organizacion_id, false)
     : null;
+  assertOrganizacionActiva_(payload.organizacion_id); // suspendida = solo lectura
 
   appendRowObject_(GO_PES_V2.SHEETS.RAW_ORGANIZACIONES, {
     created_at: now,
@@ -1178,6 +1179,7 @@ function guardarInstrumento(payload) {
   const organizacionId = String(payload.organizacion_id || '').trim();
   const organizacion = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
   if (!organizacion) throw new Error('No se encontró la organización indicada para registrar el instrumento.');
+  assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
 
   const now = new Date();
   const orgInstrumentoId = String(payload.org_instrumento_id || '').trim() || nextId_('instrumento', 'OIN');
@@ -1274,6 +1276,7 @@ function guardarRequisito(payload) {
   const orgInstrumentoId = String(payload.org_instrumento_id || '').trim();
   const organizacion = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
   if (!organizacion) throw new Error('No se encontró la organización indicada para registrar el requisito.');
+  assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
 
   const instrumento = findByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'org_instrumento_id', orgInstrumentoId, false);
   if (!instrumento) throw new Error('No se encontró el instrumento indicado para registrar el requisito.');

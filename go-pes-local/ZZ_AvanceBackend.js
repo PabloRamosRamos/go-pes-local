@@ -253,6 +253,7 @@ function registrarHitoAvance(payload) {
   payload = payload || {};
 
   const organizacionId = String(payload.organizacion_id || '').trim();
+  assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
   const solicitudIdPayload = String(payload.solicitud_id || '').trim();
   const codigoHito = String(payload.codigo_hito || '').trim();
   const observacion = String(payload.observacion || '').trim();
@@ -522,6 +523,7 @@ function cambiarEstadoAvance(payload) {
 
   if (!organizacionId) throw new Error('Falta organizacion_id.');
   if (!nuevoEstado) throw new Error('Falta estado_avance.');
+  assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
 
   const estadosPermitidos = ((GO_PES_V2.AVANCE && GO_PES_V2.AVANCE.ESTADOS) || ['Activo', 'Stand by', 'Detenido', 'Finalizado'])
     .map(function(x) { return String(x); });
@@ -1550,6 +1552,7 @@ function actualizarFechasHitos(payload) {
 
   const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
   if (!org) throw new Error('No se encontró la organización indicada.');
+  assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
 
   const solicitudId = String(org.solicitud_id || '').trim();
   const timeline = goPesGetTimelineAvanceRows_(organizacionId, solicitudId);

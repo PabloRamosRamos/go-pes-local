@@ -182,6 +182,7 @@ function actualizarCargoSocioOrganizacion(payload) {
   if (String(socio.organizacion_id || '').trim() !== organizacionId) {
     throw new Error('El socio no pertenece a la organización indicada.');
   }
+  assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
 
   const now = new Date();
   const nextSocio = Object.assign({}, socio, {
@@ -219,6 +220,7 @@ function editarDatosSocio(payload) {
 
     const socio = findByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioId, false);
     if (!socio) throw new Error('No se encontro el socio indicado.');
+    assertOrganizacionActiva_(socio.organizacion_id); // suspendida = solo lectura
 
     const cargo = (payload.cargo !== undefined) ? String(payload.cargo || '').trim() : (socio.cargo || '');
     if (cargo && !goPesSocioCargoPermitido_(cargo)) throw new Error('Cargo de socio no permitido: ' + cargo);
@@ -404,6 +406,7 @@ function vincularSocioManual(payload) {
   const organizacionIdIn = String(payload.organizacion_id || '').trim();
   if (!socioId) throw new Error('Falta socio_id.');
   if (!solicitudIdIn && !organizacionIdIn) throw new Error('Debes indicar el grupo u organización destino.');
+  assertOrganizacionActiva_(organizacionIdIn); // suspendida = solo lectura
 
   const lock = LockService.getDocumentLock();
   lock.waitLock(30000);

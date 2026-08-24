@@ -146,6 +146,7 @@ function guardarCamaras1414Organizacion(payload) {
   payload = payload || {};
   const organizacionId = String(payload.organizacion_id || '').trim();
   if (!organizacionId) throw new Error('Falta organizacion_id.');
+  assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
 
   const sync = ensureCamaras1414EligibilityForOrg_(organizacionId);
   if (!sync.assignment) {
@@ -1022,6 +1023,14 @@ function goPesUpsertFondese(payload) {
   var S = GO_PES_V2.SHEETS;
   goPesEnsureFondeseSheets_();
 
+  // suspendida = solo lectura (resolver la org del payload o del registro existente)
+  var _orgFondese = String(p.organizacion_id || '').trim();
+  if (!_orgFondese && String(p.fondese_id || '').trim()) {
+    var _rowF = getSheetData_(S.FACT_FONDESE).find(function(r) { return String(r.fondese_id || '').trim() === String(p.fondese_id).trim(); });
+    if (_rowF) _orgFondese = String(_rowF.organizacion_id || '').trim();
+  }
+  assertOrganizacionActiva_(_orgFondese);
+
   var checklistRaw = p.checklist_docs;
   if (checklistRaw && typeof checklistRaw === 'object') {
     checklistRaw = JSON.stringify(checklistRaw);
@@ -1315,6 +1324,7 @@ function goPesIngresarFondeseArmado(payload) {
   var p = payload || {};
   var orgId = String(p.organizacion_id || '').trim();
   if (!orgId) throw new Error('Falta la organizacion.');
+  assertOrganizacionActiva_(orgId); // suspendida = solo lectura
   goPesEnsureFondeseSheets_();
   var S = GO_PES_V2.SHEETS;
 

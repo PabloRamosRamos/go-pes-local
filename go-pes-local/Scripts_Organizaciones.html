@@ -476,15 +476,16 @@
     viewer.innerHTML =
       '<div class="org-viewer__head">' +
         '<div class="org-viewer__icon"><span class="material-symbols-outlined">apartment</span></div>' +
-        '<div class="org-viewer__ttl"><span class="eyebrow">Ficha de organización</span>' +
+        '<div class="org-viewer__ttl"><span class="eyebrow">Ficha de organización' +
+          (inactiva ? ' · <strong style="color:var(--warning-accent,#b36a00)">Suspendida · solo lectura</strong>' : '') + '</span>' +
         '<h3 title="' + nombre + '">' + nombreCorto + '</h3></div>' +
         '<div class="org-viewer__actions">' +
           '<button type="button" class="secondary-btn btn--sm" data-v-avance="' + orgId + '"><span class="material-symbols-outlined">timeline</span>Avance</button>' +
           '<button type="button" class="secondary-btn btn--sm" data-v-socios="' + orgId + '" data-v-nombre="' + nombre + '"><span class="material-symbols-outlined">badge</span>Socios</button>' +
-          '<button type="button" class="secondary-btn btn--sm" data-v-editar="1"><span class="material-symbols-outlined">edit</span>Editar</button>' +
           (inactiva
             ? '<button type="button" class="secondary-btn btn--sm" data-v-react="1"><span class="material-symbols-outlined">play_circle</span>Reactivar</button>'
-            : '<button type="button" class="secondary-btn btn--sm" data-v-suspend="1"><span class="material-symbols-outlined">pause_circle</span>Suspender</button>') +
+            : '<button type="button" class="secondary-btn btn--sm" data-v-editar="1"><span class="material-symbols-outlined">edit</span>Editar</button>' +
+              '<button type="button" class="secondary-btn btn--sm" data-v-suspend="1"><span class="material-symbols-outlined">pause_circle</span>Suspender</button>') +
         '</div>' +
       '</div>' +
       '<div class="org-viewer__body">' + buildOrganizacionDetalleBodyHtml_(data) + '</div>';
@@ -834,6 +835,13 @@
     const r   = data.resumen     || {};
     const avanceHitos = (data.avance && data.avance.hitos) || [];
 
+    // Muchas fechas viven en los hitos de Avance, no en MAE_Organizaciones.
+    // Fallback: si el campo de la organización está vacío, usar la fecha del hito.
+    const hitoFecha_ = function(cod) {
+      const h = avanceHitos.find(function(x){ return String(x.codigo_hito || '') === cod; });
+      return (h && h.fecha_hito) ? h.fecha_hito : '';
+    };
+
     const hitoPre03 = avanceHitos.find(h => String(h.codigo_hito || '') === 'PRE_03');
     const fechaAsambleaAsignada = hitoPre03 ? (hitoPre03.fecha_asamblea_asignada || 'Sin registrar') : 'Sin registrar';
     const hitoPre07 = avanceHitos.find(h => String(h.codigo_hito || '') === 'PRE_07');
@@ -877,9 +885,9 @@
           ['Fecha asignada asamblea (Hito 3)', fechaAsambleaAsignada]
         ])}
         ${organizacionBlockHtml_('Directiva y constitución', [
-          ['Fecha inicio',           org.fecha_inicio_acompanamiento],
-          ['Asamblea constitución',  org.fecha_asamblea_constitucion],
-          ['Ratificación',           org.fecha_ratificacion],
+          ['Fecha inicio',           org.fecha_inicio_acompanamiento || hitoFecha_('PRE_01')],
+          ['Asamblea constitución',  org.fecha_asamblea_constitucion || hitoFecha_('PRE_04')],
+          ['Ratificación',           org.fecha_ratificacion || hitoFecha_('FOR_02')],
           ['Vigencia directiva',     org.vigencia_directiva_hasta],
           ['Directiva vigente',      org.directiva_vigente_flag],
           ['Personalidad jurídica',  org.personalidad_juridica_flag],
@@ -1053,7 +1061,7 @@
           </div>
 
           <!-- Acordeones 2 y 3: Hitos -->
-          ${renderHitosAccordion_(timeline)}
+          ${renderHitosAccordion_(timeline, (data && data.catalogo_hitos) || [])}
         </div>
 
         <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">
@@ -1062,7 +1070,10 @@
     `;
   }
 
-  function renderHitosAccordion_(timeline) {
+  function renderHitosAccordion_(timeline, catalogo) {
+    // Nombres reales desde el catálogo de hitos (evita etiquetas hardcodeadas desactualizadas).
+    const nombrePorCodigo = {};
+    (catalogo || []).forEach(function(c){ if (c && c.codigo_hito) nombrePorCodigo[c.codigo_hito] = c.nombre_hito || ''; });
     // Crear mapa de hitos con sus fechas
     const hitosMap = {};
     (timeline || []).forEach(h => {
@@ -1123,7 +1134,7 @@
 
       return `
         <div class="field${disabledClass}" data-hito="${codigo}">
-          <label>${labels[idx]}</label>
+          <label>${nombrePorCodigo[codigo] ? ((idx + 1) + '. ' + nombrePorCodigo[codigo]) : labels[idx]}</label>
           <input type="date" id="inline-fecha-${codigo}" data-codigo="${codigo}" value="${fecha}" ${maxAttr} ${disabled ? 'disabled' : ''}>
         </div>
       `;
@@ -1155,7 +1166,7 @@
 
       return `
         <div class="field${disabledClass}" data-hito="${codigo}">
-          <label>${tramo2Labels[idx]}</label>
+          <label>${nombrePorCodigo[codigo] ? ((idx + 8) + '. ' + nombrePorCodigo[codigo]) : tramo2Labels[idx]}</label>
           <input type="date" id="inline-fecha-${codigo}" data-codigo="${codigo}" value="${fecha}" ${minAttr} ${maxAttr} ${disabled ? 'disabled' : ''}>
         </div>
       `;

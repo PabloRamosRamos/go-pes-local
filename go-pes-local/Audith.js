@@ -92,6 +92,8 @@ function goPesRunAllTests() {
   acumular(goPesTestBeneficios_());
   acumular(goPesTestSecurity_());
   acumular(goPesTestAlertas_());
+  acumular(goPesTestDashboard_());
+  acumular(goPesTestOrganizaciones_());
 
   Logger.log('==========================================');
   Logger.log('  TOTAL: ' + total.passed + ' pasados, ' + total.failed + ' fallados' +
@@ -1225,6 +1227,130 @@ function goPesTestAvance_() {
   return s.run();
 }
 
+// ── SUITE: ORGANIZACIONES (guard de suspensión) ───────────────────────────────
+
+function goPesTestOrganizaciones_() {
+  var s = createTestSuite_('Organizaciones');
+  var origFind = findByField_;
+  function withOrg_(estado, fn) {
+    findByField_ = function() { return estado === null ? null : { estado_general_organizacion: estado }; };
+    try { fn(); } finally { findByField_ = origFind; }
+  }
+
+  s.test('assertOrganizacionActiva_: org suspendida bloquea (solo lectura)', function() {
+    withOrg_('Suspendida', function() {
+      assertThrows_(function() { assertOrganizacionActiva_('ORG-1'); }, 'debe bloquear org suspendida');
+    });
+  });
+  s.test('assertOrganizacionActiva_: org eliminada bloquea', function() {
+    withOrg_('Eliminada', function() {
+      assertThrows_(function() { assertOrganizacionActiva_('ORG-1'); }, 'debe bloquear org eliminada');
+    });
+  });
+  s.test('assertOrganizacionActiva_: org activa no bloquea', function() {
+    withOrg_('Activo', function() {
+      assertOrganizacionActiva_('ORG-1'); // no debe lanzar
+      assertTrue_(true);
+    });
+  });
+  s.test('assertOrganizacionActiva_: id vacío no consulta ni bloquea (grupo de vecinos)', function() {
+    var called = false;
+    findByField_ = function() { called = true; return null; };
+    try {
+      assertOrganizacionActiva_('');
+      assertFalse_(called, 'no debe consultar con id vacío');
+    } finally { findByField_ = origFind; }
+  });
+
+  return s.run();
+}
+
+// ── SUITE: DASHBOARD (agregadores Alt A) ──────────────────────────────────────
+
+function goPesTestDashboard_() {
+  var s = createTestSuite_('Dashboard');
+  var origGetSheet = getSheetData_;
+  function withSheets_(map, fn) {
+    getSheetData_ = function(name) { return map[name] || []; };
+    try { fn(); } finally { getSheetData_ = origGetSheet; }
+  }
+
+  // calcularFondeseResumen_
+  s.test('fondeseResumen: embudo(8), adjudicadas, montos y rendiciones pendientes', function() {
+    withSheets_({ 'FACT_Fondese': [
+      { estado_proceso: 'en_armado' },
+      { estado_proceso: 'ingresada' },
+      { estado_proceso: 'adjudicado', monto_adjudicado: 1000000 },
+      { estado_proceso: 'en_rendicion', estado_rendicion: 'pendiente', monto_adjudicado: 500000, monto_ejecutado: 200000 },
+      { estado_proceso: 'cerrado', estado_rendicion: 'aprobada' }
+    ] }, function() {
+      var r = calcularFondeseResumen_();
+      assertEqual_(r.total, 5);
+      assertEqual_(r.embudo.length, 8);
+      assertEqual_(r.adjudicadas, 3);            // adjudicado + en_rendicion + cerrado (idx >= adjudicado)
+      assertEqual_(r.montoAdjudicado, 1500000);
+      assertEqual_(r.montoEjecutado, 200000);
+      assertEqual_(r.rendicionesPendientes, 1);  // en_rendicion no aprobada
+    });
+  });
+
+  // calcularCapacitacionesResumen_
+  s.test('capacitacionesResumen: inscripciones sin canceladas, personas únicas y ocupación', function() {
+    withSheets_({
+      'FACT_Form_Eventos': [ { tipo: 'Taller', cupo_maximo: 10 }, { tipo: 'Charla', cupo_maximo: 0 }, { tipo: 'Taller', cupo_maximo: 10 } ],
+      'FACT_Form_Inscripciones': [
+        { rut: '1-9', estado_inscripcion: 'confirmada' },
+        { rut: '1-9', estado_inscripcion: 'confirmada' },
+        { rut: '2-7', estado_inscripcion: 'cancelada' },
+        { rut: '3-5', estado_inscripcion: 'pendiente' }
+      ]
+    }, function() {
+      var r = calcularCapacitacionesResumen_();
+      assertEqual_(r.eventos, 3);
+      assertEqual_(r.inscripciones, 3);     // excluye 1 cancelada
+      assertEqual_(r.personasUnicas, 2);    // RUT distintos no cancelados: 1-9, 3-5
+      assertEqual_(r.ocupacionPct, 15);     // 3 / 20
+      assertEqual_(r.porTipo[0].label, 'Taller');
+      assertEqual_(r.porTipo[0].count, 2);
+    });
+  });
+
+  // calcularEstadosAvance_
+  s.test('estadosAvance: sólo cuenta el estado vigente (activo_flag)', function() {
+    withSheets_({ 'FACT_Avance_Estado': [
+      { estado_avance: 'Activo', activo_flag: true },
+      { estado_avance: 'Activo', activo_flag: true },
+      { estado_avance: 'Detenido', activo_flag: false },   // histórico: no cuenta
+      { estado_avance: 'Finalizado', activo_flag: 'true' }
+    ] }, function() {
+      var r = calcularEstadosAvance_();
+      assertEqual_(r['Activo'], 2);
+      assertEqual_(r['Detenido'], 0);
+      assertEqual_(r['Finalizado'], 1);
+    });
+  });
+
+  // calcularCasosResumen_
+  s.test('casosResumen: total, grupos (sin organización) y por UV', function() {
+    withSheets_({ 'MAE_Casos': [
+      { uv: '12', organizacion_id: 'ORG-1' },
+      { uv: '12', organizacion_id: '' },
+      { uv: '8',  organizacion_id: '' }
+    ] }, function() {
+      var r = calcularCasosResumen_({});
+      assertEqual_(r.total, 3);
+      assertEqual_(r.grupos, 2);
+      assertEqual_(r.porUv[0].label, 'UV 12');
+      assertEqual_(r.porUv[0].count, 2);
+    });
+  });
+
+  s.skip('getDashboardData',        'requiere auth + lectura de múltiples hojas');
+  s.skip('calcularCamarasResumen_', 'depende de helpers de beneficios + hojas de detalle');
+
+  return s.run();
+}
+
 // ── SUITE 5: BENEFICIOS ───────────────────────────────────────────────────────
 
 function goPesTestBeneficios_() {
@@ -1468,15 +1594,17 @@ function goPesTestAlertas_() {
     assertEqual_(areas.BENEFICIOS, 'beneficios', 'Área BENEFICIOS válida');
   });
 
-  s.test('GO_PES_V2.ALERTAS.HITOS contiene hitos requeridos', function() {
+  s.test('GO_PES_V2.ALERTAS.HITOS usa códigos reales del catálogo (no PRE_08..PRE_11)', function() {
     var hitos = GO_PES_V2.ALERTAS.HITOS;
-    assertEqual_(hitos.PRE_04, 'PRE_04', 'Hito PRE_04 debe existir');
-    assertEqual_(hitos.PRE_05, 'PRE_05', 'Hito PRE_05 debe existir');
-    assertEqual_(hitos.PRE_07, 'PRE_07', 'Hito PRE_07 debe existir');
-    assertEqual_(hitos.PRE_08, 'PRE_08', 'Hito PRE_08 debe existir');
-    assertEqual_(hitos.PRE_09, 'PRE_09', 'Hito PRE_09 debe existir');
-    assertEqual_(hitos.PRE_10, 'PRE_10', 'Hito PRE_10 debe existir');
-    assertEqual_(hitos.PRE_11, 'PRE_11', 'Hito PRE_11 debe existir');
+    // Códigos válidos del catálogo CAT_Hitos_Avance: 7 PRE + 8 FOR.
+    var validos = ['PRE_01','PRE_02','PRE_03','PRE_04','PRE_05','PRE_06','PRE_07',
+                   'FOR_01','FOR_02','FOR_03','FOR_04','FOR_05','FOR_06','FOR_07','FOR_08'];
+    Object.keys(hitos).forEach(function(k) {
+      assertTrue_(validos.indexOf(hitos[k]) !== -1,
+        'Hito ' + k + ' (' + hitos[k] + ') debe ser un código real del catálogo');
+    });
+    // El certificado definitivo (hito 11) debe mapear a FOR_04, como en el resto del sistema.
+    assertEqual_(hitos.FOR_04, 'FOR_04', 'Cert. definitivo (hito 11) = FOR_04');
   });
 
   s.test('GO_PES_V2.ALERTAS.ALERTAS_IDS contiene IDs de alertas', function() {

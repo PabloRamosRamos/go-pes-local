@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inicio · Alt A — Prioridad operativa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;750&display=swap" rel="stylesheet">
+<link href="_shared.css" rel="stylesheet">
+<style>
+  .hero{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:16px}
+  .hero .tile:first-child{grid-column:span 2}
+  @media(max-width:1000px){.hero{grid-template-columns:repeat(3,1fr)}.hero .tile:first-child{grid-column:span 3}}
+  @media(max-width:620px){.hero{grid-template-columns:repeat(2,1fr)}.hero .tile:first-child{grid-column:span 2}}
+  .two{grid-template-columns:1fr 1fr}
+  .three{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:900px){.two,.three{grid-template-columns:1fr}}
+  .section-t{font-size:.82rem;font-weight:700;margin:26px 0 12px;color:var(--text);display:flex;align-items:center;gap:8px}
+  .section-t::before{content:"";width:4px;height:15px;border-radius:2px;background:var(--brand)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brandmark">
+      <div class="logo">GP</div>
+      <div><h1>GO-PES · Dashboard</h1><p>Programa Estamos Seguros · Providencia</p></div>
+    </div>
+    <div class="tools">
+      <span class="fresh"><span class="dot"></span>Actualizado hace 4 min · 24-08-2026 09:51</span>
+      <button class="themebtn" onclick="tg()">◐ Tema</button>
+    </div>
+  </div>
+
+  <!-- HERO: los números que se miran primero -->
+  <div class="hero">
+    <div class="card tile">
+      <div class="k"><span class="ic" style="background:var(--ok-bg);color:var(--ok)">✓</span>Comités constituidos</div>
+      <div class="v">42</div><div class="ctx">de 118 organizaciones · cert. definitivo (FOR_04)</div>
+    </div>
+    <div class="card tile"><div class="k">En gestión</div><div class="v">76</div><div class="ctx">orgs activas sin FOR_04</div></div>
+    <div class="card tile"><div class="k">Próximas asambleas</div><div class="v">11</div><div class="ctx">PRE_03 hecho, falta PRE_04</div></div>
+    <div class="card tile"><div class="k">Casos registrados</div><div class="v">1.284</div><div class="ctx">96 grupos sin organización</div></div>
+    <div class="card tile"><div class="k">FONDESE adjudicadas</div><div class="v">5</div><div class="ctx">$38,5M adjudicado · $21,3M ejecutado</div></div>
+  </div>
+
+  <!-- REQUIERE ATENCIÓN: status reservado, icono + etiqueta -->
+  <div class="section-t">Requiere atención</div>
+  <div class="status-row">
+    <div class="chip ok"><div class="ci">✓</div><div><div class="cv">88</div><div class="cl">Formalización vigente</div></div></div>
+    <div class="chip warn"><div class="ci">!</div><div><div class="cv">19</div><div class="cl">Formalización por vencer</div></div></div>
+    <div class="chip crit"><div class="ci">▲</div><div><div class="cv">11</div><div class="cl">Formalización atrasada</div></div></div>
+    <div class="chip serious"><div class="ci">◷</div><div><div class="cv">3</div><div class="cl">CÁMARAS fuera de plazo (5 días háb.)</div></div></div>
+    <div class="chip crit"><div class="ci">▲</div><div><div class="cv">2</div><div class="cl">Rendiciones FONDESE por vencer</div></div></div>
+  </div>
+
+  <!-- APOYO: distribuciones y embudos -->
+  <div class="section-t">Avance y organizaciones</div>
+  <div class="grid two">
+    <div class="card card-pad">
+      <h3>Avance por hito</h3><p class="sub">% de organizaciones que cumplió cada hito clave</p>
+      <div class="funnel" id="fn-avance"></div>
+    </div>
+    <div class="card card-pad">
+      <h3>Organizaciones por estado</h3><p class="sub">estado de constitución · total 118</p>
+      <div class="donut-wrap">
+        <div class="donut" style="background:conic-gradient(var(--c-teal) 0 51.7%,var(--c-green) 51.7% 87.3%,var(--c-amber) 87.3% 94.9%,var(--c-rose) 94.9% 100%)">
+          <div class="center"><b>118</b><span>orgs</span></div>
+        </div>
+        <div class="legend">
+          <div class="li"><span class="sw" style="background:var(--c-teal)"></span><span class="nm">En proceso</span><span class="ct">61</span></div>
+          <div class="li"><span class="sw" style="background:var(--c-green)"></span><span class="nm">Constituida</span><span class="ct">42</span></div>
+          <div class="li"><span class="sw" style="background:var(--c-amber)"></span><span class="nm">Stand by</span><span class="ct">9</span></div>
+          <div class="li"><span class="sw" style="background:var(--c-rose)"></span><span class="nm">Inactiva</span><span class="ct">6</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="grid two" style="margin-top:16px">
+    <div class="card card-pad">
+      <h3>Organizaciones por UV</h3><p class="sub">Top 6 unidades vecinales</p>
+      <div class="bars" id="bars-uv"></div>
+    </div>
+    <div class="card card-pad">
+      <h3>Estados de avance</h3><p class="sub">estado vigente por organización</p>
+      <div class="status-row" style="gap:10px">
+        <div class="chip ok" style="min-width:120px"><div class="ci">▶</div><div><div class="cv">92</div><div class="cl">Activo</div></div></div>
+        <div class="chip warn" style="min-width:120px"><div class="ci">॥</div><div><div class="cv">14</div><div class="cl">Stand by</div></div></div>
+        <div class="chip crit" style="min-width:120px"><div class="ci">■</div><div><div class="cv">8</div><div class="cl">Detenido</div></div></div>
+        <div class="chip" style="min-width:120px;background:var(--surface-2)"><div class="ci" style="background:var(--text-soft);color:#fff">✓</div><div><div class="cv">4</div><div class="cl">Finalizado</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-t">Beneficios</div>
+  <div class="grid two">
+    <div class="card card-pad">
+      <h3>FONDESE · postulaciones por estado</h3><p class="sub">ciclo de proceso · edición 2026</p>
+      <div class="funnel" id="fn-fondese"></div>
+    </div>
+    <div class="card card-pad">
+      <h3>CÁMARAS 1414</h3><p class="sub">flujo elegible → solicitado → instalado</p>
+      <div class="funnel" id="fn-camaras"></div>
+      <div style="margin-top:14px;display:flex;gap:10px">
+        <div class="chip" style="background:var(--surface-2)"><div class="ci" style="background:var(--c-teal);color:#fff">▦</div><div><div class="cv">18</div><div class="cl">Cámaras instaladas</div></div></div>
+        <div class="chip serious"><div class="ci">◷</div><div><div class="cv">3</div><div class="cl">Elegibles fuera de plazo</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-t">Capacitaciones</div>
+  <div class="grid three">
+    <div class="card tile"><div class="k">Eventos</div><div class="v">23</div><div class="ctx">Taller 11 · Charla 7 · Curso 5</div></div>
+    <div class="card tile"><div class="k">Inscripciones</div><div class="v">412</div><div class="ctx">no canceladas</div></div>
+    <div class="card tile"><div class="k">Personas capacitadas</div><div class="v">268</div><div class="ctx">RUT únicos · 78% ocupación</div></div>
+  </div>
+
+  <p class="note">Maqueta estática · datos de ejemplo · solo agregados (sin PII) · sello de frescura simulado.
+  Alt A — <b>Prioridad operativa</b>: los números de decisión y los riesgos (status) van arriba; las distribuciones y embudos quedan como apoyo abajo.</p>
+</div>
+<script>
+function tg(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark';r.setAttribute('data-theme',d?'light':'dark');}
+var avance=[['Reunión informativa',92],['Asamblea constitutiva',74],['Cert. provisorio',58],['Cert. definitivo',36],['RUT organización',30],['Cuenta corriente',24],['Personalidad jurídica',20]];
+var fondese=[['En armado',14,100],['Ingresada',9,64],['En evaluación',7,50],['Adjudicado',5,36],['En ejecución',4,29],['En rendición',3,21],['Cerrado',8,57]];
+var camaras=[['Elegible',12,100],['Solicitado',7,58],['Instalado',5,42]];
+var uv=[['UV 12',18,100],['UV 8',15,83],['UV 5',13,72],['UV 20',11,61],['UV 3',9,50],['UV 15',7,39]];
+function funnel(id,rows){document.getElementById(id).innerHTML=rows.map(function(r){var pct=r.length>2?r[2]:r[1];return '<div class="fn-row"><div class="fn-top"><span class="l">'+r[0]+'</span><span class="r">'+r[1]+(r.length>2?'':'%')+'</span></div><div class="fn-track"><div class="fn-fill" style="width:'+pct+'%"></div></div></div>';}).join('');}
+funnel('fn-avance',avance);funnel('fn-fondese',fondese);funnel('fn-camaras',camaras);
+document.getElementById('bars-uv').innerHTML=uv.map(function(r){return '<div class="bar-row"><span class="lbl">'+r[0]+'</span><div class="bar-track"><div class="bar-fill" style="width:'+r[2]+'%"></div></div><span class="n">'+r[1]+'</span></div>';}).join('');
+</script>
+</body>
+</html>

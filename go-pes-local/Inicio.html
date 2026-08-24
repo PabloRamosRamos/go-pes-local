@@ -1,25 +1,17 @@
 <script>
   window.GO_PES_INICIO = (() => {
-    var PALETTE = ['#3D96B4','#8CC63F','#03C2AE','#F5A623','#E05555','#7B61FF','#FF8C42','#4ECDC4','#A29BFE','#FD79A8'];
-    var ESTADO_COLORS = { 'constituida':'#8CC63F','en proceso':'#3D96B4','en_proceso':'#3D96B4','iniciando':'#F5A623','inactiva':'#9E9E9E','suspendida':'#E05555' };
-    // SVG gauge: circumference for r=36: 2*π*36 ≈ 226.19
-    var GAUGE_C = 2 * Math.PI * 36;
+    /* Paleta categórica validada (dataviz) — se usa vía variables CSS en Styles.html.
+       Aquí solo se referencian por nombre de variable para el donut/leyendas. */
+    var CHART_VARS = ['--dashx-c1','--dashx-c2','--dashx-c3','--dashx-c4','--dashx-c5'];
 
-    /* ══════════════════════════════════════════
-       ENTRY POINT
-    ══════════════════════════════════════════ */
+    /* ══════════════════════════════════════════ ENTRY POINT ══════════════════════════════════════════ */
     function render(options) {
       var root = options && options.root;
       var esc  = options && options.escapeHtml;
       if (!root || typeof esc !== 'function') return;
 
-      var panelData     = (options && options.panelData)     || {};
       var dashData      = (options && options.dashData)      || {};
       var onDashRefresh = options && options.onDashRefresh;
-      var summary   = panelData.summary  || {};
-      var meta      = panelData.meta     || {};
-      var alerts    = Array.isArray(panelData.alerts)    ? panelData.alerts    : [];
-      var reminders = Array.isArray(panelData.reminders) ? panelData.reminders : [];
       var filters   = dashData.filters  || {};
 
       root.innerHTML = [
@@ -32,338 +24,219 @@
           '</div>',
           '<div class="inicio-layout">',
 
-            /* ── Panel lateral: alertas operativas + calendario ── */
+            /* ── Panel lateral: alertas operativas + calendario (sin cambios) ── */
             '<aside class="inicio-alerts-panel">',
               '<div id="alertas-panel-root"></div>',
               '<div id="inicio-calendario-root"></div>',
             '</aside>',
 
-            /* ── Panel dashboard ── */
-            '<section class="inicio-dashboard-panel">',
+            /* ── Panel dashboard (rediseño Alt A) ── */
+            '<section class="inicio-dashboard-panel" id="dashx-panel">',
               '<div class="dash-panel-head">',
                 '<div><p class="eyebrow">Dashboard</p><h3>Panel ejecutivo del programa</h3></div>',
                 '<div class="dash-head-actions">',
-                  '<span class="dash-updated" id="dash-updated">' + (dashData.lastUpdated ? esc(dashData.lastUpdated) : '') + '</span>',
+                  '<span class="dashx-fresh" id="dash-updated">' + freshLabel_(dashData.lastUpdated, esc) + '</span>',
+                  '<button class="btn secondary-btn btn--sm" id="dash-pdf-btn" type="button" title="Descargar PDF (imprimir)">',
+                    '<span class="material-symbols-outlined" style="font-size:1rem">picture_as_pdf</span> PDF',
+                  '</button>',
                   '<button class="btn secondary-btn btn--sm" id="dash-refresh-btn" type="button">',
                     '<span class="material-symbols-outlined" style="font-size:1rem">refresh</span> Actualizar',
                   '</button>',
                 '</div>',
               '</div>',
               buildFilterBar_(filters, esc),
-              '<div id="dash-kpi-row" class="dash-kpi-row">' + buildKpiRow_(dashData.kpis || null, esc) + '</div>',
-              '<div id="dash-charts-top" class="dash-grid-3">' + buildChartsTop_(dashData.charts || null) + '</div>',
-              '<div id="dash-charts-mid" class="dash-grid-2">' + buildChartsMid_(dashData.charts || null) + '</div>',
-              '<div id="dash-tables" class="dash-tables-row">' + buildTablesRow_(dashData.tables || null, esc) + '</div>',
+              '<div id="dashx-body">' + buildBody_(dashData, esc) + '</div>',
             '</section>',
           '</div>',
+          '<div class="dashx-print-meta" id="dashx-print-meta" aria-hidden="true"></div>',
         '</div>'
       ].join('');
 
       bindDashboard_(root, esc, onDashRefresh);
     }
 
-    /* ══════════════════════════════════════════
-       FILTER BAR
-    ══════════════════════════════════════════ */
+    /* ══════════════════════════════════════════ CUERPO ALT A ══════════════════════════════════════════ */
+    function buildBody_(d, esc) {
+      if (!d || !d.heroKpis) {
+        return '<div class="dashx-loading"><span class="material-symbols-outlined dash-spin">refresh</span><span>Cargando indicadores…</span></div>';
+      }
+      var charts = d.charts || {};
+      return [
+        buildHero_(d.heroKpis),
+        sectionTitle_('Requiere atención'),
+        buildAtencion_(d.formalizacion || {}, d.camaras || {}, d.fondese || {}),
+        sectionTitle_('Avance y organizaciones'),
+        '<div class="dashx-grid2">',
+          card_('Avance por hito', '% de organizaciones que cumplió cada hito clave', funnel_(mapAvance_(charts.avancePorHito || []))),
+          card_('Organizaciones por estado', 'estado de constitución', donut_(charts.estadosConstitucion || [], esc)),
+        '</div>',
+        '<div class="dashx-grid2">',
+          card_('Organizaciones por UV', 'Top 6 unidades vecinales', barsMag_((charts.porUv || []).slice(0,6))),
+          card_('Estados de avance', 'estado vigente por organización', estadosAvance_(d.estadosAvance || {})),
+        '</div>',
+        sectionTitle_('Beneficios'),
+        '<div class="dashx-grid2">',
+          card_('FONDESE · postulaciones por estado', montoSub_(d.fondese || {}), funnel_(mapFondese_((d.fondese || {}).embudo || []))),
+          card_('CÁMARAS 1414', 'flujo elegible → solicitado → instalado', camaras_(d.camaras || {})),
+        '</div>',
+        sectionTitle_('Capacitaciones'),
+        capacitaciones_(d.capacitaciones || {}, esc)
+      ].join('');
+    }
+
+    /* ── Hero ── */
+    function buildHero_(k) {
+      var tiles = [
+        tile_('Comités constituidos', fmt_(k.comites), 'de ' + fmt_(k.enGestion + k.comites) + ' orgs · cert. definitivo', 'ok'),
+        tile_('En gestión', fmt_(k.enGestion), 'activas sin FOR_04', ''),
+        tile_('Próximas asambleas', fmt_(k.proximasAsambleas), 'PRE_03 hecho, falta PRE_04', ''),
+        tile_('Casos registrados', fmt_(k.totalCasos), fmt_(k.grupos) + ' grupos sin organización', ''),
+        tile_('FONDESE adjudicadas', fmt_(k.fondeseAdjudicadas), money_(k.fondeseMontoAdjudicado) + ' adj · ' + money_(k.fondeseMontoEjecutado) + ' ejec.', '')
+      ];
+      return '<div class="dashx-hero">' + tiles.join('') + '</div>';
+    }
+    function tile_(label, value, ctx, tone) {
+      var t = tone ? ' dashx-tile--' + tone : '';
+      return '<div class="dashx-tile' + t + '"><div class="dashx-tile__k">' + label + '</div><div class="dashx-tile__v">' + value + '</div><div class="dashx-tile__ctx">' + ctx + '</div></div>';
+    }
+
+    /* ── Banda de atención (status reservado, icono + etiqueta) ── */
+    function buildAtencion_(form, cam, fon) {
+      var chips = [
+        chip_('ok',      'task_alt',      form.vigentes  || 0, 'Formalización vigente'),
+        chip_('warn',    'schedule',      form.porVencer || 0, 'Formalización por vencer'),
+        chip_('crit',    'warning',       form.atrasados || 0, 'Formalización atrasada'),
+        chip_('serious', 'hourglass_top', cam.fueraPlazo || 0, 'CÁMARAS fuera de plazo'),
+        chip_('crit',    'error',         fon.rendicionesPendientes || 0, 'Rendiciones FONDESE pendientes')
+      ];
+      return '<div class="dashx-status-row">' + chips.join('') + '</div>';
+    }
+    function chip_(tone, icon, value, label) {
+      return '<div class="dashx-chip dashx-chip--' + tone + '"><span class="material-symbols-outlined dashx-chip__i">' + icon + '</span><div><div class="dashx-chip__v">' + fmt_(value) + '</div><div class="dashx-chip__l">' + label + '</div></div></div>';
+    }
+
+    /* ── Embudo (barras descendentes, una tonalidad) ── */
+    function mapAvance_(rows) {
+      return (rows || []).map(function(r) { return { label: r.hito, value: r.pct, suffix: '%', width: Math.min(Math.max(r.pct||0,0),100) }; });
+    }
+    function mapFondese_(embudo) {
+      var max = (embudo || []).reduce(function(m,e){ return Math.max(m, e.count||0); }, 0) || 1;
+      return (embudo || []).map(function(e) { return { label: e.label, value: e.count, suffix: '', width: Math.round((e.count||0)/max*100) }; });
+    }
+    function funnel_(rows) {
+      if (!rows || !rows.length) return empty_();
+      return '<div class="dashx-funnel">' + rows.map(function(r) {
+        return '<div class="dashx-fn-row"><div class="dashx-fn-top"><span>' + r.label + '</span><span class="dashx-fn-n">' + fmt_(r.value) + (r.suffix||'') + '</span></div><div class="dashx-fn-track"><div class="dashx-fn-fill" style="width:' + r.width + '%"></div></div></div>';
+      }).join('') + '</div>';
+    }
+
+    /* ── Barras de magnitud (una tonalidad teal) ── */
+    function barsMag_(rows) {
+      if (!rows || !rows.length) return empty_();
+      var max = rows.reduce(function(m,r){ return Math.max(m, r.count||0); }, 0) || 1;
+      return '<div class="dashx-bars">' + rows.map(function(r) {
+        var w = Math.max(Math.round((r.count||0)/max*100), 2);
+        return '<div class="dashx-bar-row"><span class="dashx-bar-lbl">' + r.label + '</span><div class="dashx-bar-track"><div class="dashx-bar-fill" style="width:' + w + '%"></div></div><span class="dashx-bar-n">' + fmt_(r.count) + '</span></div>';
+      }).join('') + '</div>';
+    }
+
+    /* ── Donut (conic-gradient + leyenda con etiquetas directas) ── */
+    function donut_(data, esc) {
+      var rows = (data || []).filter(function(d){ return (d.count||0) > 0; });
+      if (!rows.length) return empty_();
+      var total = rows.reduce(function(s,d){ return s + (d.count||0); }, 0);
+      var acc = 0, stops = [], legend = [];
+      rows.forEach(function(d, i) {
+        var pct = (d.count||0)/total*100;
+        var v = CHART_VARS[i % CHART_VARS.length];
+        stops.push('var(' + v + ') ' + acc.toFixed(2) + '% ' + (acc+pct).toFixed(2) + '%');
+        acc += pct;
+        legend.push('<div class="dashx-lg-item"><span class="dashx-lg-sw" style="background:var(' + v + ')"></span><span class="dashx-lg-nm">' + esc(String(d.label||'')) + '</span><span class="dashx-lg-ct">' + fmt_(d.count) + '</span></div>');
+      });
+      return '<div class="dashx-donut-wrap"><div class="dashx-donut" style="background:conic-gradient(' + stops.join(',') + ')"><div class="dashx-donut__c"><b>' + fmt_(total) + '</b><span>orgs</span></div></div><div class="dashx-legend">' + legend.join('') + '</div></div>';
+    }
+
+    /* ── Estados de avance (chips de status) ── */
+    function estadosAvance_(e) {
+      var items = [
+        ['ok',      'play_arrow', 'Activo',     e['Activo']     || 0],
+        ['warn',    'pause',      'Stand by',   e['Stand by']   || 0],
+        ['crit',    'stop',       'Detenido',   e['Detenido']   || 0],
+        ['neutral', 'check',      'Finalizado', e['Finalizado'] || 0]
+      ];
+      return '<div class="dashx-status-row">' + items.map(function(it) {
+        return chip_(it[0], it[1], it[3], it[2]);
+      }).join('') + '</div>';
+    }
+
+    /* ── CÁMARAS ── */
+    function camaras_(c) {
+      var flow = [
+        { label: 'Elegible',   value: c.elegible   || 0, suffix: '', width: 100 },
+        { label: 'Solicitado', value: c.solicitado || 0, suffix: '', width: pctOf_(c.solicitado, c.elegible) },
+        { label: 'Instalado',  value: c.instalado  || 0, suffix: '', width: pctOf_(c.instalado, c.elegible) }
+      ];
+      return funnel_(flow) +
+        '<div class="dashx-status-row" style="margin-top:.75rem">' +
+          chip_('neutral', 'videocam', c.camarasInstaladas || 0, 'Cámaras instaladas') +
+          chip_('serious', 'hourglass_top', c.fueraPlazo || 0, 'Fuera de plazo') +
+        '</div>';
+    }
+    function pctOf_(n, base) { base = base || 0; return base > 0 ? Math.round((n||0)/base*100) : 0; }
+
+    /* ── Capacitaciones ── */
+    function capacitaciones_(c, esc) {
+      var tiles = '<div class="dashx-grid3">' + [
+        tile_('Eventos', fmt_(c.eventos || 0), tipoResumen_(c.porTipo || [], esc), ''),
+        tile_('Inscripciones', fmt_(c.inscripciones || 0), 'no canceladas', ''),
+        tile_('Personas capacitadas', fmt_(c.personasUnicas || 0), 'RUT únicos · ' + fmt_(c.ocupacionPct || 0) + '% ocupación', '')
+      ].join('') + '</div>';
+      var bars = (c.porTipo && c.porTipo.length)
+        ? card_('Eventos por tipo', 'categoría de formación', barsMag_(c.porTipo))
+        : '';
+      return tiles + (bars ? '<div style="margin-top:1rem">' + bars + '</div>' : '');
+    }
+    function tipoResumen_(list, esc) {
+      return (list || []).map(function(t){ return esc(String(t.label)) + ' ' + t.count; }).join(' · ') || 'sin eventos';
+    }
+
+    /* ══════════════════════════════════════════ FILTROS + BIND ══════════════════════════════════════════ */
     function buildFilterBar_(filters, esc) {
-      var uvs      = Array.isArray(filters.uvs)      ? filters.uvs      : [];
-      var tipos    = Array.isArray(filters.tipos)    ? filters.tipos    : [];
-      var years    = Array.isArray(filters.years)    ? filters.years    : [];
-      var af       = filters.activeFilters || {};
-      var ESTADOS  = ['','Constituida','En proceso','Iniciando','Inactiva','Suspendida'];
+      var uvs   = Array.isArray(filters.uvs)   ? filters.uvs   : [];
+      var tipos = Array.isArray(filters.tipos) ? filters.tipos : [];
+      var years = Array.isArray(filters.years) ? filters.years : [];
+      var af    = filters.activeFilters || {};
+      var ESTADOS = ['','Constituida','En proceso','Iniciando','Inactiva','Suspendida'];
 
       function sel_(id, label, items, selected, emptyLbl) {
         return [
-          '<div class="dash-filter-item">',
-            '<label for="' + id + '">' + label + '</label>',
+          '<div class="dash-filter-item"><label for="' + id + '">' + label + '</label>',
             '<select class="dash-filter-select" id="' + id + '">',
               '<option value="">' + esc(emptyLbl) + '</option>',
               items.map(function(v){ return '<option value="' + esc(String(v)) + '"' + (String(v) === String(selected||'') ? ' selected':'') + '>' + esc(String(v)) + '</option>'; }).join(''),
-            '</select>',
-          '</div>'
+            '</select></div>'
         ].join('');
       }
-
       return [
         '<div class="dash-filters"><div class="dash-filters__row">',
-          sel_('dash-filter-uv',     'UV',               uvs,      af.uv,                'Todas las UV'),
+          sel_('dash-filter-uv', 'UV', uvs, af.uv, 'Todas las UV'),
           '<div class="dash-filter-item"><label for="dash-filter-estado">Estado comité</label>',
             '<select class="dash-filter-select" id="dash-filter-estado">',
-              ESTADOS.map(function(v){ return '<option value="' + esc(v) + '"' + (v===(af.estado_constitucion||'')?'  selected':'') + '>' + esc(v||'Todos') + '</option>'; }).join(''),
-            '</select>',
-          '</div>',
-          sel_('dash-filter-tipo',   'Tipo organización', tipos,   af.tipo_organizacion, 'Todos'),
-          sel_('dash-filter-year',   'Período (año)',     years,   af.year,              'Todos los años'),
+              ESTADOS.map(function(v){ return '<option value="' + esc(v) + '"' + (v===(af.estado_constitucion||'')?' selected':'') + '>' + esc(v||'Todos') + '</option>'; }).join(''),
+            '</select></div>',
+          sel_('dash-filter-tipo', 'Tipo organización', tipos, af.tipo_organizacion, 'Todos'),
+          sel_('dash-filter-year', 'Período (año)', years, af.year, 'Todos los años'),
         '</div></div>'
       ].join('');
     }
 
-    /* ══════════════════════════════════════════
-       KPI ROW (con indicadores de tendencia)
-    ══════════════════════════════════════════ */
-    function buildKpiRow_(kpis, esc) {
-      if (!kpis) {
-        return '<div class="dash-loading-zone" style="grid-column:span 6"><span class="material-symbols-outlined dash-spin">refresh</span><span>Cargando...</span></div>';
-      }
-      var pctVal = typeof kpis.pctConstituidas === 'number' ? kpis.pctConstituidas + '%' : '—';
-      var cards = [
-        { icon:'folder_open', value:fmt_(kpis.totalSolicitudes), label:'Solicitudes',       color:'#3D96B4', trend:kpis.trendSolicitudes },
-        { icon:'groups',      value:fmt_(kpis.totalOrgs),        label:'Organizaciones',     color:'#03C2AE', trend:kpis.trendOrgs },
-        { icon:'verified',    value:fmt_(kpis.orgsConstituidas), label:'Constituidas',        color:'#8CC63F', trend:null },
-        { icon:'percent',     value:esc(pctVal),                 label:'% constituidas',      color:'#F5A623', trend:null, raw:true },
-        { icon:'handshake',   value:fmt_(kpis.instActivos),      label:'Beneficios activos',  color:'#7B61FF', trend:null },
-        { icon:'badge',       value:fmt_(kpis.totalSocios),      label:'Total socios',        color:'#4ECDC4', trend:null }
-      ];
-      return cards.map(function(c) {
-        var trendHtml = '';
-        if (c.trend !== null && c.trend !== undefined) {
-          var up  = c.trend >= 0;
-          var cls = up ? 'dash-kpi__trend--up' : 'dash-kpi__trend--down';
-          trendHtml = '<span class="dash-kpi__trend ' + cls + '">' + (up ? '↑' : '↓') + ' ' + Math.abs(c.trend) + '% <em>vs mes ant.</em></span>';
-        }
-        return [
-          '<div class="dash-kpi stagger-item">',
-            '<div class="dash-kpi__icon" style="color:' + c.color + '">',
-              '<span class="material-symbols-outlined">' + c.icon + '</span>',
-            '</div>',
-            '<div class="dash-kpi__body">',
-              '<strong class="dash-kpi__value">' + (c.raw ? c.value : esc(c.value)) + '</strong>',
-              '<span class="dash-kpi__label">' + esc(c.label) + '</span>',
-              trendHtml,
-            '</div>',
-          '</div>'
-        ].join('');
-      }).join('');
-    }
-
-    function fmt_(n) { return typeof n === 'number' ? n.toLocaleString('es-CL') : '—'; }
-
-    /* ══════════════════════════════════════════
-       SECCIONES DE CHARTS
-    ══════════════════════════════════════════ */
-    function buildChartsTop_(charts) {
-      if (!charts) return '<div class="dash-loading-zone" style="grid-column:span 3"><span class="material-symbols-outlined dash-spin">refresh</span></div>';
-      return [
-        buildChartCard_('Estado de constitución',   drawDonut_(charts.estadosConstitucion || [], true),  'dash-chart-card stagger-item', 'dash-chart-card__body--donut'),
-        buildChartCard_('Organizaciones por UV',    drawBarH_(charts.porUv || []),                       'dash-chart-card stagger-item', 'dash-chart-card__body--bar-h'),
-        buildChartCard_('Estado de formalización',  drawEstadoBeneficios_(charts.estadoBeneficios || {}), 'dash-chart-card stagger-item', 'dash-chart-card__body'),
-      ].join('');
-    }
-
-    function buildChartsMid_(charts) {
-      if (!charts) return '<div class="dash-loading-zone" style="grid-column:span 2"><span class="material-symbols-outlined dash-spin">refresh</span></div>';
-      return [
-        buildChartCard_('Avance administrativo por hito', drawRadialGauges_(charts.avancePorHito || []),  'dash-chart-card stagger-item', 'dash-chart-card__body'),
-        buildChartCard_('Tendencia mensual',              drawLineChart_(charts.tendenciaMensual || []),   'dash-chart-card stagger-item', 'dash-chart-card__body'),
-      ].join('');
-    }
-
-    function buildTablesRow_(tables, esc) {
-      if (!tables) return '';
-      return [
-        buildTableCard_('Próximos vencimientos',          buildTableVencimientos_(tables.proximosVencimientos || [], esc), 'stagger-item'),
-        buildTableCard_('Comités con atención prioritaria', buildTableAtencion_(tables.atencionPrioritaria || [], esc), 'stagger-item'),
-        buildTableCard_('Últimas gestiones registradas',  buildTableGestiones_(tables.ultimasGestiones || [], esc), 'stagger-item'),
-      ].join('');
-    }
-
-    function buildChartCard_(title, content, cardCls, bodyCls) {
-      return '<div class="' + cardCls + '"><div class="dash-chart-card__head"><h4>' + xSvg_(title) + '</h4></div><div class="dash-chart-card__body ' + bodyCls + '">' + content + '</div></div>';
-    }
-
-    function buildTableCard_(title, content, extraCls) {
-      var cls = 'dash-table-card' + (extraCls ? ' ' + extraCls : '');
-      return '<div class="' + cls + '"><div class="dash-table-card__head"><h4>' + xSvg_(title) + '</h4></div><div class="dash-table-card__body">' + content + '</div></div>';
-    }
-
-    /* ══════════════════════════════════════════
-       SVG: DONUT
-    ══════════════════════════════════════════ */
-    function drawDonut_(data, useEstadoColors) {
-      if (!data || !data.length) return emptyChart_();
-      var total = data.reduce(function(s,d){ return s + (d.count||0); }, 0);
-      if (total === 0) return emptyChart_();
-      var cx = 90, cy = 90, r = 65, ri = 40, angle = -Math.PI / 2;
-      var paths = [], legend = [], a11yRows = [];
-      data.forEach(function(d, i) {
-        var pct   = Math.min((d.count||0)/total, 0.9999);
-        var sweep = pct * 2 * Math.PI;
-        var end   = angle + sweep;
-        var color = useEstadoColors ? (ESTADO_COLORS[(d.label||'').toLowerCase()] || PALETTE[i % PALETTE.length]) : PALETTE[i % PALETTE.length];
-        var large = sweep > Math.PI ? 1 : 0;
-        var x1=cx+r*Math.cos(angle),y1=cy+r*Math.sin(angle),x2=cx+r*Math.cos(end),y2=cy+r*Math.sin(end);
-        var xi1=cx+ri*Math.cos(angle),yi1=cy+ri*Math.sin(angle),xi2=cx+ri*Math.cos(end),yi2=cy+ri*Math.sin(end);
-        paths.push('<path d="M ' + f_(x1)+' '+f_(y1)+' A '+r+' '+r+' 0 '+large+' 1 '+f_(x2)+' '+f_(y2)+' L '+f_(xi2)+' '+f_(yi2)+' A '+ri+' '+ri+' 0 '+large+' 0 '+f_(xi1)+' '+f_(yi1)+' Z" fill="' + color + '" stroke="var(--surface,#fff)" stroke-width="1.2"/>');
-        var lbl = (d.label||'').length > 16 ? (d.label||'').slice(0,15)+'…' : (d.label||'');
-        legend.push('<li class="dash-donut-legend-item"><span class="dash-donut-legend-dot" style="background:' + color + '"></span><span class="dash-donut-legend-label" title="'+xAttr_(d.label||'')+'">' + xSvg_(lbl) + '</span><span class="dash-donut-legend-count">'+d.count+' <em>('+Math.round(pct*100)+'%)</em></span></li>');
-        a11yRows.push('<tr><td>'+xSvg_(d.label||'')+'</td><td>'+d.count+'</td><td>'+Math.round(pct*100)+'%</td></tr>');
-        angle = end;
-      });
-      var a11yTable = '<table class="sr-only"><caption>Distribución de organizaciones por estado de constitución</caption><thead><tr><th>Estado</th><th>Cantidad</th><th>Porcentaje</th></tr></thead><tbody>'+a11yRows.join('')+'<tr><th scope="row">Total</th><td>'+total+'</td><td>100%</td></tr></tbody></table>';
-      return a11yTable + '<div class="dash-donut-wrap" aria-hidden="true"><div class="dash-donut-svg-wrap"><svg viewBox="0 0 180 180" class="dash-donut-svg">' + paths.join('') + '<text x="90" y="86" class="dash-donut-center-value" text-anchor="middle">' + xSvg_(total.toLocaleString('es-CL')) + '</text><text x="90" y="104" class="dash-donut-center-label" text-anchor="middle">total</text></svg></div><ul class="dash-donut-legend">' + legend.join('') + '</ul></div>';
-    }
-
-    /* ══════════════════════════════════════════
-       SVG: HORIZONTAL BAR
-    ══════════════════════════════════════════ */
-    function drawBarH_(data) {
-      if (!data || !data.length) return emptyChart_();
-      var max = data.reduce(function(m,d){ return Math.max(m,d.count||0); }, 0);
-      if (max === 0) return emptyChart_();
-      var lW=120, bW=150, vW=34, pad=2, bH=20, gap=7;
-      var svgW = lW + bW + vW + pad;
-      var svgH = data.length * (bH + gap) - gap + 4;
-      var a11yRows = [];
-      var rows = data.map(function(d, i) {
-        var w   = Math.max((d.count/max)*bW, 2);
-        var y   = i*(bH+gap)+2;
-        var lbl = (d.label||'').length > 17 ? (d.label||'').slice(0,16)+'…' : (d.label||'');
-        a11yRows.push('<tr><td>'+xSvg_(d.label||'')+'</td><td>'+d.count+'</td></tr>');
-        return '<text x="'+(lW-6)+'" y="'+f_(y+bH*0.68)+'" class="dash-bar-label" text-anchor="end">'+xSvg_(lbl)+'</text>' +
-               '<rect x="'+(lW+pad)+'" y="'+y+'" width="'+f_(w)+'" height="'+bH+'" rx="3" fill="'+PALETTE[i%PALETTE.length]+'"/>' +
-               '<text x="'+(lW+pad+w+5)+'" y="'+f_(y+bH*0.68)+'" class="dash-bar-value">'+d.count+'</text>';
-      }).join('');
-      var total = data.reduce(function(s,d){ return s + (d.count||0); }, 0);
-      var a11yTable = '<table class="sr-only"><caption>Organizaciones por Unidad Vecinal</caption><thead><tr><th>Unidad Vecinal</th><th>Cantidad</th></tr></thead><tbody>'+a11yRows.join('')+'<tr><th scope="row">Total</th><td>'+total+'</td></tr></tbody></table>';
-      return a11yTable + '<svg viewBox="0 0 ' + svgW + ' ' + f_(svgH) + '" class="dash-bar-h-svg" aria-hidden="true">' + rows + '</svg>';
-    }
-
-    /* ══════════════════════════════════════════
-       SVG: RADIAL GAUGES (avance por hito)
-    ══════════════════════════════════════════ */
-    function drawRadialGauges_(data) {
-      if (!data || !data.length) return emptyChart_();
-      var a11yRows = [];
-      var gauges = data.map(function(d, i) {
-        var pct    = Math.min(Math.max(d.pct || 0, 0), 100);
-        var offset = f_((1 - pct / 100) * GAUGE_C);
-        var color  = PALETTE[i % PALETTE.length];
-        var lbl    = (d.hito||'').length > 13 ? (d.hito||'').slice(0,12)+'…' : (d.hito||'');
-        a11yRows.push('<tr><td>'+xSvg_(d.hito||'')+'</td><td>'+d.completados+'</td><td>'+(d.total||0)+'</td><td>'+pct+'%</td></tr>');
-        return [
-          '<div class="dash-gauge-item">',
-            '<svg viewBox="0 0 90 90" class="dash-gauge-svg" aria-hidden="true">',
-              '<circle cx="45" cy="45" r="36" class="dash-gauge-bg"/>',
-              '<circle cx="45" cy="45" r="36" class="dash-gauge-arc" stroke="'+color+'"',
-                ' stroke-dasharray="'+f_(GAUGE_C)+'" stroke-dashoffset="'+offset+'"',
-                ' transform="rotate(-90 45 45)"/>',
-              '<text x="45" y="43" class="dash-gauge-num" text-anchor="middle">'+pct+'%</text>',
-              '<text x="45" y="57" class="dash-gauge-sub" text-anchor="middle">'+d.completados+'/'+(d.total||0)+'</text>',
-            '</svg>',
-            '<span class="dash-gauge-label" title="'+xAttr_(d.hito||'')+'">'+xSvg_(lbl)+'</span>',
-          '</div>'
-        ].join('');
-      }).join('');
-      var a11yTable = '<table class="sr-only"><caption>Avance administrativo por hito</caption><thead><tr><th>Hito</th><th>Completados</th><th>Total</th><th>Porcentaje</th></tr></thead><tbody>'+a11yRows.join('')+'</tbody></table>';
-      return a11yTable + '<div class="dash-gauge-grid" aria-hidden="true">' + gauges + '</div>';
-    }
-
-    /* ══════════════════════════════════════════
-       SVG: LINE CHART (tendencia mensual)
-    ══════════════════════════════════════════ */
-    function drawLineChart_(data) {
-      if (!data || !data.length) return emptyChart_();
-      var W=380, H=140, pL=35, pR=10, pT=16, pB=28;
-      var cW = W - pL - pR, cH = H - pT - pB;
-      var cols = data.length;
-      var allV = [];
-      data.forEach(function(d){ allV.push(d.ingresos||0, d.gestiones||0); });
-      var maxV = Math.max.apply(null, allV) || 1;
-      function xp(i){ return pL + (cols > 1 ? (i/(cols-1))*cW : cW/2); }
-      function yp(v){ return pT + cH - (v/maxV)*cH; }
-      var grids = [0.25,0.5,0.75,1].map(function(p){
-        var y = f_(yp(p*maxV));
-        return '<line x1="'+pL+'" y1="'+y+'" x2="'+(pL+cW)+'" y2="'+y+'" class="dash-bar-grid"/>' +
-               '<text x="'+(pL-4)+'" y="'+y+'" class="dash-bar-grid-label" text-anchor="end" dominant-baseline="middle">'+Math.round(p*maxV)+'</text>';
-      }).join('');
-      var ingPts  = data.map(function(d,i){ return f_(xp(i))+','+f_(yp(d.ingresos||0)); }).join(' ');
-      var gestPts = data.map(function(d,i){ return f_(xp(i))+','+f_(yp(d.gestiones||0)); }).join(' ');
-      var ingDots  = data.map(function(d,i){ return '<circle cx="'+f_(xp(i))+'" cy="'+f_(yp(d.ingresos||0))+'" r="3" fill="#3D96B4"/>'; }).join('');
-      var gestDots = data.map(function(d,i){ return '<circle cx="'+f_(xp(i))+'" cy="'+f_(yp(d.gestiones||0))+'" r="3" fill="#8CC63F"/>'; }).join('');
-      var xLbls    = data.map(function(d,i){ return '<text x="'+f_(xp(i))+'" y="'+(H-8)+'" class="dash-bar-x-label" text-anchor="middle">'+xSvg_(d.label)+'</text>'; }).join('');
-      var a11yRows = data.map(function(d){
-        return '<tr><td>'+xSvg_(d.label)+'</td><td>'+(d.ingresos||0)+'</td><td>'+(d.gestiones||0)+'</td></tr>';
-      }).join('');
-      var a11yTable = '<table class="sr-only"><caption>Tendencia mensual de ingresos y gestiones</caption><thead><tr><th>Mes</th><th>Ingresos</th><th>Gestiones</th></tr></thead><tbody>'+a11yRows+'</tbody></table>';
-      return a11yTable + [
-        '<div class="dash-line-wrap" aria-hidden="true">',
-          '<svg viewBox="0 0 '+W+' '+H+'" class="dash-line-svg">',
-            grids,
-            '<polyline points="'+ingPts+'"  fill="none" stroke="#3D96B4" stroke-width="2"/>',
-            '<polyline points="'+gestPts+'" fill="none" stroke="#8CC63F" stroke-width="2"/>',
-            ingDots, gestDots, xLbls,
-          '</svg>',
-          '<div class="dash-line-legend">',
-            '<span class="dash-line-leg-item"><span class="dash-line-leg-dot" style="background:#3D96B4"></span>Ingresos</span>',
-            '<span class="dash-line-leg-item"><span class="dash-line-leg-dot" style="background:#8CC63F"></span>Gestiones</span>',
-          '</div>',
-        '</div>'
-      ].join('');
-    }
-
-    /* ══════════════════════════════════════════
-       ESTADO DE BENEFICIOS
-    ══════════════════════════════════════════ */
-    function drawEstadoBeneficios_(data) {
-      var v = data.vigentes || 0, p = data.porVencer || 0, a = data.atrasados || 0;
-      var tot = v + p + a;
-      function pct_(n){ return tot > 0 ? Math.round(n/tot*100) : 0; }
-      var items = [
-        { label:'Vigentes',   count:v, cls:'vigente',    icon:'check_circle', color:'#22c55e', sub:'En plazo' },
-        { label:'Por vencer', count:p, cls:'por-vencer', icon:'schedule',     color:'#f59e0b', sub:'Próximas a vencer' },
-        { label:'Vencidos',   count:a, cls:'atrasado',   icon:'warning',      color:'#cb2431', sub:'Plazo cumplido' }
-      ];
-      var a11yTable = '<table class="sr-only"><caption>Estado de formalización</caption><thead><tr><th>Estado</th><th>Cantidad</th><th>Porcentaje</th></tr></thead><tbody>' +
-        items.map(function(it){ return '<tr><td>'+it.label+'</td><td>'+it.count+'</td><td>'+pct_(it.count)+'%</td></tr>'; }).join('') +
-        '<tr><th scope="row">Total</th><td>'+tot+'</td><td>100%</td></tr></tbody></table>';
-      return a11yTable + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:1rem;margin-bottom:1rem;" aria-hidden="true">' + items.map(function(it){
-        return [
-          '<div class="panel" style="padding:1.25rem 1rem;text-align:center;border-top:3px solid ' + it.color + ';display:flex;flex-direction:column;align-items:center;gap:0.3rem;">',
-            '<span class="material-symbols-outlined" style="font-size:1.75rem;color:' + it.color + ';">' + it.icon + '</span>',
-            '<div style="font-size:2.2rem;font-weight:700;line-height:1;">' + it.count + '</div>',
-            '<div style="font-size:0.85rem;font-weight:600;">' + it.label + '</div>',
-            it.sub ? '<span style="font-size:0.72rem;background:var(--bg,#f5f5f5);padding:2px 8px;border-radius:10px;color:var(--text-muted,#666);">' + it.sub + '</span>' : '',
-          '</div>'
-        ].join('');
-      }).join('') + '</div>';
-    }
-
-    /* ══════════════════════════════════════════
-       TABLAS
-    ══════════════════════════════════════════ */
-    var BADGE_C = { 'Alta':'#cb2431','Media':'#b36a00','Baja':'#22863a' };
-
-    function buildTableVencimientos_(rows, esc) {
-      if (!rows || !rows.length) return '<div class="dash-chart-empty"><span class="material-symbols-outlined">event_available</span><p>Sin vencimientos próximos</p></div>';
-      return '<table class="dash-table"><thead><tr><th>Comité</th><th>Beneficio</th><th>Vence</th><th>Días</th><th>Prio.</th></tr></thead><tbody>' +
-        rows.map(function(r){
-          var c = BADGE_C[r.prioridad] || '#888';
-          return '<tr><td>'+esc(r.nombre_organizacion||'—')+'</td><td>'+esc(r.instrumento||'—')+'</td><td style="white-space:nowrap">'+esc(r.fecha_cierre||'—')+'</td><td><strong>'+esc(String(r.dias??'—'))+'</strong></td><td><span class="dash-priority-badge" style="color:'+c+';background:'+c+'22">'+esc(r.prioridad||'—')+'</span></td></tr>';
-        }).join('') + '</tbody></table>';
-    }
-
-    function buildTableAtencion_(rows, esc) {
-      if (!rows || !rows.length) return '<div class="dash-chart-empty"><span class="material-symbols-outlined">check_circle</span><p>Sin comités en alerta</p></div>';
-      return '<table class="dash-table"><thead><tr><th>Comité</th><th>Motivo</th><th>Estado</th><th>Última acción</th></tr></thead><tbody>' +
-        rows.map(function(r){
-          return '<tr><td>'+esc(r.nombre_organizacion||'—')+'</td><td>'+esc(r.motivo||'—')+'</td><td><span class="dash-status-pill">'+esc(r.estado||'—')+'</span></td><td style="white-space:nowrap">'+esc(r.ultima_accion||'—')+'</td></tr>';
-        }).join('') + '</tbody></table>';
-    }
-
-    function buildTableGestiones_(rows, esc) {
-      if (!rows || !rows.length) return '<div class="dash-chart-empty"><span class="material-symbols-outlined">history</span><p>Sin gestiones recientes</p></div>';
-      return '<table class="dash-table"><thead><tr><th>Fecha</th><th>Organización</th><th>Gestión</th><th>Usuario</th></tr></thead><tbody>' +
-        rows.map(function(r){
-          return '<tr><td style="white-space:nowrap">'+esc(r.fecha||'—')+'</td><td>'+esc(r.nombre_organizacion||'—')+'</td><td>'+esc(r.gestion||'—')+'</td><td><code>'+esc(r.usuario||'—')+'</code></td></tr>';
-        }).join('') + '</tbody></table>';
-    }
-
-    /* ══════════════════════════════════════════
-       BIND: refresh + filtros
-    ══════════════════════════════════════════ */
     function bindDashboard_(root, esc, onDashRefresh) {
-      if (typeof onDashRefresh !== 'function') return;
       var refreshBtn = root.querySelector('#dash-refresh-btn');
+      var pdfBtn = root.querySelector('#dash-pdf-btn');
+
+      if (pdfBtn) pdfBtn.addEventListener('click', function() { printDashboard_(root, esc); });
+
+      if (typeof onDashRefresh !== 'function') return;
 
       function getFilters_() {
         function v_(id){ return ((root.querySelector(id)||{}).value)||''; }
@@ -374,46 +247,30 @@
           year:                parseInt(v_('#dash-filter-year')||'0', 10)
         };
       }
-
       function setLoading_(on) {
         if (refreshBtn) refreshBtn.disabled = on;
-        if (!on) return;
-        var SPIN = '<span class="material-symbols-outlined dash-spin">refresh</span>';
-        var k = root.querySelector('#dash-kpi-row');
-        var t = root.querySelector('#dash-charts-top');
-        var m = root.querySelector('#dash-charts-mid');
-        if (k) k.innerHTML = '<div class="dash-loading-zone" style="grid-column:span 6">' + SPIN + '<span>Actualizando...</span></div>';
-        if (t) t.innerHTML = '<div class="dash-loading-zone" style="grid-column:span 3">' + SPIN + '</div>';
-        if (m) m.innerHTML = '<div class="dash-loading-zone" style="grid-column:span 2">' + SPIN + '</div>';
+        var body = root.querySelector('#dashx-body');
+        if (on && body) body.innerHTML = '<div class="dashx-loading"><span class="material-symbols-outlined dash-spin">refresh</span><span>Actualizando…</span></div>';
       }
-
       function applyData_(data) {
-        var k = root.querySelector('#dash-kpi-row');
-        var t = root.querySelector('#dash-charts-top');
-        var m = root.querySelector('#dash-charts-mid');
-        var tb= root.querySelector('#dash-tables');
+        var body = root.querySelector('#dashx-body');
         var u = root.querySelector('#dash-updated');
-        if (k)  k.innerHTML  = buildKpiRow_(data.kpis || null, esc);
-        if (t)  t.innerHTML  = buildChartsTop_(data.charts || null);
-        if (m)  m.innerHTML  = buildChartsMid_(data.charts || null);
-        if (tb) tb.innerHTML = buildTablesRow_(data.tables || null, esc);
-        if (u && data.lastUpdated) u.textContent = data.lastUpdated;
+        if (body) body.innerHTML = buildBody_(data, esc);
+        if (u) u.innerHTML = freshLabel_(data.lastUpdated, esc);
         if (data.filters) updateFilterOptions_(root, data.filters, esc);
       }
-
       function runRefresh_() {
         setLoading_(true);
         onDashRefresh(getFilters_(), function(data, err) {
-          setLoading_(false);
+          if (refreshBtn) refreshBtn.disabled = false;
           if (err || !data) {
-            var k = root.querySelector('#dash-kpi-row');
-            if (k) k.innerHTML = '<div class="dash-loading-zone" style="grid-column:span 6"><span class="material-symbols-outlined">error</span><span>Error al cargar datos</span></div>';
+            var body = root.querySelector('#dashx-body');
+            if (body) body.innerHTML = '<div class="dashx-loading"><span class="material-symbols-outlined">error</span><span>Error al cargar datos</span></div>';
             return;
           }
           applyData_(data);
         });
       }
-
       if (refreshBtn) refreshBtn.addEventListener('click', runRefresh_);
       ['#dash-filter-uv','#dash-filter-estado','#dash-filter-tipo','#dash-filter-year'].forEach(function(sel){
         var el = root.querySelector(sel);
@@ -422,9 +279,9 @@
     }
 
     function updateFilterOptions_(root, filters, esc) {
-      var uvs      = Array.isArray(filters.uvs)      ? filters.uvs      : [];
-      var tipos    = Array.isArray(filters.tipos)    ? filters.tipos    : [];
-      var years    = Array.isArray(filters.years)    ? filters.years    : [];
+      var uvs   = Array.isArray(filters.uvs)   ? filters.uvs   : [];
+      var tipos = Array.isArray(filters.tipos) ? filters.tipos : [];
+      var years = Array.isArray(filters.years) ? filters.years : [];
       function rebuild_(id, items, emptyLbl) {
         var el = root.querySelector(id);
         if (!el) return;
@@ -433,40 +290,40 @@
           items.map(function(v){ return '<option value="'+esc(String(v))+'">'+esc(String(v))+'</option>'; }).join('');
         el.value = cur;
       }
-      rebuild_('#dash-filter-uv',     uvs,      'Todas las UV');
-      rebuild_('#dash-filter-tipo',   tipos,    'Todos');
-      rebuild_('#dash-filter-year',   years,    'Todos los años');
+      rebuild_('#dash-filter-uv', uvs, 'Todas las UV');
+      rebuild_('#dash-filter-tipo', tipos, 'Todos');
+      rebuild_('#dash-filter-year', years, 'Todos los años');
     }
 
-    /* ══════════════════════════════════════════
-       HELPERS
-    ══════════════════════════════════════════ */
-    function emptyChart_() {
-      return '<div class="dash-chart-empty"><span class="material-symbols-outlined">bar_chart</span><p>Sin datos suficientes</p></div>';
+    /* ══════════════════════════════════════════ PDF (imprimir navegador, fiel a los gráficos) ══════════════════════════════════════════ */
+    function printDashboard_(root, esc) {
+      var meta = root.querySelector('#dashx-print-meta');
+      if (meta) {
+        var now = new Date();
+        var f = function(n){ return (n < 10 ? '0' : '') + n; };
+        var stamp = f(now.getDate()) + '-' + f(now.getMonth()+1) + '-' + now.getFullYear() + ' ' + f(now.getHours()) + ':' + f(now.getMinutes());
+        var upd = (root.querySelector('#dash-updated') || {}).textContent || '';
+        meta.innerHTML = '<div class="dashx-print-title">GO-PES · Dashboard del Programa Estamos Seguros</div>' +
+          '<div class="dashx-print-sub">Impreso: ' + esc(stamp) + (upd ? ' · ' + esc(upd) : '') + '</div>';
+      }
+      document.body.classList.add('dashx-printing');
+      var cleanup = function(){ document.body.classList.remove('dashx-printing'); window.removeEventListener('afterprint', cleanup); };
+      window.addEventListener('afterprint', cleanup);
+      setTimeout(function(){ window.print(); }, 60);
     }
-    function f_(n){ return (Math.round(n * 100) / 100).toString(); }
-    function xSvg_(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-    function xAttr_(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-    /* ══════════════════════════════════════════
-       PANEL ALERTAS (sin cambios)
-    ══════════════════════════════════════════ */
-    function renderMetric_(label, value, icon, esc) {
-      return '<div class="inicio-metric"><span class="material-symbols-outlined">'+esc(icon)+'</span><strong>'+esc(String(value))+'</strong><small>'+esc(label)+'</small></div>';
+    /* ══════════════════════════════════════════ HELPERS ══════════════════════════════════════════ */
+    function sectionTitle_(t) { return '<div class="dashx-section-t">' + t + '</div>'; }
+    function card_(title, sub, content) {
+      return '<div class="dashx-card"><h4 class="dashx-card__h">' + title + '</h4>' + (sub ? '<p class="dashx-card__s">' + sub + '</p>' : '') + '<div class="dashx-card__b">' + content + '</div></div>';
     }
-    function renderAlertItem_(item, esc) {
-      return '<article class="inicio-alert-item inicio-alert-item--'+esc(item.tone||'info')+'"><span class="material-symbols-outlined">'+esc(item.icon||'notifications')+'</span><div><small>'+esc(item.status||'Alerta')+'</small><strong>'+esc(item.title||'Beneficio')+'</strong><p>'+esc(buildItemDetail_(item))+'</p></div></article>';
+    function montoSub_(f) { return money_(f.montoAdjudicado || 0) + ' adj · ' + money_(f.montoEjecutado || 0) + ' ejec · ' + fmt_(f.adjudicadas || 0) + ' adjudicadas'; }
+    function empty_() { return '<div class="dashx-empty"><span class="material-symbols-outlined">bar_chart</span><p>Sin datos suficientes</p></div>'; }
+    function fmt_(n) { return typeof n === 'number' ? n.toLocaleString('es-CL') : (n || '—'); }
+    function money_(n) { n = Number(n||0)||0; return '$' + n.toLocaleString('es-CL'); }
+    function freshLabel_(lastUpdated, esc) {
+      return lastUpdated ? '<span class="dashx-fresh__dot"></span>Actualizado ' + esc(String(lastUpdated)) : '';
     }
-    function renderAssemblyItem_(item, esc) {
-      return '<article class="inicio-reminder-item"><span class="material-symbols-outlined">'+esc(item.icon||'event')+'</span><div>'+(item.status?'<small>'+esc(item.status)+'</small>':'')+'<strong>'+esc(item.title||'Recordatorio')+'</strong><p>'+esc(buildItemDetail_(item))+'</p></div></article>';
-    }
-    function renderEmptyAlertState_(message, esc) {
-      return '<article class="inicio-alert-item inicio-alert-item--info"><span class="material-symbols-outlined">info</span><div><small>Sin datos operativos</small><strong>Alertas aún no activadas</strong><p>'+esc(message||'No existen vencimientos con base suficiente para mostrar alertas reales en este momento.')+'</p></div></article>';
-    }
-    function renderEmptyReminderState_(message, esc) {
-      return '<article class="inicio-reminder-item"><span class="material-symbols-outlined">event_busy</span><div><strong>Sin recordatorios activos</strong><p>'+esc(message||'No existen asambleas ni recordatorios con soporte suficiente para mostrar agenda real.')+'</p></div></article>';
-    }
-    function buildItemDetail_(item) { return [item&&item.detail, item&&item.note].filter(Boolean).join(' - '); }
 
     return { render };
   })();

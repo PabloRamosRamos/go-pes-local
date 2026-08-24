@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inicio · Alt C — Bento denso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;750&display=swap" rel="stylesheet">
+<link href="_shared.css" rel="stylesheet">
+<style>
+  .bento{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;grid-auto-rows:minmax(72px,auto)}
+  .b{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:15px 16px}
+  .col2{grid-column:span 2}.col4{grid-column:span 4}.row2{grid-row:span 2}
+  .b.mini .k{font-size:.72rem;color:var(--text-muted);font-weight:600}
+  .b.mini .v{font-size:1.7rem;font-weight:750;letter-spacing:-.02em;margin:4px 0 0;font-variant-numeric:tabular-nums}
+  .b.mini .ctx{font-size:.68rem;color:var(--text-soft)}
+  .b h3{margin:0 0 2px;font-size:.86rem;font-weight:650}.b .sub{margin:0 0 12px;font-size:.7rem;color:var(--text-soft)}
+  .b.accent{position:relative;overflow:hidden}
+  .b.accent::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+  .ac-ok::before{background:var(--ok)}.ac-warn::before{background:var(--warn)}.ac-crit::before{background:var(--crit)}.ac-teal::before{background:var(--c-teal)}
+  .statusmini{display:flex;flex-direction:column;gap:8px}
+  .sm{display:flex;align-items:center;gap:9px;font-size:.8rem}
+  .sm .d{width:9px;height:9px;border-radius:50%;flex:none}.sm .nm{color:var(--text-muted);flex:1}.sm .ct{font-weight:700;font-variant-numeric:tabular-nums}
+  @media(max-width:980px){.bento{grid-template-columns:repeat(2,1fr)}.col2,.col4{grid-column:span 2}}
+  @media(max-width:560px){.bento{grid-template-columns:1fr}.col2,.col4{grid-column:span 1}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brandmark">
+      <div class="logo">GP</div>
+      <div><h1>GO-PES · Dashboard</h1><p>Programa Estamos Seguros · Providencia</p></div>
+    </div>
+    <div class="tools">
+      <span class="fresh"><span class="dot"></span>Actualizado hace 4 min · 24-08-2026 09:51</span>
+      <button class="themebtn" onclick="tg()">◐ Tema</button>
+    </div>
+  </div>
+
+  <div class="bento">
+    <!-- fila de números clave -->
+    <div class="b mini accent ac-ok"><div class="k">Comités constituidos</div><div class="v">42</div><div class="ctx">de 118</div></div>
+    <div class="b mini accent ac-teal"><div class="k">En gestión</div><div class="v">76</div><div class="ctx">sin FOR_04</div></div>
+    <div class="b mini"><div class="k">Casos registrados</div><div class="v">1.284</div><div class="ctx">96 grupos</div></div>
+    <div class="b mini accent ac-warn"><div class="k">Próx. asambleas</div><div class="v">11</div><div class="ctx">PRE_03 ✓</div></div>
+
+    <!-- pieza central: embudo avance -->
+    <div class="b col2 row2"><h3>Avance por hito</h3><p class="sub">% de organizaciones · hito clave</p><div class="funnel" id="fn-avance"></div></div>
+
+    <!-- donut estados -->
+    <div class="b col2 row2"><h3>Organizaciones por estado</h3><p class="sub">total 118</p>
+      <div class="donut-wrap">
+        <div class="donut" style="background:conic-gradient(var(--c-teal) 0 51.7%,var(--c-green) 51.7% 87.3%,var(--c-amber) 87.3% 94.9%,var(--c-rose) 94.9% 100%)"><div class="center"><b>118</b><span>orgs</span></div></div>
+        <div class="legend">
+          <div class="li"><span class="sw" style="background:var(--c-teal)"></span><span class="nm">En proceso</span><span class="ct">61</span></div>
+          <div class="li"><span class="sw" style="background:var(--c-green)"></span><span class="nm">Constituida</span><span class="ct">42</span></div>
+          <div class="li"><span class="sw" style="background:var(--c-amber)"></span><span class="nm">Stand by</span><span class="ct">9</span></div>
+          <div class="li"><span class="sw" style="background:var(--c-rose)"></span><span class="nm">Inactiva</span><span class="ct">6</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- banda de status formalización -->
+    <div class="b col4"><h3 style="margin-bottom:12px">Estado de formalización y riesgos</h3>
+      <div class="status-row">
+        <div class="chip ok"><div class="ci">✓</div><div><div class="cv">88</div><div class="cl">Vigente</div></div></div>
+        <div class="chip warn"><div class="ci">!</div><div><div class="cv">19</div><div class="cl">Por vencer</div></div></div>
+        <div class="chip crit"><div class="ci">▲</div><div><div class="cv">11</div><div class="cl">Atrasada</div></div></div>
+        <div class="chip serious"><div class="ci">◷</div><div><div class="cv">3</div><div class="cl">CÁMARAS fuera de plazo</div></div></div>
+        <div class="chip crit"><div class="ci">▲</div><div><div class="cv">2</div><div class="cl">Rendiciones FONDESE por vencer</div></div></div>
+      </div>
+    </div>
+
+    <!-- FONDESE embudo -->
+    <div class="b col2"><h3>FONDESE · por estado</h3><p class="sub">$38,5M adj · $21,3M ejec · 5 adjudicadas</p><div class="funnel" id="fn-fondese"></div></div>
+
+    <!-- CÁMARAS mini -->
+    <div class="b"><h3>CÁMARAS 1414</h3><p class="sub">18 instaladas</p>
+      <div class="statusmini">
+        <div class="sm"><span class="d" style="background:var(--c-teal)"></span><span class="nm">Elegible</span><span class="ct">12</span></div>
+        <div class="sm"><span class="d" style="background:var(--c-amber)"></span><span class="nm">Solicitado</span><span class="ct">7</span></div>
+        <div class="sm"><span class="d" style="background:var(--c-green)"></span><span class="nm">Instalado</span><span class="ct">5</span></div>
+      </div>
+    </div>
+
+    <!-- Estados de avance mini -->
+    <div class="b"><h3>Estados de avance</h3><p class="sub">vigente por org</p>
+      <div class="statusmini">
+        <div class="sm"><span class="d" style="background:var(--ok)"></span><span class="nm">Activo</span><span class="ct">92</span></div>
+        <div class="sm"><span class="d" style="background:var(--warn)"></span><span class="nm">Stand by</span><span class="ct">14</span></div>
+        <div class="sm"><span class="d" style="background:var(--crit)"></span><span class="nm">Detenido</span><span class="ct">8</span></div>
+        <div class="sm"><span class="d" style="background:var(--text-soft)"></span><span class="nm">Finalizado</span><span class="ct">4</span></div>
+      </div>
+    </div>
+
+    <!-- Orgs por UV -->
+    <div class="b col2"><h3>Organizaciones por UV</h3><p class="sub">Top 6</p><div class="bars" id="bars-uv"></div></div>
+
+    <!-- Capacitaciones -->
+    <div class="b col2"><h3>Capacitaciones</h3><p class="sub">23 eventos · 412 inscripciones · 268 personas · 78% ocupación</p><div class="bars catbars" id="bars-tipo"></div></div>
+  </div>
+
+  <p class="note">Maqueta estática · datos de ejemplo · solo agregados (sin PII) · sello de frescura simulado.
+  Alt C — <b>Bento denso</b>: todo en una pantalla como mosaico de piezas de distinto tamaño; máxima densidad y lectura de un vistazo, con el embudo de avance y el donut como anclas visuales.</p>
+</div>
+<script>
+function tg(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark';r.setAttribute('data-theme',d?'light':'dark');}
+var avance=[['Reunión informativa',92],['Asamblea constitutiva',74],['Cert. provisorio',58],['Cert. definitivo',36],['RUT organización',30],['Cuenta corriente',24],['Personalidad jurídica',20]];
+var fondese=[['En armado',14,100],['Ingresada',9,64],['En evaluación',7,50],['Adjudicado',5,36],['En ejecución',4,29],['En rendición',3,21],['Cerrado',8,57]];
+var uv=[['UV 12',18,100],['UV 8',15,83],['UV 5',13,72],['UV 20',11,61],['UV 3',9,50],['UV 15',7,39]];
+var tipo=[['Taller',11,100,'var(--c-teal)'],['Charla',7,64,'var(--c-purple)'],['Curso',5,45,'var(--c-green)']];
+function funnel(id,rows){document.getElementById(id).innerHTML=rows.map(function(r){var pct=r.length>2?r[2]:r[1];return '<div class="fn-row"><div class="fn-top"><span class="l">'+r[0]+'</span><span class="r">'+r[1]+(r.length>2?'':'%')+'</span></div><div class="fn-track"><div class="fn-fill" style="width:'+pct+'%"></div></div></div>';}).join('');}
+funnel('fn-avance',avance);funnel('fn-fondese',fondese);
+document.getElementById('bars-uv').innerHTML=uv.map(function(r){return '<div class="bar-row"><span class="lbl">'+r[0]+'</span><div class="bar-track"><div class="bar-fill" style="width:'+r[2]+'%"></div></div><span class="n">'+r[1]+'</span></div>';}).join('');
+document.getElementById('bars-tipo').innerHTML=tipo.map(function(r){return '<div class="bar-row"><span class="lbl">'+r[0]+'</span><div class="bar-track"><div class="bar-fill" style="width:'+r[2]+'%;background:'+r[3]+'"></div></div><span class="n">'+r[1]+'</span></div>';}).join('');
+</script>
+</body>
+</html>

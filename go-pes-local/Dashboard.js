@@ -97,6 +97,16 @@ function getDashboardData(filtros) {
   var filtrosDisponibles = getFiltrosDisponibles_();
   var tz = Session.getScriptTimeZone();
 
+  // KPIs ampliados (rediseño Alt A): casos, estados de avance, beneficios y capacitaciones.
+  // Los agregados de beneficios/capacitaciones son globales (no aplican los filtros UV/estado/año)
+  // y viajan en el mismo payload cacheado, por lo que se calculan una vez por TTL.
+  // Cada agregador va protegido: un fallo de un dominio no debe romper el dashboard de inicio.
+  var casosResumen         = dashboardSafeAgg_(function(){ return calcularCasosResumen_({ uv: filterUv, year: filterYear }); }, { total: 0, grupos: 0, porUv: [] });
+  var estadosAvance        = dashboardSafeAgg_(calcularEstadosAvance_, { 'Activo': 0, 'Stand by': 0, 'Detenido': 0, 'Finalizado': 0 });
+  var fondeseResumen       = dashboardSafeAgg_(calcularFondeseResumen_, { total: 0, embudo: [], adjudicadas: 0, montoAdjudicado: 0, montoEjecutado: 0, rendicionesPendientes: 0 });
+  var camarasResumen       = dashboardSafeAgg_(calcularCamarasResumen_, { elegible: 0, solicitado: 0, instalado: 0, fueraPlazo: 0, camarasInstaladas: 0 });
+  var capacitacionesResumen = dashboardSafeAgg_(calcularCapacitacionesResumen_, { eventos: 0, inscripciones: 0, personasUnicas: 0, ocupacionPct: 0, porTipo: [] });
+
   // Adaptar estructura para compatibilidad con frontend existente
   var data = {
     kpis: {
@@ -136,6 +146,27 @@ function getDashboardData(filtros) {
       atencionPrioritaria: [],
       ultimasGestiones: []
     },
+    // ── Campos del rediseño Alt A (agregados, sin PII) ──
+    heroKpis: {
+      comites: kpis.comites.valor,
+      enGestion: kpis.enGestion.valor,
+      proximasAsambleas: kpis.proximasAsambleas.valor,
+      totalCasos: casosResumen.total,
+      grupos: casosResumen.grupos,
+      fondeseAdjudicadas: fondeseResumen.adjudicadas,
+      fondeseMontoAdjudicado: fondeseResumen.montoAdjudicado,
+      fondeseMontoEjecutado: fondeseResumen.montoEjecutado
+    },
+    formalizacion: {
+      vigentes: estadoFormalizacion.vigentes.conteo,
+      porVencer: estadoFormalizacion.porVencer.conteo,
+      atrasados: estadoFormalizacion.vencidos.conteo
+    },
+    casosResumen: casosResumen,
+    estadosAvance: estadosAvance,
+    fondese: fondeseResumen,
+    camaras: camarasResumen,
+    capacitaciones: capacitacionesResumen,
     filters: {
       uvs: filtrosDisponibles.uvs.map(function(u) { return u.nombre.replace('UV ', ''); }),
       tipos: [],
@@ -552,6 +583,159 @@ function calcularTerritorios_(filtros) {
   // Por ahora retorna array vacío (mapa es placeholder)
   // En futuro: retornar [{orgId, nombre, uv, lat, lng, estado}, ...]
   return [];
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// RESÚMENES AMPLIADOS (rediseño Alt A) — SOLO LECTURA, SOLO AGREGADOS
+// ══════════════════════════════════════════════════════════════════════════
+
+/** Ejecuta un agregador del dashboard con fallback si falla (no rompe la pantalla de inicio). */
+function dashboardSafeAgg_(fn, fallback) {
+  try { return fn(); }
+  catch (e) { Logger.log('[Dashboard] agregador falló, usando fallback: ' + e); return fallback; }
+}
+
+/** Casos: total, grupos (casos sin organización) y distribución por UV (Top 8). */
+function calcularCasosResumen_(filtros) {
+  var casos = getSheetData_(GO_PES_V2.SHEETS.MAE_CASOS) || [];
+  var filtered = filtrarCasos_(casos, filtros || {});
+
+  var grupos = filtered.filter(function(c) {
+    return !String(c.organizacion_id || '').trim();
+  }).length;
+
+  var porUv = {};
+  filtered.forEach(function(c) {
+    var uv = String(c.uv || 'Sin UV').trim() || 'Sin UV';
+    porUv[uv] = (porUv[uv] || 0) + 1;
+  });
+  var porUvList = Object.keys(porUv)
+    .map(function(uv) { return { label: 'UV ' + uv, count: porUv[uv] }; })
+    .sort(function(a, b) { return b.count - a.count; })
+    .slice(0, 8);
+
+  return { total: filtered.length, grupos: grupos, porUv: porUvList };
+}
+
+/** Estado de avance vigente por organización (Activo/Stand by/Detenido/Finalizado). */
+function calcularEstadosAvance_() {
+  var estados = getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_ESTADO) || [];
+  var out = { 'Activo': 0, 'Stand by': 0, 'Detenido': 0, 'Finalizado': 0 };
+  estados.forEach(function(r) {
+    if (!goPesBool_(r.activo_flag)) return; // solo el estado vigente (1 por org)
+    var e = String(r.estado_avance || '').trim();
+    if (out.hasOwnProperty(e)) out[e]++;
+    else if (e) out[e] = (out[e] || 0) + 1;
+  });
+  return out;
+}
+
+/** FONDESE: embudo por estado de proceso, adjudicadas, montos y rendiciones pendientes. */
+function calcularFondeseResumen_() {
+  var rows = getSheetData_(GO_PES_V2.SHEETS.FACT_FONDESE) || [];
+  var opts = (typeof getFondeseStateOptions_ === 'function') ? getFondeseStateOptions_() : [];
+  var order = opts.map(function(o) { return o.code; });
+  var labelByCode = {};
+  opts.forEach(function(o) { labelByCode[o.code] = o.label; });
+
+  var byEstado = {};
+  order.forEach(function(c) { byEstado[c] = 0; });
+
+  var idxAdjudicado = order.indexOf('adjudicado');
+  var adjudicadas = 0, montoAdj = 0, montoEjec = 0, rendPendientes = 0;
+
+  rows.forEach(function(r) {
+    var est = String(r.estado_proceso || '').trim() || 'en_armado';
+    if (byEstado.hasOwnProperty(est)) byEstado[est]++;
+    else byEstado[est] = (byEstado[est] || 0) + 1;
+
+    var idx = order.indexOf(est);
+    if (idxAdjudicado >= 0 && idx >= idxAdjudicado) adjudicadas++;
+    montoAdj += Number(r.monto_adjudicado || 0) || 0;
+    montoEjec += Number(r.monto_ejecutado || 0) || 0;
+    if (est === 'en_rendicion' && String(r.estado_rendicion || '').trim().toLowerCase() !== 'aprobada') {
+      rendPendientes++;
+    }
+  });
+
+  var embudo = order.map(function(c) {
+    return { code: c, label: labelByCode[c] || c, count: byEstado[c] || 0 };
+  });
+
+  return {
+    total: rows.length,
+    embudo: embudo,
+    adjudicadas: adjudicadas,
+    montoAdjudicado: montoAdj,
+    montoEjecutado: montoEjec,
+    rendicionesPendientes: rendPendientes
+  };
+}
+
+/** CÁMARAS 1414: conteo por estado + fuera de plazo + cámaras instaladas (sin sincronizar). */
+function calcularCamarasResumen_() {
+  var asigs = (getSheetData_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG) || []).filter(function(a) {
+    return String(a.beneficio_codigo || '').trim().toUpperCase() === 'CAMARAS_1414';
+  });
+  var config = (typeof getCamaras1414Config_ === 'function') ? getCamaras1414Config_() : {};
+
+  var elegible = 0, solicitado = 0, instalado = 0, fueraPlazo = 0, camaras = 0;
+  asigs.forEach(function(a) {
+    var detailMap = indexCamarasDetailRows_(getCamarasDetailRowsByAssignmentId_(a.beneficio_org_id));
+    var eligDate = getCamarasEligibilityDateFromAssignment_(a);
+    var wf = buildCamarasWorkflowState_(a, detailMap, eligDate);
+    if (wf.index === 0) elegible++;
+    else if (wf.index === 1) solicitado++;
+    else if (wf.index === 2) instalado++;
+    if (wf.instalacion && wf.instalacion.cameras) camaras += Number(wf.instalacion.cameras) || 0;
+    if (wf.index === 0) {
+      var plazo = buildCamarasPlazoInfo_(eligDate, wf, config);
+      if (plazo && plazo.tono === 'danger') fueraPlazo++;
+    }
+  });
+
+  return {
+    elegible: elegible,
+    solicitado: solicitado,
+    instalado: instalado,
+    fueraPlazo: fueraPlazo,
+    camarasInstaladas: camaras
+  };
+}
+
+/** Capacitaciones: eventos (por tipo), inscripciones no canceladas, personas únicas y ocupación. */
+function calcularCapacitacionesResumen_() {
+  var eventos = getSheetData_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS) || [];
+  var inscr = getSheetData_(GO_PES_V2.SHEETS.FACT_FORM_INSCRIPCIONES) || [];
+
+  var porTipo = {};
+  var cupoTotal = 0;
+  eventos.forEach(function(e) {
+    var t = String(e.tipo || 'Otro').trim() || 'Otro';
+    porTipo[t] = (porTipo[t] || 0) + 1;
+    cupoTotal += Number(e.cupo_maximo || 0) || 0;
+  });
+
+  var noCanceladas = inscr.filter(function(i) {
+    return String(i.estado_inscripcion || '').trim().toLowerCase() !== 'cancelada';
+  });
+  var rutSet = {};
+  noCanceladas.forEach(function(i) {
+    var r = String(i.rut || '').trim();
+    if (r) rutSet[r] = true; // solo para el conteo distinct; el RUT no sale del backend
+  });
+
+  var porTipoList = Object.keys(porTipo)
+    .map(function(t) { return { label: t, count: porTipo[t] }; })
+    .sort(function(a, b) { return b.count - a.count; });
+
+  return {
+    eventos: eventos.length,
+    inscripciones: noCanceladas.length,
+    personasUnicas: Object.keys(rutSet).length,
+    ocupacionPct: cupoTotal > 0 ? Math.round((noCanceladas.length / cupoTotal) * 100) : 0,
+    porTipo: porTipoList
+  };
 }
 
 // ══════════════════════════════════════════════════════════════════════════

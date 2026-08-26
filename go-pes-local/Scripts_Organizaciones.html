@@ -1020,6 +1020,36 @@
     const data = APP.state.currentOrganizacionDetalle;
     const timeline = (data && data.avance && data.avance.hitos) || [];
 
+    // Limpieza profunda por etapa: solo visible para superuser (el backend igual lo exige).
+    const esSuperuser = (function() {
+      var u = (window.APP && APP.state && APP.state.user) || {};
+      return u.superuser_flag === true || u.superuser_flag === 'true' || String(u.perfil || '').toLowerCase() === 'superuser';
+    })();
+    const limpiezaHtml = esSuperuser ? `
+          <div class="org-editar-fechas-tramo orglimp-tramo">
+            <button type="button" class="org-editar-fechas-tramo-head" data-tramo="limpieza">
+              <span class="material-symbols-outlined">delete_sweep</span>
+              <div>
+                <h4>Limpieza profunda por etapa</h4>
+                <p class="muted">Borra todos los hitos de una etapa (irreversible)</p>
+              </div>
+              <span class="material-symbols-outlined org-editar-fechas-chevron">expand_less</span>
+            </button>
+            <div class="org-editar-fechas-content is-expanded" data-tramo-content="limpieza">
+              <div class="orglimp">
+                <p class="orglimp__warn"><span class="material-symbols-outlined">warning</span> <strong>Formalización:</strong> la organización no debe tener beneficios. <strong>Preconstitución:</strong> primero debes borrar Formalización, y no debe tener socios ni beneficios. Requiere PIN de seguridad. Esta acción no se puede deshacer.</p>
+                <div class="orglimp__grid">
+                  <div class="field"><label>PIN de seguridad</label><input type="password" id="orglimp-pin" autocomplete="off"></div>
+                  <div class="field"><label>Escribe BORRAR para confirmar</label><input type="text" id="orglimp-confirm" autocomplete="off" placeholder="BORRAR"></div>
+                </div>
+                <div class="orglimp__actions">
+                  <button type="button" class="danger-btn btn--sm" data-limp-etapa="Preconstitución"><span class="material-symbols-outlined">delete_sweep</span>Borrar Preconstitución</button>
+                  <button type="button" class="danger-btn btn--sm" data-limp-etapa="Formalización posterior"><span class="material-symbols-outlined">delete_sweep</span>Borrar Formalización</button>
+                </div>
+              </div>
+            </div>
+          </div>` : '';
+
     return `
       <form id="org-inline-edit-form" style="padding-top:1rem;max-height:calc(92vh - 180px);overflow-y:auto;">
         <div class="org-editar-fechas-info" style="margin-bottom:1.5rem;">
@@ -1098,31 +1128,7 @@
 
           <!-- Acordeones 2 y 3: Hitos -->
           ${renderHitosAccordion_(timeline, (data && data.catalogo_hitos) || [])}
-
-          <!-- Limpieza profunda por etapa (destructivo, superuser + PIN) -->
-          <div class="org-editar-fechas-tramo">
-            <button type="button" class="org-editar-fechas-tramo-head" data-tramo="limpieza">
-              <span class="material-symbols-outlined">delete_sweep</span>
-              <div>
-                <h4>Limpieza profunda por etapa</h4>
-                <p class="muted">Borra todos los hitos de una etapa (irreversible)</p>
-              </div>
-              <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
-            </button>
-            <div class="org-editar-fechas-content" data-tramo-content="limpieza">
-              <div class="orglimp">
-                <p class="orglimp__warn"><span class="material-symbols-outlined">warning</span> <strong>Formalización:</strong> la organización no debe tener beneficios. <strong>Preconstitución:</strong> primero debes borrar Formalización, y no debe tener socios ni beneficios. Requiere PIN de seguridad. Esta acción no se puede deshacer.</p>
-                <div class="orglimp__grid">
-                  <div class="field"><label>PIN de seguridad</label><input type="password" id="orglimp-pin" autocomplete="off"></div>
-                  <div class="field"><label>Escribe BORRAR para confirmar</label><input type="text" id="orglimp-confirm" autocomplete="off" placeholder="BORRAR"></div>
-                </div>
-                <div class="orglimp__actions">
-                  <button type="button" class="danger-btn btn--sm" data-limp-etapa="Preconstitución"><span class="material-symbols-outlined">delete_sweep</span>Borrar Preconstitución</button>
-                  <button type="button" class="danger-btn btn--sm" data-limp-etapa="Formalización posterior"><span class="material-symbols-outlined">delete_sweep</span>Borrar Formalización</button>
-                </div>
-              </div>
-            </div>
-          </div>
+          ${limpiezaHtml}
         </div>
 
         <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">

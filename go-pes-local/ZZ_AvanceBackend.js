@@ -1550,14 +1550,16 @@ function goPesLimpiarHitosEtapa(payload) {
 
   const esFor = (tramo === 'Formalización posterior');
 
-  // Los beneficios (instrumentos/CÁMARAS/FONDESE) dependen de la formalización →
-  // bloquean el borrado de CUALQUIER etapa.
-  const beneficios =
-    (filterByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'organizacion_id', organizacionId, false) || []).length +
-    (filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'organizacion_id', organizacionId, false) || []).length +
-    (filterByField_(GO_PES_V2.SHEETS.FACT_FONDESE, 'organizacion_id', organizacionId, false) || []).length;
-  if (beneficios > 0) {
-    throw new Error('La organización tiene beneficios vinculados. Elimínalos antes de limpiar la etapa.');
+  // Los beneficios vinculados bloquean la limpieza, EXCEPTO CÁMARAS 1414: se acepta
+  // que las cámaras queden sin su base de formalización. FONDESE y otros instrumentos sí bloquean.
+  const esCamaras_ = function(codigo) { return String(codigo || '').trim().toUpperCase() === 'CAMARAS_1414'; };
+  const instrNoCamaras = (filterByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'organizacion_id', organizacionId, false) || [])
+    .filter(function(i) { return !esCamaras_(i.instrumento_codigo_catalogo); }).length;
+  const benNoCamaras = (filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'organizacion_id', organizacionId, false) || [])
+    .filter(function(b) { return !esCamaras_(b.beneficio_codigo); }).length;
+  const fondese = (filterByField_(GO_PES_V2.SHEETS.FACT_FONDESE, 'organizacion_id', organizacionId, false) || []).length;
+  if (instrNoCamaras + benNoCamaras + fondese > 0) {
+    throw new Error('La organización tiene beneficios vinculados (FONDESE u otros instrumentos). Elimínalos antes de limpiar la etapa. Las CÁMARAS 1414 no bloquean.');
   }
 
   // Preconstitución es la base: solo se puede borrar si NO queda nada de Formalización

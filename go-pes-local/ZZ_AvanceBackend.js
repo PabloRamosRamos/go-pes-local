@@ -1519,6 +1519,118 @@ function goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline) {
 }
 
 /**
+ * Limpieza profunda de una ETAPA (tramo) de hitos de una organización.
+ * DESTRUCTIVO: borra las filas de FACT_Avance_Hitos del tramo (con todos sus
+ * datos: fechas, N° registro, RUT, cuenta, banco) y resetea los campos de
+ * MAE_Organizaciones ligados a ese tramo. BLOQUEA si la organización tiene
+ * socios o beneficios vinculados. Guard: superuser + PIN + confirmación 'BORRAR'.
+ * payload = { organizacion_id, tramo, pin, confirmacion }
+ */
+function goPesLimpiarHitosEtapa(payload) {
+  const user = requireRole_(['superuser']);
+  goPesEnsureAvanceBackendReady_();
+  payload = payload || {};
+  goPesValidatePin_(GO_PES_PIN_CONTEXTS.ADMIN_RESET, payload.pin, user.email);
+
+  const confirmacion = String(payload.confirmacion || '').trim().toUpperCase();
+  if (confirmacion !== 'BORRAR') {
+    throw new Error('Confirmación inválida. Debes escribir BORRAR para ejecutar la limpieza.');
+  }
+
+  const organizacionId = String(payload.organizacion_id || '').trim();
+  if (!organizacionId) throw new Error('Falta la organización.');
+  const tramo = String(payload.tramo || '').trim();
+  if (GO_PES_V2.AVANCE.TRAMOS.indexOf(tramo) === -1) {
+    throw new Error('Etapa inválida.');
+  }
+
+  const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
+  if (!org) throw new Error('No se encontró la organización indicada.');
+  const solicitudId = String(org.solicitud_id || '').trim();
+
+  const esFor = (tramo === 'Formalización posterior');
+
+  // Los beneficios (instrumentos/CÁMARAS/FONDESE) dependen de la formalización →
+  // bloquean el borrado de CUALQUIER etapa.
+  const beneficios =
+    (filterByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'organizacion_id', organizacionId, false) || []).length +
+    (filterByField_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'organizacion_id', organizacionId, false) || []).length +
+    (filterByField_(GO_PES_V2.SHEETS.FACT_FONDESE, 'organizacion_id', organizacionId, false) || []).length;
+  if (beneficios > 0) {
+    throw new Error('La organización tiene beneficios vinculados. Elimínalos antes de limpiar la etapa.');
+  }
+
+  // Preconstitución es la base: solo se puede borrar si NO queda nada de Formalización
+  // (hay que limpiar Formalización primero) y si no tiene socios vinculados.
+  if (!esFor) {
+    const formHitos = goPesGetTimelineAvanceRows_(organizacionId, solicitudId)
+      .filter(function(h) { return String(h.tramo || '').trim() === 'Formalización posterior'; }).length;
+    if (formHitos > 0) {
+      throw new Error('Debes limpiar primero la etapa Formalización antes de borrar Preconstitución (quedan ' + formHitos + ' hito(s) de formalización).');
+    }
+    const socios = (filterByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'organizacion_id', organizacionId, false) || []).length;
+    if (socios > 0) {
+      throw new Error('La organización tiene ' + socios + ' socio(s) vinculado(s). No se puede limpiar la etapa Preconstitución con socios; elimínalos primero.');
+    }
+  }
+
+  // Borrar filas del tramo (por organizacion_id y por solicitud_id).
+  const borrados = goPesDeleteAvanceHitosRows_(organizacionId, solicitudId, tramo);
+
+  // Resetear campos de MAE ligados al tramo.
+  const resetFields = esFor
+    ? { certificado_definitivo_flag: '', personalidad_juridica_flag: '', directiva_vigente_flag: '', organizacion_constituida_flag: '', fecha_ratificacion: '', vigencia_directiva_hasta: '' }
+    : { certificado_provisorio_flag: '', fecha_asamblea_constitucion: '' };
+  const nextOrg = Object.assign({}, org, resetFields, {
+    updated_at: new Date(),
+    responsable_actual: user.nombre_visible || user.email
+  });
+  upsertByKey_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', nextOrg, false);
+
+  // Refrescar vista + artefactos derivados.
+  invalidateSheetRuntimeCache_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS);
+  upsertVistaAvanceOrganizacionRowById_(organizacionId);
+  refreshPartialArtifacts_({
+    vistaOrganizacionIds: [organizacionId],
+    sugerenciaOrganizacionIds: [organizacionId],
+    masterSolicitudIds: uniqueNonBlank_([solicitudId])
+  });
+
+  logProcessing_('WARN', 'goPesLimpiarHitosEtapa', 'organizacion', organizacionId, user.email, 'OK', { tramo: tramo, hitos_borrados: borrados });
+  logUserAction_('LIMPIAR_HITOS_ETAPA', 'organizacion', organizacionId, 'OK', { tramo: tramo, hitos_borrados: borrados });
+
+  return serializeForClient_({ ok: true, organizacion_id: organizacionId, tramo: tramo, hitos_borrados: borrados });
+}
+
+/** Borra las filas de FACT_Avance_Hitos del tramo dado, por org_id O solicitud_id. Devuelve cuántas. */
+function goPesDeleteAvanceHitosRows_(organizacionId, solicitudId, tramo) {
+  const sh = getSheet_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS);
+  if (!sh) return 0;
+  const values = sh.getDataRange().getValues();
+  if (values.length < 2) return 0;
+  const headers = values[0].map(String);
+  const iOrg = headers.indexOf('organizacion_id');
+  const iSol = headers.indexOf('solicitud_id');
+  const iTramo = headers.indexOf('tramo');
+  if (iTramo === -1) return 0;
+
+  const filasABorrar = [];
+  for (var r = 1; r < values.length; r++) {
+    const rowOrg = String(values[r][iOrg] || '').trim();
+    const rowSol = String(values[r][iSol] || '').trim();
+    const rowTramo = String(values[r][iTramo] || '').trim();
+    const coincide = rowTramo === tramo &&
+      ((rowOrg && rowOrg === organizacionId) || (solicitudId && rowSol === solicitudId));
+    if (coincide) filasABorrar.push(r + 1); // fila real (1-indexada, +1 por header)
+  }
+  // Borrar de abajo hacia arriba para no correr los índices.
+  for (var k = filasABorrar.length - 1; k >= 0; k--) {
+    sh.deleteRow(filasABorrar[k]);
+  }
+  return filasABorrar.length;
+}
+
+/**
  * ¿La fila de hito pertenece a esta organización? Coincide por organizacion_id
  * O por solicitud_id (mismo criterio con que goPesGetTimelineAvanceRows_ arma el
  * timeline). Necesario porque los hitos de preconstitución se registran antes de

@@ -168,11 +168,6 @@
         </div>
       </div>
 
-      <section class="toolbar">
-        <div class="toolbar__left"></div>
-        <span class="muted" id="status-message">Listo.</span>
-      </section>
-
       <main class="layout">
         <aside class="sidebar">
           <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Contraer menú" aria-expanded="true" title="Contraer menú">
@@ -640,7 +635,7 @@
         <span class="material-symbols-outlined">close</span>
       </button>
     </div>
-    <div id="toast-container" role="status" aria-live="polite" aria-atomic="false"></div>
+    <div id="msgbar-stack" role="status" aria-live="polite" aria-atomic="false"></div>
     <script>
       (function() {
         var ok = typeof CSS !== 'undefined' && typeof CSS.supports === 'function' &&

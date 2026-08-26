@@ -19,27 +19,34 @@
           </div>
           <aside class="org-ms__card org-rail">
             <div class="org-rail__head">
-              <input type="text" id="org-search-input" placeholder="Nombre, UV, sector, contacto, ID…" autocomplete="off">
-              <div class="org-filter-row">
-                <div class="field"><label for="org-filter-uv">UV</label><select id="org-filter-uv"><option value="">Todas las UV</option></select></div>
-                <div class="field"><label for="org-filter-sector">Sector</label><select id="org-filter-sector"><option value="">Todos los sectores</option></select></div>
-                <div class="field"><label for="org-filter-etapa">Etapa</label><select id="org-filter-etapa">
-                  <option value="">Todas</option>
-                  <option value="T1">Preconstitución (T1)</option>
-                  <option value="T2">Formalización (T2)</option>
-                  <option value="completa">Completa (15/15)</option>
-                </select></div>
-                <div class="field"><label for="org-order">Orden</label><select id="org-order">
-                  <option value="nombre_asc">Nombre A → Z</option>
-                  <option value="nombre_desc">Nombre Z → A</option>
-                  <option value="avance_desc">Más avance</option>
-                  <option value="avance_asc">Menos avance</option>
-                  <option value="socios_desc">Más socios</option>
-                  <option value="mov_desc">Movimiento reciente</option>
-                  <option value="mov_asc">Sin movimiento primero</option>
-                </select></div>
+              <div class="org-rail__searchrow">
+                <input type="text" id="org-search-input" placeholder="Nombre, UV, contacto, ID…" autocomplete="off">
+                <button type="button" class="org-filters-toggle" id="org-filters-toggle" aria-expanded="false" aria-controls="org-filters-collapse" title="Mostrar u ocultar filtros">
+                  <span class="material-symbols-outlined">tune</span><span>Filtros</span>
+                </button>
               </div>
-              <div id="org-chip-row" class="org-chip-row"></div>
+              <div class="org-filters-collapse" id="org-filters-collapse" hidden>
+                <div class="org-filter-row">
+                  <div class="field"><label for="org-filter-uv">UV</label><select id="org-filter-uv"><option value="">Todas las UV</option></select></div>
+                  <div class="field"><label for="org-filter-sector">Sector</label><select id="org-filter-sector"><option value="">Todos los sectores</option></select></div>
+                  <div class="field"><label for="org-filter-etapa">Etapa</label><select id="org-filter-etapa">
+                    <option value="">Todas</option>
+                    <option value="T1">Preconstitución (T1)</option>
+                    <option value="T2">Formalización (T2)</option>
+                    <option value="completa">Completa (15/15)</option>
+                  </select></div>
+                  <div class="field"><label for="org-order">Orden</label><select id="org-order">
+                    <option value="nombre_asc">Nombre A → Z</option>
+                    <option value="nombre_desc">Nombre Z → A</option>
+                    <option value="avance_desc">Más avance</option>
+                    <option value="avance_asc">Menos avance</option>
+                    <option value="socios_desc">Más socios</option>
+                    <option value="mov_desc">Movimiento reciente</option>
+                    <option value="mov_asc">Sin movimiento primero</option>
+                  </select></div>
+                </div>
+                <div id="org-chip-row" class="org-chip-row"></div>
+              </div>
             </div>
             <div class="org-rail__body">
               <div class="org-rail__count" id="org-rail-count"></div>
@@ -445,6 +452,7 @@
 
     bindOrganizacionSocioCargoButtons_();
     bindOrgViewerActions_();
+    bindFichaTabs_(viewer);
   }
 
   function bindOrgViewerActions_() {
@@ -651,6 +659,15 @@
       renderOrganizacionesGridFromState_();
     });
 
+    document.getElementById('org-filters-toggle')?.addEventListener('click', function() {
+      var box = document.getElementById('org-filters-collapse');
+      if (!box) return;
+      var abrir = box.hasAttribute('hidden');
+      if (abrir) box.removeAttribute('hidden'); else box.setAttribute('hidden', '');
+      this.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+      this.classList.toggle('is-open', abrir);
+    });
+
     document.getElementById('org-chip-row')?.addEventListener('click', function(e) {
       var btn = e.target.closest('.org-chip-btn');
       if (!btn) return;
@@ -777,6 +794,49 @@
       const h = avanceHitos.find(function(x){ return String(x.codigo_hito || '') === cod; });
       return (h && h.fecha_hito) ? h.fecha_hito : '';
     };
+    // Flags de constitución: no se auto-setean en MAE. Si el campo está vacío,
+    // derivar del hito cumplido (certificado provisorio=PRE_07, definitivo y
+    // personalidad jurídica=FOR_04). Un valor explícito en MAE (Sí/No) manda.
+    const flagDesdeHito_ = function(orgFlag, cod) {
+      const v = String(orgFlag || '').trim();
+      if (v) return v;
+      return avanceHitos.some(function(x){ return String(x.codigo_hito || '') === cod; }) ? 'Sí' : '';
+    };
+
+    // Estado general derivado del avance (orden del hito más alto alcanzado):
+    // < hito 3 = Grupo de vecinos · 3-7 = Preconstitución · 8-14 = Formalización · 15 = Formalización completa.
+    const estadoGeneralDerivado_ = function() {
+      let maxOrden = 0;
+      avanceHitos.forEach(function(h){ const o = Number(h.orden_hito || 0); if (o > maxOrden) maxOrden = o; });
+      if (maxOrden >= 15) return 'Formalización completa';
+      if (maxOrden < 3)   return 'Grupo de vecinos';
+      if (maxOrden <= 7)  return 'Preconstitución';
+      return 'Formalización';
+    };
+
+    // Vigencia directiva = 3 años desde la asamblea de constitución, menos la antigüedad
+    // (= tiempo restante). Muestra la fecha de vencimiento y cuánto le queda / hace cuánto venció.
+    // Devuelve { fecha: '26-05-2029', restante: '2 años y 9 meses' }.
+    const vigencia_ = function() {
+      const base = org.fecha_asamblea_constitucion || hitoFecha_('PRE_04');
+      if (!base) return { fecha: '', restante: '' };
+      const d = new Date(base);
+      if (isNaN(d.getTime())) return { fecha: '', restante: '' };
+      const expiry = new Date(d.getTime());
+      expiry.setFullYear(expiry.getFullYear() + 3);
+      const p2 = function(n){ return (n < 10 ? '0' : '') + n; };
+      const fecha = p2(expiry.getDate()) + '-' + p2(expiry.getMonth() + 1) + '-' + expiry.getFullYear();
+      const msLeft = expiry.getTime() - Date.now();
+      const dias = Math.round(Math.abs(msLeft) / 86400000);
+      const anios = Math.floor(dias / 365);
+      const meses = Math.floor((dias % 365) / 30);
+      const partes = [];
+      if (anios > 0) partes.push(anios + (anios === 1 ? ' año' : ' años'));
+      if (meses > 0) partes.push(meses + (meses === 1 ? ' mes' : ' meses'));
+      let restante = partes.join(' y ') || 'menos de un mes';
+      if (msLeft <= 0) restante = 'Vencida hace ' + restante;
+      return { fecha: fecha, restante: restante };
+    };
 
     const hitoPre03 = avanceHitos.find(h => String(h.codigo_hito || '') === 'PRE_03');
     const fechaAsambleaAsignada = hitoPre03 ? (hitoPre03.fecha_asamblea_asignada || 'Sin registrar') : 'Sin registrar';
@@ -790,67 +850,106 @@
     const numeroCuenta = hitoFor08 ? (hitoFor08.numero_cuenta || 'Sin registrar') : 'Sin registrar';
     const banco = hitoFor08 ? (hitoFor08.banco || 'Sin especificar') : 'Sin especificar';
 
+    // Stepper de avance (15 hitos) y chips de flags para el layout por pestañas.
+    const ordenesPresentes = {};
+    avanceHitos.forEach(function(h){ const o = Number(h.orden_hito || 0); if (o) ordenesPresentes[o] = true; });
+    let stepperHtml = '';
+    for (let i = 1; i <= 15; i++) stepperHtml += '<span class="orgficha-step' + (ordenesPresentes[i] ? ' is-done' : '') + '" aria-hidden="true"></span>';
+    const flagChip_ = function(label, val){
+      const on = String(val || '').trim() === 'Sí';
+      return '<span class="orgficha-flag' + (on ? ' is-on' : '') + '"><span class="material-symbols-outlined">' + (on ? 'check_circle' : 'radio_button_unchecked') + '</span>' + label + '</span>';
+    };
+    const vig = vigencia_();
+
     return `
-      <div class="organizaciones-metrics organizaciones-metrics--compact" style="grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:10px;">
-        ${organizacionMetricHtml_('Socios',     r.cantidad_socios      || 0)}
-        ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
-        ${organizacionMetricHtml_('Antigüedad', formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}
-      </div>
-      ${orgSociosMinBadgeHtml_(r.cantidad_socios || 0)}
-
-      <div class="organizaciones-grid organizaciones-grid--profile">
-        ${organizacionBlockHtml_('Datos generales', [
-          ['ID organización', org.organizacion_id],
-          ['Solicitud',       org.solicitud_id],
-          ['Tipo',            org.tipo_organizacion],
-          ['Estado general',  org.estado_general_organizacion],
-          ['Estado constitución', org.estado_constitucion],
-          ['Responsable',     org.responsable_actual],
-          ['Actualizado',     org.updated_at]
-        ])}
-        ${organizacionBlockHtml_('Territorio', [
-          ['UV',        org.uv],
-          ['Sector',    org.sector],
-          ['Dirección', org.direccion_referencia]
-        ])}
-        ${organizacionBlockHtml_('Avance y asambleas', [
-          ['Estado avance',      r.estado_avance],
-          ['Último hito',        r.ultimo_hito],
-          ['Hitos registrados',  r.cantidad_avance_hitos],
-          ['Gestiones legacy',   r.cantidad_hitos_legacy],
-          ['Fecha asignada asamblea (Hito 3)', fechaAsambleaAsignada]
-        ])}
-        ${organizacionBlockHtml_('Directiva y constitución', [
-          ['Fecha inicio',           org.fecha_inicio_acompanamiento || hitoFecha_('PRE_01')],
-          ['Asamblea constitución',  org.fecha_asamblea_constitucion || hitoFecha_('PRE_04')],
-          ['Ratificación',           org.fecha_ratificacion || hitoFecha_('FOR_02')],
-          ['Vigencia directiva',     org.vigencia_directiva_hasta],
-          ['Directiva vigente',      org.directiva_vigente_flag],
-          ['Personalidad jurídica',  org.personalidad_juridica_flag],
-          ['Certificado provisorio', org.certificado_provisorio_flag],
-          ['Certificado definitivo', org.certificado_definitivo_flag]
-        ], 'organizaciones-block--wide', 'organizaciones-kv--double')}
-        ${organizacionBlockHtml_('Observaciones', [
-          ['Resumen', org.observacion_resumen]
-        ], 'organizaciones-block--wide')}
-        ${organizacionBlockHtml_('Datos administrativos y financieros', [
-          ['RUT organización (Hito 12)', rutOrganizacion],
-          ['N° Registro cert. provisorio (Hito 7)', numeroRegistroProvisorio],
-          ['Cuenta bancaria (Hito 14)', numeroCuenta],
-          ['', ''],
-          ['N° Registro cert. definitivo (Hito 11)', numeroRegistroDefinitivo],
-          ['Banco', banco]
-        ], 'organizaciones-block--wide', 'organizaciones-kv--triple')}
+      <div class="orgficha-tabs" role="tablist">
+        <button type="button" class="orgficha-tab is-active" role="tab" aria-selected="true"  data-tab="resumen"><span class="material-symbols-outlined">summarize</span>Resumen</button>
+        <button type="button" class="orgficha-tab"           role="tab" aria-selected="false" data-tab="avance"><span class="material-symbols-outlined">timeline</span>Avance</button>
+        <button type="button" class="orgficha-tab"           role="tab" aria-selected="false" data-tab="directiva"><span class="material-symbols-outlined">gavel</span>Directiva</button>
+        <button type="button" class="orgficha-tab"           role="tab" aria-selected="false" data-tab="socios"><span class="material-symbols-outlined">groups</span>Socios</button>
+        <button type="button" class="orgficha-tab"           role="tab" aria-selected="false" data-tab="beneficios"><span class="material-symbols-outlined">redeem</span>Beneficios</button>
+        <button type="button" class="orgficha-tab"           role="tab" aria-selected="false" data-tab="historial"><span class="material-symbols-outlined">history</span>Historial</button>
       </div>
 
-      <div class="organizaciones-lower-grid">
-        ${organizacionTableHtml_('Beneficios asociados', data.instrumentos || [], ['org_instrumento_id', 'instrumento_codigo_catalogo', 'estado_instrumento', 'resultado_instrumento'], 'organizaciones-block--table-beneficios')}
-        ${organizacionSociosTableHtml_(data.socios || [], 'organizaciones-block--table-socios')}
+      <div class="orgficha-panel is-active" data-panel="resumen">
+        <div class="organizaciones-metrics organizaciones-metrics--compact orgficha-metrics">
+          ${organizacionMetricHtml_('Socios',     r.cantidad_socios      || 0)}
+          ${organizacionMetricHtml_('Beneficios', r.cantidad_instrumentos || 0)}
+          ${organizacionMetricHtml_('Antigüedad', formatOrganizacionAntiguedad_(r.fecha_antiguedad_organizacion))}
+        </div>
+        ${orgSociosMinBadgeHtml_(r.cantidad_socios || 0)}
+        <div class="organizaciones-grid organizaciones-grid--profile">
+          ${organizacionBlockHtml_('Datos generales', [
+            ['ID organización', org.organizacion_id],
+            ['Solicitud',       org.solicitud_id],
+            ['Estado general',  estadoGeneralDerivado_()],
+            ['Responsable',     org.responsable_actual],
+            ['Actualizado',     org.updated_at]
+          ])}
+          ${organizacionBlockHtml_('Territorio', [
+            ['UV',        org.uv],
+            ['Dirección', org.direccion_referencia]
+          ])}
+          ${organizacionBlockHtml_('Observaciones', [
+            ['Resumen', org.observacion_resumen]
+          ], 'organizaciones-block--wide')}
+        </div>
+        ${renderOrganizacionMapSection_(org, data.socios || [])}
       </div>
 
-      ${organizacionTableHtml_('Historial reciente', data.historial || [], ['timestamp', 'action', 'email', 'result'], 'organizaciones-block--table-full')}
+      <div class="orgficha-panel" data-panel="avance">
+        <div class="orgficha-avance-head">
+          <span class="orgficha-avance-num">${avanceHitos.length}<small> / 15 hitos</small></span>
+          <span class="orgficha-avance-estado">${escapeHtml(estadoGeneralDerivado_())}</span>
+        </div>
+        <div class="orgficha-stepper" role="img" aria-label="Avance de ${avanceHitos.length} de 15 hitos">${stepperHtml}</div>
+        <div class="orgficha-stepper-legend"><span>Preconstitución (1-7)</span><span>Formalización (8-15)</span></div>
+        <div class="organizaciones-grid organizaciones-grid--profile orgficha-mt">
+          ${organizacionBlockHtml_('Avance y asambleas', [
+            ['Estado avance',      r.estado_avance],
+            ['Último hito',        r.ultimo_hito],
+            ['Hitos registrados',  r.cantidad_avance_hitos],
+            ['Fecha asignada asamblea (Hito 3)', fechaAsambleaAsignada]
+          ], 'organizaciones-block--wide', 'organizaciones-kv--double')}
+        </div>
+      </div>
 
-      ${renderOrganizacionMapSection_(org, data.socios || [])}
+      <div class="orgficha-panel" data-panel="directiva">
+        <div class="orgficha-flags">
+          ${flagChip_('Directiva vigente', org.directiva_vigente_flag)}
+          ${flagChip_('Personalidad jurídica', flagDesdeHito_(org.personalidad_juridica_flag, 'FOR_04'))}
+          ${flagChip_('Certificado provisorio', flagDesdeHito_(org.certificado_provisorio_flag, 'PRE_07'))}
+          ${flagChip_('Certificado definitivo', flagDesdeHito_(org.certificado_definitivo_flag, 'FOR_04'))}
+        </div>
+        <div class="organizaciones-grid organizaciones-grid--profile orgficha-mt">
+          ${organizacionBlockHtml_('Directiva y constitución', [
+            ['Fecha inicio',           org.fecha_inicio_acompanamiento || hitoFecha_('PRE_01')],
+            ['Asamblea constitución',  org.fecha_asamblea_constitucion || hitoFecha_('PRE_04')],
+            ['Ratificación',           org.fecha_ratificacion || hitoFecha_('FOR_02')],
+            ['Vigencia directiva',     vig.restante],
+            ['Fecha de vencimiento',   vig.fecha]
+          ])}
+          ${organizacionBlockHtml_('Datos administrativos y financieros', [
+            ['RUT organización (Hito 12)', rutOrganizacion],
+            ['N° Registro cert. provisorio (Hito 7)', numeroRegistroProvisorio],
+            ['N° Registro cert. definitivo (Hito 11)', numeroRegistroDefinitivo],
+            ['Cuenta bancaria (Hito 14)', numeroCuenta],
+            ['Banco', banco]
+          ])}
+        </div>
+      </div>
+
+      <div class="orgficha-panel" data-panel="socios">
+        ${organizacionSociosTableHtml_(data.socios || [], 'organizaciones-block--table-socios') || goPesEmptyStateHtml_('groups', 'Sin socios', 'Esta organización aún no tiene socios registrados.', 'organizaciones-detail')}
+      </div>
+
+      <div class="orgficha-panel" data-panel="beneficios">
+        ${organizacionTableHtml_('Beneficios asociados', data.instrumentos || [], ['org_instrumento_id', 'instrumento_codigo_catalogo', 'estado_instrumento', 'resultado_instrumento'], 'organizaciones-block--table-beneficios') || goPesEmptyStateHtml_('redeem', 'Sin beneficios', 'Esta organización aún no tiene beneficios asociados.', 'organizaciones-detail')}
+      </div>
+
+      <div class="orgficha-panel" data-panel="historial">
+        ${organizacionTableHtml_('Historial reciente', data.historial || [], ['timestamp', 'action', 'email', 'result'], 'organizaciones-block--table-full') || goPesEmptyStateHtml_('history', 'Sin historial', 'No hay acciones recientes registradas.', 'organizaciones-detail')}
+      </div>
     `;
   }
 
@@ -878,6 +977,7 @@
 
     bindOrganizacionSocioCargoButtons_();
     updateOrgEstadoActions_(org);
+    bindFichaTabs_(detail);
   }
 
   // -- MODO EDICIÓN INLINE --
@@ -998,6 +1098,31 @@
 
           <!-- Acordeones 2 y 3: Hitos -->
           ${renderHitosAccordion_(timeline, (data && data.catalogo_hitos) || [])}
+
+          <!-- Limpieza profunda por etapa (destructivo, superuser + PIN) -->
+          <div class="org-editar-fechas-tramo">
+            <button type="button" class="org-editar-fechas-tramo-head" data-tramo="limpieza">
+              <span class="material-symbols-outlined">delete_sweep</span>
+              <div>
+                <h4>Limpieza profunda por etapa</h4>
+                <p class="muted">Borra todos los hitos de una etapa (irreversible)</p>
+              </div>
+              <span class="material-symbols-outlined org-editar-fechas-chevron">expand_more</span>
+            </button>
+            <div class="org-editar-fechas-content" data-tramo-content="limpieza">
+              <div class="orglimp">
+                <p class="orglimp__warn"><span class="material-symbols-outlined">warning</span> <strong>Formalización:</strong> la organización no debe tener beneficios. <strong>Preconstitución:</strong> primero debes borrar Formalización, y no debe tener socios ni beneficios. Requiere PIN de seguridad. Esta acción no se puede deshacer.</p>
+                <div class="orglimp__grid">
+                  <div class="field"><label>PIN de seguridad</label><input type="password" id="orglimp-pin" autocomplete="off"></div>
+                  <div class="field"><label>Escribe BORRAR para confirmar</label><input type="text" id="orglimp-confirm" autocomplete="off" placeholder="BORRAR"></div>
+                </div>
+                <div class="orglimp__actions">
+                  <button type="button" class="danger-btn btn--sm" data-limp-etapa="Preconstitución"><span class="material-symbols-outlined">delete_sweep</span>Borrar Preconstitución</button>
+                  <button type="button" class="danger-btn btn--sm" data-limp-etapa="Formalización posterior"><span class="material-symbols-outlined">delete_sweep</span>Borrar Formalización</button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <input type="hidden" name="organizacion_id" value="${escapeHtml(org.organizacion_id || '')}">
@@ -1201,6 +1326,46 @@
         }
       });
     });
+
+    bindLimpiezaEtapa_(form);
+  }
+
+  // Limpieza profunda por etapa (destructivo): superuser + PIN + confirmación 'BORRAR'.
+  function bindLimpiezaEtapa_(form) {
+    if (!form) return;
+    form.querySelectorAll('[data-limp-etapa]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var tramo = btn.getAttribute('data-limp-etapa');
+        var etiqueta = tramo === 'Formalización posterior' ? 'Formalización' : 'Preconstitución';
+        var org = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.organizacion;
+        if (!org || !org.organizacion_id) { showError('No se encontró la organización.'); return; }
+        var pin  = String((document.getElementById('orglimp-pin') || {}).value || '').trim();
+        var conf = String((document.getElementById('orglimp-confirm') || {}).value || '').trim();
+        if (!pin) { showError('Ingresa el PIN de seguridad.'); return; }
+        if (conf.toUpperCase() !== 'BORRAR') { showError('Escribe BORRAR para confirmar.'); return; }
+        if (!window.confirm('¿Borrar TODA la etapa ' + etiqueta + ' de esta organización? Esta acción es irreversible.')) return;
+
+        btn.disabled = true;
+        showModalLoading('org-detalle-modal', 'Limpiando etapa ' + etiqueta + '…');
+        api('goPesLimpiarHitosEtapa', { organizacion_id: org.organizacion_id, tramo: tramo, pin: pin, confirmacion: conf })
+          .then(function(res) {
+            hideModalLoading('org-detalle-modal');
+            showSuccess('Etapa ' + etiqueta + ' limpiada: ' + (res.hitos_borrados || 0) + ' hito(s) borrado(s).');
+            var orgId = org.organizacion_id;
+            return api('getOrganizacionModuloDetalle', { organizacion_id: orgId }).then(function(data) {
+              APP.state.currentOrganizacionDetalle = data || {};
+              closeOrganizacionDetalleModal_();
+              renderOrganizacionViewer_(APP.state.currentOrganizacionDetalle);
+              ensureOrganizacionesModuloList_().then(function() { renderOrganizacionesGridFromState_(); }).catch(function() {});
+            });
+          })
+          .catch(function(err) {
+            hideModalLoading('org-detalle-modal');
+            btn.disabled = false;
+            showError(err);
+          });
+      });
+    });
   }
 
   function saveInlineOrganizacion_() {
@@ -1384,6 +1549,25 @@
   function bindOrganizacionSocioCargoButtons_() {
     document.querySelectorAll('.js-org-socio-cargo').forEach(btn => {
       btn.addEventListener('click', () => openOrganizacionSocioCargoModal_(btn.dataset.socioId));
+    });
+  }
+
+  // Pestañas de la ficha (Resumen/Avance/Directiva/Socios/Beneficios/Historial).
+  // Solo alterna clases dentro del contenedor dado (no toca datos ni APIs).
+  function bindFichaTabs_(container) {
+    if (!container) return;
+    const tabs = container.querySelectorAll('.orgficha-tab');
+    const panels = container.querySelectorAll('.orgficha-panel');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const key = tab.getAttribute('data-tab');
+        tabs.forEach(t => {
+          const on = t === tab;
+          t.classList.toggle('is-active', on);
+          t.setAttribute('aria-selected', on ? 'true' : 'false');
+        });
+        panels.forEach(p => p.classList.toggle('is-active', p.getAttribute('data-panel') === key));
+      });
     });
   }
 

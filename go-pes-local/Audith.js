@@ -1262,6 +1262,14 @@ function goPesTestOrganizaciones_() {
     } finally { findByField_ = origFind; }
   });
 
+  // Limpieza profunda por etapa: los tramos válidos existen en la constante.
+  s.test('AVANCE.TRAMOS contiene Preconstitución y Formalización posterior', function() {
+    var t = GO_PES_V2.AVANCE.TRAMOS;
+    assertTrue_(t.indexOf('Preconstitución') !== -1, 'debe existir Preconstitución');
+    assertTrue_(t.indexOf('Formalización posterior') !== -1, 'debe existir Formalización posterior');
+  });
+  s.skip('goPesLimpiarHitosEtapa', 'destructivo: requiere superuser + PIN + escritura en spreadsheet');
+
   return s.run();
 }
 

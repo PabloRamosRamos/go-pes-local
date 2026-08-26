@@ -33,23 +33,28 @@
   // TOAST NOTIFICATIONS
   // ══════════════════════════════════════════════════════════════════════════
 
+  // Canal ÚNICO de mensajes al usuario: banner fijo arriba (estilo browser-compat-warning),
+  // apilable (máx 3). showSuccess/showError lo usan; no hay otro canal.
   function showToast_(message, type, durationMs) {
-    const container = document.getElementById('toast-container');
-    if (!container) return;
-    const icons = { error: 'error', success: 'check_circle', session: 'lock_person' };
-    const toast = document.createElement('div');
-    toast.className = 'go-toast go-toast--' + (type || 'error');
-    toast.innerHTML =
-      '<span class="material-symbols-outlined go-toast__icon">' + (icons[type] || 'info') + '</span>' +
-      '<span class="go-toast__body">' + escapeHtml(message) + '</span>' +
-      '<button type="button" class="go-toast__close" aria-label="Cerrar"><span class="material-symbols-outlined" style="font-size:1rem">close</span></button>';
+    const stack = document.getElementById('msgbar-stack');
+    if (!stack) return;
+    const icons = { error: 'error', success: 'check_circle', warning: 'warning', info: 'info', session: 'lock_person' };
+    const bar = document.createElement('div');
+    bar.className = 'msgbar msgbar--' + (type || 'info');
+    bar.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    bar.innerHTML =
+      '<span class="material-symbols-outlined msgbar__icon">' + (icons[type] || 'info') + '</span>' +
+      '<span class="msgbar__body">' + escapeHtml(message) + '</span>' +
+      '<button type="button" class="msgbar__close" aria-label="Cerrar"><span class="material-symbols-outlined" style="font-size:1rem">close</span></button>';
     const close = () => {
-      toast.classList.add('go-toast--out');
-      setTimeout(() => toast.parentNode && toast.remove(), 200);
+      bar.classList.add('msgbar--out');
+      setTimeout(() => bar.parentNode && bar.remove(), 260);
     };
-    toast.querySelector('.go-toast__close').addEventListener('click', close);
+    bar.querySelector('.msgbar__close').addEventListener('click', close);
+    stack.appendChild(bar);
+    while (stack.children.length > 3) stack.removeChild(stack.firstElementChild);
+    requestAnimationFrame(() => bar.classList.add('msgbar--in'));
     if (durationMs) setTimeout(close, durationMs);
-    container.appendChild(toast);
   }
 
   function showSuccess(message) {
@@ -168,12 +173,10 @@
   // STATUS MESSAGE
   // ══════════════════════════════════════════════════════════════════════════
 
-  function setStatus(message, ok) {
-    const el = document.getElementById('status-message');
-    if (!el) return;
-    el.textContent = message;
-    el.style.color = ok === false ? '#A12A2A' : ok === true ? '#0C6844' : '';
-  }
+  // La barra de estado (.toolbar) se eliminó; todos los mensajes van por el banner
+  // (showToast_/showSuccess/showError). Se conserva la firma para no romper a los
+  // llamadores existentes (los avisos menores de estado ya no se muestran).
+  function setStatus() { /* no-op */ }
 
   // ══════════════════════════════════════════════════════════════════════════
   // EMPTY STATES

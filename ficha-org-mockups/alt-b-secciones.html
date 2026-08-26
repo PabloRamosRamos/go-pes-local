@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha org · Alt B — Secciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;750&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+<link href="_shared.css" rel="stylesheet">
+<style>
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;margin:14px 0}
+  .tab{border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:999px;padding:7px 15px;font:inherit;font-size:.82rem;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .tab.active{background:var(--brand);color:#fff;border-color:transparent;font-weight:650}
+  .tab .material-symbols-outlined{font-size:1rem}
+  .panel{display:none} .panel.active{display:block}
+</style></head>
+<body><div class="wrap">
+  <div class="mock-bar"><h1>Ficha organización · Alt B — Secciones con pestañas</h1><button class="themebtn" onclick="var r=document.documentElement;r.setAttribute('data-theme',r.getAttribute('data-theme')==='dark'?'light':'dark')">◐ Tema</button></div>
+
+  <div class="card pad">
+    <div class="hero">
+      <div class="ic"><span class="material-symbols-outlined">apartment</span></div>
+      <div><h2>Junta de Vecinos Los Aromos</h2>
+        <div class="meta"><span class="badge badge--ok"><span class="material-symbols-outlined" style="font-size:.9rem">verified</span>Formalización completa</span><span>ID ORG-000142</span><span>·</span><span>24 socios</span><span>·</span><span>UV 16</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="resumen"><span class="material-symbols-outlined">summarize</span>Resumen</button>
+    <button class="tab" data-t="avance"><span class="material-symbols-outlined">timeline</span>Avance</button>
+    <button class="tab" data-t="directiva"><span class="material-symbols-outlined">gavel</span>Directiva</button>
+    <button class="tab" data-t="socios"><span class="material-symbols-outlined">groups</span>Socios</button>
+    <button class="tab" data-t="beneficios"><span class="material-symbols-outlined">redeem</span>Beneficios</button>
+  </div>
+
+  <div class="panel active" data-p="resumen">
+    <div class="grid2">
+      <div class="card pad"><h4 class="blk">Datos generales</h4><div class="kv">
+        <div><strong>ID organización</strong><span>ORG-000142</span></div>
+        <div><strong>Solicitud</strong><span>SOL-000318</span></div>
+        <div><strong>Estado general</strong><span>Formalización completa</span></div>
+        <div><strong>Responsable</strong><span>María Fuentes</span></div>
+        <div><strong>Actualizado</strong><span>24-08-2026 09:54</span></div>
+      </div></div>
+      <div class="card pad"><h4 class="blk">Territorio</h4><div class="kv">
+        <div><strong>UV</strong><span>16</span></div>
+        <div><strong>Dirección</strong><span>Av. Los Leones 1234</span></div>
+      </div>
+      <div class="tiles" style="grid-template-columns:1fr 1fr;margin-top:14px">
+        <div class="tile"><div class="v">24</div><div class="l">Socios</div></div>
+        <div class="tile"><div class="v">1 a 3 m</div><div class="l">Antigüedad</div></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="panel" data-p="avance">
+    <div class="card pad">
+      <h4 class="blk">Avance de constitución</h4>
+      <div class="stepper" id="stepper"></div>
+      <div class="stepper-legend"><span>Preconstitución (7)</span><span>Formalización (8)</span></div>
+      <div class="kv" style="margin-top:14px">
+        <div><strong>Estado avance</strong><span>Activo</span></div>
+        <div><strong>Último hito</strong><span>Registro municipal habilitado (RMRFP)</span></div>
+        <div><strong>Hitos registrados</strong><span>15</span></div>
+        <div><strong>Fecha asignada asamblea (Hito 3)</strong><span>20-05-2025</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" data-p="directiva">
+    <div class="grid2">
+      <div class="card pad"><h4 class="blk">Directiva y constitución</h4><div class="kv">
+        <div><strong>Fecha inicio</strong><span>24-05-2025</span></div>
+        <div><strong>Asamblea constitución</strong><span>26-05-2025</span></div>
+        <div><strong>Ratificación</strong><span>12-08-2025</span></div>
+        <div><strong>Vigencia directiva</strong><span>26-05-2028 · quedan 1 a 9 m</span></div>
+      </div>
+      <div class="flags" style="margin-top:12px">
+        <span class="flag on"><span class="material-symbols-outlined">check_circle</span>Directiva vigente</span>
+        <span class="flag on"><span class="material-symbols-outlined">check_circle</span>Personalidad jurídica</span>
+        <span class="flag on"><span class="material-symbols-outlined">check_circle</span>Cert. provisorio</span>
+        <span class="flag on"><span class="material-symbols-outlined">check_circle</span>Cert. definitivo</span>
+      </div></div>
+      <div class="card pad"><h4 class="blk">Datos administrativos y financieros</h4><div class="kv">
+        <div><strong>RUT organización</strong><span>65.123.456-7</span></div>
+        <div><strong>N° reg. cert. provisorio</strong><span>1234/2025</span></div>
+        <div><strong>N° reg. cert. definitivo</strong><span>5678/2025</span></div>
+        <div><strong>Cuenta bancaria</strong><span>000-12345678</span></div>
+        <div><strong>Banco</strong><span>BancoEstado</span></div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="panel" data-p="socios">
+    <div class="card pad"><h4 class="blk">Socios (24)</h4>
+      <table class="t"><thead><tr><th>Socio</th><th>RUN</th><th>Cargo</th></tr></thead><tbody>
+        <tr><td>Ana Ríos</td><td>12.345.678-9</td><td>Presidenta</td></tr>
+        <tr><td>Juan Soto</td><td>9.876.543-2</td><td>Secretario</td></tr>
+        <tr><td>Pedro Lagos</td><td>11.222.333-4</td><td>Tesorero</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <div class="panel" data-p="beneficios">
+    <div class="card pad"><h4 class="blk">Beneficios asociados</h4>
+      <table class="t"><thead><tr><th>Beneficio</th><th>Estado</th></tr></thead><tbody>
+        <tr><td>CÁMARAS 1414</td><td><span class="pill">Instalado</span></td></tr>
+        <tr><td>FONDESE 2026</td><td><span class="pill">En ejecución</span></td></tr>
+        <tr><td>Capacitaciones</td><td><span class="pill">2 eventos</span></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <p class="note">Maqueta estática · datos de ejemplo · campos ya corregidos.
+  <b>Alt B — Secciones con pestañas:</b> el header queda fijo con lo esencial y el detalle se navega por pestañas (Resumen · Avance · Directiva · Socios · Beneficios). Menos scroll, más ordenado para fichas densas.</p>
+</div>
+<script>
+  var st=document.getElementById('stepper');for(var i=0;i<15;i++){var d=document.createElement('div');d.className='step done';st.appendChild(d);}
+  document.getElementById('tabs').addEventListener('click',function(e){var b=e.target.closest('.tab');if(!b)return;
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});b.classList.add('active');
+    document.querySelectorAll('.panel').forEach(function(p){p.classList.toggle('active',p.dataset.p===b.dataset.t)});});
+</script>
+</body></html>

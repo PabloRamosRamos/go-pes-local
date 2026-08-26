@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ficha org · Alt C — Bento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;750&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+<link href="_shared.css" rel="stylesheet">
+<style>
+  .bento{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}
+  .b{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px}
+  .c2{grid-column:span 2}.c4{grid-column:span 4}
+  .big-num{font-size:2rem;font-weight:750;letter-spacing:-.02em}
+  .vig{background:linear-gradient(135deg,var(--info-bg),transparent)}
+  @media(max-width:820px){.bento{grid-template-columns:repeat(2,1fr)}.c2,.c4{grid-column:span 2}}
+  @media(max-width:520px){.bento{grid-template-columns:1fr}.c2,.c4{grid-column:span 1}}
+</style></head>
+<body><div class="wrap">
+  <div class="mock-bar"><h1>Ficha organización · Alt C — Bento</h1><button class="themebtn" onclick="var r=document.documentElement;r.setAttribute('data-theme',r.getAttribute('data-theme')==='dark'?'light':'dark')">◐ Tema</button></div>
+
+  <div class="card pad">
+    <div class="hero">
+      <div class="ic"><span class="material-symbols-outlined">apartment</span></div>
+      <div><h2>Junta de Vecinos Los Aromos</h2>
+        <div class="meta"><span class="badge badge--ok"><span class="material-symbols-outlined" style="font-size:.9rem">verified</span>Formalización completa</span><span>ID ORG-000142 · SOL-000318</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bento">
+    <!-- avance grande -->
+    <div class="b c2">
+      <h4 class="blk">Avance de constitución</h4>
+      <div class="big-num">15<span style="font-size:1rem;color:var(--text-soft);font-weight:600"> / 15 hitos</span></div>
+      <div class="stepper" id="stepper" style="margin-top:10px"></div>
+      <div class="stepper-legend"><span>Preconstitución</span><span>Formalización</span></div>
+      <div style="margin-top:10px;font-size:.82rem;color:var(--text-muted)">Activo · último: Registro municipal habilitado</div>
+    </div>
+    <!-- vigencia destacada -->
+    <div class="b vig"><h4 class="blk">Vigencia directiva</h4><div class="big-num" style="font-size:1.5rem">1 a 9 m</div><div style="font-size:.78rem;color:var(--text-muted)">restante · vence 26-05-2028</div></div>
+    <!-- antiguedad -->
+    <div class="b"><h4 class="blk">Antigüedad</h4><div class="big-num" style="font-size:1.5rem">1 a 3 m</div><div style="font-size:.78rem;color:var(--text-muted)">desde constitución</div></div>
+
+    <!-- datos generales -->
+    <div class="b c2"><h4 class="blk">Datos generales</h4><div class="kv">
+      <div><strong>Estado general</strong><span>Formalización completa</span></div>
+      <div><strong>Responsable</strong><span>María Fuentes</span></div>
+      <div><strong>UV</strong><span>16</span></div>
+      <div><strong>Dirección</strong><span>Av. Los Leones 1234</span></div>
+      <div><strong>Actualizado</strong><span>24-08-2026 09:54</span></div>
+    </div></div>
+    <!-- estado de constitución flags -->
+    <div class="b c2"><h4 class="blk">Estado de constitución</h4>
+      <div class="flags">
+        <span class="flag on"><span class="material-symbols-outlined">check_circle</span>Directiva vigente</span>
+        <span class="flag on"><span class="material-symbols-outlined">check_circle</span>Personalidad jurídica</span>
+        <span class="flag on"><span class="material-symbols-outlined">check_circle</span>Cert. provisorio</span>
+        <span class="flag on"><span class="material-symbols-outlined">check_circle</span>Cert. definitivo</span>
+      </div>
+      <div class="kv" style="margin-top:12px">
+        <div><strong>Asamblea constitución</strong><span>26-05-2025</span></div>
+        <div><strong>Ratificación</strong><span>12-08-2025</span></div>
+      </div>
+    </div>
+
+    <!-- socios -->
+    <div class="b c2"><h4 class="blk">Socios (24)</h4>
+      <table class="t"><tbody>
+        <tr><td>Ana Ríos</td><td style="text-align:right"><span class="pill">Presidenta</span></td></tr>
+        <tr><td>Juan Soto</td><td style="text-align:right"><span class="pill">Secretario</span></td></tr>
+        <tr><td>Pedro Lagos</td><td style="text-align:right"><span class="pill">Tesorero</span></td></tr>
+      </tbody></table>
+    </div>
+    <!-- admin/financiero -->
+    <div class="b c2"><h4 class="blk">Administrativo y financiero</h4><div class="kv">
+      <div><strong>RUT</strong><span>65.123.456-7</span></div>
+      <div><strong>N° reg. definitivo</strong><span>5678/2025</span></div>
+      <div><strong>Cuenta bancaria</strong><span>000-12345678 · BancoEstado</span></div>
+    </div></div>
+
+    <!-- beneficios -->
+    <div class="b c2"><h4 class="blk">Beneficios</h4>
+      <div class="flags"><span class="flag">CÁMARAS 1414 · Instalado</span><span class="flag">FONDESE 2026 · En ejecución</span><span class="flag">Capacitaciones · 2</span></div>
+    </div>
+    <!-- mapa -->
+    <div class="b c2"><h4 class="blk">Georeferencia</h4>
+      <div style="display:flex;align-items:center;gap:10px;font-size:.82rem;color:var(--text-muted)"><span class="material-symbols-outlined" style="color:var(--brand)">location_on</span>Av. Los Leones 1234, UV 16 · <a href="#" style="color:var(--brand)">Ver en mapa</a></div>
+    </div>
+  </div>
+
+  <p class="note">Maqueta estática · datos de ejemplo · campos ya corregidos.
+  <b>Alt C — Bento:</b> mosaico de tarjetas de distinto tamaño; el avance y la vigencia directiva quedan destacados como piezas grandes, los flags como chips de estado. Glanceable, tipo dashboard.</p>
+</div>
+<script>
+  var st=document.getElementById('stepper');for(var i=0;i<15;i++){var d=document.createElement('div');d.className='step done';st.appendChild(d);}
+</script>
+</body></html>

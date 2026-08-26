@@ -589,23 +589,6 @@
     color: var(--text-muted);
   }
 
-  .toolbar {
-    text-align: right;
-    justify-content: space-between;
-    gap: var(--space-6);
-    align-items: center;
-    margin: var(--space-7) var(--space-10);
-    padding: var(--space-4) var(--space-6);
-    background: var(--surface-alt);
-    border-radius: var(--radius-lg);
-  }
-
-  .toolbar__left {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-  }
-
   .link-btn {
     background: transparent;
     border: none;
@@ -3741,7 +3724,6 @@
       grid-template-columns: 1fr;
     }
 
-    .toolbar,
     .hero {
       flex-direction: column;
       align-items: flex-start;
@@ -6994,22 +6976,7 @@ html[data-theme="dark"] .hist-badge--warn { background: var(--warning-soft, #352
 .panel .user-edit-layout { max-width: none; grid-template-columns: 1fr 2fr; }
 .module-check__desc { font-size: 0.72rem; color: var(--text-muted, #6b7a8d); margin: 2px 0 4px; line-height: 1.35; }
 
-/* Toast notifications */
-#toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9998; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
-.go-toast { display: flex; align-items: flex-start; gap: 10px; padding: 11px 14px; border-radius: 8px; min-width: 240px; max-width: 360px; font-size: .84rem; font-weight: 500; box-shadow: 0 3px 16px rgba(0,0,0,.13); pointer-events: all; animation: toastSlideIn .2s ease; line-height: 1.4; }
-.go-toast__icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
-.go-toast__body { flex: 1; }
-.go-toast__close { background: none; border: none; cursor: pointer; opacity: .55; padding: 0; line-height: 1; color: inherit; display: flex; align-items: center; flex-shrink: 0; }
-.go-toast__close:hover { opacity: 1; }
-.go-toast--error { background: #fde8e8; color: #7a1f1f; border-left: 4px solid #c0392b; }
-.go-toast--success { background: #e6f4ec; color: #0b4d2a; border-left: 4px solid #007C4A; }
-.go-toast--session { background: #fff8e1; color: #6d4c00; border-left: 4px solid #f9a825; }
-.go-toast--out { animation: toastSlideOut .18s ease forwards; }
-@keyframes toastSlideIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-@keyframes toastSlideOut { to { opacity:0; transform:translateY(8px); } }
-html[data-theme="dark"] .go-toast--error { background: var(--danger-soft,#311b22); color: var(--alert-danger-fg,#ffd7d2); border-left-color: #e05555; }
-html[data-theme="dark"] .go-toast--success { background: var(--success-soft,#21311a); color: var(--success,#9fd85a); border-left-color: var(--success,#9fd85a); }
-html[data-theme="dark"] .go-toast--session { background: var(--warning-soft,#352815); color: var(--alert-warning-fg,#ffd98a); border-left-color: #f9a825; }
+/* Mensajería: banner único fijo arriba (reemplaza los toasts). CSS al final del archivo. */
 
 /* Session expired overlay */
 #session-expired-overlay { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,.6); display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -8683,5 +8650,78 @@ th.sortable.sort-desc .sort-icon {
     -webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
   @page{size:A4;margin:12mm}
 }
+
+/* ============================================================================
+   FICHA ORGANIZACIÓN — layout por pestañas (prefijo orgficha-)
+   ============================================================================ */
+.orgficha-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 16px}
+.orgficha-tab{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border,#BFD9E7);background:var(--surface,#FFFFFF);color:var(--text-muted,#64748B);border-radius:999px;padding:7px 14px;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:background .16s,color .16s}
+.orgficha-tab .material-symbols-outlined{font-size:1rem}
+.orgficha-tab:hover{background:var(--surface-alt,#F1F6FA)}
+.orgficha-tab.is-active{background:var(--runtime-brand-primary,#3D96B4);border-color:transparent;color:#fff}
+.orgficha-panel{display:none}
+.orgficha-panel.is-active{display:block}
+.orgficha-metrics{margin-bottom:14px}
+.orgficha-mt{margin-top:14px}
+.orgficha-avance-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.orgficha-avance-num{font-size:1.7rem;font-weight:750;letter-spacing:-.02em;color:var(--text,#24364B);font-variant-numeric:tabular-nums}
+.orgficha-avance-num small{font-size:.9rem;font-weight:600;color:var(--text-muted,#64748B)}
+.orgficha-avance-estado{font-size:.78rem;font-weight:650;color:var(--success-dark,#587A24);background:var(--success-soft,#F3FAEA);padding:3px 11px;border-radius:999px}
+.orgficha-stepper{display:flex;gap:4px;align-items:center}
+.orgficha-step{flex:1;min-width:10px;height:9px;border-radius:5px;background:var(--border,#BFD9E7)}
+.orgficha-step.is-done{background:var(--runtime-brand-primary,#3D96B4)}
+.orgficha-stepper-legend{display:flex;justify-content:space-between;font-size:.72rem;color:var(--text-muted,#64748B);margin-top:7px}
+.orgficha-flags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px}
+.orgficha-flag{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:10px;font-size:.8rem;font-weight:600;border:1px solid var(--border,#BFD9E7);background:var(--surface-alt,#F1F6FA);color:var(--text-muted,#64748B)}
+.orgficha-flag .material-symbols-outlined{font-size:1.05rem}
+.orgficha-flag.is-on{background:var(--success-soft,#F3FAEA);color:var(--success-dark,#587A24);border-color:transparent}
+/* Los paneles usan todo el ancho: grilla de 2 columnas iguales (no span 4 de 12). */
+.orgficha-panel .organizaciones-grid--profile{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.orgficha-panel .organizaciones-grid--profile > .organizaciones-block{grid-column:auto}
+.orgficha-panel .organizaciones-grid--profile > .organizaciones-block--wide{grid-column:1 / -1}
+.orgficha-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+/* Filtros del rail colapsables (solo la búsqueda queda siempre visible) */
+.org-rail__searchrow{display:flex;gap:8px;align-items:center}
+.org-rail__searchrow #org-search-input{flex:1;min-width:0}
+.org-filters-toggle{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border,#BFD9E7);background:var(--surface,#FFFFFF);color:var(--text-muted,#64748B);border-radius:8px;padding:7px 11px;font:inherit;font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;flex:none}
+.org-filters-toggle .material-symbols-outlined{font-size:1.05rem}
+.org-filters-toggle:hover{background:var(--surface-alt,#F1F6FA)}
+.org-filters-toggle.is-open{background:var(--runtime-brand-primary,#3D96B4);border-color:transparent;color:#fff}
+.org-filters-collapse{margin-top:10px}
+.org-filters-collapse[hidden]{display:none}
+
+/* ============================================================================
+   HEADER compacto y siempre visible + BANNER único de mensajes (msgbar-)
+   ============================================================================ */
+.hero{position:sticky;top:0;z-index:60;padding:8px 16px}
+.hero__logo{width:auto;height:auto;font-size:1.2rem}
+.brand-mark{width:48px;height:48px}
+.hero__brand{gap:14px}
+.hero__title{font-size:1.15rem;margin:0}
+.hero__subtitle{font-size:.74rem;margin:2px 0 0}
+.layout{padding-top:20px}
+
+#msgbar-stack{position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;flex-direction:column;pointer-events:none}
+.msgbar{display:flex;align-items:center;gap:10px;padding:10px 46px 10px 18px;font-size:.85rem;font-weight:600;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.18);pointer-events:all;position:relative;transform:translateY(-100%);opacity:0;transition:transform .26s ease,opacity .26s ease}
+.msgbar.msgbar--in{transform:translateY(0);opacity:1}
+.msgbar.msgbar--out{transform:translateY(-100%);opacity:0}
+.msgbar__icon{font-size:1.15rem;flex-shrink:0}
+.msgbar__body{flex:1;line-height:1.35}
+.msgbar__close{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.20);border:none;cursor:pointer;color:inherit;opacity:.95;display:flex;align-items:center;justify-content:center;padding:0}
+.msgbar__close:hover{opacity:1;background:rgba(255,255,255,.34)}
+.msgbar--success{background:var(--success-dark,#587A24)}
+.msgbar--error{background:var(--danger,#B42318)}
+.msgbar--warning{background:var(--warning,#B7791F)}
+.msgbar--info{background:var(--runtime-brand-primary,#3D96B4)}
+.msgbar--session{background:var(--warning,#B7791F)}
+@media (prefers-reduced-motion: reduce){.msgbar{transition:none}}
+
+/* Limpieza profunda por etapa (modal editar organización) */
+.orglimp{display:flex;flex-direction:column;gap:12px;padding:4px 2px}
+.orglimp__warn{display:flex;align-items:flex-start;gap:8px;font-size:.82rem;color:var(--danger,#B42318);background:var(--danger-soft,#FFF0F0);border-radius:8px;padding:10px 12px;margin:0;line-height:1.4}
+.orglimp__warn .material-symbols-outlined{font-size:1.15rem;flex-shrink:0}
+.orglimp__grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.orglimp__actions{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:640px){.orglimp__grid{grid-template-columns:1fr}}
 
 </style>

@@ -209,11 +209,6 @@ function actualizarCargoSocioOrganizacion(payload) {
     extraDetail: { organizacion_id: organizacionId }
   });
 
-  logProcessing_('INFO', 'actualizarCargoSocioOrganizacion', 'socio', socioId, user.email, 'OK', {
-    organizacion_id: organizacionId,
-    cargo: cargo
-  });
-
   return serializeForClient_({
     ok: true,
     socio_id: socioId,

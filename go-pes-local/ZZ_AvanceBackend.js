@@ -483,11 +483,6 @@ function registrarHitoAvanceGrupoVecinos_(payload, user, diag) {
     upsertVistaAvanceOrganizacionRowById_(organizacionId);
   }
 
-  logProcessing_('INFO', 'registrarHitoAvanceGrupoVecinos', 'avance_hito', avanceHitoId, goPesGetUserEmail_(user), 'OK', {
-    solicitud_id: solicitudId,
-    organizacion_id: organizacionId,
-    codigo_hito: codigoHito
-  });
   logUserAction_('REGISTRAR_HITO_AVANCE_GRUPO_VECINOS', 'avance_hito', avanceHitoId, 'OK', {
     solicitud_id: solicitudId,
     organizacion_id: organizacionId,

@@ -953,7 +953,6 @@ function guardarIngreso(payload) {
       updated_at: now
     });
 
-    logProcessing_('INFO', 'guardarIngreso', 'solicitud', solicitudId, user.email || '', 'OK', clean);
     logUserAction_('CREATE_INGRESO', 'solicitud', solicitudId, 'OK', clean);
 
     // Si viene desde calendario, crear automáticamente el hito 1 (PRE_01)
@@ -1086,7 +1085,6 @@ function guardarSeguimiento(payload) {
     masterSolicitudIds: [payload.solicitud_id],
     sugerenciaSolicitudIds: [payload.solicitud_id]
   });
-  logProcessing_('INFO', 'guardarSeguimiento', 'avance', hitoId, user.email, 'OK', payload);
   logUserAction_('CREATE_AVANCE', 'avance', hitoId, 'OK', payload);
   return { ok: true, hito_id: hitoId };
   } finally {
@@ -1184,7 +1182,6 @@ function guardarOrganizacion(payload) {
     ],
     responsables: [payload.responsable_actual || user.nombre_visible]
   });
-  logProcessing_('INFO', 'guardarOrganizacion', 'organizacion', organizacionId, user.email, 'OK', payload);
   const result = { ok: true, organizacion_id: organizacionId };
   goPesDiagEnd_(diag, { ok: true, organizacion_id: organizacionId });
   return result;
@@ -1282,11 +1279,6 @@ function guardarInstrumento(payload) {
     vistaInstrumentoIds: [orgInstrumentoId],
     vistaTerritorialPairs: [{ uv: organizacion.uv || '', sector: organizacion.sector || '' }]
   });
-  logProcessing_('INFO', 'guardarInstrumento', 'instrumento', orgInstrumentoId, user.email, 'OK', {
-    organizacion_id: organizacionId,
-    instrumento_codigo_catalogo: clean.instrumento_codigo_catalogo,
-    estado_instrumento: clean.estado_instrumento
-  });
 
   const result = {
     ok: true,
@@ -1383,11 +1375,6 @@ function guardarRequisito(payload) {
     vistaOrganizacionIds: [organizacionId],
     vistaInstrumentoIds: [orgInstrumentoId],
     vistaTerritorialPairs: [{ uv: organizacion.uv || '', sector: organizacion.sector || '' }]
-  });
-  logProcessing_('INFO', 'guardarRequisito', 'requisito', requisitoRegistroId, user.email, 'OK', {
-    organizacion_id: organizacionId,
-    org_instrumento_id: orgInstrumentoId,
-    estado_requisito: clean.estado_requisito
   });
 
   const result = {

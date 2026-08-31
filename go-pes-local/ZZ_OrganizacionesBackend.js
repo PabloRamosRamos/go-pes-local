@@ -388,7 +388,6 @@ function cambiarEstadoAdministrativoOrganizacion_(payload, estado, action) {
       vistaOrganizacionIds: [organizacionId],
       sugerenciaOrganizacionIds: [organizacionId]
     });
-    logProcessing_('INFO', action, 'organizacion', organizacionId, user.email, 'OK', { estado: estado, motivo: motivo });
   }
 
   return serializeForClient_({ ok: true, organizacion_id: organizacionId, estado_general_organizacion: estado, sin_cambios: !!r.sin_cambios });

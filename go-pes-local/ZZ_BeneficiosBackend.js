@@ -198,9 +198,22 @@ function guardarCamaras1414Organizacion(payload) {
   upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_org_id', [nextAssignment], false);
   syncFactInstrumentoFromCamaras_(org, nextAssignment, computed, actorEmail, now);
 
+  // Auditoría con antes→después del beneficio. CÁMARAS es una escritura ACOPLADA
+  // (filas de detalle + asignación + sync al ledger) con estado derivado: NO encaja
+  // en aplicarCorreccionAuditada_ (su reversión por-registro dejaría el detalle
+  // inconsistente). Se reutiliza el diff de la central y se registra el cambio.
+  const camposCamaras = ['estado_beneficio', 'activo_flag', 'avance_beneficio_pct',
+    'proximo_hito_beneficio', 'fecha_inicio_beneficio', 'fecha_termino_beneficio',
+    'resultado_beneficio', 'responsable_beneficio', 'observacion_beneficio'];
+  const auditPatchCamaras = {};
+  camposCamaras.forEach(function(c) { auditPatchCamaras[c] = nextAssignment[c]; });
+  const cambiosCamaras = diffCamposCorreccion_(sync.assignment || {}, auditPatchCamaras);
+
   logUserAction_('GUARDAR_CAMARAS_1414_ORG', 'beneficio_org', nextAssignment.beneficio_org_id, 'OK', {
     organizacion_id: organizacionId,
-    estado_beneficio: nextAssignment.estado_beneficio
+    estado_anterior: String((sync.assignment && sync.assignment.estado_beneficio) || ''),
+    estado_beneficio: nextAssignment.estado_beneficio,
+    cambios: cambiosCamaras
   });
 
   return serializeForClient_({
@@ -239,9 +252,29 @@ function buildCamaras1414Panel_(payload) {
     if (id) orgById[id] = o;
   });
 
+  // CÁMARAS solo aplica a organizaciones ACTIVAS (no suspendidas/eliminadas) y que
+  // mantengan el certificado definitivo vigente (hito FOR_04). Si perdieron el FOR_04
+  // (p. ej. se limpió la formalización) o están suspendidas, no deben aparecer.
+  const orgsConFor04 = {};
+  getSheetData_(GO_PES_V2.SHEETS.FACT_AVANCE_HITOS).forEach(function(h) {
+    if (String(h.codigo_hito || '').trim().toUpperCase() === 'FOR_04') {
+      const oid = String(h.organizacion_id || '').trim();
+      if (oid) orgsConFor04[oid] = true;
+    }
+  });
+  const orgCamarasVigente_ = function(orgId) {
+    const o = orgById[orgId] || {};
+    const estado = String(o.estado_general_organizacion || '').toLowerCase();
+    if (estado.indexOf('suspend') !== -1 || estado.indexOf('elimin') !== -1) return false;
+    return !!orgsConFor04[orgId];
+  };
+
   const estados = ['elegible', 'solicitado', 'instalado'];
   const orgs = getSheetData_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG)
-    .filter(function(a) { return String(a.beneficio_codigo || '').trim().toUpperCase() === 'CAMARAS_1414'; })
+    .filter(function(a) {
+      return String(a.beneficio_codigo || '').trim().toUpperCase() === 'CAMARAS_1414' &&
+        orgCamarasVigente_(String(a.organizacion_id || '').trim());
+    })
     .map(function(a) {
       const detailMap = indexCamarasDetailRows_(getCamarasDetailRowsByAssignmentId_(a.beneficio_org_id));
       const eligDate = getCamarasEligibilityDateFromAssignment_(a);
@@ -293,7 +326,16 @@ function syncAllCamaras1414Eligibility_() {
     }
   });
 
+  // No re-eligibilizar organizaciones suspendidas/eliminadas.
+  const orgById = {};
+  getSheetData_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES).forEach(function(o) {
+    const id = String(o.organizacion_id || '').trim();
+    if (id) orgById[id] = o;
+  });
   Object.keys(latestByOrg).forEach(function(orgId) {
+    const o = orgById[orgId] || {};
+    const estado = String(o.estado_general_organizacion || '').toLowerCase();
+    if (estado.indexOf('suspend') !== -1 || estado.indexOf('elimin') !== -1) return;
     ensureCamaras1414EligibilityForOrg_(orgId, latestByOrg[orgId].fecha_hito);
   });
 }
@@ -1068,11 +1110,31 @@ function goPesUpsertFondese(payload) {
       goPesAssertAdjudicacionFondese_(merged, Number((edMerged && edMerged.anio) || 0));
     }
 
-    upsertRowsByKey_(S.FACT_FONDESE, 'fondese_id', [merged], false);
-    invalidateSheetRuntimeCache_(S.FACT_FONDESE);
-    syncFactInstrumentoFromFondese_(merged, edMerged, buildFondeseWorkflowState_(merged, edMerged), email, now);
+    // Corrección auditada (antes→después). La lógica de adjudicación (arriba) NO cambia.
+    // El write real (upsertRowsByKey_ + sync al ledger FACT_Instrumentos) va en applyFn,
+    // para que la reversión por fallo de log también restaure el ledger. El patch se
+    // restringe a columnas de FACT_Fondese para no ensuciar la auditoría.
+    var fondeseHeaders = buildSheetDefinitions_()[S.FACT_FONDESE] || [];
+    var patchFondese = {};
+    fondeseHeaders.forEach(function(h) {
+      if (h === 'fondese_id') return;
+      patchFondese[h] = merged[h];
+    });
 
-    logUserAction_('UPSERT_FONDESE', 'fondese', id, 'OK', { organizacion_id: merged.organizacion_id });
+    aplicarCorreccionAuditada_({
+      sheet: S.FACT_FONDESE,
+      keyField: 'fondese_id',
+      keyValue: id,
+      entityType: 'fondese',
+      action: 'EDIT_FONDESE',
+      patch: patchFondese,
+      extraDetail: { organizacion_id: merged.organizacion_id },
+      applyFn: function(row) {
+        upsertRowsByKey_(S.FACT_FONDESE, 'fondese_id', [row], false);
+        invalidateSheetRuntimeCache_(S.FACT_FONDESE);
+        syncFactInstrumentoFromFondese_(row, edMerged, buildFondeseWorkflowState_(row, edMerged), email, now);
+      }
+    });
     return serializeForClient_({ ok: true, fondese_id: id });
   }
 
@@ -1103,7 +1165,7 @@ function goPesUpsertFondese(payload) {
   var edCreated = goPesParseFondeseEdicion_(edCreatedRow);
   syncFactInstrumentoFromFondese_(createdRow, edCreated, buildFondeseWorkflowState_(createdRow, edCreated), email, now);
 
-  logUserAction_('UPSERT_FONDESE', 'fondese', newId, 'OK', { organizacion_id: p.organizacion_id });
+  logUserAction_('CREATE_FONDESE', 'fondese', newId, 'OK', { organizacion_id: p.organizacion_id });
   return serializeForClient_({ ok: true, fondese_id: newId });
 }
 
@@ -1319,6 +1381,57 @@ function goPesGetFondeseHabilitadas(payload) {
 /* Accion "Ingresar al armado" (Fase B): valida elegibilidad (FOR_04) y no-duplicado POR LLAMADO
    (una org puede estar en proceso en ambos llamados), y crea el registro FONDESE en 'en_armado'
    con su linea. Delega la escritura y el sync al ledger en goPesUpsertFondese. */
+/**
+ * Quita una postulación FONDESE del proceso, borrando TODO su rastro:
+ * la fila de FACT_Fondese y su instrumento sincronizado en FACT_Instrumentos.
+ * DESTRUCTIVO e irreversible. Guard: coordinador/superuser.
+ */
+function goPesEliminarFondese(payload) {
+  const user = requireModuleAccess_('instrumento', ['coordinador', 'superuser']);
+  const p = payload || {};
+  const fondeseId = String(p.fondese_id || '').trim();
+  if (!fondeseId) throw new Error('Falta la postulación a quitar.');
+  goPesEnsureFondeseSheets_();
+  const S = GO_PES_V2.SHEETS;
+
+  const reg = getSheetData_(S.FACT_FONDESE).find(function(r) { return String(r.fondese_id || '').trim() === fondeseId; });
+  if (!reg) throw new Error('No se encontró la postulación indicada.');
+  const orgId = String(reg.organizacion_id || '').trim();
+
+  const borradosFondese = goPesDeleteRowsByFieldValue_(S.FACT_FONDESE, 'fondese_id', fondeseId);
+  // Instrumento sincronizado (clave determinista por fondese_id).
+  const instrId = deterministicId_('INST', ['FONDESE', fondeseId]);
+  const borradosInstr = goPesDeleteRowsByFieldValue_(S.FACT_INSTRUMENTOS, 'org_instrumento_id', instrId);
+
+  invalidateSheetRuntimeCache_(S.FACT_FONDESE);
+  invalidateSheetRuntimeCache_(S.FACT_INSTRUMENTOS);
+  if (orgId && typeof refreshPartialArtifacts_ === 'function') {
+    refreshPartialArtifacts_({ vistaOrganizacionIds: [orgId] });
+  }
+
+  logProcessing_('WARN', 'goPesEliminarFondese', 'fondese', fondeseId, user.email, 'OK', { organizacion_id: orgId, borrados_fondese: borradosFondese, borrados_instrumento: borradosInstr });
+  logUserAction_('ELIMINAR_FONDESE', 'fondese', fondeseId, 'OK', { organizacion_id: orgId });
+
+  return serializeForClient_({ ok: true, fondese_id: fondeseId, borrados_fondese: borradosFondese, borrados_instrumento: borradosInstr });
+}
+
+/** Borra las filas de una hoja donde `field` == `value`. Devuelve cuántas. */
+function goPesDeleteRowsByFieldValue_(sheetName, field, value) {
+  const sh = getSheet_(sheetName);
+  if (!sh) return 0;
+  const values = sh.getDataRange().getValues();
+  if (values.length < 2) return 0;
+  const idx = values[0].map(String).indexOf(field);
+  if (idx === -1) return 0;
+  const target = String(value || '').trim();
+  const rows = [];
+  for (var r = 1; r < values.length; r++) {
+    if (String(values[r][idx] || '').trim() === target) rows.push(r + 1);
+  }
+  for (var k = rows.length - 1; k >= 0; k--) sh.deleteRow(rows[k]);
+  return rows.length;
+}
+
 function goPesIngresarFondeseArmado(payload) {
   requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   var p = payload || {};
@@ -1522,13 +1635,30 @@ function goPesUpsertFormEvento(payload) {
     updated_at:       now
   };
 
-  if (isNew) {
-    row.created_by = actorEmail;
-    row.created_at = now;
-  }
+  var existingEvento = isNew ? null : findByField_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS, 'evento_id', eventoId, false);
 
-  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS, 'evento_id', [row], false);
-  logUserAction_('UPSERT_FORM_EVENTO', 'form_evento', eventoId, 'OK', { actor: actorEmail, tipo: tipo, nuevo: isNew });
+  if (existingEvento) {
+    // CORRECCIÓN de evento existente → auditada (antes→después). El patch NO trae
+    // created_by/created_at, así que la central los preserva desde el registro
+    // anterior (antes esta rama los borraba) y fija updated_by/updated_at.
+    var patchEvento = Object.assign({}, row);
+    delete patchEvento.updated_by;
+    delete patchEvento.updated_at;
+    aplicarCorreccionAuditada_({
+      sheet: GO_PES_V2.SHEETS.FACT_FORM_EVENTOS,
+      keyField: 'evento_id',
+      keyValue: eventoId,
+      entityType: 'form_evento',
+      action: 'EDIT_FORM_EVENTO',
+      patch: patchEvento,
+      extraDetail: { tipo: tipo }
+    });
+  } else {
+    // ALTA (o id sin registro previo): asegura created_by/created_at.
+    if (!row.created_by) { row.created_by = actorEmail; row.created_at = now; }
+    upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FORM_EVENTOS, 'evento_id', [row], false);
+    logUserAction_('CREATE_FORM_EVENTO', 'form_evento', eventoId, 'OK', { actor: actorEmail, tipo: tipo });
+  }
 
   return serializeForClient_({ ok: true, evento_id: eventoId });
 }
@@ -1633,7 +1763,9 @@ function goPesUpsertFormInscripcion(payload) {
   };
 
   upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_FORM_INSCRIPCIONES, 'inscripcion_id', [row], false);
-  logUserAction_('UPSERT_FORM_INSCRIPCION', 'form_inscripcion', inscripcionId, 'OK', { actor: actorEmail, evento_id: eventoId });
+  // Alta (create-only: id nuevo + rechazo de duplicados). No hay corrección in-place
+  // de inscripciones; corregir una inscripción mal ingresada requeriría un flujo aparte.
+  logUserAction_('CREATE_FORM_INSCRIPCION', 'form_inscripcion', inscripcionId, 'OK', { actor: actorEmail, evento_id: eventoId });
 
   return serializeForClient_({ ok: true, inscripcion_id: inscripcionId });
 }

@@ -94,6 +94,7 @@ function goPesRunAllTests() {
   acumular(goPesTestAlertas_());
   acumular(goPesTestDashboard_());
   acumular(goPesTestOrganizaciones_());
+  acumular(goPesTestCorrecciones_());
 
   Logger.log('==========================================');
   Logger.log('  TOTAL: ' + total.passed + ' pasados, ' + total.failed + ' fallados' +
@@ -1706,6 +1707,176 @@ function goPesTestAlertas_() {
   s.test('saveAlertasConfigAdmin acepta usuarios_perfiles válidos', function() {
     s.skip('Test requiere permisos de superuser - verificar manualmente');
   });
+
+  return s.run();
+}
+
+// ── SUITE: CORRECCIONES (corrección auditada — Corrections.js) ─────────────────
+
+/**
+ * Deps falsas para probar aplicarCorreccionCore_ sin tocar hojas ni sesión.
+ * Registra cada fila aplicada y cuántas veces se logueó; opcionalmente el log falla.
+ */
+function makeFakeCorreccionDeps_(opts) {
+  opts = opts || {};
+  var calls = { apply: [], log: [] };
+  return {
+    calls: calls,
+    apply: function(row) { calls.apply.push(Object.assign({}, row)); },
+    log: function(action, type, id, result, detail) {
+      calls.log.push({ action: action, type: type, id: id, result: result, detail: detail });
+      if (opts.logThrows) throw new Error('fallo simulado del log');
+    }
+  };
+}
+
+function goPesTestCorrecciones_() {
+  var s = createTestSuite_('Correcciones');
+  var USER = { email: 'operador@providencia.cl' };
+
+  // ── diffCamposCorreccion_ ──
+  s.test('diff: solo devuelve los campos que cambiaron', function() {
+    var d = diffCamposCorreccion_({ a: '1', b: '2' }, { a: '1', b: '9' });
+    assertDeepEqual_(d, [{ campo: 'b', antes: '2', despues: '9' }]);
+  });
+  s.test('diff: número vs string equivalente NO es cambio', function() {
+    assertDeepEqual_(diffCamposCorreccion_({ n: 5 }, { n: '5' }), []);
+  });
+  s.test('diff: patch vacío → []', function() {
+    assertDeepEqual_(diffCamposCorreccion_({ a: '1' }, {}), []);
+  });
+  s.test('diff: null/undefined en antes se tratan como vacío', function() {
+    assertDeepEqual_(diffCamposCorreccion_({ a: null }, { a: 'x' }),
+      [{ campo: 'a', antes: '', despues: 'x' }]);
+  });
+
+  // ── enmascararPII_ ──
+  s.test('enmascararPII: largo > 3 conserva últimos 3', function() {
+    assertEqual_(enmascararPII_('912345678'), '***678');
+  });
+  s.test('enmascararPII: longitud <= 3 → ***', function() {
+    assertEqual_(enmascararPII_('ab'), '***');
+  });
+  s.test('enmascararPII: vacío → vacío', function() {
+    assertEqual_(enmascararPII_(''), '');
+  });
+
+  // ── sanitizarCambiosPII_ ──
+  s.test('sanitizarPII: enmascara campo PII y marca pii:true', function() {
+    var out = sanitizarCambiosPII_([{ campo: 'telefono_contacto', antes: '111222', despues: '333444' }]);
+    assertEqual_(out[0].antes, '***222');
+    assertEqual_(out[0].despues, '***444');
+    assertTrue_(out[0].pii === true);
+  });
+  s.test('sanitizarPII: campo no-PII queda intacto', function() {
+    var out = sanitizarCambiosPII_([{ campo: 'estado_actual', antes: 'A', despues: 'B' }]);
+    assertDeepEqual_(out, [{ campo: 'estado_actual', antes: 'A', despues: 'B' }]);
+  });
+  s.test('sanitizarPII: respeta piiFields extra del flujo', function() {
+    var out = sanitizarCambiosPII_([{ campo: 'campo_secreto', antes: 'abcdef', despues: 'zzzzzz' }], ['campo_secreto']);
+    assertTrue_(out[0].pii === true);
+    assertEqual_(out[0].despues, '***zzz');
+  });
+
+  // ── aplicarCorreccionCore_: happy path ──
+  s.test('core: aplica el cambio y loguea una vez', function() {
+    var deps = makeFakeCorreccionDeps_();
+    var r = aplicarCorreccionCore_(
+      { socio_id: 'S1', nombre_socio: 'Juan' }, USER,
+      { keyValue: 'S1', entityType: 'socio', patch: { nombre_socio: 'Juana' } }, deps);
+    assertTrue_(r.ok);
+    assertEqual_(r.cambios.length, 1);
+    assertEqual_(deps.calls.apply.length, 1);
+    assertEqual_(deps.calls.log.length, 1);
+    assertEqual_(deps.calls.log[0].action, 'CORREGIR_SOCIO');
+  });
+  s.test('core: fija updated_by con el email del usuario', function() {
+    var deps = makeFakeCorreccionDeps_();
+    aplicarCorreccionCore_(
+      { socio_id: 'S1', nombre_socio: 'Juan' }, USER,
+      { keyValue: 'S1', entityType: 'socio', patch: { nombre_socio: 'Juana' } }, deps);
+    assertEqual_(deps.calls.apply[0].updated_by, 'operador@providencia.cl');
+  });
+  s.test('core: respeta action explícita', function() {
+    var deps = makeFakeCorreccionDeps_();
+    aplicarCorreccionCore_(
+      { id: 'X', v: '1' }, USER,
+      { keyValue: 'X', entityType: 'org', action: 'EDIT_ORG', patch: { v: '2' } }, deps);
+    assertEqual_(deps.calls.log[0].action, 'EDIT_ORG');
+  });
+  s.test('core: extraDetail se fusiona en el log sin pisar cambios', function() {
+    var deps = makeFakeCorreccionDeps_();
+    aplicarCorreccionCore_(
+      { id: 'X', v: '1' }, USER,
+      { keyValue: 'X', entityType: 'org', patch: { v: '2' }, extraDetail: { organizacion_id: 'ORG-9', cambios: 'no-pisa' } },
+      deps);
+    assertEqual_(deps.calls.log[0].detail.organizacion_id, 'ORG-9');
+    assertTrue_(Array.isArray(deps.calls.log[0].detail.cambios), 'cambios no lo pisa extraDetail');
+  });
+
+  // ── aplicarCorreccionCore_: no-op ──
+  s.test('core: sin cambios reales → no aplica ni loguea', function() {
+    var deps = makeFakeCorreccionDeps_();
+    var r = aplicarCorreccionCore_(
+      { id: 'X', v: '1' }, USER,
+      { keyValue: 'X', entityType: 'org', patch: { v: '1' } }, deps);
+    assertTrue_(r.sin_cambios === true);
+    assertEqual_(deps.calls.apply.length, 0);
+    assertEqual_(deps.calls.log.length, 0);
+  });
+
+  // ── aplicarCorreccionCore_: motivo obligatorio (grado 2) ──
+  s.test('core: requireMotivo sin motivo → lanza antes de aplicar', function() {
+    var deps = makeFakeCorreccionDeps_();
+    assertThrows_(function() {
+      aplicarCorreccionCore_(
+        { id: 'X', v: '1' }, USER,
+        { keyValue: 'X', entityType: 'org', patch: { v: '2' }, requireMotivo: true }, deps);
+    });
+    assertEqual_(deps.calls.apply.length, 0);
+  });
+  s.test('core: requireMotivo con motivo → aplica y guarda el motivo', function() {
+    var deps = makeFakeCorreccionDeps_();
+    aplicarCorreccionCore_(
+      { id: 'X', v: '1' }, USER,
+      { keyValue: 'X', entityType: 'org', patch: { v: '2' }, requireMotivo: true, motivo: 'error de tipeo' }, deps);
+    assertEqual_(deps.calls.log[0].detail.motivo, 'error de tipeo');
+  });
+
+  // ── aplicarCorreccionCore_: log-o-aborta (reversión) ──
+  s.test('core: si el log falla, revierte y lanza', function() {
+    var deps = makeFakeCorreccionDeps_({ logThrows: true });
+    var antes = { id: 'X', v: '1' };
+    assertThrows_(function() {
+      aplicarCorreccionCore_(antes, USER, { keyValue: 'X', entityType: 'org', patch: { v: '2' } }, deps);
+    });
+    // 1ª aplicación = cambio; 2ª = reversión al snapshot anterior.
+    assertEqual_(deps.calls.apply.length, 2);
+    assertEqual_(deps.calls.apply[0].v, '2');
+    assertEqual_(deps.calls.apply[1].v, '1');
+  });
+
+  // ── aplicarCorreccionCore_: concurrencia optimista ──
+  s.test('core: expectedAntes que no coincide → lanza sin aplicar', function() {
+    var deps = makeFakeCorreccionDeps_();
+    assertThrows_(function() {
+      aplicarCorreccionCore_(
+        { id: 'X', v: 'disco' }, USER,
+        { keyValue: 'X', entityType: 'org', patch: { v: 'nuevo' }, expectedAntes: { v: 'lo-que-vi' } }, deps);
+    });
+    assertEqual_(deps.calls.apply.length, 0);
+  });
+  s.test('core: expectedAntes que coincide → aplica', function() {
+    var deps = makeFakeCorreccionDeps_();
+    var r = aplicarCorreccionCore_(
+      { id: 'X', v: 'disco' }, USER,
+      { keyValue: 'X', entityType: 'org', patch: { v: 'nuevo' }, expectedAntes: { v: 'disco' } }, deps);
+    assertTrue_(r.ok);
+    assertEqual_(deps.calls.apply.length, 1);
+  });
+
+  // Wrapper público-interno: requiere Session + spreadsheet (LockService/find/upsert).
+  s.skip('aplicarCorreccionAuditada_', 'requiere LockService + Session + lectura/escritura de hoja; verificar en DEV');
 
   return s.run();
 }

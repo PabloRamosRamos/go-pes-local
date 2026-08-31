@@ -16,7 +16,7 @@ Skills de Claude (`go-pes-*`) que encapsulan los flujos de trabajo recurrentes d
 | `go-pes-avance` | Máquina de estados del Avance: tramos, estados, hitos PRE_*/FOR_* y sus prerequisitos. |
 | `go-pes-bug` | Corrección estructurada de bugs (reproducir → causa raíz → fix mínimo → test → deploy). |
 | `go-pes-higiene` | Anti-duplicados y anti-código-muerto (namespace único GAS, limpieza segura). |
-| `go-pes-performance` | Rendimiento backend/datos (CacheService vs `GO_PES_RUNTIME`, índices, endpoints compuestos). |
+| `go-pes-performance` | Diagnóstico y optimización de rendimiento con test de timing GAS-puro (`Perf.js`) + reglas de cache/índices/endpoints compuestos. |
 | `go-pes-ui-rapida` | Velocidad **percibida** del frontend (round-trips, loaders, cache cliente, render no bloqueante). |
 | `go-pes-seguridad` | Guards de rol/módulo y PINs de operaciones sensibles con rate limiting. |
 | `go-pes-mensajes` | Mensajes al usuario en lenguaje operativo (traducción de errores técnicos, sin filtrar internals). |
@@ -25,6 +25,8 @@ Skills de Claude (`go-pes-*`) que encapsulan los flujos de trabajo recurrentes d
 | `go-pes-loaders` | Uso estandarizado de loaders y su área de visualización (nunca fullscreen salvo splash). |
 | `go-pes-a11y` | Guardarraíl de accesibilidad (teclado, foco, ARIA, modales, movimiento reducido). |
 | `go-pes-beneficios` | Módulo Beneficios/Instrumentos (CÁMARAS 1414, FONDESE por ediciones, eventos de formación). |
+| `go-pes-correccion` | Corrección auditada de datos: editar + registrar antes→después en `LOG_Acciones_Usuario` (función central `aplicarCorreccionAuditada_`). |
+| `go-pes-entrada-segura` | Cara preventiva: validar al ingresar, confirmar acciones con consecuencias, resumen antes de guardar, mensajes claros, calidad de datos. |
 
 ## Estructura
 

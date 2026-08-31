@@ -1236,6 +1236,19 @@
         }
         return loadAvanceGrupoVecinos_(solicitudId);
       }
+      // #2 perf: el guardado ya devuelve la vista actualizada → renderizar sin un
+      // segundo round-trip a getAvanceOrganizacion. Fallback al re-fetch si no viene.
+      if (res && res.avance) {
+        APP.state.currentAvance = res.avance;
+        renderAvanceResumen_(res.avance);
+        renderAvanceBotones_(res.avance);
+        renderAvanceTimeline_(res.avance.timeline || []);
+        const _expBtn = document.getElementById('avance-export-btn');
+        if (_expBtn) _expBtn.classList.toggle('is-hidden', !((res.avance.timeline || []).length));
+        lockAvanceActions_(false, res.avance);
+        if (benefitReminder) openAvanceBeneficioReminderModal_(benefitReminder);
+        return;
+      }
       return loadAvanceOrganizacion_(organizacionId).then(() => {
         if (benefitReminder) openAvanceBeneficioReminderModal_(benefitReminder);
       });

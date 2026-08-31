@@ -1803,7 +1803,7 @@
         <td><span class="fnd-estado fnd-estado--${escapeHtml(o.estado_fondese)}">${escapeHtml(stateLabel[o.estado_fondese] || o.estado_label)}</span></td>
         <td style="min-width:150px"><div class="fnd-doc-bar"><div class="fnd-doc-bar__track"><div class="fnd-doc-bar__fill fnd-doc-bar__fill--mid" style="width:${Number(o.avance_pct || 0)}%"></div></div><span class="fnd-doc-bar__label">${Number(o.avance_pct || 0)}%</span></div></td>
         <td>${plazoHtml(o)}</td>
-        <td style="text-align:right"><button type="button" class="secondary-btn js-fnd-detalle-btn" data-id="${escapeHtml(o.fondese_id)}" style="padding:4px 10px;font-size:0.78rem">Abrir</button></td>
+        <td style="text-align:right;white-space:nowrap"><button type="button" class="secondary-btn js-fnd-detalle-btn" data-id="${escapeHtml(o.fondese_id)}" style="padding:4px 10px;font-size:0.78rem">Abrir</button><button type="button" class="danger-btn js-fnd-quitar-btn" data-id="${escapeHtml(o.fondese_id)}" data-nombre="${escapeHtml(o.nombre_organizacion || o.organizacion_id)}" style="padding:4px 10px;font-size:0.78rem;margin-left:6px" title="Quitar del proceso (borra la postulación)"><span class="material-symbols-outlined" style="font-size:15px;vertical-align:-2px">delete</span>Quitar</button></td>
       </tr>`;
     };
     const rowPend = function(o) {
@@ -1846,6 +1846,18 @@
     });
     container.querySelectorAll('.js-fnd-detalle-btn').forEach(function(btn) {
       btn.addEventListener('click', function() { renderFondeseDetalle_(this.dataset.id); });
+    });
+    container.querySelectorAll('.js-fnd-quitar-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var id = this.dataset.id;
+        var nombre = this.dataset.nombre || 'la organización';
+        if (!window.confirm('¿Quitar del proceso a "' + nombre + '"? Se borrará toda la postulación FONDESE, sin dejar rastro. Esta acción es irreversible.')) return;
+        var b = this; b.disabled = true;
+        api('goPesEliminarFondese', { fondese_id: id }).then(function() {
+          showSuccess('Postulación quitada del proceso.');
+          loadFondeseHabilitadas_(edId, convId);
+        }).catch(function(err) { b.disabled = false; showError(err); });
+      });
     });
     container.querySelectorAll('.js-fnd-ingresar-btn').forEach(function(btn) {
       btn.addEventListener('click', function() {

@@ -208,6 +208,9 @@
       }
       form.innerHTML =
         '<div class="ficha-edit-form__grid">' +
+          '<label>Nombre<input type="text" id="fedit-nombre" value="' + escapeHtml(s.nombre_vecino || '') + '" maxlength="80"></label>' +
+          '<label>Apellido<input type="text" id="fedit-apellido" value="' + escapeHtml(s.apellido_vecino || '') + '" maxlength="80"></label>' +
+          '<label>RUT<input type="text" id="fedit-rut" value="' + escapeHtml(s.rut_vecino || '') + '" maxlength="15"></label>' +
           '<label>Telefono<input type="tel" id="fedit-telefono" value="' + escapeHtml(s.telefono_contacto || '') + '" maxlength="50"></label>' +
           '<label>Correo<input type="email" id="fedit-correo" value="' + escapeHtml(s.correo_contacto || '') + '" maxlength="150"></label>' +
           '<label>Direccion<input type="text" id="fedit-direccion" value="' + escapeHtml(s.direccion_original || '') + '" maxlength="250"></label>' +
@@ -219,7 +222,7 @@
           '<button type="button" class="secondary-btn" id="fedit-cancelar"><span class="material-symbols-outlined">close</span>Cancelar</button>' +
         '</div>';
       form.classList.remove('is-hidden');
-      document.getElementById('fedit-telefono').focus();
+      document.getElementById('fedit-nombre').focus();
 
       document.getElementById('fedit-cancelar').addEventListener('click', function() {
         form.classList.add('is-hidden');
@@ -231,6 +234,9 @@
         saveBtn.textContent = 'Guardando...';
         api('editarDatosVecino', {
           solicitud_id:       s.solicitud_id || '',
+          nombre_vecino:      document.getElementById('fedit-nombre').value,
+          apellido_vecino:    document.getElementById('fedit-apellido').value,
+          rut_vecino:         document.getElementById('fedit-rut').value,
           telefono_contacto:  document.getElementById('fedit-telefono').value,
           correo_contacto:    document.getElementById('fedit-correo').value,
           direccion_original: document.getElementById('fedit-direccion').value,

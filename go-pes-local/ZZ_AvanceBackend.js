@@ -167,6 +167,33 @@ function getBotonesAvanceEstado(payload) {
   return goPesAvanceToClientSafe_(buttons);
 }
 
+/**
+ * Fuente ÚNICA del payload del módulo Avance de una organización (organizacion,
+ * estado, resumen, botones, timeline). La usan:
+ *   - getAvanceOrganizacion (lectura del módulo), y
+ *   - registrarHitoAvance (para DEVOLVER la vista ya actualizada y que el frontend
+ *     no tenga que re-pedir getAvanceOrganizacion en un segundo round-trip).
+ */
+function goPesBuildAvanceOrganizacionPayload_(org, solicitudId, user) {
+  const orgId = String((org && org.organizacion_id) || '').trim();
+  const sid = String(solicitudId || (org && org.solicitud_id) || '').trim();
+
+  goPesEnsureEstadoAvanceInicial_(orgId, sid, user);
+
+  const estadoActual = goPesGetEstadoAvanceActual_(orgId, sid);
+  const timeline = goPesGetTimelineAvanceRows_(orgId, sid);
+  const botones = goPesBuildBotonesAvanceEstado_(orgId, sid, { timeline: timeline, estadoActual: estadoActual });
+  const resumen = goPesBuildResumenAvance_(org, estadoActual, timeline);
+
+  return goPesAvanceToClientSafe_({
+    organizacion: org,
+    estado: estadoActual,
+    resumen: resumen,
+    botones: botones,
+    timeline: timeline
+  });
+}
+
 function getAvanceOrganizacion(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getAvanceOrganizacion', payload || {});
   const user = requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
@@ -179,20 +206,7 @@ function getAvanceOrganizacion(payload) {
   const orgId = ctx.organizacion.organizacion_id;
   const solicitudId = ctx.organizacion.solicitud_id || '';
 
-  goPesEnsureEstadoAvanceInicial_(orgId, solicitudId, user);
-
-  const estadoActual = goPesGetEstadoAvanceActual_(orgId, solicitudId);
-  const timeline = goPesGetTimelineAvanceRows_(orgId, solicitudId);
-  const botones = goPesBuildBotonesAvanceEstado_(orgId, solicitudId, { timeline: timeline, estadoActual: estadoActual });
-  const resumen = goPesBuildResumenAvance_(ctx.organizacion, estadoActual, timeline);
-
-  const result = goPesAvanceToClientSafe_({
-    organizacion: ctx.organizacion,
-    estado: estadoActual,
-    resumen: resumen,
-    botones: botones,
-    timeline: timeline
-  });
+  const result = goPesBuildAvanceOrganizacionPayload_(ctx.organizacion, solicitudId, user);
 
   // [OPTIMIZACIÓN 2026-07-10] Log de performance
   const perfElapsed = Date.now() - perfStart;
@@ -203,7 +217,7 @@ function getAvanceOrganizacion(payload) {
     solicitud_id: solicitudId,
     timeline_count: result.timeline.length,
     botones_count: result.botones ? result.botones.length : 0,
-    has_estado: !!estadoActual,
+    has_estado: !!result.estado,
     performance_ms: perfElapsed
   });
   return goPesDiagPayloadSize_(result, 'getAvanceOrganizacion');
@@ -348,20 +362,9 @@ function registrarHitoAvance(payload) {
 
   upsertVistaAvanceOrganizacionRowById_(organizacionId);
 
-  logProcessing_(
-    'INFO',
-    'registrarHitoAvance',
-    'avance_hito',
-    avanceHitoId,
-    goPesGetUserEmail_(user),
-    'OK',
-    {
-      organizacion_id: organizacionId,
-      solicitud_id: solicitudId,
-      codigo_hito: codigoHito
-    }
-  );
-
+  // Auditoría de la acción → LOG_Acciones_Usuario. Se eliminó el logProcessing_('INFO')
+  // redundante (duplicaba esta acción en LOG_Procesamiento; ~0,6 s por hito). El logging
+  // de errores/críticos sigue en sus rutas propias.
   logUserAction_(
     'REGISTRAR_HITO_AVANCE',
     'avance_hito',
@@ -384,7 +387,10 @@ function registrarHitoAvance(payload) {
     nombre_hito: hitoCatalogo.nombre_hito,
     beneficio_recordatorio: typeof goPesHandleCamaras1414EligibilityFromAvance_ === 'function'
       ? goPesHandleCamaras1414EligibilityFromAvance_(organizacionId, fechaHito, hitoCatalogo)
-      : null
+      : null,
+    // Vista de Avance ya actualizada (misma que getAvanceOrganizacion): el frontend
+    // renderiza desde aquí y evita un segundo round-trip con su propio warmup.
+    avance: goPesBuildAvanceOrganizacionPayload_(org, solicitudId, user)
   });
 
   goPesDiagEnd_(diag, {
@@ -543,6 +549,13 @@ function cambiarEstadoAvance(payload) {
   const now = new Date();
   const avanceEstadoId = goPesNextIdSafe_('avance_estado', 'AVE');
 
+  // Estado anterior, para auditar la transición X→Y. Se lee ANTES de desactivar.
+  // (cambiarEstadoAvance es un evento append-only: no es una corrección in-place,
+  // por eso NO pasa por aplicarCorreccionAuditada_; el antes→después se registra aquí.)
+  const estadoAnterior = String(
+    (goPesGetEstadoAvanceActual_(organizacionId, solicitudId) || {}).estado_avance || ''
+  ).trim();
+
   goPesDeactivateEstadosAvanceActivos_(organizacionId);
 
   appendRowObject_(GO_PES_V2.SHEETS.FACT_AVANCE_ESTADO, {
@@ -569,6 +582,7 @@ function cambiarEstadoAvance(payload) {
     {
       organizacion_id: organizacionId,
       solicitud_id: solicitudId,
+      estado_anterior: estadoAnterior,
       estado_avance: nuevoEstado
     }
   );
@@ -581,6 +595,7 @@ function cambiarEstadoAvance(payload) {
     {
       organizacion_id: organizacionId,
       solicitud_id: solicitudId,
+      estado_anterior: estadoAnterior,
       estado_avance: nuevoEstado,
       motivo_estado: motivo
     }
@@ -1724,25 +1739,16 @@ function actualizarFechasHitos(payload) {
     throw new Error('No hay cambios de fecha para aplicar.');
   }
 
-  // Aplicar actualizaciones a FACT_AVANCE_HITOS
+  // Cada corrección de fecha pasa por la función central, por su avance_hito_id
+  // (auditada antes→después por hito). Se recolectan primero los cambios REALES
+  // y se aplican después, para no leer datos de hoja ya invalidados en el loop.
   const sheetName = GO_PES_V2.SHEETS.FACT_AVANCE_HITOS;
   const sh = getSheet_(sheetName);
   if (!sh) throw new Error('No existe la hoja FACT_Avance_Hitos.');
 
-  const headers = goPesGetAvanceHeaders_(sheetName);
   const data = getSheetData_(sheetName);
 
-  const idxOrgId = headers.indexOf('organizacion_id');
-  const idxCodigoHito = headers.indexOf('codigo_hito');
-  const idxFechaHito = headers.indexOf('fecha_hito');
-
-  if (idxOrgId === -1 || idxCodigoHito === -1 || idxFechaHito === -1) {
-    throw new Error('Estructura de hoja FACT_Avance_Hitos inválida.');
-  }
-
-  let contador = 0;
-  const cambios = [];
-
+  const aplicar = [];
   for (var i = 0; i < data.length; i++) {
     const row = data[i];
     // Coincidir con el mismo criterio del timeline (organizacion_id O
@@ -1754,28 +1760,55 @@ function actualizarFechasHitos(payload) {
     const act = actualizaciones.find(function(a) {
       return a.codigo_hito === codigoHito;
     });
-
     if (!act) continue;
 
-    const rowIndex = i + 2; // +2 porque empieza en 1 y hay header
     const fechaActual = row.fecha_hito ? Utilities.formatDate(new Date(row.fecha_hito), 'GMT-3', 'yyyy-MM-dd') : '';
+    if (fechaActual === act.fecha_iso) continue; // sin cambio real
 
-    // Solo actualizar si la fecha cambió
-    if (fechaActual !== act.fecha_iso) {
-      sh.getRange(rowIndex, idxFechaHito + 1).setValue(act.nueva_fecha);
+    const avanceHitoId = String(row.avance_hito_id || '').trim();
+    if (!avanceHitoId) {
+      errores.push('El hito ' + codigoHito + ' no tiene identificador para auditar la corrección.');
+      continue;
+    }
+    aplicar.push({
+      avance_hito_id: avanceHitoId,
+      codigo_hito: codigoHito,
+      nueva_fecha: act.nueva_fecha,
+      fecha_anterior: fechaActual,
+      fecha_nueva: act.fecha_iso
+    });
+  }
+
+  if (errores.length > 0) {
+    throw new Error('Errores de validación:\n' + errores.join('\n'));
+  }
+
+  let contador = 0;
+  const cambios = [];
+  aplicar.forEach(function(it) {
+    const r = aplicarCorreccionAuditada_({
+      sheet: sheetName,
+      keyField: 'avance_hito_id',
+      keyValue: it.avance_hito_id,
+      entityType: 'hito_avance',
+      action: 'ACTUALIZAR_FECHA_HITO',
+      patch: { fecha_hito: it.nueva_fecha },
+      extraDetail: { organizacion_id: organizacionId, codigo_hito: it.codigo_hito }
+    });
+    if (!r.sin_cambios) {
       contador++;
       cambios.push({
-        codigo_hito: codigoHito,
-        fecha_anterior: fechaActual,
-        fecha_nueva: act.fecha_iso
+        codigo_hito: it.codigo_hito,
+        fecha_anterior: it.fecha_anterior,
+        fecha_nueva: it.fecha_nueva
       });
     }
-  }
+  });
 
   // Actualizar vista derivada
   upsertVistaAvanceOrganizacionRowById_(organizacionId);
 
-  // Log de cambios
+  // Telemetría del lote (el antes→después por hito ya quedó en LOG_Acciones_Usuario).
   logProcessing_(
     'INFO',
     'actualizarFechasHitos',
@@ -1788,17 +1821,6 @@ function actualizarFechasHitos(payload) {
       solicitud_id: solicitudId,
       total_actualizados: contador,
       cambios: cambios
-    }
-  );
-
-  logUserAction_(
-    'ACTUALIZAR_FECHAS_HITOS',
-    'organizacion',
-    organizacionId,
-    'OK',
-    {
-      organizacion_id: organizacionId,
-      total_actualizados: contador
     }
   );
 

@@ -198,20 +198,18 @@ function actualizarCargoSocioOrganizacion(payload) {
   }
   assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
 
-  const now = new Date();
-  const nextSocio = Object.assign({}, socio, {
-    cargo: cargo,
-    updated_by: user.email,
-    updated_at: now
+  // Corrección auditada centralizada (aporta LockService + antes→después + log-o-aborta).
+  const r = aplicarCorreccionAuditada_({
+    sheet: GO_PES_V2.SHEETS.FACT_SOCIOS,
+    keyField: 'socio_id',
+    keyValue: socioId,
+    entityType: 'socio',
+    action: 'UPDATE_SOCIO_CARGO',            // conserva el nombre de acción histórico
+    patch: { cargo: cargo },
+    extraDetail: { organizacion_id: organizacionId }
   });
-
-  upsertByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', nextSocio, false);
 
   logProcessing_('INFO', 'actualizarCargoSocioOrganizacion', 'socio', socioId, user.email, 'OK', {
-    organizacion_id: organizacionId,
-    cargo: cargo
-  });
-  logUserAction_('UPDATE_SOCIO_CARGO', 'socio', socioId, 'OK', {
     organizacion_id: organizacionId,
     cargo: cargo
   });
@@ -220,44 +218,53 @@ function actualizarCargoSocioOrganizacion(payload) {
     ok: true,
     socio_id: socioId,
     organizacion_id: organizacionId,
-    cargo: cargo
+    cargo: cargo,
+    sin_cambios: !!r.sin_cambios
   });
 }
 
 function editarDatosSocio(payload) {
-  const user = requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
-  const lock = LockService.getDocumentLock();
-  lock.waitLock(30000);
-  try {
-    const socioId = String(payload && payload.socio_id || '').trim();
-    if (!socioId) throw new Error('Falta socio_id.');
+  requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
 
-    const socio = findByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioId, false);
-    if (!socio) throw new Error('No se encontro el socio indicado.');
-    assertOrganizacionActiva_(socio.organizacion_id); // suspendida = solo lectura
+  const socioId = String(payload && payload.socio_id || '').trim();
+  if (!socioId) throw new Error('Falta socio_id.');
 
-    const cargo = (payload.cargo !== undefined) ? String(payload.cargo || '').trim() : (socio.cargo || '');
+  // Lectura previa para el guard de organización suspendida y el contexto de auditoría.
+  // La escritura atómica (leer→aplicar→loguear) la hace aplicarCorreccionAuditada_ bajo lock.
+  const socio = findByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioId, false);
+  if (!socio) throw new Error('No se encontro el socio indicado.');
+  assertOrganizacionActiva_(socio.organizacion_id); // suspendida = solo lectura
+
+  // Patch solo con los campos presentes en el payload; la función central calcula el diff.
+  const patch = {};
+  if (payload.run_socio       !== undefined) patch.run_socio       = String(payload.run_socio       || '').trim();
+  if (payload.numero_registro !== undefined) patch.numero_registro = String(payload.numero_registro || '').trim();
+  if (payload.nombre_socio    !== undefined) patch.nombre_socio    = String(payload.nombre_socio    || '').trim();
+  if (payload.edad            !== undefined) patch.edad            = String(payload.edad            || '').trim();
+  if (payload.direccion_socio !== undefined) patch.direccion_socio = String(payload.direccion_socio || '').trim();
+  if (payload.cargo           !== undefined) {
+    const cargo = String(payload.cargo || '').trim();
     if (cargo && !goPesSocioCargoPermitido_(cargo)) throw new Error('Cargo de socio no permitido: ' + cargo);
-
-    const now = new Date();
-    const next = Object.assign({}, socio, {
-      run_socio:       payload.run_socio       !== undefined ? String(payload.run_socio       || '').trim() : (socio.run_socio       || ''),
-      numero_registro: payload.numero_registro !== undefined ? String(payload.numero_registro || '').trim() : (socio.numero_registro || ''),
-      nombre_socio:    payload.nombre_socio    !== undefined ? String(payload.nombre_socio    || '').trim() : (socio.nombre_socio    || ''),
-      edad:            payload.edad            !== undefined ? String(payload.edad            || '').trim() : (socio.edad            || ''),
-      cargo:           cargo,
-      direccion_socio: payload.direccion_socio !== undefined ? String(payload.direccion_socio || '').trim() : (socio.direccion_socio || ''),
-      updated_by: user.email,
-      updated_at: now
-    });
-
-    upsertByKey_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', next, false);
-
-    logUserAction_('EDIT_SOCIO', 'socio', socioId, 'OK', { socio_id: socioId, organizacion_id: socio.organizacion_id });
-    return serializeForClient_({ ok: true, socio_id: socioId, organizacion_id: socio.organizacion_id });
-  } finally {
-    lock.releaseLock();
+    patch.cargo = cargo;
   }
+
+  const r = aplicarCorreccionAuditada_({
+    sheet: GO_PES_V2.SHEETS.FACT_SOCIOS,
+    keyField: 'socio_id',
+    keyValue: socioId,
+    entityType: 'socio',
+    action: 'EDIT_SOCIO',                 // conserva el nombre de acción histórico del log
+    patch: patch,
+    piiFields: ['nombre_socio', 'run_socio', 'direccion_socio'],
+    extraDetail: { organizacion_id: socio.organizacion_id }
+  });
+
+  return serializeForClient_({
+    ok: true,
+    socio_id: socioId,
+    organizacion_id: socio.organizacion_id,
+    sin_cambios: !!r.sin_cambios
+  });
 }
 
 function goPesSocioCargoPermitido_(cargo) {

@@ -10,7 +10,7 @@
 |---------|-------|
 | **Archivos de código** | 53 archivos fuente en go-pes-local/ |
 | **Líneas de código** | 44.486 (según análisis completo 2026-07-10) |
-| **Tests automatizados** | 272 (90 validators + 41 auth + 51 services + 35 avance + 32 beneficios + 10 security + 13 alertas) |
+| **Tests automatizados** | 291 (90 validators + 41 auth + 51 services + 40 avance + 16 beneficios + 10 security + 14 alertas + 4 dashboard + 5 organizaciones + 20 correcciones) |
 | **Fallos en tests** | 0 |
 | **Cobertura estimada** | ~78% (core + servicios + auth + módulos críticos) |
 | **Módulos funcionales** | 11 |
@@ -77,18 +77,21 @@
 
 ## Cobertura de tests
 
-### Suites implementadas (257 tests activos, 7 suites)
+### Suites implementadas (291 tests activos, 10 suites)
 
 | Suite | Tests | Descripción |
 |-------|-------|-------------|
 | `goPesTestValidators_` | 90 | Validación de RUT, email, teléfono, campos requeridos, normalización |
 | `goPesTestAuth_` | 41 | Autenticación, autorización, roles, permisos por módulo |
 | `goPesTestServices_` | 51 | Búsqueda, ficha, dashboard, catálogos |
-| `goPesTestAvance_` | 35 | Módulo Avance (hitos, formateadores, estados) |
+| `goPesTestAvance_` | 40 | Módulo Avance (hitos, formateadores, estados) |
 | `goPesTestBeneficios_` | 16 | Módulo Beneficios (estados CÁMARAS/FONDESE, workflow, días hábiles, elegibilidad) |
 | `goPesTestSecurity_` | 10 | Auth guards, PINs, rate limiting |
 | `goPesTestAlertas_` | 14 | Alertas operativas (plazos de formalización, beneficios) |
-| **TOTAL** | **257** | |
+| `goPesTestDashboard_` | 4 | Dashboard de Inicio (KPIs, estructura) |
+| `goPesTestOrganizaciones_` | 5 | Módulo Organizaciones (grilla, estados, grupos) |
+| `goPesTestCorrecciones_` | 20 | Corrección auditada (diff, PII, no-op, motivo, reversión log-o-aborta, concurrencia) |
+| **TOTAL** | **291** | |
 
 > Conteo verificado por grep de `s.test(` en `Audith.js`. Si agregas tests, actualiza estos números.
 
@@ -96,11 +99,11 @@
 
 - ✅ **Core completo:** Auth (41 tests), Repository, Validators (90 tests), Services (51 tests)
 - ✅ **Seguridad completa:** Auth guards, PINs, rate limiting (10 tests)
-- ✅ **Módulos críticos:** Avance (35 tests), Beneficios (16 tests)
+- ✅ **Módulos críticos:** Avance (40 tests), Beneficios (16 tests)
 - ⚠️ **Módulos con cobertura parcial:** Organizaciones, Socios, NuevoIngreso
 - ❌ **Sin cobertura:** DerivedBuilders, Diagnostics
 
-**Tests con SKIPs:** 31 tests omitidos intencionalmente (requieren Session + lectura/escritura de hojas reales)
+**Tests con SKIPs:** 35 tests omitidos intencionalmente (requieren Session + lectura/escritura de hojas reales)
 
 ---
 
@@ -219,7 +222,7 @@
 
 | Métrica | Valor | Estado |
 |---------|-------|--------|
-| **Tests pasados** | 272/272 | ✅ 100% |
+| **Tests pasados** | 291/291 | ✅ 100% |
 | **Hallazgos seguridad cerrados** | 5/7 | ✅ 71% |
 | **Código duplicado** | 0 | ✅ Ninguno |
 | **CSS inline en JS** | 0 | ✅ Ninguno |

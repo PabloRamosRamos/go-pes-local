@@ -324,50 +324,74 @@ function cambiarEstadoAdministrativoOrganizacion_(payload, estado, action) {
   const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
   if (!org) throw new Error('No se encontró la organización indicada.');
 
-  const now = new Date();
-  const nextOrg = Object.assign({}, org, {
-    estado_general_organizacion: estado,
-    observacion_resumen: [org.observacion_resumen || '', motivo ? '[' + estado + '] ' + motivo : ''].filter(Boolean).join('\n'),
-    responsable_actual: user.nombre_visible || user.email,
-    updated_at: now
+  const observacionResumen = [org.observacion_resumen || '', motivo ? '[' + estado + '] ' + motivo : ''].filter(Boolean).join('\n');
+  const responsable = user.nombre_visible || user.email;
+
+  // Grado 2 (consecuencia: al suspender, la organización queda en solo lectura):
+  // motivo obligatorio + corrección auditada centralizada (LockService + antes→después
+  // + log-o-aborta). El write de MAE, el diff y el log los hace la función central.
+  const r = aplicarCorreccionAuditada_({
+    sheet: GO_PES_V2.SHEETS.MAE_ORGANIZACIONES,
+    keyField: 'organizacion_id',
+    keyValue: organizacionId,
+    entityType: 'organizacion',
+    action: action,                          // SUSPENDER_ORGANIZACION / REACTIVAR_ORGANIZACION
+    patch: {
+      estado_general_organizacion: estado,
+      observacion_resumen: observacionResumen,
+      responsable_actual: responsable
+    },
+    requireMotivo: true,
+    motivo: motivo,
+    extraDetail: { estado: estado }
   });
 
-  appendRowObject_(GO_PES_V2.SHEETS.RAW_ORGANIZACIONES, {
-    created_at: now,
-    source: action,
-    user_email: user.email,
-    solicitud_id: nextOrg.solicitud_id || '',
-    organizacion_id: nextOrg.organizacion_id,
-    tipo_organizacion: nextOrg.tipo_organizacion || '',
-    nombre_organizacion: nextOrg.nombre_organizacion || '',
-    uv: nextOrg.uv || '',
-    sector: nextOrg.sector || '',
-    direccion_referencia: nextOrg.direccion_referencia || '',
-    fecha_inicio_acompanamiento: nextOrg.fecha_inicio_acompanamiento || '',
-    cantidad_socios_declarada: nextOrg.cantidad_socios_declarada || '',
-    estado_constitucion: nextOrg.estado_constitucion || '',
-    fecha_asamblea_constitucion: nextOrg.fecha_asamblea_constitucion || '',
-    fecha_ratificacion: nextOrg.fecha_ratificacion || '',
-    vigencia_directiva_hasta: nextOrg.vigencia_directiva_hasta || '',
-    personalidad_juridica_flag: nextOrg.personalidad_juridica_flag || '',
-    certificado_provisorio_flag: nextOrg.certificado_provisorio_flag || '',
-    certificado_definitivo_flag: nextOrg.certificado_definitivo_flag || '',
-    directiva_vigente_flag: nextOrg.directiva_vigente_flag || '',
-    organizacion_constituida_flag: nextOrg.organizacion_constituida_flag || '',
-    estado_general_organizacion: estado,
-    responsable_actual: nextOrg.responsable_actual || '',
-    observacion_resumen: nextOrg.observacion_resumen || ''
-  });
+  // Trail append-only (RAW) + refresco de vistas + telemetría: solo si el cambio se aplicó.
+  if (!r.sin_cambios) {
+    const now = new Date();
+    const nextOrg = Object.assign({}, org, {
+      estado_general_organizacion: estado,
+      observacion_resumen: observacionResumen,
+      responsable_actual: responsable,
+      updated_at: now
+    });
 
-  upsertByKey_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', nextOrg, false);
-  refreshPartialArtifacts_({
-    masterSolicitudIds: uniqueNonBlank_([nextOrg.solicitud_id]),
-    vistaOrganizacionIds: [organizacionId],
-    sugerenciaOrganizacionIds: [organizacionId]
-  });
-  logProcessing_('INFO', action, 'organizacion', organizacionId, user.email, 'OK', { estado: estado, motivo: motivo });
-  logUserAction_(action, 'organizacion', organizacionId, 'OK', { estado: estado, motivo: motivo });
-  return serializeForClient_({ ok: true, organizacion_id: organizacionId, estado_general_organizacion: estado });
+    appendRowObject_(GO_PES_V2.SHEETS.RAW_ORGANIZACIONES, {
+      created_at: now,
+      source: action,
+      user_email: user.email,
+      solicitud_id: nextOrg.solicitud_id || '',
+      organizacion_id: nextOrg.organizacion_id,
+      tipo_organizacion: nextOrg.tipo_organizacion || '',
+      nombre_organizacion: nextOrg.nombre_organizacion || '',
+      uv: nextOrg.uv || '',
+      sector: nextOrg.sector || '',
+      direccion_referencia: nextOrg.direccion_referencia || '',
+      fecha_inicio_acompanamiento: nextOrg.fecha_inicio_acompanamiento || '',
+      cantidad_socios_declarada: nextOrg.cantidad_socios_declarada || '',
+      estado_constitucion: nextOrg.estado_constitucion || '',
+      fecha_asamblea_constitucion: nextOrg.fecha_asamblea_constitucion || '',
+      fecha_ratificacion: nextOrg.fecha_ratificacion || '',
+      vigencia_directiva_hasta: nextOrg.vigencia_directiva_hasta || '',
+      personalidad_juridica_flag: nextOrg.personalidad_juridica_flag || '',
+      certificado_provisorio_flag: nextOrg.certificado_provisorio_flag || '',
+      certificado_definitivo_flag: nextOrg.certificado_definitivo_flag || '',
+      directiva_vigente_flag: nextOrg.directiva_vigente_flag || '',
+      organizacion_constituida_flag: nextOrg.organizacion_constituida_flag || '',
+      estado_general_organizacion: estado,
+      responsable_actual: nextOrg.responsable_actual || '',
+      observacion_resumen: nextOrg.observacion_resumen || ''
+    });
+
+    refreshPartialArtifacts_({
+      masterSolicitudIds: uniqueNonBlank_([nextOrg.solicitud_id]),
+      vistaOrganizacionIds: [organizacionId],
+      sugerenciaOrganizacionIds: [organizacionId]
+    });
+    logProcessing_('INFO', action, 'organizacion', organizacionId, user.email, 'OK', { estado: estado, motivo: motivo });
+  }
+
+  return serializeForClient_({ ok: true, organizacion_id: organizacionId, estado_general_organizacion: estado, sin_cambios: !!r.sin_cambios });
 }
 
 /**

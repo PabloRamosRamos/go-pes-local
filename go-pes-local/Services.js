@@ -600,31 +600,65 @@ function formatInicioDate_(value) {
 }
 
 function editarDatosVecino(payload) {
-  const user = requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'superuser']);
-  const lock = LockService.getDocumentLock();
-  lock.waitLock(30000);
-  try {
-    const solicitudId = String(payload && payload.solicitud_id || '').trim();
-    if (!solicitudId) throw new Error('Falta solicitud_id.');
+  requireModuleAccess_('nuevo-ingreso', ['operador', 'coordinador', 'superuser']);
 
-    const existing = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
-    if (!existing) throw new Error('No se encontro la solicitud indicada.');
+  const solicitudId = String(payload && payload.solicitud_id || '').trim();
+  if (!solicitudId) throw new Error('Falta solicitud_id.');
 
-    const patch = {};
-    if (payload.telefono_contacto  !== undefined) patch.telefono_contacto  = String(payload.telefono_contacto  || '').trim();
-    if (payload.correo_contacto    !== undefined) patch.correo_contacto    = String(payload.correo_contacto    || '').trim();
-    if (payload.direccion_original !== undefined) patch.direccion_original = String(payload.direccion_original || '').trim();
-    if (payload.uv                 !== undefined) patch.uv                 = String(payload.uv                 || '').trim();
-    if (payload.sector             !== undefined) patch.sector             = String(payload.sector             || '').trim();
+  // Verifica existencia (mensaje claro); la escritura atómica leer→aplicar→loguear
+  // la hace aplicarCorreccionAuditada_ bajo lock. El applyFn por defecto (upsertByKey_)
+  // reproduce exactamente lo que hacía patchCaseSummary_ (merge + updated_at).
+  const existing = findByField_(GO_PES_V2.SHEETS.MAE_CASOS, 'solicitud_id', solicitudId, false);
+  if (!existing) throw new Error('No se encontro la solicitud indicada.');
 
-    patchCaseSummary_(solicitudId, patch);
+  const patch = {};
+  if (payload.telefono_contacto  !== undefined) patch.telefono_contacto  = String(payload.telefono_contacto  || '').trim();
+  if (payload.correo_contacto    !== undefined) patch.correo_contacto    = String(payload.correo_contacto    || '').trim();
+  if (payload.direccion_original !== undefined) patch.direccion_original = String(payload.direccion_original || '').trim();
+  if (payload.uv                 !== undefined) patch.uv                 = String(payload.uv                 || '').trim();
+  if (payload.sector             !== undefined) patch.sector             = String(payload.sector             || '').trim();
 
-    refreshPartialArtifacts_({ masterSolicitudIds: [solicitudId] });
-    logUserAction_('EDIT_VECINO_CONTACTO', 'vecino', solicitudId, 'OK', patch);
-    return serializeForClient_({ ok: true, solicitud_id: solicitudId });
-  } finally {
-    lock.releaseLock();
+  // Identidad del vecino (nombre/apellido son obligatorios; el RUT puede quedar
+  // vacío y NO se valida su formato aquí — hay datos históricos sin RUT).
+  if (payload.nombre_vecino !== undefined) {
+    const nom = String(payload.nombre_vecino || '').trim();
+    if (!nom) throw new Error('Debes completar el campo Nombre.');
+    patch.nombre_vecino = nom;
   }
+  if (payload.apellido_vecino !== undefined) {
+    const ape = String(payload.apellido_vecino || '').trim();
+    if (!ape) throw new Error('Debes completar el campo Apellido.');
+    patch.apellido_vecino = ape;
+  }
+  if (payload.rut_vecino !== undefined) patch.rut_vecino = String(payload.rut_vecino || '').trim();
+
+  // nombre_completo es derivado: recalcularlo si cambió nombre o apellido.
+  if (patch.nombre_vecino !== undefined || patch.apellido_vecino !== undefined) {
+    const nomFinal = patch.nombre_vecino   !== undefined ? patch.nombre_vecino   : String(existing.nombre_vecino   || '');
+    const apeFinal = patch.apellido_vecino !== undefined ? patch.apellido_vecino : String(existing.apellido_vecino || '');
+    patch.nombre_completo = buildFullName_(nomFinal, apeFinal);
+  }
+
+  const r = aplicarCorreccionAuditada_({
+    sheet: GO_PES_V2.SHEETS.MAE_CASOS,
+    keyField: 'solicitud_id',
+    keyValue: solicitudId,
+    entityType: 'vecino',
+    action: 'EDIT_VECINO_CONTACTO',                 // conserva el nombre de acción histórico
+    patch: patch,
+    piiFields: ['telefono_contacto', 'correo_contacto', 'direccion_original',
+                'nombre_vecino', 'apellido_vecino', 'rut_vecino', 'nombre_completo']
+  });
+
+  if (!r.sin_cambios) {
+    // masterSolicitudIds refresca la ficha/búsqueda; sugerenciaSolicitudIds mantiene
+    // el autocompletado de vecinos al día cuando cambia nombre/RUT.
+    refreshPartialArtifacts_({
+      masterSolicitudIds: [solicitudId],
+      sugerenciaSolicitudIds: [solicitudId]
+    });
+  }
+  return serializeForClient_({ ok: true, solicitud_id: solicitudId, sin_cambios: !!r.sin_cambios });
 }
 
 function obtenerFicha(payload) {
@@ -1063,9 +1097,6 @@ function guardarSeguimiento(payload) {
 function guardarOrganizacion(payload) {
   const user = requireModuleAccess_('organizacion', ['operador', 'coordinador', 'superuser']);
   const diag = goPesDiagStart_('Services.guardarOrganizacion', {});
-  const lock = LockService.getDocumentLock();
-  lock.waitLock(30000);
-  try {
   validateOrganizacionV2_(payload);
   const now = new Date();
   const organizacionId = payload.organizacion_id || nextId_('organizacion', 'ORG');
@@ -1074,12 +1105,9 @@ function guardarOrganizacion(payload) {
     : null;
   assertOrganizacionActiva_(payload.organizacion_id); // suspendida = solo lectura
 
-  appendRowObject_(GO_PES_V2.SHEETS.RAW_ORGANIZACIONES, {
-    created_at: now,
-    source: 'WEB_APP',
-    user_email: user.email,
+  // Campos canónicos (derivados/saneados) — únicos para el trail RAW y para MAE.
+  const orgFields = {
     solicitud_id: payload.solicitud_id || '',
-    organizacion_id: organizacionId,
     tipo_organizacion: payload.tipo_organizacion,
     nombre_organizacion: payload.nombre_organizacion,
     uv: payload.uv || '',
@@ -1099,32 +1127,36 @@ function guardarOrganizacion(payload) {
     estado_general_organizacion: payload.estado_general_organizacion || '',
     responsable_actual: payload.responsable_actual || user.nombre_visible,
     observacion_resumen: payload.observacion_resumen || ''
-  });
+  };
 
-  upsertByKey_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', {
-    organizacion_id: organizacionId,
-    solicitud_id: payload.solicitud_id || '',
-    tipo_organizacion: payload.tipo_organizacion,
-    nombre_organizacion: payload.nombre_organizacion,
-    uv: payload.uv || '',
-    sector: payload.sector || '',
-    direccion_referencia: payload.direccion_referencia || '',
-    fecha_inicio_acompanamiento: asDateOrBlank_(payload.fecha_inicio_acompanamiento) || now,
-    cantidad_socios_declarada: asNumberOrBlank_(payload.cantidad_socios_declarada),
-    estado_constitucion: payload.estado_constitucion || '',
-    fecha_asamblea_constitucion: asDateOrBlank_(payload.fecha_asamblea_constitucion),
-    fecha_ratificacion: asDateOrBlank_(payload.fecha_ratificacion),
-    vigencia_directiva_hasta: asDateOrBlank_(payload.vigencia_directiva_hasta),
-    personalidad_juridica_flag: toSiNo_(payload.personalidad_juridica_flag),
-    certificado_provisorio_flag: toSiNo_(payload.certificado_provisorio_flag),
-    certificado_definitivo_flag: toSiNo_(payload.certificado_definitivo_flag),
-    directiva_vigente_flag: toSiNo_(payload.directiva_vigente_flag),
-    organizacion_constituida_flag: toSiNo_(payload.organizacion_constituida_flag),
-    estado_general_organizacion: payload.estado_general_organizacion || '',
-    responsable_actual: payload.responsable_actual || user.nombre_visible,
-    observacion_resumen: payload.observacion_resumen || '',
-    updated_at: now
-  });
+  // Trail append-only (RAW), igual para alta y corrección.
+  appendRowObject_(GO_PES_V2.SHEETS.RAW_ORGANIZACIONES, Object.assign({
+    created_at: now,
+    source: 'WEB_APP',
+    user_email: user.email,
+    organizacion_id: organizacionId
+  }, orgFields));
+
+  if (existingOrg) {
+    // CORRECCIÓN de organización existente → auditada (antes→después). La función
+    // central posee la sección crítica (lock + diff + log-o-aborta) del write de MAE.
+    aplicarCorreccionAuditada_({
+      sheet: GO_PES_V2.SHEETS.MAE_ORGANIZACIONES,
+      keyField: 'organizacion_id',
+      keyValue: organizacionId,
+      entityType: 'organizacion',
+      action: 'EDIT_ORGANIZACION',
+      patch: orgFields
+    });
+  } else {
+    // ALTA de organización nueva (no es corrección): id único recién generado, sin
+    // contención sobre una fila existente.
+    upsertByKey_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id',
+      Object.assign({ organizacion_id: organizacionId }, orgFields, { updated_at: now }), false);
+    logUserAction_('CREATE_ORGANIZACION', 'organizacion', organizacionId, 'OK', {
+      nombre_organizacion: payload.nombre_organizacion
+    });
+  }
 
   if (payload.solicitud_id) {
     patchCaseSummary_(payload.solicitud_id, {
@@ -1153,21 +1185,14 @@ function guardarOrganizacion(payload) {
     responsables: [payload.responsable_actual || user.nombre_visible]
   });
   logProcessing_('INFO', 'guardarOrganizacion', 'organizacion', organizacionId, user.email, 'OK', payload);
-  logUserAction_('UPSERT_ORGANIZACION', 'organizacion', organizacionId, 'OK', payload);
   const result = { ok: true, organizacion_id: organizacionId };
   goPesDiagEnd_(diag, { ok: true, organizacion_id: organizacionId });
   return result;
-  } finally {
-    lock.releaseLock();
-  }
 }
 
 function guardarInstrumento(payload) {
   const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   const diag = goPesDiagStart_('Services.guardarInstrumento', {});
-  const lock = LockService.getDocumentLock();
-  lock.waitLock(30000);
-  try {
   ensureSheetsSubset_([
     GO_PES_V2.SHEETS.RAW_INSTRUMENTOS,
     GO_PES_V2.SHEETS.FACT_INSTRUMENTOS,
@@ -1183,7 +1208,11 @@ function guardarInstrumento(payload) {
   assertOrganizacionActiva_(organizacionId); // suspendida = solo lectura
 
   const now = new Date();
+  const wantEdit = !!String(payload.org_instrumento_id || '').trim();
   const orgInstrumentoId = String(payload.org_instrumento_id || '').trim() || nextId_('instrumento', 'OIN');
+  const existingInstr = wantEdit
+    ? findByField_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'org_instrumento_id', orgInstrumentoId, false)
+    : null;
   const clean = {
     org_instrumento_id: orgInstrumentoId,
     organizacion_id: organizacionId,
@@ -1223,10 +1252,29 @@ function guardarInstrumento(payload) {
     legacy_key: ''
   }, clean));
 
-  upsertByKey_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'org_instrumento_id', Object.assign({}, clean, {
-    updated_by: user.email,
-    updated_at: now
-  }), false);
+  if (existingInstr) {
+    // CORRECCIÓN de instrumento existente → auditada (antes→después). La central
+    // posee la sección crítica del write y fija updated_by/updated_at.
+    aplicarCorreccionAuditada_({
+      sheet: GO_PES_V2.SHEETS.FACT_INSTRUMENTOS,
+      keyField: 'org_instrumento_id',
+      keyValue: orgInstrumentoId,
+      entityType: 'instrumento',
+      action: 'EDIT_INSTRUMENTO',
+      patch: clean
+    });
+  } else {
+    // ALTA de instrumento nuevo (no es corrección): id único recién generado.
+    upsertByKey_(GO_PES_V2.SHEETS.FACT_INSTRUMENTOS, 'org_instrumento_id', Object.assign({}, clean, {
+      updated_by: user.email,
+      updated_at: now
+    }), false);
+    logUserAction_('CREATE_INSTRUMENTO', 'instrumento', orgInstrumentoId, 'OK', {
+      organizacion_id: organizacionId,
+      instrumento_codigo_catalogo: clean.instrumento_codigo_catalogo,
+      estado_instrumento: clean.estado_instrumento
+    });
+  }
 
   refreshPartialArtifacts_({
     masterSolicitudIds: uniqueNonBlank_([organizacion.solicitud_id]),
@@ -1239,11 +1287,6 @@ function guardarInstrumento(payload) {
     instrumento_codigo_catalogo: clean.instrumento_codigo_catalogo,
     estado_instrumento: clean.estado_instrumento
   });
-  logUserAction_('UPSERT_INSTRUMENTO', 'instrumento', orgInstrumentoId, 'OK', {
-    organizacion_id: organizacionId,
-    instrumento_codigo_catalogo: clean.instrumento_codigo_catalogo,
-    estado_instrumento: clean.estado_instrumento
-  });
 
   const result = {
     ok: true,
@@ -1252,17 +1295,11 @@ function guardarInstrumento(payload) {
   };
   goPesDiagEnd_(diag, { ok: true, org_instrumento_id: orgInstrumentoId });
   return result;
-  } finally {
-    lock.releaseLock();
-  }
 }
 
 function guardarRequisito(payload) {
   const user = requireModuleAccess_('instrumento', ['operador', 'coordinador', 'superuser']);
   const diag = goPesDiagStart_('Services.guardarRequisito', {});
-  const lock = LockService.getDocumentLock();
-  lock.waitLock(30000);
-  try {
   ensureSheetsSubset_([
     GO_PES_V2.SHEETS.RAW_REQUISITOS,
     GO_PES_V2.SHEETS.FACT_REQUISITOS,
@@ -1286,7 +1323,11 @@ function guardarRequisito(payload) {
   }
 
   const now = new Date();
+  const wantEdit = !!String(payload.requisito_registro_id || '').trim();
   const requisitoRegistroId = String(payload.requisito_registro_id || '').trim() || nextId_('requisito', 'REQ');
+  const existingReq = wantEdit
+    ? findByField_(GO_PES_V2.SHEETS.FACT_REQUISITOS, 'requisito_registro_id', requisitoRegistroId, false)
+    : null;
   const clean = {
     requisito_registro_id: requisitoRegistroId,
     organizacion_id: organizacionId,
@@ -1313,10 +1354,29 @@ function guardarRequisito(payload) {
     legacy_key: ''
   }, clean));
 
-  upsertByKey_(GO_PES_V2.SHEETS.FACT_REQUISITOS, 'requisito_registro_id', Object.assign({}, clean, {
-    updated_by: user.email,
-    updated_at: now
-  }), false);
+  if (existingReq) {
+    // CORRECCIÓN de requisito existente → auditada (antes→después). La central
+    // posee la sección crítica del write y fija updated_by/updated_at.
+    aplicarCorreccionAuditada_({
+      sheet: GO_PES_V2.SHEETS.FACT_REQUISITOS,
+      keyField: 'requisito_registro_id',
+      keyValue: requisitoRegistroId,
+      entityType: 'requisito',
+      action: 'EDIT_REQUISITO',
+      patch: clean
+    });
+  } else {
+    // ALTA de requisito nuevo (no es corrección): id único recién generado.
+    upsertByKey_(GO_PES_V2.SHEETS.FACT_REQUISITOS, 'requisito_registro_id', Object.assign({}, clean, {
+      updated_by: user.email,
+      updated_at: now
+    }), false);
+    logUserAction_('CREATE_REQUISITO', 'requisito', requisitoRegistroId, 'OK', {
+      organizacion_id: organizacionId,
+      org_instrumento_id: orgInstrumentoId,
+      estado_requisito: clean.estado_requisito
+    });
+  }
 
   refreshPartialArtifacts_({
     masterSolicitudIds: uniqueNonBlank_([organizacion.solicitud_id]),
@@ -1325,11 +1385,6 @@ function guardarRequisito(payload) {
     vistaTerritorialPairs: [{ uv: organizacion.uv || '', sector: organizacion.sector || '' }]
   });
   logProcessing_('INFO', 'guardarRequisito', 'requisito', requisitoRegistroId, user.email, 'OK', {
-    organizacion_id: organizacionId,
-    org_instrumento_id: orgInstrumentoId,
-    estado_requisito: clean.estado_requisito
-  });
-  logUserAction_('UPSERT_REQUISITO', 'requisito', requisitoRegistroId, 'OK', {
     organizacion_id: organizacionId,
     org_instrumento_id: orgInstrumentoId,
     estado_requisito: clean.estado_requisito
@@ -1343,9 +1398,6 @@ function guardarRequisito(payload) {
   };
   goPesDiagEnd_(diag, { ok: true, requisito_registro_id: requisitoRegistroId });
   return result;
-  } finally {
-    lock.releaseLock();
-  }
 }
 
 function recalcularFicha(payload) {

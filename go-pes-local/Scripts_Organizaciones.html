@@ -1645,10 +1645,18 @@
     const org = APP.state.currentOrganizacionDetalle && APP.state.currentOrganizacionDetalle.organizacion;
     if (!org || !org.organizacion_id) return;
 
-    const motivo = window.prompt('Indica el motivo para ' + actionLabel + ' la organización:', '');
+    // Acción con consecuencias (grado 2): nombra la consecuencia y exige motivo
+    // (el backend también lo exige vía aplicarCorreccionAuditada_).
+    const consecuencia = (fn === 'suspenderOrganizacion')
+      ? 'La organización quedará en solo lectura: no se podrá editar, avanzar hitos, ni gestionar socios o beneficios.'
+      : 'La organización volverá a estar activa y editable.';
+    const nombre = org.nombre_organizacion ? ('"' + org.nombre_organizacion + '"') : 'esta organización';
+    const motivo = window.prompt(
+      'Vas a ' + actionLabel + ' ' + nombre + '.\n' + consecuencia + '\n\nIndica el motivo (obligatorio):', '');
     if (motivo === null) return;
+    if (!motivo.trim()) { showError('Debes indicar el motivo para ' + actionLabel + ' la organización.'); return; }
 
-    api(fn, { organizacion_id: org.organizacion_id, motivo }).then(res => {
+    api(fn, { organizacion_id: org.organizacion_id, motivo: motivo.trim() }).then(res => {
       showSuccess('Organización actualizada: ' + res.estado_general_organizacion);
       APP.state.organizacionesModuloFetchedAt = 0;
       return ensureOrganizacionesModuloList_().then(() => {

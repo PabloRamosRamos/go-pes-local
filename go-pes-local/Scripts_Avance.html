@@ -583,10 +583,11 @@
 
     showModuleLoading('Cargando opciones...');
 
-    Promise.all([
-      api('getGruposVecinosAvanceClient'),
-      api('getOrganizacionesAvanceClient')
-    ]).then(([grupos, data]) => {
+    // Endpoint compuesto: 1 round-trip en vez de 2 (grupos + organizaciones).
+    api('getAvanceBootstrapClient').then((boot) => {
+      boot = boot || {};
+      const grupos = boot.grupos || {};
+      const data = boot.organizaciones || {};
       APP.state.avanceGrupos = (grupos && grupos.gruposList) || [];
       APP.state.avanceGruposFetchedAt = Date.now();
       APP.state.avanceOrganizaciones = (data && data.organizacionesList) || [];
@@ -643,15 +644,13 @@
 
     showModuleLoading('Cargando módulo de avance...');
 
-    return Promise.all([
-      api('getCatalogosAvanceClient'),
-      api('getGruposVecinosAvanceClient'),
-      api('getOrganizacionesAvanceClient')
-    ]).then(([catalogos, grupos, organizaciones]) => {
-      APP.state.avanceCatalogos = catalogos || {};
-      APP.state.avanceGrupos = (grupos && grupos.gruposList) || [];
+    // Endpoint compuesto: 1 round-trip en vez de 3 (catálogos + grupos + organizaciones).
+    return api('getAvanceBootstrapClient').then((data) => {
+      data = data || {};
+      APP.state.avanceCatalogos = data.catalogos || {};
+      APP.state.avanceGrupos = (data.grupos && data.grupos.gruposList) || [];
       APP.state.avanceGruposFetchedAt = Date.now();
-      APP.state.avanceOrganizaciones = (organizaciones && organizaciones.organizacionesList) || [];
+      APP.state.avanceOrganizaciones = (data.organizaciones && data.organizaciones.organizacionesList) || [];
       APP.state.avanceOrganizacionesFetchedAt = Date.now();
     }).finally(() => {
       hideModuleLoading();

@@ -28,6 +28,22 @@ function goPesDiagnosticarAvanceBackend() {
  *  API CLIENTE
  *  ========================= */
 
+/**
+ * Endpoint compuesto de arranque del módulo Avance: catálogos + grupos +
+ * organizaciones en UNA sola ejecución (antes eran 3 `google.script.run` en paralelo,
+ * cada una con su warmup/auth). Las lecturas de hojas se memoizan entre las tres
+ * dentro del mismo request. Cada parte ya viene client-safe de su función.
+ */
+function getAvanceBootstrapClient() {
+  requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
+  goPesEnsureAvanceBackendReady_();
+  return {
+    catalogos: getCatalogosAvanceClient(),
+    grupos: getGruposVecinosAvanceClient(),
+    organizaciones: getOrganizacionesAvanceClient()
+  };
+}
+
 function getCatalogosAvanceClient() {
   requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
   goPesEnsureAvanceBackendReady_();

@@ -9,6 +9,17 @@ function getUsuarioActual() {
 
   const email = getCurrentUserEmail_();
   const normalizedEmail = normalizeEmail_(email);
+
+  // PERF: cache persistente del perfil (evita releer DIM_Usuarios en CADA ejecución).
+  // Solo cachea usuarios con acceso; se invalida explícitamente en updateUser/
+  // deactivateUser (los cambios de permiso), con TTL corto de respaldo.
+  const cachedProfile = goPesReadUserProfileCache_(normalizedEmail);
+  if (cachedProfile) {
+    GO_PES_RUNTIME.currentUser = cachedProfile;
+    GO_PES_RUNTIME.currentUserEmail = normalizedEmail;
+    return Object.assign({}, cachedProfile);
+  }
+
   const usersResult = readDimUsuariosUsers_();
   const users = usersResult.users;
   let user = users.find(function(row) {
@@ -51,7 +62,40 @@ function getUsuarioActual() {
 
   GO_PES_RUNTIME.currentUser = decorated;
   GO_PES_RUNTIME.currentUserEmail = normalizedEmail;
+  if (decorated.canAccess) goPesWriteUserProfileCache_(normalizedEmail, decorated);
   return Object.assign({}, decorated);
+}
+
+// ── Cache persistente del perfil de usuario (PERF) ───────────────────────────
+// Evita releer DIM_Usuarios en cada ejecución. Compartido (ScriptCache) por email,
+// para que un admin pueda invalidar el perfil de OTRO usuario al cambiar permisos.
+function goPesUserProfileCacheKey_(normalizedEmail) {
+  return 'go_pes_user_profile_v1_' + String(normalizedEmail || '');
+}
+
+function goPesReadUserProfileCache_(normalizedEmail) {
+  if (!normalizedEmail) return null;
+  try {
+    const raw = CacheService.getScriptCache().get(goPesUserProfileCacheKey_(normalizedEmail));
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    return (obj && obj.canAccess) ? obj : null;
+  } catch (err) {
+    return null;
+  }
+}
+
+function goPesWriteUserProfileCache_(normalizedEmail, decorated) {
+  if (!normalizedEmail || !decorated) return;
+  try {
+    CacheService.getScriptCache().put(goPesUserProfileCacheKey_(normalizedEmail), JSON.stringify(decorated), 300);
+  } catch (err) {}
+}
+
+function goPesInvalidateUserProfileCache_(email) {
+  try {
+    CacheService.getScriptCache().remove(goPesUserProfileCacheKey_(normalizeEmail_(email)));
+  } catch (err) {}
 }
 
 function buildDeniedUser_(email, reason) {
@@ -198,6 +242,7 @@ function updateUser(payload) {
   }
 
   upsertDimUsuarioByEmail_(row);
+  goPesInvalidateUserProfileCache_(payload.email); // el perfil cacheado quedó obsoleto
   logUserAction_('UPDATE_USER', 'usuario', payload.email, 'OK', { actor: actor.email, payload: row });
 
   return { ok: true, user: serializeUserForClient_(decorateUser_(row)) };
@@ -424,6 +469,7 @@ function deactivateUser(payload) {
   });
 
   upsertDimUsuarioByEmail_(row);
+  goPesInvalidateUserProfileCache_(existing.email); // el perfil cacheado quedó obsoleto
   const persisted = readDimUsuariosUsers_().users
     .find(function(r) { return normalizeEmail_(r.email) === normalizedEmail; });
 

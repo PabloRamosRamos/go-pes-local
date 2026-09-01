@@ -223,7 +223,9 @@ function actualizarCargoSocioOrganizacion(payload) {
     socio_id: socioId,
     organizacion_id: organizacionId,
     cargo: cargo,
-    sin_cambios: !!r.sin_cambios
+    sin_cambios: !!r.sin_cambios,
+    // Detalle de la organización ya actualizado, para refrescar el visor sin re-fetch.
+    detalle: goPesBuildOrganizacionModuloDetalle_(organizacionId)
   });
 }
 

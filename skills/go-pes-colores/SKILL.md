@@ -50,6 +50,9 @@ Cuando el síntoma es "el área de contenido muestra fondo oscuro incorrecto" o 
 3. Recién entonces propón el cambio mínimo, e indica su efecto en **ambos** modos.
 4. No apliques el fix hasta presentar el diagnóstico y recibir aprobación.
 
+### Patrón frecuente: variable que se invierte por tema, usada en el rol equivocado
+Varios tokens **cambian de valor entre claro y oscuro a propósito** (p. ej. `--success-dark` es `#587A24` en claro y `#d7f4b0` en oscuro): están pensados como **color de texto** legible sobre el `--success-soft` de **ese** tema. Si uno de esos tokens se usa como **fondo** con texto fijo (`color:#fff`), el contraste funciona en un tema y **se rompe en el otro**. Caso real (2026-09): `.msgbar--success` (toast) usaba `background:var(--success-dark)` con texto blanco → en oscuro el fondo se aclaraba a `#d7f4b0` y el texto blanco quedaba ilegible. Fix: override en `ThemeDark.html` fijando un fondo oscuro estable (`html[data-theme="dark"] .msgbar--success{background:#587A24}`). Antes de usar un token de color, confirma su **rol** (texto vs fondo) y si **invierte** por tema.
+
 ## Cierre
 - Reporta cada archivo/línea tocada y por qué.
 - Confirma verificación en claro **y** oscuro.

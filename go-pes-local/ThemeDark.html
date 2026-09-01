@@ -413,4 +413,11 @@
     border-color: transparent;
   }
 
+  /* ======== Toast / barra de mensajes — contraste del success en oscuro ======== */
+  /* .msgbar--success usa var(--success-dark) como FONDO con texto blanco (.msgbar).
+     En oscuro --success-dark se invierte a claro (#d7f4b0) → blanco ilegible. Se fija
+     el verde oscuro del modo claro para conservar el contraste (error/warning/info no
+     se rompen: usan --danger/--warning/--runtime-brand-primary, que no se aclaran). */
+  html[data-theme="dark"] .msgbar--success { background: #587A24; }
+
 </style>

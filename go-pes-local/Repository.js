@@ -237,16 +237,21 @@ function getSheetDataFromSheet_(sh, headerRow) {
   try {
     if (!sh) return [];
 
-    const lastRow = sh.getLastRow();
-    const lastCol = sh.getLastColumn();
-    if (lastRow <= headerRow || !lastCol) return [];
+    // PERF: una sola llamada a la API (getDataRange) en vez de getLastRow +
+    // getLastColumn + getRange(header) + getRange(data) = 4 round-trips. Esta es la
+    // lectura base de TODA la app; el probe mostró que ~2/3 del tiempo se iba en la
+    // metadata (getLastRow/getLastColumn), no en los datos.
+    const all = sh.getDataRange().getValues();
+    if (all.length <= headerRow) return [];
 
-    rowsRead = lastRow - headerRow;
-    colsRead = lastCol;
+    const headerArr = all[headerRow - 1];
+    if (!headerArr || !headerArr.length) return [];
 
-    const headers = sh.getRange(headerRow, 1, 1, lastCol).getValues()[0].map(String);
-    const values = sh.getRange(headerRow + 1, 1, rowsRead, headers.length).getValues();
-    return values
+    rowsRead = all.length - headerRow;
+    colsRead = headerArr.length;
+
+    const headers = headerArr.map(String);
+    return all.slice(headerRow)
       .filter(r => r.join('').trim() !== '')
       .map(r => {
         const obj = {};

@@ -1234,6 +1234,17 @@
             });
           });
         }
+        // #2 perf: si el guardado ya trae la vista del grupo → render sin re-fetch.
+        if (res && res.avance) {
+          APP.state.currentAvance = res.avance;
+          renderAvanceResumen_(res.avance);
+          renderAvanceBotones_(res.avance);
+          renderAvanceTimeline_(res.avance.timeline || []);
+          const _expBtnG = document.getElementById('avance-export-btn');
+          if (_expBtnG) _expBtnG.classList.toggle('is-hidden', !((res.avance.timeline || []).length));
+          lockAvanceActions_(true, res.avance);
+          return;
+        }
         return loadAvanceGrupoVecinos_(solicitudId);
       }
       // #2 perf: el guardado ya devuelve la vista actualizada → renderizar sin un

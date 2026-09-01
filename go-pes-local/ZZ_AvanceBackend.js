@@ -223,6 +223,26 @@ function getAvanceOrganizacion(payload) {
   return goPesDiagPayloadSize_(result, 'getAvanceOrganizacion');
 }
 
+/**
+ * Fuente ÚNICA del payload del módulo Avance de un Grupo de vecinos (grupo, estado,
+ * resumen, botones, timeline). La usan getAvanceGrupoVecinos (lectura del módulo) y
+ * registrarHitoAvanceGrupoVecinos_ (para devolver la vista ya actualizada sin re-fetch).
+ */
+function goPesBuildAvanceGrupoVecinosPayload_(caso, solicitudId) {
+  const timeline = goPesGetTimelineAvanceRowsBySolicitud_(solicitudId);
+  const estadoActual = goPesGetEstadoAvanceActualBySolicitud_(solicitudId);
+  const botones = goPesBuildBotonesAvanceGrupoVecinos_(solicitudId, { timeline: timeline, estadoActual: estadoActual });
+  const resumen = goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline);
+  return goPesAvanceToClientSafe_({
+    context_type: 'grupo_vecinos',
+    grupo: caso,
+    estado: estadoActual,
+    resumen: resumen,
+    botones: botones,
+    timeline: timeline
+  });
+}
+
 function getAvanceGrupoVecinos(payload) {
   const diag = goPesDiagStart_('ZZ_AvanceBackend.getAvanceGrupoVecinos', payload || {});
   requireModuleAccess_('avance', ['operador', 'coordinador', 'superuser']);
@@ -237,19 +257,7 @@ function getAvanceGrupoVecinos(payload) {
     throw new Error('Esta solicitud ya tiene organización creada. Continúa el Tramo 2 desde Organización.');
   }
 
-  const timeline = goPesGetTimelineAvanceRowsBySolicitud_(solicitudId);
-  const estadoActual = goPesGetEstadoAvanceActualBySolicitud_(solicitudId);
-  const botones = goPesBuildBotonesAvanceGrupoVecinos_(solicitudId, { timeline: timeline, estadoActual: estadoActual });
-  const resumen = goPesBuildResumenAvanceGrupoVecinos_(caso, estadoActual, timeline);
-
-  const result = goPesAvanceToClientSafe_({
-    context_type: 'grupo_vecinos',
-    grupo: caso,
-    estado: estadoActual,
-    resumen: resumen,
-    botones: botones,
-    timeline: timeline
-  });
+  const result = goPesBuildAvanceGrupoVecinosPayload_(caso, solicitudId);
   goPesDiagEnd_(diag, {
     solicitud_id: solicitudId,
     timeline_count: result.timeline.length,
@@ -497,7 +505,10 @@ function registrarHitoAvanceGrupoVecinos_(payload, user, diag) {
     organizacion_id: organizacionId,
     codigo_hito: codigoHito,
     nombre_hito: hitoCatalogo.nombre_hito,
-    warning_nombre_duplicado: organizacionCreada ? String(organizacionCreada.warning_nombre_duplicado || '') : ''
+    warning_nombre_duplicado: organizacionCreada ? String(organizacionCreada.warning_nombre_duplicado || '') : '',
+    // Si NO se creó organización, devolver la vista del grupo ya actualizada para que
+    // el frontend no re-pida getAvanceGrupoVecinos (si se creó org, va por la ruta de org).
+    avance: organizacionId ? null : goPesBuildAvanceGrupoVecinosPayload_(caso, solicitudId)
   });
 
   goPesDiagEnd_(diag, {

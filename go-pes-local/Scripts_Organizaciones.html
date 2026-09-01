@@ -1642,9 +1642,16 @@
       organizacion_id: org.organizacion_id,
       socio_id: socioId,
       cargo
-    }).then(() => {
+    }).then((res) => {
       closeOrganizacionSocioCargoModal_();
       showSuccess('Cargo de socio actualizado.');
+      // #2 perf: la org ya está seleccionada; el guardado trae el detalle actualizado
+      // → refrescar el visor sin re-pedir getOrganizacionModuloDetalle. Fallback si no viene.
+      if (res && res.detalle) {
+        APP.state.currentOrganizacionDetalle = res.detalle;
+        renderOrganizacionViewer_(res.detalle);
+        return;
+      }
       return selectOrganizacionInline_(org.organizacion_id);
     }).catch(showError).finally(() => {
       hideModalLoading('org-socio-cargo-modal');

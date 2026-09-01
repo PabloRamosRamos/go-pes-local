@@ -379,8 +379,25 @@ function ensureCamaras1414EligibilityForOrg_(organizacionId, fechaHito) {
     updated_at: existing && existing.updated_at ? existing.updated_at : now
   });
 
-  upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_org_id', [assignment], false);
-  syncFactInstrumentoFromCamaras_(organizacion, assignment, computed, 'system', now);
+  // Escribir SOLO si es nueva o si cambió algo real. Antes se hacía un upsert + sync
+  // INCONDICIONAL por organización, y syncAllCamaras1414Eligibility_ llama aquí por cada
+  // org con FOR_04 en CADA carga del panel → N×2 escrituras redundantes en una lectura.
+  // El estado solo cambia al guardar solicitud/instalación (que reescribe su fila) o al
+  // registrar el FOR_04; en una carga normal, escribir no aporta nada.
+  const requiereWrite = !existing
+    || String(existing.elegible_flag || '')          !== String(assignment.elegible_flag || '')
+    || String(existing.criterio_elegibilidad || '')  !== String(assignment.criterio_elegibilidad || '')
+    || String(existing.motivo_no_elegibilidad || '') !== String(assignment.motivo_no_elegibilidad || '')
+    || String(existing.activo_flag || '')            !== String(assignment.activo_flag || '')
+    || String(existing.estado_beneficio || '')       !== String(assignment.estado_beneficio || '')
+    || String(existing.avance_beneficio_pct || '')   !== String(assignment.avance_beneficio_pct || '')
+    || String(existing.proximo_hito_beneficio || '') !== String(assignment.proximo_hito_beneficio || '')
+    || String(existing.org_instrumento_id || '')     !== String(assignment.org_instrumento_id || '');
+
+  if (requiereWrite) {
+    upsertRowsByKey_(GO_PES_V2.SHEETS.FACT_BENEFICIOS_ORG, 'beneficio_org_id', [assignment], false);
+    syncFactInstrumentoFromCamaras_(organizacion, assignment, computed, 'system', now);
+  }
 
   return {
     assignment: assignment,

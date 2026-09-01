@@ -883,8 +883,24 @@
         edad:            document.getElementById('sedit-edad').value,
         cargo:           document.getElementById('sedit-cargo').value,
         direccion_socio: document.getElementById('sedit-direccion').value
-      }).then(function() {
+      }).then(function(res) {
         showSuccess('Socio actualizado correctamente.');
+        // #2 perf: parchear la fila editada en el estado, sin re-pedir toda la lista.
+        if (res && res.socio && Array.isArray(APP.state.sociosModuleRows)) {
+          var idx = APP.state.sociosModuleRows.findIndex(function(r) { return r.socio_id === row.socio_id; });
+          if (idx !== -1) {
+            APP.state.sociosModuleRows[idx] = res.socio;
+            APP.state.sociosModuleRows.sort(function(a, b) {
+              return String(a.nombre_socio || '').localeCompare(String(b.nombre_socio || ''), 'es', { sensitivity: 'base' });
+            });
+            updateSociosTableView_(APP.state.sociosModuleRows);
+            APP.state.currentSocioDetalle = res.socio;
+            content.innerHTML = renderSocioDetailContent_(res.socio);
+            restoreSocioDetailActions_();
+            return;
+          }
+        }
+        // Fallback: re-fetch completo.
         APP.state.sociosModuleFetchedAt = 0;
         return loadSociosModuleData_({ force: true }).then(function(rows) {
           var updated = (rows || []).find(function(r) { return r.socio_id === row.socio_id; });

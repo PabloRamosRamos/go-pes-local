@@ -124,6 +124,43 @@ function importarSocios(payload) {
   return result;
 }
 
+/**
+ * Transforma una fila cruda de FACT_SOCIOS en la fila enriquecida del módulo Socios.
+ * Fuente ÚNICA usada por getSociosModuloClient (lista) y por editarDatosSocio (para
+ * devolver la fila actualizada y que el frontend la parchee sin re-pedir toda la lista).
+ */
+function goPesBuildSocioModuloRow_(row, orgById, caseByOrgId) {
+  const organizacionId = String(row.organizacion_id || '').trim();
+  const org = orgById[organizacionId] || {};
+  const caseRow = caseByOrgId[organizacionId] || {};
+  const nombreComite = String(row.nombre_comite_origen || org.nombre_organizacion || '').trim();
+  return {
+    socio_id: row.socio_id || '',
+    organizacion_id: organizacionId,
+    solicitud_id: String(row.solicitud_id || org.solicitud_id || caseRow.solicitud_id || '').trim(),
+    nombre_organizacion: String(org.nombre_organizacion || '').trim(),
+    nombre_comite: nombreComite,
+    nombre_comite_origen: String(row.nombre_comite_origen || '').trim(),
+    run_socio: String(row.run_socio || '').trim(),
+    numero_registro: String(row.numero_registro || '').trim(),
+    nombre_socio: String(row.nombre_socio || '').trim(),
+    edad: row.edad,
+    cargo: String(row.cargo || '').trim(),
+    direccion_socio: String(row.direccion_socio || '').trim(),
+    ubicacion_socio: String(row.ubicacion_socio || '').trim(),
+    // Contacto del socio (form nuevo); fallback al contacto del caso para datos antiguos.
+    telefono_contacto: String(row.telefono_socio || caseRow.telefono_contacto || '').trim(),
+    correo_contacto: String(row.correo_socio || caseRow.correo_contacto || '').trim(),
+    consentimiento: String(row.consentimiento || '').trim(),
+    vinculo_estado: String(row.vinculo_estado || '').trim(),
+    grupo_label_origen: String(row.grupo_label_origen || '').trim(),
+    fecha_registro: row.fecha_registro || '',
+    status_carga: String(row.status_carga || '').trim(),
+    updated_by: String(row.updated_by || '').trim(),
+    updated_at: row.updated_at || ''
+  };
+}
+
 function getSociosModuloClient() {
   const diag = goPesDiagStart_('ZZ_SociosBackend.getSociosModuloClient', {});
   requireModuleAccess_('socios', ['operador', 'coordinador', 'superuser']);
@@ -134,39 +171,11 @@ function getSociosModuloClient() {
   const orgById = buildOrganizacionesByOrgIdIndex_();
   const caseByOrgId = buildCasosByOrgIdIndex_();
 
-  const rows = socios.map(function(row) {
-    const organizacionId = String(row.organizacion_id || '').trim();
-    const org = orgById[organizacionId] || {};
-    const caseRow = caseByOrgId[organizacionId] || {};
-    const nombreComite = String(row.nombre_comite_origen || org.nombre_organizacion || '').trim();
-    return {
-      socio_id: row.socio_id || '',
-      organizacion_id: organizacionId,
-      solicitud_id: String(row.solicitud_id || org.solicitud_id || caseRow.solicitud_id || '').trim(),
-      nombre_organizacion: String(org.nombre_organizacion || '').trim(),
-      nombre_comite: nombreComite,
-      nombre_comite_origen: String(row.nombre_comite_origen || '').trim(),
-      run_socio: String(row.run_socio || '').trim(),
-      numero_registro: String(row.numero_registro || '').trim(),
-      nombre_socio: String(row.nombre_socio || '').trim(),
-      edad: row.edad,
-      cargo: String(row.cargo || '').trim(),
-      direccion_socio: String(row.direccion_socio || '').trim(),
-      ubicacion_socio: String(row.ubicacion_socio || '').trim(),
-      // Contacto del socio (form nuevo); fallback al contacto del caso para datos antiguos.
-      telefono_contacto: String(row.telefono_socio || caseRow.telefono_contacto || '').trim(),
-      correo_contacto: String(row.correo_socio || caseRow.correo_contacto || '').trim(),
-      consentimiento: String(row.consentimiento || '').trim(),
-      vinculo_estado: String(row.vinculo_estado || '').trim(),
-      grupo_label_origen: String(row.grupo_label_origen || '').trim(),
-      fecha_registro: row.fecha_registro || '',
-      status_carga: String(row.status_carga || '').trim(),
-      updated_by: String(row.updated_by || '').trim(),
-      updated_at: row.updated_at || ''
-    };
-  }).sort(function(a, b) {
-    return String(a.nombre_socio || '').localeCompare(String(b.nombre_socio || ''), 'es', { sensitivity: 'base' });
-  });
+  const rows = socios
+    .map(function(row) { return goPesBuildSocioModuloRow_(row, orgById, caseByOrgId); })
+    .sort(function(a, b) {
+      return String(a.nombre_socio || '').localeCompare(String(b.nombre_socio || ''), 'es', { sensitivity: 'base' });
+    });
 
   const result = serializeForClient_({
     rows: rows
@@ -254,11 +263,19 @@ function editarDatosSocio(payload) {
     extraDetail: { organizacion_id: socio.organizacion_id }
   });
 
+  // Fila enriquecida ya actualizada (misma forma que getSociosModuloClient), para que
+  // el frontend la parchee en el estado sin re-pedir toda la lista.
+  const socioActualizado = findByField_(GO_PES_V2.SHEETS.FACT_SOCIOS, 'socio_id', socioId, false);
+  const socioRow = socioActualizado
+    ? goPesBuildSocioModuloRow_(socioActualizado, buildOrganizacionesByOrgIdIndex_(), buildCasosByOrgIdIndex_())
+    : null;
+
   return serializeForClient_({
     ok: true,
     socio_id: socioId,
     organizacion_id: socio.organizacion_id,
-    sin_cambios: !!r.sin_cambios
+    sin_cambios: !!r.sin_cambios,
+    socio: socioRow
   });
 }
 

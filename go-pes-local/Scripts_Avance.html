@@ -1291,8 +1291,19 @@
       estado_avance: nuevoEstado,
       motivo_estado: motivo,
       fecha_estado: fechaEstado
-    }).then(() => {
+    }).then((res) => {
       showSuccess(`Estado actualizado a: ${nuevoEstado}`);
+      // #2 perf: el cambio de estado ya devuelve la vista actualizada → sin re-fetch.
+      if (res && res.avance) {
+        APP.state.currentAvance = res.avance;
+        renderAvanceResumen_(res.avance);
+        renderAvanceBotones_(res.avance);
+        renderAvanceTimeline_(res.avance.timeline || []);
+        const _expBtn = document.getElementById('avance-export-btn');
+        if (_expBtn) _expBtn.classList.toggle('is-hidden', !((res.avance.timeline || []).length));
+        lockAvanceActions_(false, res.avance);
+        return;
+      }
       loadAvanceOrganizacion_(organizacionId);
     }).catch(showError).finally(() => {
       hideModuleLoading();

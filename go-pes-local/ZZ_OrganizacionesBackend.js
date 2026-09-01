@@ -225,7 +225,15 @@ function getOrganizacionModuloDetalle(payload) {
 
   const organizacionId = String(payload && payload.organizacion_id || '').trim();
   if (!organizacionId) throw new Error('Falta organizacion_id.');
+  return goPesBuildOrganizacionModuloDetalle_(organizacionId);
+}
 
+/**
+ * Builder del detalle del módulo Organizaciones (visor). Fuente ÚNICA usada por
+ * getOrganizacionModuloDetalle (lectura del módulo) y por guardarOrganizacion
+ * (para devolver el detalle ya actualizado y evitar un segundo round-trip tras guardar).
+ */
+function goPesBuildOrganizacionModuloDetalle_(organizacionId) {
   const org = findByField_(GO_PES_V2.SHEETS.MAE_ORGANIZACIONES, 'organizacion_id', organizacionId, false);
   if (!org) throw new Error('No se encontró la organización indicada.');
 

@@ -1182,7 +1182,13 @@ function guardarOrganizacion(payload) {
     ],
     responsables: [payload.responsable_actual || user.nombre_visible]
   });
-  const result = { ok: true, organizacion_id: organizacionId };
+  const result = {
+    ok: true,
+    organizacion_id: organizacionId,
+    // Detalle ya actualizado (mismo que getOrganizacionModuloDetalle): el frontend
+    // renderiza desde aquí y evita un segundo round-trip tras guardar.
+    detalle: goPesBuildOrganizacionModuloDetalle_(organizacionId)
+  };
   goPesDiagEnd_(diag, { ok: true, organizacion_id: organizacionId });
   return result;
 }

@@ -1399,10 +1399,14 @@
     showModalLoading('org-detalle-modal', 'Guardando organización...');
 
     // Primero guardar datos básicos de la organización
+    let __orgDetalle = null;
     api('guardarOrganizacion', payload)
-      .then(() => {
-        // Si hay fechas de hitos para actualizar, hacerlo ahora
+      .then((saveRes) => {
+        __orgDetalle = (saveRes && saveRes.detalle) || null;
+        // Si hay fechas de hitos para actualizar, hacerlo ahora. El detalle debe
+        // reflejarlas → se descarta el del guardado y se re-pide abajo.
         if (Object.keys(fechasMap).length > 0) {
+          __orgDetalle = null;
           return api('actualizarFechasHitos', {
             organizacion_id: payload.organizacion_id,
             fechas_map: fechasMap
@@ -1418,17 +1422,23 @@
           : 'Organización actualizada correctamente.';
         showSuccess(msg);
 
-        // Cerrar el modal de edición y refrescar el visor inline + la lista
         const orgId = payload.organizacion_id;
-        return api('getOrganizacionModuloDetalle', { organizacion_id: orgId }).then(data => {
+        const applyDetalle_ = (data) => {
           APP.state.currentOrganizacionDetalle = data || {};
           closeOrganizacionDetalleModal_();
           renderOrganizacionViewer_(APP.state.currentOrganizacionDetalle);
-
           ensureOrganizacionesModuloList_().then(() => {
             renderOrganizacionesGridFromState_();
           }).catch(() => {});
-        });
+        };
+
+        // #2 perf: si el guardado ya trajo el detalle (y no se tocaron fechas),
+        // renderizar sin re-pedir getOrganizacionModuloDetalle.
+        if (__orgDetalle) {
+          applyDetalle_(__orgDetalle);
+          return;
+        }
+        return api('getOrganizacionModuloDetalle', { organizacion_id: orgId }).then(applyDetalle_);
       })
       .catch(err => {
         hideModalLoading('org-detalle-modal');

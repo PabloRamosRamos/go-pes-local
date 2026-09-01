@@ -601,7 +601,9 @@ function cambiarEstadoAvance(payload) {
     avance_estado_id: avanceEstadoId,
     organizacion_id: organizacionId,
     solicitud_id: solicitudId,
-    estado_avance: nuevoEstado
+    estado_avance: nuevoEstado,
+    // Vista ya actualizada para que el frontend no re-pida getAvanceOrganizacion.
+    avance: goPesBuildAvanceOrganizacionPayload_(org, solicitudId, user)
   });
   goPesDiagEnd_(diag, {
     ok: true,

@@ -5,9 +5,9 @@ const GO_PES_V2 = {
   APP_NAME: 'GO-PES',
   PROGRAM_TITLE: 'Gestor Operativo PES',
   SUBTITLE: 'Programa Estamos Seguros · Municipalidad de Providencia',
-  VERSION: '2.1.916',
-  BUILD: '5400b8c',
-  BUILD_DATE: '20260831',
+  VERSION: '2.1.917',
+  BUILD: '665f04b',
+  BUILD_DATE: '20260901',
   ENVIRONMENT: 'DEV',
 
   // Script IDs para detección de entorno (centralizados 2026-07-10)
